@@ -16,6 +16,7 @@ export interface Overview {
   plans: Record<Plan, number>;
   usage: { feature: string; uses: number; players: number }[];
   openReports: number;
+  feedback: { fresh: number; avg: number | null };
   dbBytes: number;
   guruToday: number;
 }
@@ -143,9 +144,12 @@ export const PAGE_NAMES: Record<string, string> = {
   '/more': 'More (phone menu)',
   '/admin': 'Admin',
   '/students': 'My students',
+  '/feedback': 'Feedback',
+  '/legal/refunds': 'Refund policy',
   '/g/[id]': 'Shared game',
 };
 export const FEATURE_NAMES: Record<string, string> = {
+  feedback: 'Sent feedback',
   fide_game: 'Game vs FIDE-rated player',
   tournament: 'FIDE tournament',
   review: 'Game Review',

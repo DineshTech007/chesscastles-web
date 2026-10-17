@@ -4,7 +4,6 @@
    * plans, plan settings, reports, and the team. The server checks the role on
    * every call; this page only shows what the role allows.
    */
-  import { page } from '$app/state';
   import { onMount } from 'svelte';
   import { session } from '$lib/auth';
   import { adminMe, type Can, type Role } from '$lib/admin';
@@ -13,8 +12,9 @@
   import PlanSettings from '$lib/admin/PlanSettings.svelte';
   import Reports from '$lib/admin/Reports.svelte';
   import Team from '$lib/admin/Team.svelte';
+  import Feedback from '$lib/admin/Feedback.svelte';
 
-  type Tab = 'dashboard' | 'players' | 'plans' | 'reports' | 'team';
+  type Tab = 'dashboard' | 'players' | 'plans' | 'reports' | 'feedback' | 'team';
   let tab = $state<Tab>('dashboard');
   let role = $state<{ role: Role; can: Can[] } | undefined>();
   let denied = $state(false);
@@ -28,8 +28,14 @@
     );
   });
   onMount(() => {
-    const h = page.url.hash.slice(1) as Tab;
-    if (['dashboard', 'players', 'plans', 'reports', 'team'].includes(h)) tab = h;
+    const fromHash = () => {
+      const h = location.hash.slice(1) as Tab;
+      if (['dashboard', 'players', 'plans', 'reports', 'feedback', 'team'].includes(h)) tab = h;
+    };
+    fromHash();
+    // The dashboard's tiles link to #reports and #feedback.
+    addEventListener('hashchange', fromHash);
+    return () => removeEventListener('hashchange', fromHash);
   });
   const go = (t: Tab) => {
     tab = t;
@@ -42,6 +48,7 @@
         ['players', 'Players', 'view'],
         ['plans', 'Plans & offers', 'view'],
         ['reports', 'Reports', 'reports'],
+        ['feedback', 'Feedback', 'reports'],
         ['team', 'Team & log', 'owner'],
       ] as [Tab, string, Can][]
     ).filter(([, , c]) => role?.can.includes(c)),
@@ -75,6 +82,8 @@
       <PlanSettings can={role.can} />
     {:else if tab === 'reports'}
       <Reports onopen={(uid) => ((openUid = uid), go('players'))} />
+    {:else if tab === 'feedback'}
+      <Feedback onopen={(uid) => ((openUid = uid), go('players'))} />
     {:else if tab === 'team'}
       <Team />
     {/if}

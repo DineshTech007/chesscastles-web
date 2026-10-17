@@ -3,6 +3,7 @@ import { doc, serverTimestamp, updateDoc } from 'firebase/firestore/lite';
 import { db, session } from '$lib/auth';
 import { computeKfideAll } from '$lib/kfide';
 import { myGames, type SavedGame } from './myGames';
+import { saveProfile, smallPhoto } from '$lib/social';
 
 const LEGACY = 'k24.kfideOwner';
 /**
@@ -98,24 +99,51 @@ function cachedPhoto(): { uid: string; photo: string } | undefined {
 }
 
 /**
- * The player's photo (base64 JPEG, as the app stores it): from their account
- * when signed in (shown from this device's copy while the account loads),
- * else from this browser.
+ * The account's photo, from Chess Castles' own database, where only friends
+ * can see it (set by setAccountPhoto when the profile loads). It is never kept
+ * in the Firebase profile, which every signed-in player can read.
  */
-export const myPhoto = derived([session, localPhoto], ([s, local]) => {
+const accountPhoto = writable<{ uid: string; photo?: string } | undefined>();
+export function setAccountPhoto(uid: string, photo: string | undefined) {
+  accountPhoto.set({ uid, photo });
+  try {
+    if (photo) localStorage.setItem(ACCOUNT_PHOTO, JSON.stringify({ uid, photo }));
+    else localStorage.removeItem(ACCOUNT_PHOTO);
+  } catch {
+    /* storage full */
+  }
+}
+
+/**
+ * The player's photo (base64 JPEG): from their account when signed in (shown
+ * from this device's copy while the account loads), else from this browser.
+ */
+export const myPhoto = derived([session, localPhoto, accountPhoto], ([s, local, account]) => {
   const cached = typeof localStorage === 'undefined' ? undefined : cachedPhoto();
   if (s.status === 'loading') return cached?.photo ?? local;
   if (s.status !== 'in') return local;
-  const photo = s.profile?.photo ?? (cached?.uid === s.uid ? cached.photo : undefined) ?? local;
-  if (s.profile?.photo && (cached?.uid !== s.uid || cached.photo !== s.profile.photo)) {
-    try {
-      localStorage.setItem(ACCOUNT_PHOTO, JSON.stringify({ uid: s.uid, photo: s.profile.photo }));
-    } catch {
-      /* storage full */
+  if (account?.uid === s.uid) return account.photo;
+  return (cached?.uid === s.uid ? cached.photo : undefined) ?? local;
+});
+
+/**
+ * A photo left in the Firebase profile by an older version (readable by every
+ * signed-in player): moved to Chess Castles' own database, then removed there.
+ */
+export async function movePhotoOutOfFirebase(uid: string, hasOwn: boolean) {
+  const s = get(session);
+  if (s.status !== 'in' || s.uid !== uid || !s.profile?.photo) return;
+  const old = s.profile.photo;
+  if (!hasOwn) {
+    const small = await smallPhoto(old);
+    if (small) {
+      await saveProfile({ photo: small });
+      setAccountPhoto(uid, small);
     }
   }
-  return photo;
-});
+  await updateDoc(doc(db, 'users', uid), { photo: null, updatedAt: serverTimestamp() });
+  session.set({ ...s, profile: { ...s.profile, photo: undefined } });
+}
 
 /** The photo as an image address. */
 export const photoSrc = (b64: string) => `data:image/jpeg;base64,${b64}`;
@@ -143,18 +171,18 @@ export async function shrinkPhoto(file: Blob): Promise<string | undefined> {
   return undefined;
 }
 
-/** Saves (or with undefined removes) the photo: in the account when signed in (shared with the app), else in this browser. */
+/**
+ * Saves (or with undefined removes) the photo: when signed in, in Chess
+ * Castles' own database (friends only); else in this browser.
+ */
 export async function savePhoto(b64: string | undefined): Promise<void> {
   const s = get(session);
-  if (s.status === 'in' && s.profile) {
-    await updateDoc(doc(db, 'users', s.uid), { photo: b64 ?? null, updatedAt: serverTimestamp() });
-    try {
-      if (b64) localStorage.setItem(ACCOUNT_PHOTO, JSON.stringify({ uid: s.uid, photo: b64 }));
-      else localStorage.removeItem(ACCOUNT_PHOTO);
-    } catch {
-      /* storage full */
-    }
-    session.set({ ...s, profile: { ...s.profile, photo: b64 } });
+  if (s.status === 'in') {
+    const small = b64 ? await smallPhoto(b64) : undefined;
+    if (b64 && !small) throw new Error('That picture could not be read.');
+    await saveProfile({ photo: small ?? null });
+    setAccountPhoto(s.uid, small);
+    if (s.profile?.photo) await movePhotoOutOfFirebase(s.uid, true).catch(() => {});
     return;
   }
   try {

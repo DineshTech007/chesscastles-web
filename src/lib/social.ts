@@ -110,10 +110,10 @@ export async function smallPhoto(b64: string): Promise<string | undefined> {
     img.src = `data:image/jpeg;base64,${b64}`;
     await img.decode();
     const c = document.createElement('canvas');
-    c.width = c.height = 96;
+    c.width = c.height = 160;
     const side = Math.min(img.width, img.height);
-    c.getContext('2d')!.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 96, 96);
-    return c.toDataURL('image/jpeg', 0.7).split(',')[1];
+    c.getContext('2d')!.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 160, 160);
+    return c.toDataURL('image/jpeg', 0.8).split(',')[1];
   } catch {
     return undefined;
   }
@@ -140,7 +140,7 @@ export type ReportReason = 'cheating' | 'abuse' | 'profile' | 'sandbagging' | 'o
 /** Reports a player for review (fair play, abuse, an inappropriate name or photo…). */
 export const reportPlayer = (uid: string, reason: ReportReason, details: string, game = '') => call<{ ok: true }>('POST', 'report', { uid, reason, details, game });
 /** A message to Chess Castles' support. */
-export const contactSupport = (reason: 'help' | 'bug' | 'idea' | 'account', details: string) => call<{ ok: true }>('POST', 'support', { reason, details });
+export const contactSupport = (reason: 'help' | 'bug' | 'idea' | 'account' | 'refund', details: string) => call<{ ok: true }>('POST', 'support', { reason, details });
 
 /** A game in progress on Chess Castles, as shared with friends who watch it. */
 export interface LiveGame {

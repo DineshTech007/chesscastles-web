@@ -32,5 +32,8 @@
     "vite": "7.3.7",
     "vitest": "3.2.7",
     "wrangler": "^4.151.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6"
   }
 }

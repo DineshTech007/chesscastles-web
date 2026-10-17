@@ -36,7 +36,7 @@
   }
 
   // ---------- writing to the team ----------
-  let reason = $state<'help' | 'bug' | 'idea' | 'account'>('help');
+  let reason = $state<'help' | 'bug' | 'idea' | 'account' | 'refund'>('help');
   let details = $state('');
   let sending = $state(false);
   let sent = $state('');
@@ -103,6 +103,7 @@
             <option value="bug">Something is not working</option>
             <option value="idea">An idea for Chess Castles</option>
             <option value="account">My account or data (including deleting it)</option>
+            <option value="refund">A payment or refund</option>
           </select>
         </label>
         <label class="field">
@@ -120,6 +121,8 @@
   <section class="card links">
     <a href="/legal/terms">Terms of use</a>
     <a href="/legal/privacy">Privacy policy</a>
+    <a href="/legal/refunds">Refund policy</a>
+    <a href="/feedback">Send feedback</a>
     <a href="/legal/fair-play">Fair play policy</a>
     <a href="/about">About and licences</a>
   </section>

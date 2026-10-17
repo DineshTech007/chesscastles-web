@@ -27,6 +27,7 @@
     { href: '/leaderboard', label: 'Leaderboard', icon: 'star' },
     { href: '/ratings', label: 'Ratings', icon: 'trophy' },
     { href: '/community', label: 'Community: tournaments and coaches', icon: 'globe' },
+    { href: '/feedback', label: 'Send feedback', icon: 'send' },
     { href: '/help', label: 'Help & support', icon: 'bulb' },
     { href: '/legal/terms', label: 'Terms of use', icon: 'book' },
     { href: '/legal/privacy', label: 'Privacy policy', icon: 'book' },

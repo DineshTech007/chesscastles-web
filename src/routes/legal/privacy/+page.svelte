@@ -17,11 +17,11 @@
   <h2>2. What we collect, and why</h2>
   <ul>
     <li><strong>Your Lichess account</strong> (its username and ID), when you sign in with Lichess: to give you a Chess Castles account. We never see your Lichess password. With your permission Lichess also lets Chess Castles play games, send challenges and join tournaments for you.</li>
-    <li><strong>Profile details you choose to add</strong>: display name, first and last name, country, location, language, time zone, FIDE ID, status, "about me" and photo.</li>
+    <li><strong>Profile details you choose to add</strong>: display name, first and last name, country, location, language, time zone, FIDE ID, status, "about me" and photo. Your photo is kept in Chess Castles' own database and shown only to you and your friends. We do not show photos from FIDE.</li>
     <li><strong>Friends and messages</strong>: who you are friends with, and messages between friends.</li>
     <li><strong>Games and progress</strong>: games you finish against Chess Castles' opponents (so you and your friends can review them), your CC Ratings, Vision Gym results, study points for the week and book chapters read (for the leaderboards).</li>
     <li><strong>Fair-play signals</strong>: in rated games, how often you leave the game's tab during your turn, and how you play, to keep games fair (see the <a href="/legal/fair-play">Fair play policy</a>).</li>
-    <li><strong>Reports and support messages</strong> you send us.</li>
+    <li><strong>Reports, support messages and feedback</strong> you send us. Feedback sent without signing in is anonymous; signed in, it is linked to your account so we can follow up if you allow it.</li>
     <li><strong>Your plan and what you use</strong>: your plan (Pawn, Bishop, Rook or Queen), how it was given (launch offer, invite, coach), and how many times a day you use features with limits, to apply them. Who invited you, if you joined with an invite link.</li>
     <li><strong>Coach tools</strong>: if you join a coach, the link between you and the work they set you. Your coach sees your ratings, your games on Chess Castles and your study this week, until you leave.</li>
     <li><strong>Anonymous usage counts</strong>: which pages are opened and features used, the kind of device, the country (from the connection, not stored with you) and the site a visit came from, counted per day. A random id in your browser lets us count visitors once a day; it is not linked to your account, no cookies are used, and nothing is sent when your browser asks not to be tracked.</li>
@@ -52,7 +52,7 @@
   <ul>
     <li>Your profile, friends and messages: while your account exists.</li>
     <li>Finished games shared with friends: the newest 100. A game in progress: until 30 minutes after it ends.</li>
-    <li>Reports and support messages: as long as needed to deal with them and to keep the community safe.</li>
+    <li>Reports and support messages: as long as needed to deal with them and to keep the community safe. Feedback: up to two years, to see how Chess Castles improves.</li>
     <li>When you delete your account, we delete your profile, friends, messages and games within 30 days, except what the law requires us to keep.</li>
   </ul>
 

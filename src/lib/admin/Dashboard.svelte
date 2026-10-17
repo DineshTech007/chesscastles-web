@@ -51,6 +51,7 @@
     <div class="card kpi"><span class="label">New sign-ups</span><strong class="num">{data.totals.signups.toLocaleString()}</strong><span class="label">{data.members.new1 ?? 0} today · {data.members.new7 ?? 0} this week</span></div>
     <div class="card kpi"><span class="label">Members</span><strong class="num">{(data.members.total ?? 0).toLocaleString()}</strong><span class="label">{data.members.active1 ?? 0} active today · {data.members.active7 ?? 0} this week</span></div>
     <a class="card kpi" href="#reports"><span class="label">Open reports</span><strong class="num" class:alert={data.openReports > 0}>{data.openReports}</strong><span class="label">fair play and support</span></a>
+    <a class="card kpi" href="#feedback"><span class="label">New feedback</span><strong class="num">{data.feedback?.fresh ?? 0}</strong><span class="label">{data.feedback?.avg ? `average ${data.feedback.avg.toFixed(1)} / 5` : 'no ratings yet'}</span></a>
   </div>
 
   <div class="grid3">
@@ -132,7 +133,7 @@
   }
   .kpis {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 12px;
   }

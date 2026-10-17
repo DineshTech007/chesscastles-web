@@ -10,7 +10,7 @@
   import { myGames } from '$lib/stores/myGames';
   import { FED_NAMES } from '$lib/fideFeds';
   import { fideSearch, displayName } from '$lib/api';
-  import { myProfile, saveProfile, smallPhoto, type Player } from '$lib/social';
+  import { myProfile, saveProfile, type Player } from '$lib/social';
   import { myCountry, setMyCountry } from '$lib/stores/me';
   import CoachWork from '$lib/components/CoachWork.svelte';
   import { PLAN_INFO, RANK, myPlan, untilText } from '$lib/plans';
@@ -117,10 +117,6 @@
         return;
       }
       await savePhoto(b64);
-      if ($session.status === 'in') {
-        const small = await smallPhoto(b64);
-        if (small) await saveProfile({ photo: small }).catch(() => {});
-      }
       message = $session.status === 'in' ? 'Photo saved to your Chess Castles account.' : 'Photo saved on this device.';
     } catch {
       message = "The photo couldn't be saved. Check your connection and try again.";
@@ -133,7 +129,6 @@
     busy = true;
     try {
       await savePhoto(undefined);
-      if ($session.status === 'in') await saveProfile({ photo: null }).catch(() => {});
       message = 'Photo removed.';
     } catch {
       message = "The photo couldn't be removed. Try again.";

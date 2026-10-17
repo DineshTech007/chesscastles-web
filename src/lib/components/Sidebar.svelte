@@ -120,7 +120,7 @@
       </button>
     {/if}
     {#if !collapsed}
-      <nav class="foot" aria-label="Help and policies"><a href="/plans">Plans</a><a href="/help">Help</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/legal/fair-play">Fair play</a><a href="/legal/refunds">Refunds</a></nav>
+      <nav class="foot" aria-label="Help and policies"><a href="/plans">Plans</a><a href="/feedback">Feedback</a><a href="/help">Help</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/legal/fair-play">Fair play</a><a href="/legal/refunds">Refunds</a></nav>
     {/if}
   </div>
 </nav>

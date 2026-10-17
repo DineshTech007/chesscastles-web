@@ -13,7 +13,7 @@
   import { reportStudy } from '$lib/study/reminders';
   import { myProfile, refreshBadge, saveProfile } from '$lib/social';
   import { session } from '$lib/auth';
-  import { kfide, kfideAll, myCountry, myFideId, myInitials, myPhoto, photoSrc, setMyCountry, setMyName } from '$lib/stores/me';
+  import { kfide, kfideAll, myCountry, movePhotoOutOfFirebase, myFideId, myInitials, myPhoto, photoSrc, setAccountPhoto, setMyCountry, setMyName } from '$lib/stores/me';
   import { fedName } from '$lib/fideFeds';
   import { goto } from '$app/navigation';
   import { loadResume, resumeHref, type ResumeState } from '$lib/game/resume';
@@ -147,6 +147,8 @@
         .then((p) => {
           if (p.country) setMyCountry(p.country);
           setMyName(s.uid, p.name);
+          setAccountPhoto(s.uid, p.photo);
+          void movePhotoOutOfFirebase(s.uid, !!p.photo).catch(() => {});
           myFideId.set(p.fideId ?? '');
           syncBoards();
           const k = get(kfide);
