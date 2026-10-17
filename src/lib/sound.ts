@@ -6,6 +6,8 @@ import type { NormalMove } from 'chessops/types';
  * Board sounds, made on the fly with Web Audio (no sound files): a wooden
  * "tock" for a move, a heavier double knock for a capture, a bright ping
  * for check, two knocks for castling, and a soft chime when a game ends.
+ * A second, playful "Fun" theme (bright pops and a cartoon boing) is also
+ * synthesised, for kids who want something livelier than plain wood.
  */
 
 const KEY = 'k24.sound';
@@ -21,6 +23,25 @@ export function setSound(on: boolean) {
   soundOn.set(on);
   try {
     localStorage.setItem(KEY, on ? 'on' : 'off');
+  } catch {
+    /* fine */
+  }
+}
+
+export type SoundTheme = 'wood' | 'fun';
+const THEME_KEY = 'k24.soundTheme';
+export const soundTheme = writable<SoundTheme>('wood');
+if (typeof localStorage !== 'undefined') {
+  try {
+    if (localStorage.getItem(THEME_KEY) === 'fun') soundTheme.set('fun');
+  } catch {
+    /* default wood */
+  }
+}
+export function setSoundTheme(t: SoundTheme) {
+  soundTheme.set(t);
+  try {
+    localStorage.setItem(THEME_KEY, t);
   } catch {
     /* fine */
   }
@@ -69,12 +90,12 @@ function knock(at: number, { pitch = 900, gain = 0.5, length = 0.07 } = {}) {
   osc.stop(t + length * 1.3);
 }
 
-function tone(at: number, freq: number, length: number, gain = 0.18) {
+function tone(at: number, freq: number, length: number, gain = 0.18, wave: OscillatorType = 'sine') {
   const a = audio();
   if (!a) return;
   const t = a.currentTime + at;
   const osc = a.createOscillator();
-  osc.type = 'sine';
+  osc.type = wave;
   osc.frequency.value = freq;
   const g = a.createGain();
   g.gain.setValueAtTime(0.0001, t);
@@ -85,7 +106,24 @@ function tone(at: number, freq: number, length: number, gain = 0.18) {
   osc.stop(t + length + 0.02);
 }
 
-export const sounds = {
+/** A cartoon pitch slide (the "Fun" theme's boing), triangle wave from `from` to `to` Hz. */
+function sweep(at: number, from: number, to: number, length: number, gain = 0.22) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const osc = a.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(from, t);
+  osc.frequency.exponentialRampToValueAtTime(to, t + length);
+  const g = a.createGain();
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + length);
+  osc.connect(g).connect(a.destination);
+  osc.start(t);
+  osc.stop(t + length + 0.02);
+}
+
+const WOOD = {
   move: () => knock(0, { pitch: 950, gain: 0.45 }),
   capture: () => {
     knock(0, { pitch: 700, gain: 0.6, length: 0.09 });
@@ -105,16 +143,61 @@ export const sounds = {
     tone(0.24, 784, 0.5);
   },
   error: () => tone(0, 220, 0.15, 0.12),
-  /** A game begins: a bright two-note call. */
   start: () => {
     tone(0, 784, 0.16, 0.16);
     tone(0.13, 1175, 0.28, 0.16);
   },
-  /** Your clock is running low: two quick beeps. */
   lowTime: () => {
     tone(0, 1568, 0.09, 0.14);
     tone(0.16, 1568, 0.09, 0.14);
   },
+};
+
+/** A brighter, bouncier set: a pop for a move, a cartoon boing for a capture. */
+const FUN = {
+  move: () => {
+    tone(0, 880, 0.07, 0.2, 'triangle');
+    tone(0.035, 1320, 0.06, 0.12, 'triangle');
+  },
+  capture: () => sweep(0, 520, 190, 0.16, 0.26),
+  castle: () => {
+    tone(0, 660, 0.1, 0.18, 'triangle');
+    tone(0.1, 880, 0.14, 0.18, 'triangle');
+  },
+  check: () => {
+    tone(0, 784, 0.08, 0.16, 'triangle');
+    tone(0.07, 988, 0.08, 0.16, 'triangle');
+    tone(0.14, 1319, 0.14, 0.18, 'triangle');
+  },
+  end: () => {
+    tone(0, 523, 0.14, 0.2, 'triangle');
+    tone(0.1, 659, 0.14, 0.2, 'triangle');
+    tone(0.2, 784, 0.14, 0.2, 'triangle');
+    tone(0.3, 1047, 0.4, 0.22, 'triangle');
+  },
+  error: () => sweep(0, 320, 180, 0.18, 0.18),
+  start: () => {
+    tone(0, 660, 0.09, 0.18, 'triangle');
+    tone(0.09, 880, 0.09, 0.18, 'triangle');
+    tone(0.18, 1175, 0.22, 0.2, 'triangle');
+  },
+  lowTime: () => {
+    tone(0, 1760, 0.07, 0.16, 'triangle');
+    tone(0.13, 1760, 0.07, 0.16, 'triangle');
+  },
+};
+
+type Sounds = typeof WOOD;
+const pick = <K extends keyof Sounds>(k: K) => (get(soundTheme) === 'fun' ? FUN[k] : WOOD[k])();
+export const sounds: Record<keyof Sounds, () => void> = {
+  move: () => pick('move'),
+  capture: () => pick('capture'),
+  castle: () => pick('castle'),
+  check: () => pick('check'),
+  end: () => pick('end'),
+  error: () => pick('error'),
+  start: () => pick('start'),
+  lowTime: () => pick('lowTime'),
 };
 
 /** The warning point for a clock: 10 seconds, or less in very fast games. */

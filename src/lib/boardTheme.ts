@@ -26,6 +26,8 @@ export const BOARD_THEMES: BoardThemeDef[] = [
   { id: 'candy', name: 'Candy', emoji: '🍬', light: '#ffe1f0', dark: '#ff7eb6' },
   { id: 'lemon', name: 'Lemon', emoji: '🍋', light: '#fff6d6', dark: '#e8b923' },
   { id: 'midnight', name: 'Midnight', emoji: '🌙', light: '#4a5068', dark: '#2b2f42' },
+  { id: 'space', name: 'Space', emoji: '🚀', light: '#cfd6e8', dark: '#2a2f5c' },
+  { id: 'jungle', name: 'Jungle', emoji: '🦕', light: '#eaf4df', dark: '#3f6b3a' },
 ];
 
 const KEY = 'k24.board';

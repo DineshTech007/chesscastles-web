@@ -5,7 +5,7 @@
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { session, signOut, startSignIn } from '$lib/auth';
   import { myName } from '$lib/stores/me';
-  import { setSound, soundOn } from '$lib/sound';
+  import { setSound, setSoundTheme, sounds, soundOn, soundTheme } from '$lib/sound';
   import { autoQueen, premovesOn } from '$lib/preferences';
   import { boardThemeOpen } from '$lib/boardTheme';
   import { currentPlan, PLAN_INFO } from '$lib/plans';
@@ -49,6 +49,16 @@
       <span><strong>Move sounds</strong></span>
       <input type="checkbox" checked={$soundOn} onchange={(e) => setSound(e.currentTarget.checked)} />
     </label>
+    <div class="row sound-theme">
+      <span><strong>Sound theme</strong><span class="label sub">Wood is the classic knock. Fun is brighter and bouncier, for kids.</span></span>
+      <div class="sound-pick">
+        <select value={$soundTheme} onchange={(e) => setSoundTheme(e.currentTarget.value === 'fun' ? 'fun' : 'wood')}>
+          <option value="wood">Wood</option>
+          <option value="fun">Fun</option>
+        </select>
+        <button class="btn icon-only" onclick={() => sounds.capture()} aria-label="Preview this sound" title="Preview"><Icon name="speaker" size={16} /></button>
+      </div>
+    </div>
     <label class="row">
       <span><strong>Light UI</strong></span>
       <input type="checkbox" checked={theme === 'light'} onchange={toggleTheme} />
@@ -131,5 +141,29 @@
   }
   .row-btn :global(svg:last-child) {
     margin-left: auto;
+  }
+  .sound-theme {
+    align-items: flex-start;
+    cursor: default;
+  }
+  .sound-pick {
+    display: flex;
+    gap: 8px;
+    flex: none;
+  }
+  .sound-pick select {
+    font: inherit;
+    color: var(--text);
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+  }
+  .btn.icon-only {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 0;
   }
 </style>
