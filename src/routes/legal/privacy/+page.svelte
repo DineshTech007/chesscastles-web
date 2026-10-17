@@ -67,7 +67,7 @@
   </ul>
   <p>To use any of these rights, write to us from <a href="/help">Help &amp; support</a> (choose "My account or data") or at <a href="mailto:support@chesscastles.com">support@chesscastles.com</a>.</p>
   <p>
-    Our grievance contact is the Grievance Officer, Chess Castles, at <a href="mailto:support@chesscastles.com">support@chesscastles.com</a>
+    Our Grievance Officer is Dinesh Patil, Chess Castles, at <a href="mailto:support@chesscastles.com">support@chesscastles.com</a>
     (subject “Grievance”). We acknowledge complaints within 48 hours and aim to resolve them within one month.
   </p>
 

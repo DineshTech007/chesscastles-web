@@ -58,7 +58,7 @@
   </p>
   <p>
     <strong>Grievance Officer</strong><br />
-    Grievance Officer, Chess Castles<br />
+    Dinesh Patil, Grievance Officer, Chess Castles<br />
     Email: <a href="mailto:support@chesscastles.com">support@chesscastles.com</a> (subject “Grievance”)
   </p>
 
