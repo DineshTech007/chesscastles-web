@@ -1,0 +1,23 @@
+// An imported game shows at once; the review runs only on request (or when the link asks for it).
+import { chromium } from 'playwright';
+const [base] = process.argv.slice(2);
+const PGN = '[White "A"]\n[Black "B"]\n1. e4 e5 2. Nf3 d6 3. d4 Bg4 4. dxe5 Bxf3 5. Qxf3 dxe5 6. Bc4 Nf6 7. Qb3 Qe7 8. Nc3 c6 9. Bg5 b5 *';
+const b = await chromium.launch({ channel: 'chrome' });
+const p = await b.newPage({ viewport: { width: 1300, height: 860 } });
+await p.goto(base + '/analysis');
+await p.waitForSelector('cg-board');
+await p.getByRole('button', { name: /^Import$/ }).first().click();
+await p.fill('#import-text', PGN);
+const t0 = Date.now();
+await p.locator('.import').getByRole('button', { name: 'Import' }).click();
+await p.waitForFunction(() => document.querySelectorAll('.tree .row').length >= 9);
+console.log('import shown in', Date.now() - t0, 'ms | reviewing now:', await p.locator('.reviewing').count(), '| review button:', await p.locator('.review-btn').count());
+await p.locator('.review-btn').click();
+await p.waitForTimeout(600);
+console.log('after tapping Review: reviewing', await p.locator('.reviewing').count());
+await p.evaluate((pgn) => sessionStorage.setItem('k24.importPgn', pgn), PGN);
+await p.goto(base + '/analysis?import=1&review=1');
+await p.waitForSelector('.tree .mv');
+await p.waitForTimeout(600);
+console.log('opened with review=1: reviewing', await p.locator('.reviewing').count());
+await b.close();

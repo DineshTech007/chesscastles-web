@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1426" />
+    <title>Chess Castles · Learn, Play, Conquer</title>
+    <meta name="description" content="Chess Castles: play FIDE-rated opponents, review with 5.4 million tournament games, train openings with AI, get insights from your chess.com games and learn with Chess Guru. Plus online play, puzzles, analysis and live games." />
+    <meta property="og:site_name" content="Chess Castles" />
+    <meta property="og:title" content="Chess Castles · Learn, Play, Conquer" />
+    <meta property="og:description" content="Chess Castles: play FIDE-rated opponents, review with 5.4 million tournament games, train openings with AI, get insights from your chess.com games and learn with Chess Guru. Plus online play, puzzles, analysis and live games." />
+    <meta property="og:image" content="https://chesscastles.com/social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="%sveltekit.assets%/brand/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@800&family=Barlow+Condensed:wght@700;800&family=Barlow+Semi+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap"
+    />
+    <link rel="preconnect" href="https://book.chesscastles.com" crossorigin="anonymous" />
+    <script>
+      // Apply the saved theme before the first paint (no flash).
+      try {
+        const t = localStorage.getItem('k24.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>

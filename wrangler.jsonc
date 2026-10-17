@@ -1,0 +1,17 @@
+// Cloudflare (free plan): the built site as static files. Unknown paths get
+// index.html so the single-page app can draw them.
+{
+  "name": "knight24-web",
+  "compatibility_date": "2026-10-01",
+  // The old address stays on, so earlier links (and shared games) keep working.
+  "workers_dev": true,
+  // The site's own domain (and www), with free HTTPS; the workers.dev address keeps working.
+  "routes": [
+    { "pattern": "chesscastles.com", "custom_domain": true },
+    { "pattern": "www.chesscastles.com", "custom_domain": true }
+  ],
+  "assets": {
+    "directory": "./build",
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+const [path, file] = process.argv.slice(2);
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+page.on('pageerror', (e) => console.log('PAGE ERROR:', e.message));
+page.on('console', (m) => m.type() === 'error' && console.log('CONSOLE:', m.text()));
+await page.goto('http://localhost:4173' + path, { waitUntil: 'networkidle' });
+await page.waitForTimeout(1500);
+await page.screenshot({ path: file });
+console.log((await page.locator('main').innerText()).slice(0, 300));
+await browser.close();

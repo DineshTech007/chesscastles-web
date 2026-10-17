@@ -1,0 +1,288 @@
+/**
+ * Chess Castles plans on the website: Pawn (free), Bishop, Rook and Queen.
+ * "Every pawn can become a Queen."
+ *
+ * The API worker (server/api-worker/src/plans.ts) is the judge: useFeature()
+ * asks it before a limited feature starts, and it counts the use. Visitors
+ * who are not signed in get Pawn's limits, counted in this browser, and are
+ * asked to sign in (free, with the launch offer).
+ *
+ * DEFAULT_CONFIG matches the server's defaults; the live numbers (the admin
+ * page can change them) come from GET /plans.
+ */
+import { derived, get, writable } from 'svelte/store';
+import { API } from '$lib/api';
+import { session } from '$lib/auth';
+import { call } from '$lib/social';
+import { track } from '$lib/analytics';
+
+export type Plan = 'pawn' | 'bishop' | 'rook' | 'queen';
+export const PLANS: Plan[] = ['pawn', 'bishop', 'rook', 'queen'];
+export const RANK: Record<Plan, number> = { pawn: 0, bishop: 1, rook: 2, queen: 3 };
+export type Per = 'day' | 'week' | 'month' | 'ever';
+export interface Limit {
+  n: number | null;
+  per: Per;
+}
+export type Feature = 'fide_game' | 'tournament' | 'review' | 'insights' | 'guru' | 'puzzle' | 'vision' | 'opening';
+export const FEATURES: Feature[] = ['fide_game', 'tournament', 'review', 'insights', 'guru', 'puzzle', 'vision', 'opening'];
+export type Gate = 'bot_opening' | 'themed_puzzles' | 'own_lines' | 'coach_tools';
+export type Quota = 'insights_games' | 'history';
+export interface PlanConfig {
+  limits: Record<Feature, Record<Plan, Limit>>;
+  gates: Record<Gate, Plan>;
+  quotas: Record<Quota, Record<Plan, number>>;
+  prices: Record<Exclude<Plan, 'pawn'>, { month: number; year: number }>;
+}
+export interface Launch {
+  on: boolean;
+  plan: Plan;
+  days: number;
+  until: string;
+}
+export interface Banner {
+  on: boolean;
+  text: string;
+  link: string;
+}
+
+const L = (n: number | null, per: Per = 'day'): Limit => ({ n, per });
+const UNLIMITED = L(null);
+export const DEFAULT_CONFIG: PlanConfig = {
+  limits: {
+    fide_game: { pawn: L(3), bishop: L(15), rook: UNLIMITED, queen: UNLIMITED },
+    tournament: { pawn: L(1, 'week'), bishop: L(1), rook: UNLIMITED, queen: UNLIMITED },
+    review: { pawn: L(2), bishop: L(10), rook: UNLIMITED, queen: UNLIMITED },
+    insights: { pawn: L(1, 'month'), bishop: L(1, 'week'), rook: UNLIMITED, queen: UNLIMITED },
+    guru: { pawn: L(5), bishop: L(30), rook: L(100), queen: L(300) },
+    puzzle: { pawn: L(15), bishop: UNLIMITED, rook: UNLIMITED, queen: UNLIMITED },
+    vision: { pawn: L(3), bishop: UNLIMITED, rook: UNLIMITED, queen: UNLIMITED },
+    opening: { pawn: L(3, 'ever'), bishop: L(10, 'ever'), rook: UNLIMITED, queen: UNLIMITED },
+  },
+  gates: { bot_opening: 'bishop', themed_puzzles: 'bishop', own_lines: 'rook', coach_tools: 'queen' },
+  quotas: {
+    insights_games: { pawn: 20, bishop: 50, rook: 200, queen: 200 },
+    history: { pawn: 50, bishop: 500, rook: 2000, queen: 2000 },
+  },
+  prices: { bishop: { month: 99, year: 799 }, rook: { month: 249, year: 1999 }, queen: { month: 499, year: 3999 } },
+};
+export const DEFAULT_LAUNCH: Launch = { on: true, plan: 'rook', days: 90, until: '2027-01-17' };
+
+/** How each plan presents itself. */
+export const PLAN_INFO: Record<Plan, { name: string; piece: string; tag: string; blurb: string }> = {
+  pawn: { name: 'Pawn', piece: '♟', tag: 'Free forever', blurb: 'Everything to start: play, analyse, puzzles, books and friends.' },
+  bishop: { name: 'Bishop', piece: '♝', tag: 'For regular players', blurb: 'More FIDE-rated games, Game Reviews and Guru lessons every day.' },
+  rook: { name: 'Rook', piece: '♜', tag: 'For serious students', blurb: 'Unlimited FIDE-rated players, reviews, Insights and tournaments.' },
+  queen: { name: 'Queen', piece: '♛', tag: 'For coaches and academies', blurb: 'Everything in Rook, plus coach tools: your students’ progress, games and homework.' },
+};
+
+/** Each limited feature, for tables and messages. */
+export const FEATURE_INFO: Record<Feature, { label: string; one: string; many: string }> = {
+  fide_game: { label: 'Play FIDE-rated players', one: 'game against a FIDE-rated player', many: 'games against FIDE-rated players' },
+  tournament: { label: 'FIDE tournaments with trophies', one: 'FIDE tournament', many: 'FIDE tournaments' },
+  review: { label: 'Game Review (accuracy, badges, mistakes)', one: 'Game Review', many: 'Game Reviews' },
+  insights: { label: 'Chess.com & Lichess Insights reports', one: 'Insights report', many: 'Insights reports' },
+  guru: { label: 'Chess Guru lessons (AI coach)', one: 'Guru lesson', many: 'Guru lessons' },
+  puzzle: { label: 'Rated puzzles', one: 'puzzle', many: 'puzzles' },
+  vision: { label: 'Vision Gym sessions', one: 'Vision Gym session', many: 'Vision Gym sessions' },
+  opening: { label: 'Opening trainer courses', one: 'opening course', many: 'opening courses' },
+};
+export const GATE_INFO: Record<Gate, string> = {
+  bot_opening: 'Choose the opening a FIDE-rated player plays',
+  themed_puzzles: 'Themed puzzles (forks, pins, mates…)',
+  own_lines: 'Your own opening lines in the trainer',
+  coach_tools: 'Coach tools: students, progress, homework',
+};
+export const QUOTA_INFO: Record<Quota, string> = {
+  insights_games: 'Games in each Insights report',
+  history: 'Games kept in your account',
+};
+const PER_TEXT: Record<Per, string> = { day: 'a day', week: 'a week', month: 'a month', ever: 'in all' };
+/** "3 a day", "Unlimited", "1 a week". */
+export const limitText = (l: Limit) => (l.n === null ? 'Unlimited' : l.n === 0 ? '—' : `${l.n} ${PER_TEXT[l.per]}`);
+
+// ---------- live settings (GET /plans)
+
+export const planSettings = writable<{ config: PlanConfig; launch: Launch; banner: Banner }>({ config: DEFAULT_CONFIG, launch: DEFAULT_LAUNCH, banner: { on: false, text: '', link: '' } });
+let settingsLoaded = false;
+export async function loadPlanSettings(force = false) {
+  if (settingsLoaded && !force) return;
+  settingsLoaded = true;
+  try {
+    const res = await fetch(`${API}/plans`);
+    if (res.ok) planSettings.set(await res.json());
+  } catch {
+    settingsLoaded = false;
+  }
+}
+/** Whether the launch offer is on now. */
+export const launchOn = (l: Launch) => l.on && new Date().toISOString().slice(0, 10) <= l.until;
+
+// ---------- your plan
+
+export interface MyPlan {
+  plan: Plan;
+  until?: number;
+  source?: string;
+  usage: Record<Feature, { used: number; limit: number | null; per: Per }>;
+  grants: { plan: Plan; start: number; until: number; source: string }[];
+  referral: { code: string; invited: number; days: number };
+}
+export const myPlan = writable<MyPlan | undefined>();
+export async function refreshMyPlan() {
+  if (get(session).status !== 'in') return myPlan.set(undefined);
+  try {
+    myPlan.set(await call<MyPlan>('GET', 'plan'));
+  } catch {
+    /* offline: keep what we had */
+  }
+}
+/** Your plan now (Pawn when signed out). */
+export const currentPlan = derived([session, myPlan], ([s, p]) => (s.status === 'in' ? (p?.plan ?? 'pawn') : 'pawn'));
+
+// ---------- limits
+
+/** What the limit popup shows (LimitModal.svelte). */
+export interface LimitHit {
+  feature?: Feature;
+  gate?: Gate;
+  plan: Plan;
+  limit?: number;
+  per?: Per;
+  /** India day ("2026-10-18") when the next free use comes. */
+  next?: string;
+  signedOut: boolean;
+}
+export const limitHit = writable<LimitHit | undefined>();
+
+const LOCAL = 'cc.usage';
+const today = () => new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
+const daysAgo = (n: number) => new Date(Date.now() + 5.5 * 3600_000 - n * 86_400_000).toISOString().slice(0, 10);
+type LocalUse = { day: string; ref?: string }[];
+function localUses(): Record<string, LocalUse> {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL) ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Asks before a limited feature starts: true to go ahead (the use is
+ * counted), false when the plan's limit is reached (the limit popup opens).
+ * `ref`: the game, opening or puzzle, so the same one opened again is free.
+ * If the server can't be reached the feature goes ahead.
+ */
+export async function useFeature(feature: Feature, ref?: string): Promise<boolean> {
+  track('feature', feature);
+  if (get(session).status === 'in') {
+    try {
+      const r = await call<{ ok: boolean; plan: Plan; used?: number; limit?: number | null; per?: Per; next?: string; again?: boolean }>('POST', 'plan/use', { feature, ref });
+      if (!r.ok) {
+        limitHit.set({ feature, plan: r.plan, limit: r.limit ?? undefined, per: r.per, next: r.next, signedOut: false });
+        return false;
+      }
+      if (!r.again)
+        myPlan.update((p) => (p ? { ...p, usage: { ...p.usage, [feature]: { ...p.usage[feature], used: r.used ?? p.usage[feature].used + 1 } } } : p));
+      return true;
+    } catch {
+      return true;
+    }
+  }
+  // Signed out: Pawn's limits, in this browser.
+  const l = get(planSettings).config.limits[feature].pawn;
+  if (l.n === null) return true;
+  const all = localUses();
+  const from = l.per === 'ever' ? '' : daysAgo({ day: 0, week: 6, month: 29 }[l.per]);
+  const list = (all[feature] ?? []).filter((u) => u.day >= from);
+  if (ref && list.some((u) => u.ref === ref)) return true;
+  if (list.length >= l.n) {
+    track('limit', feature);
+    limitHit.set({ feature, plan: 'pawn', limit: l.n, per: l.per, signedOut: true });
+    return false;
+  }
+  all[feature] = [...list, { day: today(), ref }].slice(-500);
+  try {
+    localStorage.setItem(LOCAL, JSON.stringify(all));
+  } catch {
+    /* storage full or blocked: let it go */
+  }
+  return true;
+}
+
+/** A short id for a line of moves, so reviewing the same moves again isn't counted twice. */
+export function reviewKey(fen: string, ucis: string[]): string {
+  let h = 2166136261;
+  for (const c of fen + ' ' + ucis.join(' ')) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return `m${(h >>> 0).toString(36)}${ucis.length}`;
+}
+
+/** An id for something opened in this tab ("blind:k3x9"), so moving around in the same tab isn't counted again. */
+export function tabRef(name: string): string {
+  try {
+    let id = sessionStorage.getItem('cc.tab');
+    if (!id) sessionStorage.setItem('cc.tab', (id = Math.random().toString(36).slice(2, 10)));
+    return `${name}:${id}`;
+  } catch {
+    return name;
+  }
+}
+
+/** Whether your plan includes a feature (no popup). */
+export const hasGate = (gate: Gate) => RANK[get(currentPlan)] >= RANK[get(planSettings).config.gates[gate]];
+/** Like hasGate, opening the popup when the plan doesn't include it. */
+export function requireGate(gate: Gate): boolean {
+  if (hasGate(gate)) return true;
+  track('limit', gate);
+  limitHit.set({ gate, plan: get(currentPlan), signedOut: get(session).status !== 'in' });
+  return false;
+}
+/** A number your plan allows (games per Insights report…). */
+export const quota = (q: Quota) => get(planSettings).config.quotas[q][get(currentPlan)];
+
+/** The lowest plan that lifts a limit (or includes a gate). */
+export function upgradeFor(hit: LimitHit, config: PlanConfig): Plan | undefined {
+  if (hit.gate) return config.gates[hit.gate];
+  if (!hit.feature) return undefined;
+  const cur = config.limits[hit.feature][hit.plan];
+  return PLANS.find((p) => {
+    if (RANK[p] <= RANK[hit.plan]) return false;
+    const l = config.limits[hit.feature!][p];
+    return l.n === null || (cur.n !== null && l.n > cur.n);
+  });
+}
+
+/** "Rook until 15 Jan 2027". */
+export const untilText = (t?: number) => (t ? new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+
+// ---------- invites
+
+const REF_KEY = 'cc.ref';
+/** Keeps ?ref=<username> from an invite link until the visitor signs in. */
+export function keepReferral(url: URL) {
+  const r = url.searchParams.get('ref');
+  if (r && /^[A-Za-z0-9_-]{2,30}$/.test(r))
+    try {
+      localStorage.setItem(REF_KEY, r);
+    } catch {
+      /* blocked */
+    }
+}
+/** After sign-in: tells the server who invited this player (once). */
+export async function sendReferral(username: string) {
+  let r: string | null = null;
+  try {
+    r = localStorage.getItem(REF_KEY);
+  } catch {
+    return;
+  }
+  if (!r) return;
+  if (r.toLowerCase() === username.toLowerCase()) return localStorage.removeItem(REF_KEY);
+  try {
+    await call('POST', 'plan/referral', { by: r });
+    localStorage.removeItem(REF_KEY);
+  } catch {
+    /* try again next time */
+  }
+}
+export const inviteLink = (code: string) => `https://chesscastles.com/?ref=${encodeURIComponent(code)}`;

@@ -1,0 +1,17 @@
+node_modules/
+.svelte-kit/
+build/
+.wrangler/
+static/engine/
+
+# Data built by the scripts in scripts/ (not source code); see README.
+static/data/
+static/books/
+static/maia/*.part*
+static/ort/
+
+# Design work, ads and screenshots (not part of the website).
+design/
+shots/
+shots.log
+*.log

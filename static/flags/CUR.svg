@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="238.12498mm"
+   height="158.75mm"
+   viewBox="0 0 238.12498 158.75"
+   version="1.1"
+   id="svg1"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="mm">
+    <inkscape:page
+       x="0"
+       y="0"
+       width="238.12498"
+       height="158.75"
+       id="page2"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Слой 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-49.477082,-96.572922)">
+    <path
+       d="M 49.477083,96.572917 H 287.60209 V 255.32292 H 49.477083"
+       fill="#002b7f"
+       id="path1"
+       inkscape:export-filename="CUR.svg"
+       inkscape:export-xdpi="600.009"
+       inkscape:export-ydpi="600.009"
+       style="stroke-width:4.40972" />
+    <path
+       d="M 49.477083,195.79167 H 287.60209 v 19.84375 H 49.477083"
+       fill="#f9e814"
+       id="path2"
+       style="stroke-width:4.40972" />
+    <path
+       d="m 67.997917,133.61458 0.440972,-0.44097 7.496528,-23.37153 7.9375,23.8125 -20.284723,-14.55208 h 25.135417 m 3.086806,44.5382 10.583333,-31.75 10.58333,31.75 -27.340274,-19.40278 H 119.1507"
+       fill="#ffffff"
+       id="path3"
+       style="stroke-width:4.40972" />
+  </g>
+</svg>

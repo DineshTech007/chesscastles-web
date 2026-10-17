@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 112" width="100" height="112" role="img" aria-label="Chess Castles crest"><title>Chess Castles crest</title><defs>
+<linearGradient id="cgold" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#fbe3a0"/><stop offset="0.3" stop-color="#f3c460"/><stop offset="0.55" stop-color="#edb040"/>
+  <stop offset="0.8" stop-color="#c98f2a"/><stop offset="1" stop-color="#9a6a18"/></linearGradient>
+<radialGradient id="cnavy" cx="0.45" cy="0.3" r="0.85">
+  <stop offset="0" stop-color="#22355f"/><stop offset="0.5" stop-color="#14213d"/><stop offset="1" stop-color="#0b1426"/></radialGradient>
+<linearGradient id="civory" x1="0" y1="0" x2="1" y2="0">
+  <stop offset="0" stop-color="#c9bfaa"/><stop offset="0.35" stop-color="#fbf8f1"/><stop offset="0.55" stop-color="#ffffff"/>
+  <stop offset="0.8" stop-color="#e6decd"/><stop offset="1" stop-color="#b5a98f"/></linearGradient>
+<linearGradient id="cgoldcyl" x1="0" y1="0" x2="1" y2="0">
+  <stop offset="0" stop-color="#7a520f"/><stop offset="0.16" stop-color="#c08a2a"/><stop offset="0.38" stop-color="#f3c460"/>
+  <stop offset="0.48" stop-color="#fff0c0"/><stop offset="0.62" stop-color="#edb040"/><stop offset="0.86" stop-color="#a8701a"/><stop offset="1" stop-color="#6e470c"/></linearGradient>
+<linearGradient id="cgloss" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#ffffff" stop-opacity="0.3"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
+<filter id="cdrop" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="2.2" stdDeviation="1.8" flood-color="#000" flood-opacity="0.45"/></filter>
+<filter id="csoft" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2.6" flood-color="#000" flood-opacity="0.3"/></filter>
+</defs><g transform="translate(0.00 0.00) scale(1.0000)"><g filter="url(#csoft)"><path d="M50 4L92 17V50C92 77 74 95 50 107C26 95 8 77 8 50V17Z" fill="url(#cgold)"/></g><path d="M12 18L50 6.5L88 18" fill="none" stroke="#fff8e0" stroke-opacity="0.7" stroke-width="1.2"/><path d="M50 11L86 22V50C86 73 70 89 50 99C30 89 14 73 14 50V22Z" fill="url(#cnavy)"/><path d="M50 11L86 22V50C86 73 70 89 50 99C30 89 14 73 14 50V22Z" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="1.4"/><path d="M50 11L86 22V50C86 58 84 66 80 72" fill="none" stroke="#fff" stroke-opacity="0.16" stroke-width="1"/><path d="M50 11L86 22V50C86 73 70 89 50 99C30 89 14 73 14 50V22Z" fill="url(#cgloss)"/><g transform="translate(20.5 18) scale(0.59)" filter="url(#cdrop)"><path d="M22 12H34V21H44V12H56V21H66V12H78V31L70 38V64L77 72V78H83V90H17V78H23V72L30 64V38L22 31Z" fill="url(#cgoldcyl)" stroke="#4a2f06" stroke-width="2.71" stroke-linejoin="round"/><path d="M22 12H34M44 12H56M66 12H78M17 78H83" stroke="#fff" stroke-opacity="0.55" stroke-width="2.71" fill="none"/><path d="M22 31L30 38M78 31L70 38" stroke="#000" stroke-opacity="0.25" stroke-width="4.34" fill="none"/><path d="M43 78V65A7 7 0 0 1 57 65V78Z" fill="#0b1426"/></g></g></svg>

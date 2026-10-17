@@ -1,0 +1,394 @@
+/* Chess Castles design system (navy and gold, wood board): one look for the app and the website. */
+:root {
+  --bg: #0b1426;
+  --rail: #0d1730;
+  --card: #111c36;
+  --raised: #182648;
+  --border: #22325a;
+  --border-soft: #1a2850;
+  --text: #eef3ff;
+  --text-2: #b4c0dc;
+  --muted: #8c9bbe;
+  /* Chess Castles: deep navy and gold. */
+  --action: #edb040;
+  --action-hover: #f5c560;
+  --on-action: #0b1426;
+  --brand: #edb040;
+  --accent: #f2c14e;
+  --gold: #edb040;
+  --gold-soft: rgba(237, 176, 64, 0.14);
+  --live: #38d2ff;
+  --win: #22c55e;
+  --loss: #f05252;
+  --draw: #a3aed0;
+  --engine: #f2b562;
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  /* Chart series (validated for colour-blind separation on --card). */
+  --series-1: #4d86e6;
+  --series-2: #b98520;
+  --series-3: #9c67d4;
+
+  --r-chip: 6px;
+  --r-control: 12px;
+  --r-card: 16px;
+  --r-panel: 20px;
+
+  --font-display: 'Barlow Condensed', system-ui, sans-serif;
+  --font-title: 'Barlow Semi Condensed', system-ui, sans-serif;
+  --font-body: 'Barlow', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #f6f3ec;
+  --rail: #ffffff;
+  --card: #ffffff;
+  --raised: #f0ebe0;
+  --border: #e2dbcc;
+  --border-soft: #ebe5d8;
+  --text: #14213d;
+  --text-2: #33415f;
+  --muted: #5b6273;
+  --action: #14213d;
+  --action-hover: #0b1426;
+  --on-action: #ffffff;
+  --brand: #14213d;
+  --accent: #8a5a12;
+  --gold: #8a5a12;
+  --gold-soft: rgba(168, 112, 26, 0.12);
+  --live: #0284c7;
+  --win: #15803d;
+  --loss: #c81e1e;
+  --draw: #55627f;
+  --engine: #b45309;
+  --shadow: 0 10px 28px rgba(13, 24, 48, 0.12);
+  --series-1: #2563eb;
+  --series-2: #b7791f;
+  --series-3: #9333ea;
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Type */
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+.title {
+  font-family: var(--font-title);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0;
+}
+.label {
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Surfaces */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 18px;
+}
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-panel);
+  padding: 20px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--text);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 16.5px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.08s;
+  text-decoration: none;
+}
+.btn:hover {
+  border-color: var(--brand);
+  text-decoration: none;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn.primary {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--on-action);
+}
+.btn.primary:hover {
+  background: var(--action-hover);
+}
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+}
+.btn.big {
+  min-height: 54px;
+  font-size: 19px;
+  border-radius: 14px;
+}
+.btn.block {
+  width: 100%;
+}
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-control);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.icon-btn:hover {
+  border-color: var(--brand);
+  color: var(--text);
+}
+
+/* Chips and segmented controls */
+.chip {
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.chip[aria-pressed='true'],
+.chip.on {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--on-action);
+}
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--r-control);
+  background: var(--bg);
+  border: 1px solid var(--border-soft);
+}
+.segmented button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--action);
+  color: var(--on-action);
+  font-weight: 700;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.pill.gold {
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+.pill.live {
+  background: rgba(56, 210, 255, 0.14);
+  color: var(--live);
+}
+.badge-new {
+  font-size: 11px;
+  font-weight: 800;
+  color: #0a1226;
+  background: var(--gold);
+  border-radius: 999px;
+  padding: 2px 7px;
+  letter-spacing: 0.3px;
+}
+
+.clock {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  min-width: 92px;
+  text-align: center;
+}
+.clock.active {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--on-action);
+}
+.clock.low:not(.active) {
+  color: var(--engine);
+}
+
+/* The board: classic wood (cream and brown), a warm last move, darker premoves. */
+.cg-wrap cg-board {
+  background-color: #f0d9b5;
+  background-image: repeating-conic-gradient(#b58863 0 25%, #f0d9b5 0 50%);
+  background-size: 25% 25%;
+}
+.cg-wrap cg-board square.last-move {
+  background-color: rgba(205, 210, 106, 0.62);
+}
+.cg-wrap cg-board square.selected {
+  background-color: rgba(20, 85, 30, 0.5);
+}
+.cg-wrap cg-board square.move-dest {
+  background: radial-gradient(rgba(10, 18, 38, 0.28) 22%, transparent 23%);
+}
+.cg-wrap cg-board square.move-dest:hover {
+  background: rgba(20, 85, 30, 0.3);
+}
+.cg-wrap cg-board square.move-dest.oc {
+  background: radial-gradient(transparent 0%, transparent 78%, rgba(10, 18, 38, 0.3) 79%);
+}
+.cg-wrap cg-board square.premove-dest {
+  background: radial-gradient(rgba(16, 26, 60, 0.4) 22%, transparent 23%);
+}
+.cg-wrap cg-board square.premove-dest.oc {
+  background: radial-gradient(transparent 0%, transparent 78%, rgba(16, 26, 60, 0.45) 79%);
+}
+.cg-wrap cg-board square.current-premove,
+.cg-wrap cg-board square.queued-premove {
+  background-color: rgba(16, 26, 60, 0.55);
+}
+.cg-wrap cg-board square.check {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(240, 82, 82, 1) 0%,
+    rgba(240, 82, 82, 0.6) 30%,
+    rgba(240, 82, 82, 0) 70%
+  );
+}
+html .cg-wrap coords {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 11px;
+  opacity: 1;
+}
+html .cg-wrap coords coord {
+  color: rgba(16, 26, 60, 0.7);
+}
+/* Coordinates inside the edge squares: ranks top-left, files bottom-right. */
+html .cg-wrap coords.ranks {
+  left: 3px;
+  top: 0;
+  width: 14px;
+  height: 100%;
+}
+html .cg-wrap coords.ranks coord {
+  flex: 1 1 0;
+  padding-top: 2px;
+  transform: none;
+}
+html .cg-wrap coords.files {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: auto;
+  text-transform: lowercase;
+}
+html .cg-wrap coords.files coord {
+  flex: 1 1 0;
+  text-align: right;
+  padding: 0 4px 1px 0;
+}

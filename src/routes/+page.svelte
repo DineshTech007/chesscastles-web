@@ -1,0 +1,595 @@
+<script lang="ts">
+  import PlanBadge from '$lib/components/PlanBadge.svelte';
+  import HeroLanding from '$lib/components/landing/HeroLanding.svelte';
+  import { HERO_FEATURES } from '$lib/heroFeatures';
+  import { PLAN_INFO, currentPlan } from '$lib/plans';
+  import { myName } from '$lib/stores/me';
+  import { onMount } from 'svelte';
+  import Board from '$lib/components/Board.svelte';
+  import Icon from '$lib/components/Icon.svelte';
+  import GameHistory from '$lib/components/GameHistory.svelte';
+  import LeaderboardCard from '$lib/components/LeaderboardCard.svelte';
+  import CoachWork from '$lib/components/CoachWork.svelte';
+  import { fenOf, keyOf } from '$lib/chess/position';
+  import { dailyPuzzle, topBroadcasts, type Broadcast, type DailyPuzzle } from '$lib/lichess';
+  import { KIND_LABEL, myGames, opponentOf, outcome } from '$lib/stores/myGames';
+  import { shownGames } from '$lib/stores/me';
+  import { formatDate } from '$lib/format';
+  import { session } from '$lib/auth';
+  import { kfide, myCountry } from '$lib/stores/me';
+  import { fedName } from '$lib/fideFeds';
+  import { SPEED_LABEL } from '$lib/kfide';
+  import { dayOf, streak, study } from '$lib/study/progress';
+  import { loadPlan, nextStep, topicOn, TOPICS, hasPlan } from '$lib/study/plan';
+
+  let puzzle = $state<DailyPuzzle | undefined>();
+  let puzzleError = $state(false);
+  let live = $state<Broadcast[] | undefined>();
+  let liveError = $state(false);
+
+  onMount(() => {
+    dailyPuzzle().then((p) => (puzzle = p), () => (puzzleError = true));
+    topBroadcasts().then((b) => (live = b.slice(0, 4)), () => (liveError = true));
+  });
+
+  const stats = $derived.by(() => {
+    const done = $shownGames.filter((g) => outcome(g) !== 'unfinished');
+    const won = done.filter((g) => outcome(g) === 'won').length;
+    const drawn = done.filter((g) => outcome(g) === 'draw').length;
+    return { played: done.length, won, drawn, lost: done.length - won - drawn };
+  });
+  const recent = $derived($shownGames.slice(0, 3));
+  const myStreak = $derived(streak($study, Date.now()));
+  const studiedToday = $derived($study.some((a) => dayOf(a.at) === dayOf(Date.now())));
+  let todayPlan = $state<{ label: string; color: string; href: string; title: string } | undefined>();
+  onMount(() => {
+    if (!hasPlan()) return;
+    const t = topicOn(loadPlan(), new Date());
+    if (t === 'rest') return;
+    const step = nextStep(t);
+    todayPlan = { label: TOPICS[t].label, color: TOPICS[t].color, href: step.href, title: step.title };
+  });
+  /** Visitors see the landing; a browser that was signed in before skips it while the sign-in loads. */
+  const wasIn = typeof localStorage !== 'undefined' && localStorage.getItem('cc.wasIn') === '1';
+  const showLanding = $derived($session.status === 'out' || ($session.status === 'loading' && !wasIn));
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+</script>
+
+<svelte:head><title>Chess Castles · Learn, Play, Conquer</title></svelte:head>
+
+<div class="home">
+  {#if showLanding}
+    <HeroLanding closing={false} />
+  {:else}
+  <header class="hello">
+    <div>
+      <h1 class="display">
+        {greeting}{$session.status === 'in' ? `, ${$myName}` : ''}
+        {#if $session.status === 'in'}<a class="h-plan" href="/plans" title="{PLAN_INFO[$currentPlan].name} member"><PlanBadge plan={$currentPlan} size={34} /></a>{/if}
+        {#if $myCountry}<img class="h-flag" src="/flags/{$myCountry}.svg" alt={fedName($myCountry)} title={fedName($myCountry)} width="30" height="20" />{/if}
+      </h1>
+      <p class="sub"><strong>Learn</strong> with Chess Guru. <strong>Play</strong> FIDE-rated opponents and friends. <strong>Conquer</strong> your next tournament.</p>
+    </div>
+    {#if $session.status === 'in' && $session.profile}
+      <div class="stats" aria-label="Your Chess Castles ratings">
+        <a class="kf" href="/profile" title="Your Chess Castles rating ({SPEED_LABEL[$kfide.speed]}, the speed you play most)"><span class="label">CC Rating {SPEED_LABEL[$kfide.speed]}</span><strong class="title num">{$kfide.rating}{$kfide.provisional ? '?' : ''}</strong></a>
+        <div><span class="label">Puzzles</span><strong class="title num">{$session.profile.ratings.puzzle}</strong></div>
+        <div><span class="label">Blitz</span><strong class="title num">{$session.profile.ratings.blitz}</strong></div>
+        <div><span class="label">Rapid</span><strong class="title num">{$session.profile.ratings.rapid}</strong></div>
+        <div><span class="label">Games</span><strong class="title num">{$session.profile.games.played}</strong></div>
+      </div>
+    {:else if stats.played}
+      <div class="stats" aria-label="Your results on this site">
+        <a class="kf" href="/profile" title="Your Chess Castles rating ({SPEED_LABEL[$kfide.speed]}, the speed you play most)"><span class="label">CC Rating {SPEED_LABEL[$kfide.speed]}</span><strong class="title num">{$kfide.rating}{$kfide.provisional ? '?' : ''}</strong></a>
+        <div><span class="label">Played</span><strong class="title num">{stats.played}</strong></div>
+        <div><span class="label">Won</span><strong class="title num" style="color: var(--win)">{stats.won}</strong></div>
+        <div><span class="label">Drawn</span><strong class="title num">{stats.drawn}</strong></div>
+        <div><span class="label">Lost</span><strong class="title num">{stats.lost}</strong></div>
+      </div>
+    {/if}
+  </header>
+  {/if}
+
+  {#if !studiedToday && (myStreak > 0 || todayPlan)}
+    <a class="nudge card" href={todayPlan?.href ?? '/puzzles'}>
+      <Icon name="flame" size={22} color="var(--gold)" />
+      <span>
+        {#if myStreak > 0}<strong>Keep your {myStreak}-day streak!</strong> You haven't studied today yet.{:else}<strong>Today's plan:</strong>{/if}
+        {#if todayPlan} Today is <span style="color: {todayPlan.color}">{todayPlan.label}</span>: {todayPlan.title}.{:else} One puzzle is enough.{/if}
+      </span>
+      <span class="btn primary">Start</span>
+    </a>
+  {/if}
+
+  {#if !showLanding}
+    <section class="only-strip" aria-labelledby="only-h">
+      <h2 id="only-h" class="label only-h"><Icon name="sparkle" size={14} color="var(--accent)" /> Only on Chess Castles</h2>
+      <div class="only-row">
+        {#each HERO_FEATURES as f (f.id)}
+          <a class="only-tile card" href={f.href}>
+            <span class="only-ic"><Icon name={f.icon} size={22} color="var(--on-action)" /></span>
+            <strong>{f.short}</strong>
+            <span class="label">{f.cta}</span>
+          </a>
+        {/each}
+      </div>
+    </section>
+  {/if}
+
+  <CoachWork />
+
+  <div class="row">
+    <section class="panel play" aria-labelledby="play-h">
+      <div class="play-options">
+        <h2 id="play-h" class="display play-h">Play</h2>
+        <a class="option primary" href="/play">
+          <Icon name="users" size={28} color="currentColor" />
+          <span class="opt-text">
+            <span class="title">A FIDE-rated player <span class="badge-new">NEW</span></span>
+            <span class="opt-sub">A real tournament feel, at the rating you pick</span>
+          </span>
+          <Icon name="chevron" size={20} color="currentColor" />
+        </a>
+        <a class="option" href="/play?mode=computer">
+          <Icon name="robot" size={26} color="var(--accent)" />
+          <span class="opt-text">
+            <span class="title">Computer</span>
+            <span class="opt-sub">Stockfish from beginner to maximum</span>
+          </span>
+        </a>
+        <a class="option" href="/insights">
+          <Icon name="coach" size={26} color="var(--accent)" />
+          <span class="opt-text">
+            <span class="title">Game Insights</span>
+            <span class="opt-sub">A deep review of your chess.com games, and a study plan</span>
+          </span>
+        </a>
+        <a class="option" href="/analysis">
+          <Icon name="analyse" size={26} color="var(--accent)" />
+          <span class="opt-text">
+            <span class="title">Analysis board</span>
+            <span class="opt-sub">Engine and 5.4 million rated games</span>
+          </span>
+        </a>
+      </div>
+      <div class="hero-board">
+        <Board fen="rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6" viewOnly coordinates={false} label="The Najdorf Sicilian" />
+      </div>
+    </section>
+
+    <section class="card recent" aria-labelledby="recent-h">
+      <div class="card-head">
+        <h2 id="recent-h" class="title">Your games</h2>
+        <a href="/games">See all</a>
+      </div>
+      {#if recent.length}
+        {#each recent as g (g.id)}
+          {@const o = outcome(g)}
+          <a class="game" href="/analysis?game={g.id}">
+            <span class="res {o}">{o === 'won' ? 'W' : o === 'lost' ? 'L' : o === 'draw' ? 'D' : '–'}</span>
+            <span class="g-text">
+              <span class="g-title">vs {opponentOf(g)}</span>
+              <span class="label">{KIND_LABEL[g.kind]}{g.timeControl ? ` · ${g.timeControl}` : ''} · {formatDate(g.playedAt)}</span>
+            </span>
+          </a>
+        {/each}
+      {:else}
+        <p class="label">Games you play here are kept in this browser, ready to analyse.</p>
+        <a class="btn primary" href="/play">Play your first game</a>
+      {/if}
+    </section>
+  </div>
+
+  <div class="row">
+    <section class="card puzzle" aria-labelledby="puzzle-h">
+      <div class="card-head">
+        <h2 id="puzzle-h" class="title">Puzzle of the day</h2>
+        {#if puzzle}<span class="label">Rating {puzzle.rating}</span>{/if}
+      </div>
+      {#if puzzle}
+        <div class="mini">
+          <Board
+            fen={fenOf(puzzle.start)}
+            orientation={puzzle.start.turn}
+            lastMove={puzzle.lastMove?.map(keyOf)}
+            viewOnly
+            coordinates={false}
+            label="Puzzle position"
+          />
+        </div>
+        <div class="card-foot">
+          <span class="label">{puzzle.start.turn === 'white' ? 'White' : 'Black'} to play</span>
+          <a class="btn primary" href="/puzzles">Solve</a>
+        </div>
+      {:else if puzzleError}
+        <p class="label">The puzzle couldn't load. Check your connection.</p>
+      {:else}
+        <div class="mini skeleton"></div>
+      {/if}
+    </section>
+
+    <section class="card live-card" aria-labelledby="live-h">
+      <div class="card-head">
+        <h2 id="live-h" class="title">Live now</h2>
+        <span class="pill live"><span class="live-dot"></span>Live broadcasts</span>
+      </div>
+      {#if live}
+        {#each live as b (b.id)}
+          <a class="event" href="/watch/{b.id}">
+            {#if b.image}<img src={b.image} alt="" loading="lazy" />{:else}<span class="img-ph"></span>{/if}
+            <span class="g-text">
+              <span class="g-title">{b.name}</span>
+              <span class="label">{b.round}{b.location ? ` · ${b.location}` : ''}</span>
+            </span>
+            <Icon name="chevron" size={16} color="var(--muted)" />
+          </a>
+        {/each}
+        <a href="/watch">All live events</a>
+      {:else if liveError}
+        <p class="label">Live events couldn't load. Check your connection.</p>
+      {:else}
+        {#each [0, 1, 2] as i (i)}<div class="event skeleton-line"></div>{/each}
+      {/if}
+    </section>
+
+    <LeaderboardCard />
+  </div>
+
+  {#if $shownGames.length}
+    <GameHistory limit={8} title="Recent games" />
+  {/if}
+</div>
+
+<style>
+  .only-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .only-h {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 12px;
+  }
+  .only-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .only-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px;
+    color: var(--text);
+    text-decoration: none;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    background:
+      radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+      var(--card);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .only-tile:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+  }
+  .only-ic {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, #f7d27a, #edb040 50%, #c98a1b);
+  }
+  .only-tile strong {
+    font-size: 15px;
+  }
+  .only-tile .label {
+    font-size: 12.5px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  @media (max-width: 900px) {
+    .only-row {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+  }
+  .h-plan {
+    display: inline-flex;
+    vertical-align: middle;
+    margin: 0 4px;
+  }
+  .sub strong {
+    color: var(--accent);
+    font-weight: 800;
+  }
+  .h-flag {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
+    border-radius: 3px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  .home {
+    max-width: 1140px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .hello {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  h1 {
+    font-size: 46px;
+  }
+  .sub {
+    margin: 6px 0 0;
+    color: var(--text-2);
+    font-size: 16.5px;
+  }
+  .nudge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-color: var(--gold);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .nudge span:not(.btn) {
+    flex: 1;
+  }
+  .nudge:hover {
+    text-decoration: none;
+  }
+  .stats {
+    display: flex;
+    gap: 8px;
+  }
+  .stats div,
+  .stats .kf {
+    display: flex;
+    flex-direction: column;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-control);
+    padding: 7px 14px;
+    min-width: 78px;
+  }
+  .stats strong {
+    font-size: 22px;
+  }
+  .stats .kf {
+    border-color: var(--gold);
+    color: inherit;
+    text-decoration: none;
+  }
+  .stats .kf strong {
+    color: var(--gold);
+  }
+  @media (max-width: 560px) {
+    .stats {
+      flex-wrap: wrap;
+    }
+  }
+  .row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .play {
+    flex: 2 1 560px;
+    min-width: 0;
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .play-options {
+    flex: 1 1 300px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .play-h {
+    font-size: 40px;
+  }
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 14px;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+    transition:
+      border-color 0.15s,
+      transform 0.15s;
+  }
+  .option:hover {
+    border-color: var(--brand);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  .option.primary {
+    background: var(--action);
+    border-color: var(--action);
+    color: var(--on-action);
+  }
+  .opt-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .opt-text .title {
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .opt-sub {
+    font-size: 14px;
+    opacity: 0.85;
+  }
+  .option:not(.primary) .opt-sub {
+    color: var(--muted);
+    opacity: 1;
+  }
+  .hero-board {
+    flex: 0 1 300px;
+    min-width: 220px;
+    margin: 0 auto;
+  }
+  .recent {
+    flex: 1 1 300px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-head .title {
+    font-size: 19px;
+  }
+  .game,
+  .event {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    margin: 0 -8px;
+    border-radius: var(--r-control);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .game:hover,
+  .event:hover {
+    background: var(--raised);
+    text-decoration: none;
+  }
+  .res {
+    width: 38px;
+    height: 38px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    font-family: var(--font-title);
+    font-weight: 700;
+    border: 1px solid currentColor;
+  }
+  .res.won {
+    color: var(--win);
+  }
+  .res.lost {
+    color: var(--loss);
+  }
+  .res.draw {
+    color: var(--accent);
+  }
+  .res.unfinished {
+    color: var(--muted);
+  }
+  .g-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .g-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .puzzle {
+    flex: 1 1 300px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .mini {
+    width: min(100%, 300px);
+    align-self: center;
+  }
+  .skeleton,
+  .skeleton-line {
+    background: linear-gradient(90deg, var(--raised), var(--card), var(--raised));
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+    border-radius: 8px;
+  }
+  .skeleton {
+    aspect-ratio: 1;
+  }
+  .skeleton-line {
+    height: 54px;
+  }
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+  .card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .live-card {
+    flex: 2 1 420px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--live);
+  }
+  .event img,
+  .img-ph {
+    width: 88px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex: none;
+    background: var(--raised);
+  }
+  @media (max-width: 767px) {
+    h1 {
+      font-size: 36px;
+    }
+    .stats div {
+      min-width: 0;
+      padding: 6px 10px;
+    }
+  }
+</style>

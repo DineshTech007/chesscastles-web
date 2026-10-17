@@ -1,0 +1,13 @@
+/_app/immutable/*
+  Cache-Control: public, max-age=31536000, immutable
+/engine/*
+  Cache-Control: public, max-age=2592000
+
+/maia/*
+  Cache-Control: public, max-age=31536000, immutable
+/ort/*
+  Cache-Control: public, max-age=31536000, immutable
+/data/*
+  Cache-Control: public, max-age=86400
+/sw.js
+  Cache-Control: no-cache
