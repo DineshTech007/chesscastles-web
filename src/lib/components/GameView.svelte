@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { myName } from '$lib/stores/me';
+  import { myInitials, myName } from '$lib/stores/me';
   import { onDestroy, onMount } from 'svelte';
   import type { Key } from '@lichess-org/chessground/types';
   import Board from './Board.svelte';
@@ -83,7 +83,7 @@
     if (!g || g.uci.length < 4) return;
     reviewing = 0;
     try {
-      const r = await analyseGame(g, (p) => (reviewing = p), 11, () => gone);
+      const r = await analyseGame(g, (p) => (reviewing = p), 13, () => gone);
       badges = g.uci.map((_, i) => r.all.find((m) => m.ply === i)?.cls);
     } catch {
       /* left the page, or the engine can't run */
@@ -295,9 +295,10 @@
     return {
       me,
       name: me ? ($session.status === 'in' ? $myName : 'You') : opponent,
-      rating: me ? `CC ${SPEED_LABEL[speed]} ${kfideText($kfideAll[speed])}` : kind === 'fide' ? `FIDE ${game.rating}` : undefined,
+      // (The opponent's rating only when its name doesn't already say it: "FIDE 1800".)
+      rating: me ? `CC ${SPEED_LABEL[speed]} ${kfideText($kfideAll[speed])}` : kind === 'fide' && !opponent.includes(String(game.rating)) ? `FIDE ${game.rating}` : undefined,
       country: me ? $myCountry || undefined : opponentCountry,
-      initials: me ? 'YO' : opponentInitials,
+      initials: me ? ($session.status === 'in' ? $myInitials : '♙') : opponentInitials,
       photo: me && $myPhoto ? photoSrc($myPhoto) : undefined,
       subtitle: me ? (side === 'white' ? 'White' : 'Black') : opponentSubtitle,
       toMove: !game.isOver && pos.turn === side,
@@ -386,7 +387,7 @@
       </div>
       {#if reviewing !== undefined}<p class="label reviewing">Marking every move (brilliant … blunder)… {Math.round(reviewing * 100)}%</p>{/if}
       <MoveList sans={g.sans} sources={g.sources} current={viewPly ?? g.sans.length} onselect={go} {badges} />
-      <MoveNav ply={viewPly ?? g.sans.length} max={g.sans.length} {go} />
+      <div class="nav-wrap"><MoveNav ply={viewPly ?? g.sans.length} max={g.sans.length} {go} /></div>
       {#if viewPly !== undefined}
         <div class="looking-row">
           <span class="looking label">{viewPly === 0 ? 'Start position' : `After ${Math.ceil(viewPly / 2)}${viewPly % 2 ? '.' : '…'} ${g.sans[viewPly - 1]}`}</span>
@@ -557,13 +558,30 @@
   }
   @media (max-width: 767px) {
     .game {
-      gap: 14px;
+      gap: 10px;
     }
     .side {
       max-width: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    /* Phones: the controls right under the board, the move list after them. */
+    .actions {
+      order: -1;
+    }
+    .moves-card {
+      display: flex;
+      flex-direction: column;
+    }
+    .nav-wrap {
+      order: -1;
     }
     .moves-card :global(.moves) {
-      height: 180px;
+      height: 132px;
+    }
+    .board-col {
+      gap: 6px;
     }
   }
 </style>

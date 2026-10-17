@@ -91,5 +91,5 @@
   </p>
 
   <h2>12. Contact</h2>
-  <p>Questions, complaints or requests: write to us from <a href="/help">Help &amp; support</a>.</p>
+  <p>Questions, complaints or requests: write to us from <a href="/help">Help &amp; support</a> or at <a href="mailto:support@chesscastles.com">support@chesscastles.com</a>.</p>
 </LegalPage>

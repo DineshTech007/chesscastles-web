@@ -20,7 +20,7 @@
   };
   const title = $derived.by(() => {
     if (!hit) return '';
-    if (hit.gate) return `${GATE_INFO[hit.gate]} comes with ${PLAN_INFO[config.gates[hit.gate]].name}`;
+    if (hit.gate) return `${GATE_INFO[hit.gate]} comes with the ${PLAN_INFO[config.gates[hit.gate]].name} plan`;
     const f = FEATURE_INFO[hit.feature!];
     const per = hit.per === 'day' ? 'today’s' : hit.per === 'week' ? 'this week’s' : hit.per === 'month' ? 'this month’s' : 'your';
     return `You’ve used ${per} ${hit.limit === 1 ? `free ${f.one}` : `${hit.limit} free ${f.many}`}`;
@@ -52,7 +52,7 @@
         <p>Sign in free with Lichess to keep your progress and see every plan.</p>
       {/if}
       <div class="btns">
-        <button class="btn primary" onclick={() => (close(), startSignIn())}>Sign in with Lichess</button>
+        <button class="btn primary" onclick={() => (close(), startSignIn())}>Sign in</button>
         <button class="btn" onclick={() => (close(), goto('/plans'))}>See plans</button>
       </div>
     {:else}

@@ -18,6 +18,8 @@ describe('engine output', () => {
     expect(whiteChances({ cp: 300 })).toBeGreaterThan(0.7);
     expect(whiteChances({ mate: -2 })).toBe(0);
     expect(evalLabel({ cp: 34 })).toBe('+0.3');
+    expect(evalLabel({ cp: -4 })).toBe('0.0');
+    expect(evalLabel({ cp: -46 })).toBe('-0.5');
     expect(evalLabel({ mate: -3 })).toBe('#-3');
   });
 });

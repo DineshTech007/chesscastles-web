@@ -41,14 +41,14 @@ export const SPEED_LABEL: Record<KfideSpeed, string> = { standard: 'Classical', 
 
 /**
  * The speed of a time control like "15+10" (minutes + seconds a move), from
- * the time for a 60-move game, as FIDE does: under 10 minutes is Blitz,
+ * the time for a 60-move game, as FIDE does: 10 minutes or less is Blitz,
  * under 60 Rapid, 60 or more Standard. No clock counts as Rapid.
  */
 export function speedOf(timeControl: string): KfideSpeed {
   const m = /^(\d+(?:\.\d+)?)\+(\d+)$/.exec(timeControl.trim());
   if (!m) return 'rapid';
   const total = Number(m[1]) + Number(m[2]);
-  return total < 10 ? 'blitz' : total < 60 ? 'rapid' : 'standard';
+  return total <= 10 ? 'blitz' : total < 60 ? 'rapid' : 'standard';
 }
 
 export function computeKfide(games: SavedGame[], start = KFIDE_START, speed?: KfideSpeed): Kfide {
@@ -84,5 +84,5 @@ export function computeKfideAll(games: SavedGame[], start = KFIDE_START): KfideA
   return { ...all, main };
 }
 
-/** "1612" or "1500?" (provisional). */
-export const kfideText = (k: Kfide) => `${k.rating}${k.provisional ? '?' : ''}`;
+/** "1612", or "1500 (new)" while it is provisional (fewer than KFIDE_PROVISIONAL games). */
+export const kfideText = (k: Kfide) => `${k.rating}${k.provisional ? ' (new)' : ''}`;

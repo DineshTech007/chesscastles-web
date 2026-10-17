@@ -47,13 +47,13 @@
 
   <h2>5. How to ask for a refund</h2>
   <ul>
-    <li>Write to us from the <a href="/help">Help page</a> with your username, the date and amount of the payment, and its transaction ID.</li>
+    <li>Write to us from the <a href="/help">Help page</a> (choose “A payment or refund”) or at <a href="mailto:support@chesscastles.com">support@chesscastles.com</a>, with your username, the date and amount of the payment, and its transaction ID.</li>
     <li>We reply within 2 working days. Approved refunds go back to the way you paid within 5 to 7 working days; your bank may take a few more days to show it.</li>
   </ul>
 
   <h2>6. Complaints</h2>
   <p>
-    If you are not happy with how a payment or refund was handled, write to us from the <a href="/help">Help page</a>. We
+    If you are not happy with how a payment or refund was handled, write to <a href="mailto:support@chesscastles.com">support@chesscastles.com</a>. We
     acknowledge complaints within 48 hours and aim to resolve them within one month. The contact details of our grievance
     officer will be shown here before paid plans go on sale.
   </p>

@@ -73,7 +73,7 @@
 </header>
 
 {#if $session.status !== 'in'}
-  <div class="card gate"><button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button></div>
+  <div class="card gate"><button class="btn primary" onclick={() => startSignIn()}>Sign in</button></div>
 {:else if !allowed && !data}
   <div class="card gate">
     <PlanBadge plan="queen" size={56} />

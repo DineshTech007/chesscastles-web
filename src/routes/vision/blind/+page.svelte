@@ -164,6 +164,8 @@
     void v;
     return p ? p.moves.map((_, i) => p!.san(i)) : [];
   });
+  /** Touch screens use the on-screen keys below, not the phone's keyboard (which would cover them). */
+  const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 </script>
 
 <svelte:head><title>Blindfold puzzles · Vision Gym · Chess Castles</title></svelte:head>
@@ -203,7 +205,7 @@
 
         <div class="moves">
           {#if easier}
-            <p><span class="label">Their last move:</span> <strong class="num">{view.moves[0]}</strong> (already on the board above)</p>
+            <p><span class="label">Their last move:</span> <strong class="num">{view.moves[0]}</strong> (already played)</p>
           {:else}
             <p><span class="label">They play:</span> <strong class="num">{view.moves[0]}</strong>. Move it in your head.</p>
           {/if}
@@ -216,7 +218,7 @@
           <form class="answer" onsubmit={(e) => (e.preventDefault(), submit())}>
             <label for="vision-move" class="title">{view.toMove === 'white' ? 'White' : 'Black'} to move: your move?</label>
             <div class="row">
-              <input bind:this={input} id="vision-move" bind:value={typed} autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. Qxh7+" />
+              <input bind:this={input} id="vision-move" bind:value={typed} autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. Qxh7+" inputmode={touch ? 'none' : undefined} />
               <button class="btn primary" type="submit">Play</button>
             </div>
           </form>

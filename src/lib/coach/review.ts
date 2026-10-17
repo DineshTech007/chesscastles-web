@@ -50,7 +50,13 @@ export interface GameReview {
 const TACTICAL = new Set(['capture', 'pins', 'attacks', 'fork', 'check', 'mate']);
 
 /** Analyses the student's moves (onProgress: 0..1). */
-export async function analyseGame(g: SavedGame, onProgress: (p: number) => void, depth = 11, stopped: () => boolean = () => false): Promise<GameReview> {
+/**
+ * Reviews a game: every position at `depth`, then the positions around each
+ * move about to be called brilliant, an only move, a mistake or a blunder
+ * again at `depth + 5`, so the labels people notice are not shallow guesses
+ * (and the same game gets the same labels each time).
+ */
+export async function analyseGame(g: SavedGame, onProgress: (p: number) => void, depth = 13, stopped: () => boolean = () => false): Promise<GameReview> {
   const positions: Chess[] = [positionFromFen(g.startFen)];
   const moves: NormalMove[] = [];
   for (const uci of g.uci) {
@@ -66,9 +72,29 @@ export async function analyseGame(g: SavedGame, onProgress: (p: number) => void,
     if (stopped()) throw new Error('stopped');
     // The second-best line tells an only move from an easy one.
     evals.push(positions[i].isEnd() ? undefined : await engine.evaluate(fenOf(positions[i]), depth, 2));
-    onProgress((i + 1) / positions.length);
+    onProgress((0.8 * (i + 1)) / positions.length);
   }
   const opening = await findOpening(positions[0], moves);
+  // The second look: the positions around every strong label, deeper.
+  const recheck = new Set<number>();
+  for (let i = 0; i < moves.length; i++) {
+    const before = evals[i];
+    const after = evals[i + 1];
+    if (!before || !after) continue;
+    const color = positions[i].turn;
+    const mine = (x: EngineInfo) => (color === 'white' ? whiteChances(x) : 1 - whiteChances(x));
+    const grade = gradeMove(before, after, color, moves[i], positions[i]);
+    const drop = Math.max(0, mine(before) - mine(after));
+    const cls = classify({ pos: positions[i], move: moves[i], prev: i > 0 ? { pos: positions[i - 1], move: moves[i - 1] } : undefined, before, after, grade, drop, color, book: !!opening && i < opening.plies });
+    if (cls === 'brilliant' || cls === 'only' || cls === 'mistake' || cls === 'blunder') recheck.add(i).add(i + 1);
+  }
+  const deeper = [...recheck].filter((i) => !positions[i].isEnd());
+  for (let k = 0; k < deeper.length; k++) {
+    if (stopped()) throw new Error('stopped');
+    evals[deeper[k]] = await engine.evaluate(fenOf(positions[deeper[k]]), depth + 5, 2);
+    onProgress(0.8 + (0.2 * (k + 1)) / deeper.length);
+  }
+  onProgress(1);
   const counts: Record<Grade, number> = { best: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
   const emptyClasses = (): Record<MoveClass, number> => ({ brilliant: 0, only: 0, best: 0, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 0 });
   const acc: Record<Color, { sum: number; n: number; classes: Record<MoveClass, number> }> = {

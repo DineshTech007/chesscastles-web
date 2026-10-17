@@ -1,0 +1,13 @@
+# Chess Castles: everything public may be indexed; private pages are not useful in search.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /auth/
+Disallow: /profile
+Disallow: /friends
+Disallow: /games
+Disallow: /students
+Disallow: /play/online/
+Disallow: /g/
+
+Sitemap: https://chesscastles.com/sitemap.xml

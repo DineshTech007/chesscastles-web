@@ -65,7 +65,7 @@
   const mine = $derived(shown.find((r) => r.me));
   const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '');
   const EMPTY: Record<BoardKind, [string, string, string]> = {
-    kfide: ['No CC Ratings at this speed yet.', 'Play a FIDE-rated player', '/play?mode=fide'],
+    kfide: ['No CC Ratings at this speed yet.', 'Play a FIDE-rated opponent', '/play?mode=fide'],
     lichess: ['No Chess Castles player has a Lichess rating at this speed yet.', 'Play online', '/play?mode=online'],
     puzzles: ['No puzzle ratings yet.', 'Solve puzzles', '/puzzles'],
     vision: ['No one on this board yet.', 'Train in the Vision Gym', '/vision'],
@@ -110,7 +110,7 @@
     <div class="card empty">
       <p>This leaderboard is for Chess Castles players. Sign in to see where you stand.</p>
       <div class="row">
-        <button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button>
+        <button class="btn primary" onclick={() => startSignIn()}>Sign in</button>
         <button class="btn" onclick={() => pick('vision')}>See the Vision Gym board</button>
       </div>
     </div>
@@ -168,6 +168,9 @@
     overflow-x: auto;
     border-bottom: 1px solid var(--border);
     scrollbar-width: none;
+    /* A fade at the right edge shows there are more tabs to swipe to. */
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+    padding-right: 24px;
   }
   .tabs button {
     flex: none;

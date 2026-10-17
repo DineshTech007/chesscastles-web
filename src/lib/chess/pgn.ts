@@ -15,6 +15,8 @@ export interface PgnGame {
   headers: Map<string, string>;
   start: Chess;
   plies: PgnPly[];
+  /** The first move that is not legal in the game (reading stopped there). */
+  illegal?: string;
 }
 
 /** Reads the main line of each game in a PGN text (stops at an illegal move). */
@@ -27,15 +29,19 @@ export function readPgn(text: string): PgnGame[] {
     const start = startResult.value as Chess;
     const pos = start.clone();
     const plies: PgnPly[] = [];
+    let illegal: string | undefined;
     for (const node of g.moves.mainline()) {
       const m = parseSan(pos, node.san);
-      if (!m || !('from' in m)) break;
+      if (!m || !('from' in m)) {
+        illegal = node.san;
+        break;
+      }
       const san = node.san;
       pos.play(m);
       const clock = node.comments?.map(parseComment).find((c) => c.clock !== undefined)?.clock;
       plies.push({ move: m, san, after: pos.clone(), clock: clock !== undefined ? clock * 1000 : undefined });
     }
-    out.push({ headers: g.headers, start, plies });
+    out.push({ headers: g.headers, start, plies, illegal });
   }
   return out;
 }

@@ -190,4 +190,27 @@
     color: var(--text);
     font-size: 13px;
   }
+  /* Phones: a compact bar, so the board and the controls fit on one screen. */
+  @media (max-width: 767px) {
+    .bar {
+      padding: 5px 8px;
+      gap: 8px;
+    }
+    .avatar {
+      width: 34px;
+      height: 34px;
+      font-size: 13px;
+    }
+    .name {
+      font-size: 15.5px;
+    }
+    .sub {
+      font-size: 12.5px;
+    }
+    .clock {
+      font-size: 22px;
+      padding: 3px 10px;
+      min-width: 0;
+    }
+  }
 </style>

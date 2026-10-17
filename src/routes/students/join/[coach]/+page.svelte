@@ -36,7 +36,7 @@
   <h1 class="title">Join your coach</h1>
   {#if $session.status !== 'in'}
     <p>Sign in to join your coach on Chess Castles.</p>
-    <button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button>
+    <button class="btn primary" onclick={() => startSignIn()}>Sign in</button>
   {:else if error}
     <p class="error">{error}</p>
     <a class="btn" href="/">Home</a>

@@ -85,10 +85,11 @@ const puzzles = (theme: string, n: number, why: string): Task => ({
   counts: `Theme puzzle: ${theme}`,
 });
 
+/** Puzzle themes in plain words (as they read in a sentence: "10 hanging piece puzzles"). */
 export const THEME_NAMES: Record<string, string> = {
-  fork: 'fork', pin: 'pin', skewer: 'skewer', hangingPiece: 'hanging-piece', mateIn1: 'mate-in-1', mateIn2: 'mate-in-2', mateIn3: 'mate-in-3',
-  backRankMate: 'back-rank', opening: 'opening', rookEndgame: 'rook-endgame', pawnEndgame: 'pawn-endgame', crushing: 'finish-it-off',
-  short: 'quick', endgame: 'endgame', middlegame: 'middlegame', discoveredAttack: 'discovered-attack', defensiveMove: 'defence', sacrifice: 'sacrifice',
+  fork: 'fork', pin: 'pin', skewer: 'skewer', hangingPiece: 'hanging piece', mateIn1: 'mate in 1', mateIn2: 'mate in 2', mateIn3: 'mate in 3',
+  backRankMate: 'back-rank mate', opening: 'opening', rookEndgame: 'rook endgame', pawnEndgame: 'pawn endgame', crushing: 'winning blow',
+  short: 'quick', endgame: 'endgame', middlegame: 'middlegame', discoveredAttack: 'discovered attack', defensiveMove: 'defence', sacrifice: 'sacrifice',
 };
 
 const lesson = (id: string, why: string): Task | undefined => {
@@ -170,7 +171,7 @@ export function buildWeeklyPlan(r: Report, source: string): WeeklyPlan {
     const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + d, 12);
     const tasks: Task[] = [];
     if (d === 6 || !sections.length) {
-      tasks.push({ id: 'g-games', kind: 'games', title: 'Play 2 games against a FIDE-rated player', detail: 'At your level, then come back and analyse your games again to see what changed.', href: '/play', target: 2, minutes: 40, counts: 'Game' });
+      tasks.push({ id: 'g-games', kind: 'games', title: 'Play 2 games against a FIDE-rated opponent', detail: 'At your level, then come back and analyse your games again to see what changed.', href: '/play', target: 2, minutes: 40, counts: 'Game' });
     } else {
       // The costliest weakness gets days 1, 3 and 5; the others share the rest.
       const s = d % 2 === 0 ? sections[0] : sections[(Math.floor(d / 2) + 1) % sections.length];

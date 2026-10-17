@@ -31,10 +31,10 @@ export type Note =
   | { k: 'wins'; piece: Role }
   | { k: 'promotes' };
 
-const T: Record<Note['k'], L10n> = {
+const T: Record<Note['k'] | 'forkBoth', L10n> = {
   develop: { en: 'It develops the {piece} into the game.', hi: 'इससे {piece} game में आ जाता है (development)।', mr: 'यामुळे {piece} game मध्ये येतो (development).' },
   occupyCentre: { en: 'It takes a centre square ({squares}).', hi: 'यह centre के square ({squares}) पर कब्ज़ा करता है।', mr: 'हे centre चा square ({squares}) ताब्यात घेते.' },
-  controlCentre: { en: 'It controls the centre squares {squares}.', hi: 'यह centre के squares {squares} को control करता है।', mr: 'हे centre चे squares {squares} control करते.' },
+  controlCentre: { en: 'It controls the centre ({squares}).', hi: 'यह centre के squares {squares} को control करता है।', mr: 'हे centre चे squares {squares} control करते.' },
   capture: { en: 'It captures the {piece} on {square}.', hi: 'यह {square} पर {piece} को capture करता है।', mr: 'हे {square} वरचा {piece} capture करते.' },
   opensLine: { en: 'It opens a line for the {piece} on {square}.', hi: 'इससे {square} वाले {piece} के लिए रास्ता खुलता है।', mr: 'यामुळे {square} वरच्या {piece} साठी रस्ता मोकळा होतो.' },
   space: { en: 'It gains space.', hi: 'इससे ज़्यादा space मिलता है।', mr: 'यामुळे जास्त space मिळते.' },
@@ -46,6 +46,7 @@ const T: Record<Note['k'], L10n> = {
   pins: { en: 'It pins the {piece} on {square}.', hi: 'यह {square} वाले {piece} को pin करता है।', mr: 'हे {square} वरच्या {piece} ला pin करते.' },
   attacks: { en: 'It attacks the {piece} on {square}.', hi: 'यह {square} वाले {piece} पर attack करता है।', mr: 'हे {square} वरच्या {piece} वर attack करते.' },
   fork: { en: 'The {piece} on {square} attacks the {a} and the {b} at the same time: a fork!', hi: '{square} वाला {piece} एक साथ {a} और {b} पर attack करता है: fork!', mr: '{square} वरचा {piece} एकाच वेळी {a} आणि {b} वर attack करतो: fork!' },
+  forkBoth: { en: 'The {piece} on {square} attacks both {a}s at the same time: a fork!', hi: '{square} वाला {piece} एक साथ दोनों {a} पर attack करता है: fork!', mr: '{square} वरचा {piece} एकाच वेळी दोन्ही {a} वर attack करतो: fork!' },
   check: { en: 'It gives check.', hi: 'यह check देता है।', mr: 'हे check देते.' },
   mate: { en: 'Checkmate!', hi: 'Checkmate!', mr: 'Checkmate!' },
   popular: { en: 'Strong players (2000+) chose this move in {pct}% of {games} games.', hi: 'Strong players (2000+) ने {games} games में से {pct}% में यही move खेली।', mr: 'Strong players (2000+) नी {games} games पैकी {pct}% मध्ये हीच move खेळली.' },
@@ -54,7 +55,9 @@ const T: Record<Note['k'], L10n> = {
 };
 
 export function noteText(n: Note, lang: Lang): string {
-  return fill(T[n.k][lang], n as unknown as Record<string, string | number>);
+  // Two pieces of the same kind: "attacks both rooks", not "the rook and the rook".
+  const key = n.k === 'fork' && n.a === n.b ? 'forkBoth' : n.k;
+  return fill(T[key][lang], n as unknown as Record<string, string | number>);
 }
 
 export const notesText = (notes: Note[], lang: Lang) => notes.map((n) => noteText(n, lang)).join(' ');

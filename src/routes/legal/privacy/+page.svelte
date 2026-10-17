@@ -65,7 +65,7 @@
     <li>name someone to use these rights for you if you cannot;</li>
     <li>complain to our grievance contact, and then to the Data Protection Board of India.</li>
   </ul>
-  <p>To use any of these rights, write to us from <a href="/help">Help &amp; support</a> (choose "My account or data").</p>
+  <p>To use any of these rights, write to us from <a href="/help">Help &amp; support</a> (choose "My account or data") or at <a href="mailto:support@chesscastles.com">support@chesscastles.com</a>.</p>
 
   <h2>7. Security</h2>
   <p>

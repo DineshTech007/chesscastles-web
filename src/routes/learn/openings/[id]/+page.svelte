@@ -269,7 +269,7 @@
       <a class="back" href="/learn"><Icon name="back" size={16} />Learn</a>
       <h1 id="build-h" class="display">{opening.name}</h1>
       <p class="label sans">{opening.sans}</p>
-      <p class="intro">{opening.blurb} Chess Castles builds this opening from the FIDE games database: at your turns the move strong players chose most, at your opponent's turns their popular replies.</p>
+      <p class="intro">{opening.blurb} Chess Castles builds this opening from 5.4 million tournament games: at your turns the move strong players chose most, at your opponent's turns their popular replies.</p>
 
       <div class="group">
         <h2 class="title h">You play</h2>

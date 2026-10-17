@@ -19,4 +19,10 @@ describe('the help bot', () => {
     expect(findAnswers('qwerty zzz')).toEqual([]);
     expect(findAnswers('')).toEqual([]);
   });
+  it('answers parents, in English, Hindi and Marathi', () => {
+    expect(findAnswers('Is it safe for my child?')[0]?.id).toBe('safe');
+    expect(findAnswers('माझ्या मुलगी साठी सुरक्षित आहे का?')[0]?.id).toBe('safe');
+    expect(findAnswers('पैसे वापस कैसे मिलेंगे')[0]?.id).toBe('refund');
+    expect(findAnswers('how do I get a refund')[0]?.id).toBe('refund');
+  });
 });

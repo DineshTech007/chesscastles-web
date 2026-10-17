@@ -746,6 +746,12 @@
   .listen.on {
     border-color: var(--gold);
   }
+  /* Phones: above the tab bar at the bottom of the screen. */
+  @media (max-width: 767px) {
+    .listen {
+      bottom: calc(84px + env(safe-area-inset-bottom));
+    }
+  }
   .play {
     width: 46px;
     height: 46px;

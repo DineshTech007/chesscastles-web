@@ -91,9 +91,10 @@
 
   <section class="card" id="contact">
     <h2 class="title">Write to the team</h2>
+    <p class="label">Or email <a href="mailto:support@chesscastles.com">support@chesscastles.com</a>.</p>
     {#if $session.status !== 'in'}
       <p>Sign in to send a message, so we can answer you.</p>
-      <button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button>
+      <button class="btn primary" onclick={() => startSignIn()}>Sign in</button>
     {:else}
       <form class="contact" onsubmit={send}>
         <label class="field">
@@ -119,6 +120,7 @@
   </section>
 
   <section class="card links">
+    <a href="/parents">For parents</a>
     <a href="/legal/terms">Terms of use</a>
     <a href="/legal/privacy">Privacy policy</a>
     <a href="/legal/refunds">Refund policy</a>

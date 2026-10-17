@@ -9,9 +9,11 @@ describe('FIDE tournaments', () => {
     const rows: FideRow[] = Array.from({ length: 200 }, (_, i) => [i + 1, `Name${i}, P`, i % 20 ? '' : 'FM', 'M', 1000 + i * 10, 0, 0, 2000, i % 7 === 0 ? 1 : 0]);
     const got = pickOpponents(rows, 1600, 8, 'rapid', 'IND', rng(3));
     expect(got).toHaveLength(8);
-    expect(new Set(got.map((p) => p.fideId)).size).toBe(8);
+    expect(new Set(got.map((p) => p.id)).size).toBe(8);
     expect(got.every((p) => Math.abs(p.rating - 1600) <= 150)).toBe(true);
-    expect(got[0].name).toBe(`P Name${got[0].fideId! - 1}`);
+    // Computer opponents: invented names, never a real player's name, title or FIDE ID.
+    expect(got.every((p) => p.bot && !p.fideId && !p.title && !p.name.startsWith('P Name'))).toBe(true);
+    expect(new Set(got.map((p) => p.name)).size).toBe(8);
   });
 
   it('round robin: everyone meets everyone once', () => {

@@ -146,7 +146,7 @@
         <a class="back" href={back} aria-label={backLabel}><Icon name="back" size={18} /></a>
         <div class="titles">
           <h1 class="title">{lesson.title}</h1>
-          <span class="label">{lesson.section} · {lesson.level}</span>
+          <span class="label">{lesson.section} · {lesson.level.charAt(0).toUpperCase() + lesson.level.slice(1)}</span>
         </div>
         <select value={lang} onchange={(e) => setLang((e.currentTarget as HTMLSelectElement).value as Lang)} aria-label="Guru speaks">
           {#each LANGS as l (l.id)}<option value={l.id}>{l.name}</option>{/each}
@@ -176,7 +176,7 @@
       {#if slide?.game}
         <a class="game-ref" href={gameHref}>
           <Icon name="book" size={16} />
-          <span>{slide.game.white} – {slide.game.black}, {slide.game.event}{slide.game.year ? ` ${slide.game.year}` : ''}</span>
+          <span>{slide.game.white} – {slide.game.black}, {slide.game.event}{slide.game.year && !slide.game.event.includes(String(slide.game.year)) ? ` ${slide.game.year}` : ''}</span>
           {#if slide.game.legend && LEGENDS[slide.game.legend]}<span class="pill gold">{LEGENDS[slide.game.legend].name}</span>{/if}
         </a>
       {/if}
@@ -262,7 +262,6 @@
   }
   .titles .label {
     font-size: 12.5px;
-    text-transform: capitalize;
   }
   select {
     height: 34px;

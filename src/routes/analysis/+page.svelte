@@ -12,7 +12,7 @@
   import MoveNav from '$lib/components/MoveNav.svelte';
   import BoardEditor from '$lib/components/BoardEditor.svelte';
   import { CloudBook } from '$lib/book/book';
-  import { destsOf, fenOf, keyOf, moveFromKeys, moveToUci, positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
+  import { START_FEN, destsOf, fenOf, keyOf, moveFromKeys, moveToUci, positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
   import { engine, evalLabel, whiteChances, type EngineInfo } from '$lib/engine/stockfish';
   import { myGames, type SavedGame } from '$lib/stores/myGames';
   import { POINTS, study } from '$lib/study/progress';
@@ -70,6 +70,8 @@
     path = [];
     cursor = 0;
     tv++;
+    headers = new Map();
+    importNote = '';
   }
 
   /** Goes to a move anywhere in the tree (and on along its line). */
@@ -230,10 +232,15 @@
   let importText = $state('');
   let importError = $state('');
   let importBusy = $state(false);
+  /** After an import that stopped early: where and why. */
+  let importNote = $state('');
+  /** The tags of the imported game (Event, players, result…), kept for Copy PGN. */
+  let headers = $state(new Map<string, string>());
 
   async function doImport() {
     track('feature', 'analysis_import');
     importError = '';
+    importNote = '';
     let text = importText.trim();
     if (!text) return;
     importBusy = true;
@@ -247,14 +254,30 @@
       }
       // A position (FEN).
       if (/^[pnbrqkPNBRQK1-8]+(\/[pnbrqkPNBRQK1-8]+){7}(\s|$)/.test(text)) {
-        reset(positionFromFen(text));
+        let pos: Chess;
+        try {
+          pos = positionFromFen(text);
+        } catch {
+          throw new Error('That position (FEN) is not possible: check the kings, the side to move and the castling rights.');
+        }
+        reset(pos);
         title = 'Position';
+        headers = new Map();
       } else {
         const [g] = readPgn(text);
-        if (!g || (!g.plies.length && !/\[FEN /.test(text))) throw new Error("That doesn't look like a PGN, a FEN or a Lichess game link.");
+        if (!g && /\[FEN /.test(text)) throw new Error('The starting position in this PGN (its FEN) is not possible.');
+        if (!g || (!g.plies.length && !g.illegal && !/\[FEN /.test(text))) throw new Error("That doesn't look like a PGN, a FEN or a Lichess game link.");
+        if (g.illegal && !g.plies.length) throw new Error(`The first move, ${g.illegal}, is not legal in this position.`);
         load(g.start, g.plies.map((p) => moveToUci(p.move)));
         title = `${g.headers.get('White') ?? 'White'} – ${g.headers.get('Black') ?? 'Black'}`;
+        headers = g.headers;
         cursor = 0;
+        if (g.illegal) {
+          const n = g.plies.length;
+          const at = g.plies[n - 1].after;
+          const no = `${at.fullmoves}${at.turn === 'white' ? '.' : '...'}`;
+          importNote = `Loaded ${n} moves. Move ${no} ${g.illegal} is not legal, so the game stops there.`;
+        }
       }
       importing = false;
       importText = '';
@@ -299,7 +322,7 @@
       const result = await analyseGame(
         { id: 'analysis', playedAt: 0, kind: 'computer', white: 'White', black: 'Black', userSide: orientation, result: '*', reason: '', timeControl: '', startFen: fenOf(start), uci: ucis },
         (p) => run === reviewRun && (reviewing = p),
-        11,
+        13,
         () => run !== reviewRun,
       );
       if (run === reviewRun) review = { ucis, result };
@@ -460,7 +483,29 @@
       }
       return parts.join(' ');
     };
-    return lineText(root.children[0], true);
+    const moves = lineText(root.children[0], true);
+    // The tags first (the Seven Tag Roster, then the rest), and the result at the end.
+    const tags = new Map(headers);
+    const [w, b] = title.includes(' – ') ? title.split(' – ') : ['?', '?'];
+    const result = tags.get('Result') ?? '*';
+    const roster: [string, string][] = [
+      ['Event', tags.get('Event') ?? 'Analysis'],
+      ['Site', tags.get('Site') ?? 'chesscastles.com'],
+      ['Date', tags.get('Date') ?? new Date().toISOString().slice(0, 10).replaceAll('-', '.')],
+      ['Round', tags.get('Round') ?? '-'],
+      ['White', tags.get('White') ?? w],
+      ['Black', tags.get('Black') ?? b],
+      ['Result', result],
+    ];
+    for (const [k] of roster) tags.delete(k);
+    const fen = fenOf(start);
+    if (fen !== START_FEN) {
+      tags.set('SetUp', '1');
+      tags.set('FEN', fen);
+    }
+    const quote = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const head = [...roster, ...tags].map(([k, v]) => `[${k} "${quote(v)}"]`).join('\n');
+    return `${head}\n\n${moves ? `${moves} ` : ''}${result}\n`;
   }
 
   async function copy(what: 'fen' | 'pgn') {
@@ -533,7 +578,7 @@
         <div class="engine">
           <label class="toggle">
             <input type="checkbox" bind:checked={engineOn} />
-            <span>Stockfish 19 {engine.error ? `· ${engine.error}` : ''}</span>
+            <span>Stockfish 19 lite {engine.error ? `· ${engine.error}` : ''}</span>
           </label>
           {#if engineOn}
             {#if pos.isCheckmate()}
@@ -599,13 +644,14 @@
           <button class="btn ghost small-btn" onclick={deleteVariation}>Delete variation</button>
         </div>
       {/if}
+      {#if importNote}<p class="err note" role="status">{importNote}</p>{/if}
       <MoveTree {root} {current} version={tv} badges={badgeMap} onselect={select} />
       <MoveNav ply={cursor} max={line.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
       {#if importing}
         <div class="import">
           <label for="import-text" class="label">Paste a game (PGN), a position (FEN), or a Lichess game link. For chess.com, use Share → PGN and paste it here.</label>
           <textarea id="import-text" bind:value={importText} rows="5" placeholder={'[Event "…"]\n1. e4 e5 2. Nf3 Nc6 …'}></textarea>
-          {#if importError}<p class="err">{importError}</p>{/if}
+          {#if importError}<p class="err" role="alert">{importError}</p>{/if}
           <div class="import-btns">
             <button class="btn primary" disabled={importBusy || !importText.trim()} onclick={doImport}>{importBusy ? 'Importing…' : 'Import'}</button>
             <button class="btn ghost" onclick={() => ((importing = false), (importError = ''))}>Cancel</button>
@@ -653,6 +699,11 @@
     border-radius: 8px;
     padding: 8px 10px;
     resize: vertical;
+  }
+  .note {
+    margin: 0 0 8px;
+    color: var(--warn, var(--loss));
+    font-size: 14px;
   }
   .import .err {
     margin: 0;
@@ -994,17 +1045,20 @@
       flex-basis: 300px;
     }
   }
-  /* Phones and narrow windows: the moves and their buttons come right under the board. */
+  /* Phones and narrow windows: the engine and the database right under the board
+     (their own scroll), then the moves and their buttons. */
   @media (max-width: 899px) {
     .side {
       max-width: none;
       flex-basis: 100%;
     }
-    .moves-card {
-      order: -1;
+    .info-card {
+      max-height: 300px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
     .moves-card :global(.tree) {
-      max-height: 210px;
+      max-height: 180px;
     }
   }
   @media (max-width: 767px) {

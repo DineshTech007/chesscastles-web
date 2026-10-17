@@ -10,7 +10,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import { arena, type ArenaInfo } from '$lib/lichess';
   import * as api from '$lib/lichessBoard';
-  import { lichessToken, session, startSignIn } from '$lib/auth';
+  import { lichessToken, session, startLichessSignIn } from '$lib/auth';
 
   const id = page.params.id!;
   let t = $state<ArenaInfo | undefined>();
@@ -56,7 +56,7 @@
 
   async function join() {
     const token = lichessToken()?.token;
-    if (!token) return startSignIn();
+    if (!token) return startLichessSignIn($session.status === 'in');
     busy = true;
     joinError = '';
     try {
@@ -121,12 +121,12 @@
       <section class="card action">
         {#if !t.playable}
           <p>Watch the standings and the top game live.</p>
-        {:else if $session.status !== 'in'}
-          <p>Sign in to play in this arena.</p>
-          <button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button>
+        {:else if $session.status !== 'in' || !lichessToken()}
+          <p>{$session.status === 'in' ? 'Connect your free Lichess account to play in this arena.' : 'Sign in to play in this arena.'}</p>
+          <button class="btn primary" onclick={() => startLichessSignIn($session.status === 'in')}>{$session.status === 'in' ? 'Connect your Lichess account' : 'Sign in with Lichess'}</button>
         {:else if needsPermission}
           <p>To join tournaments, Chess Castles needs one more permission from Lichess. Sign in again and allow “Create, update, and join tournaments”.</p>
-          <button class="btn primary" onclick={() => startSignIn()}>Sign in again</button>
+          <button class="btn primary" onclick={() => startLichessSignIn($session.status === 'in')}>Sign in again</button>
         {:else if joined}
           <p class="ok"><span class="pulse"></span><strong>You're in.</strong> Keep this page open: when Lichess pairs you, your game opens here. After each game, come back for the next one.</p>
           <button class="btn" onclick={leave}>Pause (leave the arena)</button>

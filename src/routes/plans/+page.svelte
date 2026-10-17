@@ -55,6 +55,18 @@
   const gateCell = (g: Gate, p: Plan) => RANK[p] >= RANK[config.gates[g]];
   const quotaCell = (q: Quota, p: Plan) => config.quotas[q][p].toLocaleString();
 
+  /** The comparison as rows (the phone's cards). */
+  const compareRows = $derived.by(() => {
+    const rows: { label: string; values: Record<Plan, string | boolean> }[] = [];
+    const all = (f: (p: Plan) => string | boolean) => Object.fromEntries(PLANS.map((p) => [p, f(p)])) as Record<Plan, string | boolean>;
+    for (const f of FEATURES) rows.push({ label: FEATURE_INFO[f].label, values: all((p) => limitText(config.limits[f][p])) });
+    for (const q of Object.keys(config.quotas) as Quota[]) rows.push({ label: QUOTA_INFO[q], values: all((p) => quotaCell(q, p)) });
+    for (const g of Object.keys(config.gates) as Gate[]) rows.push({ label: GATE_INFO[g], values: all((p) => gateCell(g, p)) });
+    rows.push({ label: 'Analysis board with engine', values: all(() => 'Unlimited') });
+    rows.push({ label: 'Online play, lobby and arenas', values: all(() => 'Free') });
+    return rows;
+  });
+
   function interest(p: Plan) {
     interested = p;
     track('interest', p);
@@ -164,6 +176,22 @@
       </tbody>
     </table>
   </div>
+  <!-- Phones: one small card per feature (the table's plan columns don't fit). -->
+  <ul class="cmp-cards">
+    {#each compareRows as r (r.label)}
+      <li>
+        <strong>{r.label}</strong>
+        <div class="cmp-grid">
+          {#each PLANS as p (p)}
+            <span class="cmp-cell" class:mine={$session.status === 'in' && $currentPlan === p}>
+              <span class="label"><PlanBadge plan={p} size={14} /> {PLAN_INFO[p].name}</span>
+              <span class="v">{r.values[p] === true ? '✓' : r.values[p] === false ? '—' : r.values[p]}</span>
+            </span>
+          {/each}
+        </div>
+      </li>
+    {/each}
+  </ul>
   <p class="label fine">{FIDE_DISCLAIMER}</p>
 </section>
 
@@ -346,6 +374,55 @@
   .invite h2,
   .faq h2 {
     margin: 0 0 12px;
+  }
+  .cmp-cards {
+    display: none;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cmp-cards li {
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--raised);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cmp-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .cmp-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: var(--card);
+  }
+  .cmp-cell.mine {
+    box-shadow: 0 0 0 2px var(--accent) inset;
+  }
+  .cmp-cell .label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+  }
+  .cmp-cell .v {
+    font-weight: 700;
+  }
+  @media (max-width: 640px) {
+    .scroll {
+      display: none;
+    }
+    .cmp-cards {
+      display: flex;
+    }
   }
   .scroll {
     overflow-x: auto;

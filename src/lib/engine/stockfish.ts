@@ -251,8 +251,9 @@ export function whiteChances(i: Pick<EngineInfo, 'cp' | 'mate'>): number {
 
 export function evalLabel(i: Pick<EngineInfo, 'cp' | 'mate'>): string {
   if (i.mate !== undefined) return `#${i.mate}`;
-  const p = (i.cp ?? 0) / 100;
-  return `${p > 0 ? '+' : ''}${p.toFixed(1)}`;
+  const p = Math.round((i.cp ?? 0) / 10) / 10;
+  // A tiny edge either way is shown as 0.0, never -0.0.
+  return p === 0 ? '0.0' : `${p > 0 ? '+' : ''}${p.toFixed(1)}`;
 }
 
 export const engine = new Stockfish();

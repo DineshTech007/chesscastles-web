@@ -6,7 +6,7 @@ export type GameKind = 'computer' | 'fide' | 'lichess';
 
 export const KIND_LABEL: Record<GameKind, string> = {
   computer: 'Computer',
-  fide: 'FIDE-rated player',
+  fide: 'FIDE-rated opponent',
   lichess: 'Lichess',
 };
 

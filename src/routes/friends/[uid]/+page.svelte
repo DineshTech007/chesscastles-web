@@ -73,7 +73,7 @@
 <div class="page">
   <a class="back" href="/friends"><Icon name="back" size={16} />Friends</a>
   {#if $session.status === 'out'}
-    <div class="card pad"><p>Sign in to message your friends.</p><button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button></div>
+    <div class="card pad"><p>Sign in to message your friends.</p><button class="btn primary" onclick={() => startSignIn()}>Sign in</button></div>
   {:else}
     <section class="card chat">
       <header class="top">

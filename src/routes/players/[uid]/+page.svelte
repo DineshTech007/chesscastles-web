@@ -88,7 +88,7 @@
 <div class="page">
   <a class="back" href="/friends"><Icon name="back" size={16} />Friends</a>
   {#if $session.status === 'out'}
-    <div class="card pad"><p>Sign in to see Chess Castles players.</p><button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button></div>
+    <div class="card pad"><p>Sign in to see Chess Castles players.</p><button class="btn primary" onclick={() => startSignIn()}>Sign in</button></div>
   {:else if relation === 'blocked' && !player}
     <div class="card pad"><p>You blocked this player. They can't see you or message you.</p></div>
   {:else if error}

@@ -142,14 +142,26 @@ export async function chessComGames(username: string, count: number, onProgress?
   return out.slice(0, count);
 }
 
-/** The player's newest `count` standard games from Lichess (with clocks), newest first. */
-export async function lichessGames(username: string, count: number): Promise<ImportedGame[]> {
+/** Lichess now shares game archives only with signed-in apps: thrown when there is no Lichess login. */
+export class NeedsLichessLogin extends Error {}
+
+/**
+ * The player's newest `count` standard games from Lichess (with clocks),
+ * newest first. `token`: the visitor's Lichess login (Lichess's game export
+ * no longer answers apps without one).
+ */
+export async function lichessGames(username: string, count: number, token?: string): Promise<ImportedGame[]> {
   const user = username.trim();
   if (!/^[A-Za-z0-9_-]{2,30}$/.test(user)) throw new Error('That is not a Lichess username.');
+  if (!token) throw new NeedsLichessLogin('Connect your Lichess account to analyse Lichess games.');
   const res = await fetch(`https://lichess.org/api/games/user/${encodeURIComponent(user)}?max=${count + 10}&clocks=true&opening=true&perfType=bullet,blitz,rapid,classical`, {
-    headers: { Accept: 'application/x-ndjson' },
+    headers: { Accept: 'application/x-ndjson', Authorization: `Bearer ${token}` },
   });
-  if (res.status === 404) throw new Error('No Lichess player with that name.');
+  if (res.status === 404) {
+    // Tell a missing player apart from a refused export.
+    const exists = await fetch(`https://lichess.org/api/user/${encodeURIComponent(user)}`).then((r) => r.ok).catch(() => true);
+    throw new Error(exists ? 'Lichess did not share these games right now. Try again in a minute.' : 'No Lichess player with that name.');
+  }
   if (!res.ok) throw new Error(`Lichess had a problem (${res.status}). Try again later.`);
   const lines = (await res.text()).split('\n').filter(Boolean);
   const out: ImportedGame[] = [];

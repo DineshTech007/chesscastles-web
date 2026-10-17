@@ -48,7 +48,7 @@ describe('CC Rating', () => {
 describe('CC Rating at each speed', () => {
   it('sorts time controls by speed like FIDE (minutes + increment)', () => {
     expect(['5+0', '3+2', '10+0', '15+10', '30+0', '45+15', '60+0', '90+30', ''].map(speedOf)).toEqual([
-      'blitz', 'blitz', 'rapid', 'rapid', 'rapid', 'standard', 'standard', 'standard', 'rapid',
+      'blitz', 'blitz', 'blitz', 'rapid', 'rapid', 'standard', 'standard', 'standard', 'rapid',
     ]);
   });
   it('rates each speed on its own, and the main one is the speed played most', () => {

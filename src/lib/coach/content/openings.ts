@@ -67,7 +67,7 @@ export const COURSES: OpeningCourse[] = [
   {
     id: 'scotch', name: 'Scotch Game', eco: 'C45', side: 'white', level: 'intermediate', section: 'Open games (1.e4 e5)',
     line: 'e4 e5 Nf3 Nc6 d4 exd4 Nxd4 Nf6 Nxc6 bxc6 e5 Qe7 Qe2 Nd5 c4',
-    idea: I('White opens the centre at once with d4. After the exchange on c6, White gains space with e5 and c4 while Black gets the bishop pair. Kasparov revived it in the 1990s.', 'White तुरंत d4 से centre खोलता है। c6 पर exchange के बाद White e5 और c4 से space लेता है, जबकि Black को bishop pair मिलता है। Kasparov ने 1990 के दशक में इसे फिर से popular बनाया।', 'White लगेच d4 ने centre उघडतो. c6 वर exchange नंतर White e5 आणि c4 ने space घेतो, तर Black ला bishop pair मिळते. Kasparov ने 1990 च्या दशकात ही परत popular केली.'),
+    idea: I('White opens the centre at once with d4. After the exchange on c6, White gains space with e5 and c4, while Black’s doubled c-pawns give him a strong centre and the half-open b-file. Kasparov revived it in the 1990s.', 'White तुरंत d4 से centre खोलता है। c6 पर exchange के बाद White e5 और c4 से space लेता है, जबकि Black के doubled c-pawns उसे मज़बूत centre और half-open b-file देते हैं। Kasparov ने 1990 के दशक में इसे फिर से popular बनाया।', 'White लगेच d4 ने centre उघडतो. c6 वर exchange नंतर White e5 आणि c4 ने space घेतो, तर Black च्या doubled c-pawns मुळे त्याला मजबूत centre आणि half-open b-file मिळते. Kasparov ने 1990 च्या दशकात ही परत popular केली.'),
   },
   {
     id: 'four-knights', name: 'Four Knights Game', eco: 'C48', side: 'white', level: 'beginner', section: 'Open games (1.e4 e5)',

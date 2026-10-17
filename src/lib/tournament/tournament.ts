@@ -1,5 +1,5 @@
 /**
- * Chess Castles FIDE tournaments: the player against 5–10 real FIDE-rated
+ * Chess Castles FIDE tournaments: the player against 5–10 computer opponents rated like FIDE-rated
  * players from the FIDE list (the bot plays each at their rating). The
  * player's game each round is played on the board; the others are decided
  * by FIDE's expected score (with draws, more often between strong players).
@@ -16,9 +16,22 @@ export interface TPlayer {
   rating: number;
   /** FIDE federation, e.g. "IND". */
   fed: string;
+  /** Old tournaments only (opponents used to carry real players' names; see loadTournament). */
   fideId?: number;
+  /** A computer opponent (every opponent is one). */
+  bot?: boolean;
   me?: boolean;
 }
+
+/**
+ * The computer opponents' names: invented first names, never a real player's
+ * (the FIDE list only gives each opponent a realistic rating).
+ */
+export const BOT_NAMES = [
+  'Aarav', 'Diya', 'Vihaan', 'Anika', 'Kabir', 'Myra', 'Reyansh', 'Saanvi', 'Advait', 'Ira', 'Arjun', 'Kiara', 'Ishaan', 'Navya', 'Dhruv', 'Aadhya',
+  'Rohan', 'Tara', 'Neel', 'Riya', 'Veer', 'Zoya', 'Om', 'Mira', 'Yash', 'Pari', 'Dev', 'Siya', 'Aryan', 'Avni', 'Shaurya', 'Kavya',
+];
+const botName = (i: number) => `${BOT_NAMES[i % BOT_NAMES.length]}${i >= BOT_NAMES.length ? ` ${Math.floor(i / BOT_NAMES.length) + 1}` : ''}`;
 
 export interface TGame {
   round: number;
@@ -78,12 +91,15 @@ export function pickOpponents(rows: FideRow[], rating: number, n: number, speed:
   const ok = rows.filter((r) => !r[8] && val(r) > 0);
   const out: TPlayer[] = [];
   const used = new Set<number>();
+  // Names in a random order, so each tournament has different ones.
+  const names = BOT_NAMES.map((_, i) => i).sort(() => random() - 0.5);
   for (const width of [150, 250, 400, 700, 3000]) {
     const pool = ok.filter((r) => !used.has(r[0]) && Math.abs(val(r) - rating) <= width);
     while (out.length < n && pool.length) {
       const r = pool.splice(Math.floor(random() * pool.length), 1)[0];
       used.add(r[0]);
-      out.push({ id: `f${r[0]}`, fideId: r[0], name: displayName(r[1]), title: r[2] || undefined, rating: val(r), fed });
+      // Only the rating comes from the list: no name, title or FIDE ID of a real player.
+      out.push({ id: `b${r[0]}`, name: botName(names[out.length] ?? out.length), rating: val(r), fed, bot: true });
     }
     if (out.length >= n) break;
   }
@@ -255,7 +271,17 @@ export interface Trophy {
 
 export function loadTournament(): Tournament | undefined {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? 'null') ?? undefined;
+    const t: Tournament | undefined = JSON.parse(localStorage.getItem(KEY) ?? 'null') ?? undefined;
+    // Older tournaments named their opponents after real players: computer names instead.
+    t?.players.forEach((p, i) => {
+      if (!p.me && (p.fideId || !p.bot)) {
+        p.name = botName(i);
+        p.bot = true;
+        delete p.fideId;
+        delete p.title;
+      }
+    });
+    return t;
   } catch {
     return undefined;
   }

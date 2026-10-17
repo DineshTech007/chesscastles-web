@@ -53,7 +53,7 @@
       const rows: FideRow[] = await res.json();
       const random = rng(Date.now());
       const opponents = pickOpponents(rows, myRating, size, speed, res.url.includes(`/${fed}.json`) ? fed : 'IND', random);
-      if (opponents.length < 5) throw new Error('Not enough FIDE-rated players near your rating. Try again.');
+      if (opponents.length < 5) throw new Error('Not enough opponents near your rating. Try again.');
       t = createTournament({ name: name.trim() || 'Chess Castles Open', tc, format, rounds, me: { id: ME, name: myName, rating: myRating, fed }, opponents });
       saveTournament(t);
     } catch (e) {
@@ -97,6 +97,7 @@
       {#if p.fed}<img class="flag" src="/flags/{p.fed}.svg" alt={fedName(p.fed)} title={fedName(p.fed)} width="16" height="11" />{/if}
       {#if p.title}<span class="ttl">{p.title}</span>{/if}
       {#if bold}<strong>{p.me ? 'You' : p.name}</strong>{:else}{p.me ? 'You' : p.name}{/if}
+      {#if !p.me}<span class="bot" title="A computer opponent">Computer</span>{/if}
       <span class="label num">{p.rating}</span>
     </span>
   {/if}
@@ -110,7 +111,7 @@
       <span class="cup">🏆</span>
       <div>
         <h1 class="display">FIDE tournament</h1>
-        <p>Play a real tournament against 5 to 10 FIDE-rated players from the FIDE rating list, picked near your CC Rating. Play your game each round, watch the standings change, and win a trophy for the top three.</p>
+        <p>A tournament against 5 to 10 computer opponents rated like players near your CC Rating (their ratings come from the FIDE rating list). Play your game each round, watch the standings change, and win a trophy for the top three.</p>
       </div>
     </section>
 
@@ -268,6 +269,16 @@
 </div>
 
 <style>
+  .bot {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 999px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
   .page {
     max-width: 860px;
     margin: 0 auto;

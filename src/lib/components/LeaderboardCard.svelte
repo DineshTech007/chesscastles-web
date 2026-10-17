@@ -27,7 +27,7 @@
   });
   const medal = ['🥇', '🥈', '🥉', '4', '5'];
   const EMPTY: Record<BoardKind, string> = {
-    kfide: 'No CC Ratings yet: play a FIDE-rated player to be first.',
+    kfide: 'No CC Ratings yet: play a FIDE-rated opponent to be first.',
     lichess: 'No Lichess ratings yet.',
     puzzles: 'No puzzle ratings yet.',
     vision: 'No one here yet: try the Vision Gym.',

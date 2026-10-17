@@ -1,5 +1,7 @@
 <script lang="ts">
   /** The player's game in the current round of their FIDE tournament. */
+  import { maia } from '$lib/engine/maia';
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import GameView from '$lib/components/GameView.svelte';
   import { CloudBook } from '$lib/book/book';
@@ -40,6 +42,8 @@
     saveTournament(next);
     if (finished(next)) awardTrophy(next);
   }
+  // The human-like engine: loaded from this browser, or downloaded the first time.
+  onMount(() => maia.autoLoad(0));
 </script>
 
 <svelte:head><title>Round {g?.round ?? ''} · {t?.name ?? 'Tournament'} · Chess Castles</title></svelte:head>

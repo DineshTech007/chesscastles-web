@@ -216,7 +216,10 @@ function tacticsFrom(pos: Chess, s: Square, who: string, b: Builder) {
   const piece = pieceAt(pos, s);
   if (!piece) return;
   if (targets.length >= 2) {
-    b.add(`${who} ${piece.role} on ${sq(s)} attacks the ${targets[0].role} on ${sq(targets[0].square)} and the ${targets[1].role} on ${sq(targets[1].square)} at the same time: a fork.`);
+    b.add(
+      targets[0].role === targets[1].role
+        ? `${who} ${piece.role} on ${sq(s)} attacks both ${targets[0].role}s, on ${sq(targets[0].square)} and ${sq(targets[1].square)}, at the same time.`
+        : `${who} ${piece.role} on ${sq(s)} attacks the ${targets[0].role} on ${sq(targets[0].square)} and the ${targets[1].role} on ${sq(targets[1].square)} at the same time: a fork.`);
   } else if (targets.length === 1 && targets[0].role !== 'king' && targets[0].role !== 'pawn') {
     b.add(`${who} ${piece.role} on ${sq(s)} attacks the ${targets[0].role} on ${sq(targets[0].square)}.`);
   }

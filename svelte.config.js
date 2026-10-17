@@ -16,9 +16,10 @@ const config = {
       directives: {
         'default-src': ['self'],
         // Cloudflare Web Analytics (cookieless) adds its beacon on the live site.
-        'script-src': ['self', 'wasm-unsafe-eval', 'https://static.cloudflareinsights.com'],
-        'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
-        'font-src': ['self', 'data:', 'https://fonts.gstatic.com'],
+        // Google sign-in loads Google's helper script (apis.google.com) only when used.
+        'script-src': ['self', 'wasm-unsafe-eval', 'https://static.cloudflareinsights.com', 'https://apis.google.com', 'sha256-n2bxny/PgIgvQI8qcMSC06vXufnXQxVJew/RA1jOxFA='],
+        'style-src': ['self', 'unsafe-inline'],
+        'font-src': ['self', 'data:'],
         'img-src': ['self', 'data:', 'blob:', 'https:'],
         'media-src': ['self', 'data:', 'blob:'],
         'worker-src': ['self', 'blob:'],
@@ -40,9 +41,11 @@ const config = {
           'https://securetoken.googleapis.com',
           'https://firestore.googleapis.com',
           'https://firebaseinstallations.googleapis.com',
+          'https://www.googleapis.com',
+          'https://apis.google.com',
           'https://cloudflareinsights.com',
         ],
-        'frame-src': ['https://knigh24-af271.firebaseapp.com'],
+        'frame-src': ['https://knigh24-af271.firebaseapp.com', 'https://accounts.google.com'],
         'object-src': ['none'],
         'base-uri': ['self'],
         'form-action': ['self'],

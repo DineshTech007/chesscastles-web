@@ -13,7 +13,7 @@ export interface TimeControl {
 
 export const TIME_CONTROLS: TimeControl[] = [
   { minutes: 5, increment: 0, kind: 'Blitz' },
-  { minutes: 10, increment: 0, kind: 'Rapid' },
+  { minutes: 10, increment: 0, kind: 'Blitz' },
   { minutes: 15, increment: 10, kind: 'Rapid' },
   { minutes: 30, increment: 0, kind: 'Rapid' },
   { minutes: 60, increment: 0, kind: 'Classical' },

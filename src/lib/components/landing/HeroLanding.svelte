@@ -37,7 +37,7 @@
   <section class="hero">
     <div class="copy">
       <p class="eyebrow">Learn · Play · Conquer</p>
-      <h1 class="display">Everything chess. <span class="gold">Plus five things you won’t find anywhere else.</span></h1>
+      <h1 class="display">Everything chess. <span class="gold">Plus five things you won’t find together anywhere else.</span></h1>
       <p class="sub">Play online, solve puzzles, analyse and watch the world’s best live, all free. Then go further with five features built only for Chess Castles.</p>
       <div class="ctas">
         <a class="btn primary big" href="/play?mode=fide" onclick={() => go('hero_play')}><Icon name="play" size={18} fill color="currentColor" />Play a FIDE-rated opponent<sup>*</sup></a>
@@ -48,6 +48,7 @@
       {#if launchOn(launch) && $session.status !== 'in'}
         <p class="offer"><PlanBadge plan={launch.plan} size={22} /><span><strong>Launch offer:</strong> {PLAN_INFO[launch.plan].name} free for {launch.days} days. No card needed.</span></p>
       {/if}
+      <p class="parents"><a href="/parents"><Icon name="shield" size={16} color="var(--accent)" />For parents: is it safe for my child?</a></p>
       <ul class="trust" aria-label="Chess Castles in numbers">
         <li><strong class="num">5.4M</strong><span>tournament games</span></li>
         <li><strong class="num">3,865</strong><span>openings</span></li>
@@ -58,7 +59,7 @@
       <div class="board-wrap">
         <Board fen={FEN} {shapes} viewOnly coordinates={false} label="A chess position" />
       </div>
-      <div class="float f1"><span class="dot"></span>FIDE 1800 · thinking…</div>
+      <div class="float f1"><span class="dot"></span>Puzzle · White to play</div>
       <div class="float f2"><span class="bang">#</span>Mate in one</div>
       <div class="float f3"><Icon name="coach" size={16} color="var(--accent)" />Guru: the f7 square is weak!</div>
     </div>
@@ -66,8 +67,8 @@
 
   <section class="only" aria-labelledby="only-h">
     <header class="sec-head">
-      <p class="eyebrow"><Icon name="sparkle" size={14} color="var(--accent)" /> Only on Chess Castles</p>
-      <h2 id="only-h" class="display">Five features no other chess site gives you</h2>
+      <p class="eyebrow"><Icon name="sparkle" size={14} color="var(--accent)" /> Signature features</p>
+      <h2 id="only-h" class="display">Five signature features, all in one place</h2>
     </header>
     <div class="bento">
       {#each HERO_FEATURES as f, i (f.id)}
@@ -185,6 +186,15 @@
     margin: 14px 0 0;
     font-size: 14.5px;
     color: var(--text-2);
+  }
+  .parents {
+    margin: 14px 0 0;
+  }
+  .parents a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
   }
   .trust {
     list-style: none;
@@ -477,6 +487,9 @@
       grid-column: auto;
       flex-direction: column;
       align-items: stretch;
+    }
+    .feat.wide .art-box {
+      flex: none;
     }
     .tiles {
       grid-template-columns: minmax(0, 1fr);

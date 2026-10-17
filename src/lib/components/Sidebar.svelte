@@ -63,8 +63,8 @@
 
   <div class="nav">
     {@render link(home)}
-    <div class="only" class:collapsed aria-label="Only on Chess Castles" role="group">
-      {#if !collapsed}<span class="only-h"><Icon name="sparkle" size={13} color="var(--accent)" />Only on Chess Castles</span>{/if}
+    <div class="only" class:collapsed aria-label="Signature features" role="group">
+      {#if !collapsed}<span class="only-h"><Icon name="sparkle" size={13} color="var(--accent)" />Signature features</span>{/if}
       {#each only as item (item.href)}
         {@const on = isOn(item)}
         <a class="item gold" class:on href={item.href} aria-current={on ? 'page' : undefined} title={collapsed ? item.label : undefined}>
@@ -96,7 +96,7 @@
           <span class="me-text">
             <span class="me-name">{$myName} <PlanBadge plan={$currentPlan} /></span>
             <span class="label me-sub">
-              CC Rating {$kfide.rating}{$kfide.provisional ? '?' : ''} · {SPEED_LABEL[$kfide.speed]}
+              CC Rating {$kfide.rating}{$kfide.provisional ? ' (new)' : ''} · {SPEED_LABEL[$kfide.speed]}
             </span>
           </span>
         {/if}
@@ -112,15 +112,15 @@
       {#if !collapsed}
         <a class="me guest" href="/profile" title="Your profile">
           <span class="avatar">{#if $myPhoto}<img src={photoSrc($myPhoto)} alt="" />{:else}<Icon name="users" size={18} color="#fff" />{/if}</span>
-          <span class="me-text"><span class="me-name">Profile</span><span class="label me-sub">CC Rating {$kfide.rating}{$kfide.provisional ? '?' : ''} · {SPEED_LABEL[$kfide.speed]}</span></span>
+          <span class="me-text"><span class="me-name">Profile</span><span class="label me-sub">CC Rating {$kfide.rating}{$kfide.provisional ? ' (new)' : ''} · {SPEED_LABEL[$kfide.speed]}</span></span>
         </a>
       {/if}
-      <button class="btn signin" class:icon-only={collapsed} onclick={() => startSignIn()} title="Sign in with Lichess">
-        <Icon name="users" size={18} />{#if !collapsed}Sign in with Lichess{/if}
+      <button class="btn signin" class:icon-only={collapsed} onclick={() => startSignIn()} title="Sign in">
+        <Icon name="users" size={18} />{#if !collapsed}Sign in{/if}
       </button>
     {/if}
     {#if !collapsed}
-      <nav class="foot" aria-label="Help and policies"><a href="/plans">Plans</a><a href="/feedback">Feedback</a><a href="/help">Help</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/legal/fair-play">Fair play</a><a href="/legal/refunds">Refunds</a></nav>
+      <nav class="foot" aria-label="Help and policies"><a href="/plans">Plans</a><a href="/parents">Parents</a><a href="/feedback">Feedback</a><a href="/help">Help</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/legal/fair-play">Fair play</a><a href="/legal/refunds">Refunds</a></nav>
     {/if}
   </div>
 </nav>

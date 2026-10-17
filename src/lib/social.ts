@@ -67,7 +67,7 @@ export const socialBadge = writable(0);
 /** A signed-in call to the API worker's /social/… (throws the server's error message). */
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = await auth.currentUser?.getIdToken().catch(() => undefined);
-  if (!token) throw new Error('Sign in with Lichess to use friends and messages.');
+  if (!token) throw new Error('Sign in to use friends and messages.');
   const res = await fetch(`${API}/social/${path}`, {
     method,
     headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },

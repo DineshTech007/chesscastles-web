@@ -54,7 +54,7 @@ export const DEFAULT_CONFIG: PlanConfig = {
     tournament: { pawn: L(1, 'week'), bishop: L(1), rook: UNLIMITED, queen: UNLIMITED },
     review: { pawn: L(2), bishop: L(10), rook: UNLIMITED, queen: UNLIMITED },
     insights: { pawn: L(1, 'month'), bishop: L(1, 'week'), rook: UNLIMITED, queen: UNLIMITED },
-    guru: { pawn: L(5), bishop: L(30), rook: L(100), queen: L(300) },
+    guru: { pawn: L(5), bishop: L(30), rook: UNLIMITED, queen: UNLIMITED },
     puzzle: { pawn: L(15), bishop: UNLIMITED, rook: UNLIMITED, queen: UNLIMITED },
     vision: { pawn: L(3), bishop: UNLIMITED, rook: UNLIMITED, queen: UNLIMITED },
     opening: { pawn: L(3, 'ever'), bishop: L(10, 'ever'), rook: UNLIMITED, queen: UNLIMITED },
@@ -72,13 +72,13 @@ export const DEFAULT_LAUNCH: Launch = { on: true, plan: 'rook', days: 90, until:
 export const PLAN_INFO: Record<Plan, { name: string; piece: string; tag: string; blurb: string }> = {
   pawn: { name: 'Pawn', piece: '♟', tag: 'Free forever', blurb: 'Everything to start: play, analyse, puzzles, books and friends.' },
   bishop: { name: 'Bishop', piece: '♝', tag: 'For regular players', blurb: 'More FIDE-rated games, Game Reviews and Guru lessons every day.' },
-  rook: { name: 'Rook', piece: '♜', tag: 'For serious students', blurb: 'Unlimited FIDE-rated players, reviews, Insights and tournaments.' },
-  queen: { name: 'Queen', piece: '♛', tag: 'For coaches and academies', blurb: 'Everything in Rook, plus coach tools: your students’ progress, games and homework.' },
+  rook: { name: 'Rook', piece: '♜', tag: 'For serious students', blurb: 'Unlimited FIDE-rated opponents, reviews, Insights and tournaments.' },
+  queen: { name: 'Queen', piece: '♛', tag: 'For coaches and academies', blurb: 'Everything in Rook, plus coach tools for up to 200 students: their progress, games and homework. Students keep their own plan.' },
 };
 
 /** Each limited feature, for tables and messages. */
 export const FEATURE_INFO: Record<Feature, { label: string; one: string; many: string }> = {
-  fide_game: { label: 'Play FIDE-rated players', one: 'game against a FIDE-rated player', many: 'games against FIDE-rated players' },
+  fide_game: { label: 'Play FIDE-rated opponents', one: 'game against a FIDE-rated opponent', many: 'games against FIDE-rated opponents' },
   tournament: { label: 'FIDE tournaments with trophies', one: 'FIDE tournament', many: 'FIDE tournaments' },
   review: { label: 'Game Review (accuracy, badges, mistakes)', one: 'Game Review', many: 'Game Reviews' },
   insights: { label: 'Chess.com & Lichess Insights reports', one: 'Insights report', many: 'Insights reports' },
@@ -88,8 +88,8 @@ export const FEATURE_INFO: Record<Feature, { label: string; one: string; many: s
   opening: { label: 'Opening trainer courses', one: 'opening course', many: 'opening courses' },
 };
 export const GATE_INFO: Record<Gate, string> = {
-  bot_opening: 'Choose the opening a FIDE-rated player plays',
-  themed_puzzles: 'Themed puzzles (forks, pins, mates…)',
+  bot_opening: 'Choose the opening a FIDE-rated opponent plays',
+  themed_puzzles: 'All 17 puzzle themes (Pawn has 4)',
   own_lines: 'Your own opening lines in the trainer',
   coach_tools: 'Coach tools: students, progress, homework',
 };

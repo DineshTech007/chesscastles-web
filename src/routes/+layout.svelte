@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../fonts.css';
   import '../app.css';
   import { page } from '$app/state';
   import { onMount } from 'svelte';
@@ -8,7 +9,6 @@
   import { study, weekOf, weekPoints } from '$lib/study/progress';
   import { allProgress } from '$lib/books/books';
   import { watchSession } from '$lib/auth';
-  import { maia } from '$lib/engine/maia';
   import { setSound, soundOn } from '$lib/sound';
   import { reportStudy } from '$lib/study/reminders';
   import { myProfile, refreshBadge, saveProfile } from '$lib/social';
@@ -23,6 +23,7 @@
   import { get } from 'svelte/store';
   import { afterNavigate } from '$app/navigation';
   import LimitModal from '$lib/components/LimitModal.svelte';
+  import SignInModal from '$lib/components/SignInModal.svelte';
   import { flush, pageView, setSignedIn } from '$lib/analytics';
   import { keepReferral, loadPlanSettings, planSettings, refreshMyPlan, sendReferral } from '$lib/plans';
 
@@ -91,8 +92,8 @@
     const unResume = session.subscribe((s) => {
       if (s.status !== 'loading') void backToGame(s.status === 'in');
     });
-    // The human-like engine downloads once in the background, so it is ready when needed.
-    maia.autoLoad();
+    // The human-like engine (46 MB) downloads only where it plays: the Play
+    // page and its games (not on every page: phones and their data plans).
     // Studying today switches off today's reminders.
     // Study points this week and book chapters read go to the leaderboards (signed in, a few seconds after a change).
     let lastBoards = '';
@@ -120,7 +121,8 @@
       // One account at a time: a Lichess login that is not the signed-in account's (two people on one browser) signs out cleanly.
       // (A browser that lost the saved Lichess login keeps the account: only a different account signs out.)
       const t = s.status === 'in' ? lichessToken() : undefined;
-      if (s.status === 'in' && t && t.username.toLowerCase() !== s.uid.replace(/^lichess:/, '')) {
+      // (A Google account may have connected a Lichess login of any name for online play.)
+      if (s.status === 'in' && t && s.uid.startsWith('lichess:') && t.username.toLowerCase() !== s.uid.replace(/^lichess:/, '')) {
         mixedAccounts = true;
         void signOut();
         return;
@@ -184,6 +186,8 @@
   // The full menu stays on every page (the board adapts instead); it shrinks
   // to icons only when the screen is too narrow for both.
   const phone = $derived(width < 768);
+  /** During a game on a phone: no site header or tab bar, so the board and the controls fit on one screen. */
+  const focusGame = $derived(phone && /^\/play\/(fide|computer|online\/|tournament\/game)/.test(page.url.pathname));
   const collapsed = $derived(width < 960);
 
   const tabs = [
@@ -203,6 +207,13 @@
     <Sidebar {collapsed} />
   {/if}
   <div class="main">
+    {#if focusGame}
+      <div class="focus-top">
+        <button class="focus-back" onclick={() => history.back()} aria-label="Leave the game page"><Icon name="back" size={18} />Back</button>
+        <span class="focus-name">CHESS <span class="gold">CASTLES</span></span>
+        <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'}><Icon name={$soundOn ? 'speaker' : 'mute'} size={18} /></button>
+      </div>
+    {:else}
     <header class="top">
       {#if phone}
         <a class="phone-brand" href="/" aria-label="Chess Castles: Learn, Play, Conquer (home)">
@@ -228,6 +239,7 @@
         {#if $myCountry}<img class="top-flag" src="/flags/{$myCountry}.svg" alt={fedName($myCountry)} title={fedName($myCountry)} width="18" height="12" />{/if}
       </a>
     </header>
+    {/if}
     {#if mixedAccounts}
       <div class="resume-bar warn" role="alert">
         <span>Two different accounts were signed in on this browser, so Chess Castles signed you out to keep them apart. Please sign in again.</span>
@@ -257,19 +269,21 @@
         <span class="go">Return to the game →</span>
       </a>
     {/if}
-    <main id="content">
+    <main id="content" class:focus={focusGame}>
       {@render children()}
     </main>
   </div>
 </div>
 
 <LimitModal />
+<SignInModal />
 
-{#if phone}
+{#if phone && !focusGame}
   <nav class="tabs" aria-label="Main">
     {#each tabs as t (t.href)}
       {@const on = tabOn(t.href)}
-      <a href={t.href} aria-current={on ? 'page' : undefined} class:on>
+      <a href={t.href} aria-current={on ? 'page' : undefined} class:on title={t.href === '/more' ? 'More: all pages, profile and settings' : undefined}>
+        {#if t.href === '/more'}<span class="sr-only">All pages, profile and settings: </span>{/if}
         <span class="tab-icon"><Icon name={t.icon} color={on ? 'var(--accent)' : 'var(--muted)'} /></span>
         {t.label}
       </a>
@@ -401,9 +415,9 @@
     color: var(--gold);
   }
   .pb-slogan {
-    font-size: 8.5px;
+    font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.13em;
+    letter-spacing: 0.1em;
     line-height: 1;
     color: var(--muted);
     white-space: nowrap;
@@ -435,6 +449,38 @@
     main {
       padding: 8px 16px 96px;
     }
+  }
+  .focus-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 12px 0;
+  }
+  .focus-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 40px;
+    padding: 0 10px 0 4px;
+    border: 0;
+    background: none;
+    color: var(--text-2);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .focus-name {
+    font-family: 'Cinzel', serif;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+  .focus-name .gold {
+    color: var(--gold);
+  }
+  main.focus {
+    padding: 4px 10px 24px;
   }
   .tabs {
     position: fixed;

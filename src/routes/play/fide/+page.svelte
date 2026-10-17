@@ -8,6 +8,7 @@
   import { OPENINGS } from '$lib/openings';
   import { resumeFor, routeOf } from '$lib/game/resume';
   import { onMount } from 'svelte';
+  import { maia } from '$lib/engine/maia';
   import { useFeature } from '$lib/plans';
   import LimitReached from '$lib/components/LimitReached.svelte';
 
@@ -27,6 +28,8 @@
   /** A new game counts towards the plan's games a day (a resumed one doesn't). */
   let allowed = $state<boolean | undefined>(resumed ? true : undefined);
   onMount(async () => {
+    // The human-like engine: loaded from this browser, or downloaded the first time.
+    maia.autoLoad(0);
     if (!resumed) allowed = await useFeature('fide_game');
   });
   async function again() {
@@ -58,7 +61,7 @@
     kind="fide"
     opponent="FIDE {rating}"
     opponentInitials={String(Math.floor(rating / 100))}
-    opponentSubtitle="Plays like a {rating} player"
+    opponentSubtitle="Plays like {/^(8|11|18)/.test(String(rating)) ? 'an' : 'a'} {rating} player"
     openingName={opening?.name}
     onagain={again}
     gameId={round === 0 ? resumed?.id : undefined}

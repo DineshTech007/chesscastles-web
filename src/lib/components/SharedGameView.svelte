@@ -110,7 +110,7 @@
         <MoveNav {ply} max={line.sans.length} {go} />
       </div>
       <a class="card cta" href="/">
-        <span><strong>Play on Chess Castles</strong><span class="label">Free chess: real FIDE-rated opponents, lessons, puzzles and more.</span></span>
+        <span><strong>Play on Chess Castles</strong><span class="label">Free chess: FIDE-rated opponents, lessons, puzzles and more.</span></span>
         <Icon name="chevron" />
       </a>
     </aside>

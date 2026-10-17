@@ -152,7 +152,7 @@
     <div class="who">
       <h1 class="display">{name}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'pawn'} size={30} />{/if}</h1>
       <p class="label">
-        {#if $session.status === 'in'}Signed in with Lichess as {$session.username}{:else}Not signed in: your photo and games stay on this device.{/if}
+        {#if $session.status === 'in'}{$session.uid.startsWith('lichess:') ? `Signed in with Lichess as ${$session.username}` : 'Signed in with Google'}{:else}Not signed in: your photo and games stay on this device.{/if}
       </p>
       <div class="buttons">
         <input bind:this={input} id="photo-file" type="file" accept="image/*" hidden onchange={pick} />
@@ -245,10 +245,10 @@
 
   <section class="card about">
     <h2 class="title">What is the CC Rating?</h2>
-    <p>Your CC Rating (CC = Chess Castles) goes up and down with your results against the FIDE-rated players on the Play page, worked out the same way FIDE rates real games. Beat a stronger player and it climbs a lot; lose to a weaker one and it drops.</p>
+    <p>Your CC Rating (CC = Chess Castles) goes up and down with your results against the FIDE-rated opponents (computer opponents) on the Play page, worked out the same way FIDE rates real games. Beat a stronger player and it climbs a lot; lose to a weaker one and it drops.</p>
     <p>Like FIDE, you have three: <strong>Classical</strong> (games of 60 minutes or more), <strong>Rapid</strong> (10 to 59 minutes) and <strong>Blitz</strong> (under 10 minutes), counting the minutes plus the increment. Each game changes only the rating for its speed, because most players are stronger at one speed than another. Your main CC Rating, shown next to your name, is the speed you play most.</p>
     <p>Each rating becomes steady after {KFIDE_PROVISIONAL} games at that speed (until then it shows a ?). If you give your own FIDE rating on the Play page, they all start from it; otherwise from 1500.</p>
-    <a class="btn primary" href="/play?mode=fide"><Icon name="play" size={18} fill color="currentColor" />Play a FIDE-rated player</a>
+    <a class="btn primary" href="/play?mode=fide"><Icon name="play" size={18} fill color="currentColor" />Play a FIDE-rated opponent</a>
   </section>
 
   {#if recent.length}

@@ -2,6 +2,10 @@ import type { L10n } from '../i18n';
 
 /** The legends whose games the lessons use: display name and a short, checked bio. */
 export const LEGENDS: Record<string, { name: string; bio: L10n }> = {
+  colle: {
+    name: 'Edgar Colle',
+    bio: { en: 'Edgar Colle of Belgium gave his name to the Colle System, an opening that often leads to this very attack.', hi: 'Belgium के Edgar Colle के नाम पर Colle System opening है, जिससे अक्सर यही attack बनता है।', mr: 'Belgium च्या Edgar Colle यांच्या नावावर Colle System opening आहे, ज्यातून बऱ्याचदा हाच attack तयार होतो.' },
+  },
   gukesh: {
     name: 'Gukesh D',
     bio: { en: 'Gukesh from Chennai became the youngest undisputed World Champion in 2024, at just 18.', hi: 'चेन्नई के Gukesh 2024 में सिर्फ़ 18 साल की उम्र में सबसे कम उम्र के undisputed World Champion बने।', mr: 'चेन्नईचा Gukesh 2024 मध्ये फक्त 18 वर्षांचा असताना सगळ्यात लहान undisputed World Champion झाला.' },

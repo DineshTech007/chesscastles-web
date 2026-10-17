@@ -102,13 +102,14 @@
   {/each}
 {/snippet}
 
-<div class="tree" bind:this={box} role="list" aria-label="Moves">
-  {#if !root.children.length}
+<!-- A region, not a list: variations sit between the move rows. -->
+<div class="tree" bind:this={box} role="region" aria-label="Moves">
+  {#if !items.length}
     <p class="empty label">No moves yet. Move a piece on the board to start.</p>
   {/if}
   {#each items as it, k (k)}
     {#if it.kind === 'row'}
-      <div class="row" role="listitem">
+      <div class="row">
         <span class="no num">{it.no}.</span>
         {#if it.white}{@render mv(it.white)}{:else}<span class="mv dots">…</span>{/if}
         {#if it.black}{@render mv(it.black)}{:else}<span class="mv"></span>{/if}

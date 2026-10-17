@@ -27,6 +27,7 @@
     { href: '/leaderboard', label: 'Leaderboard', icon: 'star' },
     { href: '/ratings', label: 'Ratings', icon: 'trophy' },
     { href: '/community', label: 'Community: tournaments and coaches', icon: 'globe' },
+    { href: '/parents', label: 'For parents: safety, prices, getting started', icon: 'shield' },
     { href: '/feedback', label: 'Send feedback', icon: 'send' },
     { href: '/help', label: 'Help & support', icon: 'bulb' },
     { href: '/legal/terms', label: 'Terms of use', icon: 'book' },
@@ -46,11 +47,11 @@
     <button class="btn" onclick={() => signOut()}>Sign out</button>
   {:else if $session.status === 'out'}
     <span class="label">Sign in to keep your progress with your Chess Castles account.</span>
-    <button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button>
+    <button class="btn primary" onclick={() => startSignIn()}>Sign in</button>
   {/if}
 </div>
-<nav class="list only" aria-label="Only on Chess Castles">
-  <span class="only-h"><Icon name="sparkle" size={14} color="var(--accent)" />Only on Chess Castles</span>
+<nav class="list only" aria-label="Signature features">
+  <span class="only-h"><Icon name="sparkle" size={14} color="var(--accent)" />Signature features</span>
   {#each HERO_FEATURES as f (f.id)}
     <a href={f.href}><span class="gchip"><Icon name={f.icon} size={16} color="#0b1426" /></span><span><strong>{f.short}</strong></span><Icon name="chevron" color="var(--muted)" /></a>
   {/each}

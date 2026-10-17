@@ -20,13 +20,12 @@
   let query = $state('');
   let library = $state<LibraryRow[]>([]);
   let voices = $state<{ name: string; lang: string }[]>([]);
-  /** The coach chooser, open until a coach has been picked once. */
+  /** The coach chooser: closed until asked for (Guru teaches by default), closed again once a coach is picked. */
   let choosing = $state(false);
 
   const refreshVoices = () => (voices = voicesFor(prefs.lang).map((v) => ({ name: v.name, lang: v.lang })));
   onMount(() => {
     prefs = loadCoach();
-    choosing = !prefs.avatar;
     myGames.load();
     try {
       const t = sessionStorage.getItem('k24.coach.tab');
@@ -94,10 +93,10 @@
     <GuruAvatar size={104} talking={$speaking} />
     <div class="intro">
       <h1 class="display">Chess Guru</h1>
-      <p>Lessons from beginner to grandmaster level: openings, middlegame tactics and strategy, and endgames. Guru explains every position, plays the moves out, and you practise each one against the engine at your level.</p>
+      <p>Lessons from beginner to advanced level: openings, middlegame tactics and strategy, and endgames. Guru explains every position, plays the moves out, and you practise each one against the engine at your level.</p>
       <p class="label">{CATALOG.length} lessons · 3,865 openings in the library · {doneCount} finished</p>
       <button class="btn ghost change" aria-expanded={choosing} onclick={() => (choosing = !choosing)}>
-        <Icon name="users" size={18} />{choosing ? 'Done' : 'Change coach'}
+        <Icon name="users" size={18} />{choosing ? 'Close' : 'Change coach'}
       </button>
     </div>
   </section>
@@ -107,7 +106,7 @@
       <h2 class="title">Choose your coach</h2>
       <div class="faces">
         {#each AVATARS as a (a.id)}
-          <button class="face" class:on={$coachAvatar === a.id} aria-pressed={$coachAvatar === a.id} onclick={() => { chooseAvatar(a.id); prefs = loadCoach(); }}>
+          <button class="face" class:on={$coachAvatar === a.id} aria-pressed={$coachAvatar === a.id} onclick={() => { chooseAvatar(a.id); prefs = loadCoach(); choosing = false; }}>
             <GuruAvatar id={a.id} size={84} talking={$coachAvatar === a.id} />
             <span class="title">{a.name}</span>
             <span class="label">{a.about}</span>
@@ -542,7 +541,14 @@
       font-size: 30px;
     }
     .tabs {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8px;
+    }
+    .tab {
+      min-width: 0;
+      padding: 12px 10px;
+      font-size: 15.5px;
+      gap: 6px;
     }
     .lib a {
       grid-template-columns: 48px minmax(0, 1fr);

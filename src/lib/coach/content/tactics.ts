@@ -1,6 +1,6 @@
 import type { Role } from 'chessops/types';
 import { makeSquare } from 'chessops/util';
-import { START_FEN, positionFromFen, uciToMove } from '$lib/chess/position';
+import { START_FEN, positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
 import { moveSentence, noteText, type Note } from '../explain';
 import { openingNotes } from '../facts';
 import { fill, type L10n, type Lang } from '../i18n';
@@ -225,9 +225,9 @@ const LESSONS: MotifLesson[] = [
     blurb: 'Bishop takes h7 with check, and the attack on the king begins.',
     intro: [
       {
-        en: 'The Greek gift is a classic attack on a castled king: the bishop takes the h7 pawn (h2 for Black) with check. After the king takes it, the knight and queen jump in with checks. It works when the knight can reach g5 and the queen can reach the h-file.',
-        hi: 'Greek gift castled king पर एक classic attack है: bishop check के साथ h7 का pawn ले लेता है (Black के लिए h2)। King के bishop लेने के बाद knight और queen checks के साथ आते हैं। यह तब काम करता है जब knight g5 पर और queen h-file पर पहुँच सके।',
-        mr: 'Greek gift हा castled king वरचा classic attack आहे: bishop check देऊन h7 चा pawn घेतो (Black साठी h2). King ने bishop घेतल्यावर knight आणि queen checks देत येतात. Knight g5 वर आणि queen h-file वर पोहोचू शकत असेल तेव्हाच हे चालतं.',
+        en: 'The Greek gift is a classic attack on a castled king: the bishop takes the h7 pawn (h2 for Black) with check. After the king takes it, the knight jumps to g5 with check and the queen joins on the h-file. It works when the knight can reach g5 and the queen can reach the h-file quickly.',
+        hi: 'Greek gift castled king पर एक classic attack है: bishop check के साथ h7 का pawn ले लेता है (Black के लिए h2)। King के bishop लेने के बाद knight check के साथ g5 पर आता है और queen h-file पर आ जाती है। यह तब काम करता है जब knight g5 पर और queen h-file पर पहुँच सके।',
+        mr: 'Greek gift हा castled king वरचा classic attack आहे: bishop check देऊन h7 चा pawn घेतो (Black साठी h2). King ने bishop घेतल्यावर knight check देत g5 वर येतो आणि queen h-file वर येते. Knight g5 वर आणि queen h-file वर पोहोचू शकत असेल तेव्हाच हे चालतं.',
       },
     ],
     key: { en: '{legend} plays bishop takes {to}, check!', hi: '{legend} bishop से {to} capture करते हैं, check!', mr: '{legend} bishop ने {to} capture करतात, check!' },
@@ -321,11 +321,57 @@ const SEEN_TEXT: L10n = { en: '{white} vs {black}, {event} {year}.', hi: '{white
 const LOOK: L10n = { en: '{legend} plays {side} here. Look at the {piece} on {from}: what can it do?', hi: 'यहाँ {legend} {side} से खेल रहे हैं। {from} वाले {piece} को देखो: वो क्या कर सकता है?', mr: 'इथे {legend} {side} ने खेळत आहेत. {from} वरचा {piece} बघ: तो काय करू शकतो?' };
 const END_WIN: L10n = { en: 'At the end of the line, {legend} has won the {piece}.', hi: 'Line के आखिर में {legend} ने {piece} जीत लिया।', mr: 'Line च्या शेवटी {legend} ने {piece} जिंकला.' };
 const END_MATE: L10n = { en: 'And it ends in checkmate. Brilliant!', hi: 'और आखिर में checkmate। कमाल!', mr: 'आणि शेवटी checkmate. कमाल!' };
-const END_QUEEN: L10n = { en: 'The pawn becomes a queen, and the game is decided.', hi: 'Pawn queen बन जाता है, और game का फ़ैसला हो जाता है।', mr: 'Pawn queen बनतो, आणि game चा निकाल लागतो.' };
+const END_QUEEN: L10n = { en: 'The pawn reaches the last rank and becomes a queen.', hi: 'Pawn आखिरी rank पर पहुँचकर queen बन जाता है।', mr: 'Pawn शेवटच्या rank वर पोहोचून queen बनतो.' };
+const LINE_TEXT: L10n = { en: 'The moves: {line}.', hi: 'Moves: {line}।', mr: 'Moves: {line}.' };
 const END_PLAN: L10n = { en: 'Watch how the position develops: {legend} keeps the advantage.', hi: 'देखो position कैसे आगे बढ़ती है: {legend} बढ़त बनाए रखते हैं।', mr: 'बघ position कशी पुढे जाते: {legend} आघाडी टिकवून ठेवतात.' };
 const PRACTICE_HINT: L10n = { en: 'Now try it yourself: press Practice and play this position against the engine.', hi: 'अब खुद try करो: Practice दबाओ और यह position engine के खिलाफ़ खेलो।', mr: 'आता स्वतः try कर: Practice दाब आणि ही position engine विरुद्ध खेळ.' };
 
 const both = (fn: (lang: Lang) => string): L10n => ({ en: fn('en'), hi: fn('hi'), mr: fn('mr') });
+
+/** Classic examples a motif needs beyond the legends' games. */
+const EXTRA: Record<string, Moment[]> = {
+  greekgift: [
+    {
+      fen: 'r1bqr1k1/pp1n1ppp/3bp3/8/3pB3/2P2N2/PP3PPP/R1BQR1K1 w - - 0 12',
+      move: 'e4h7',
+      line: ['e4h7', 'g8h7', 'f3g5', 'h7g6', 'h2h4', 'e8h8', 'e1e6', 'd7f6', 'h4h5', 'g6h6', 'e6d6', 'd8a5', 'g5f7', 'h6h7', 'f7g5', 'h7g8', 'd1b3'],
+      game: { id: 0, white: "Edgar Colle", black: "John O'Hanlon", event: 'Nice', year: 1930, legend: 'colle' },
+    },
+  ],
+};
+
+/** Only the real thing: the bishop takes on h7/h2 with check, the king takes it, and the attack goes on with check. */
+const GENUINE: Record<string, (m: Moment) => boolean> = {
+  greekgift: (m) => {
+    const pos = positionFromFen(m.fen);
+    const line = m.line ?? [];
+    const mv = uciToMove(m.move);
+    if (!mv || pos.board.get(mv.from)?.role !== 'bishop' || !['h7', 'h2'].includes(makeSquare(mv.to)) || line.length < 3) return false;
+    const p = pos.clone();
+    p.play(mv);
+    const reply = uciToMove(line[1]);
+    if (!p.isCheck() || !reply || p.board.get(reply.from)?.role !== 'king' || reply.to !== mv.to) return false;
+    p.play(reply);
+    const next = uciToMove(line[2]);
+    if (!next || !p.isLegal(next)) return false;
+    p.play(next);
+    return p.isCheck();
+  },
+};
+
+/** The line in move-number notation from a position: "12.Bxh7+ Kxh7 13.Ng5+". */
+function lineSan(from: ReturnType<typeof positionFromFen>, ucis: string[]): string {
+  const p = from.clone();
+  const out: string[] = [];
+  for (const [i, u] of ucis.entries()) {
+    const mv = uciToMove(u);
+    if (!mv || !p.isLegal(mv)) break;
+    const san = sanOf(p, mv);
+    out.push(p.turn === 'white' ? `${p.fullmoves}.${san}` : i === 0 ? `${p.fullmoves}...${san}` : san);
+    p.play(mv);
+  }
+  return out.join(' ');
+}
 
 /** The slides for one real-game moment: the position, the key move, the whole line. */
 function momentSlides(def: MotifLesson, m: Moment, firstTime: boolean): Slide[] {
@@ -334,7 +380,7 @@ function momentSlides(def: MotifLesson, m: Moment, firstTime: boolean): Slide[] 
   const piece = pos.board.get(move.from)?.role ?? 'piece';
   const legend = LEGENDS[m.game.legend]?.name ?? m.game.legend;
   const side = pos.turn === 'white' ? 'White' : 'Black';
-  const vars = { legend, piece, from: makeSquare(move.from), to: makeSquare(move.to), file: makeSquare(move.to)[0], side, white: m.game.white, black: m.game.black, event: m.game.event, year: m.game.year || '' };
+  const vars = { legend, piece, from: makeSquare(move.from), to: makeSquare(move.to), file: makeSquare(move.to)[0], side, white: m.game.white, black: m.game.black, event: m.game.event, year: m.game.year && !m.game.event.includes(String(m.game.year)) ? m.game.year : '' };
   const game = { ...m.game };
   const orientation = pos.turn;
 
@@ -343,7 +389,7 @@ function momentSlides(def: MotifLesson, m: Moment, firstTime: boolean): Slide[] 
     game,
     orientation,
     marks: [vars.from],
-    text: both((l) => [fill(SEEN_TEXT[l], vars), firstTime && LEGENDS[m.game.legend] ? LEGENDS[m.game.legend].bio[l] : '', fill(LOOK[l], vars)].filter(Boolean).join(' ')),
+    text: both((l) => [fill(SEEN_TEXT[l], vars).replace(/ +([.।])/, '$1'), firstTime && LEGENDS[m.game.legend] ? LEGENDS[m.game.legend].bio[l] : '', fill(LOOK[l], vars)].filter(Boolean).join(' ')),
     practice: { side: pos.turn },
   };
 
@@ -369,7 +415,7 @@ function momentSlides(def: MotifLesson, m: Moment, firstTime: boolean): Slide[] 
     if (!mv || !p.isLegal(mv)) break;
     const taken = p.board.get(mv.to);
     if (p.turn === pos.turn && taken && taken.color !== p.turn && (!biggest || VALUE[taken.role] > VALUE[biggest])) biggest = taken.role;
-    if (mv.promotion) promoted = true;
+    if (mv.promotion && p.turn === pos.turn) promoted = true;
     p.play(mv);
   }
   const gain = material(p, pos.turn) - start;
@@ -381,7 +427,7 @@ function momentSlides(def: MotifLesson, m: Moment, firstTime: boolean): Slide[] 
       moves: line,
       game,
       orientation,
-      text: both((l) => `${fill(end[l], { ...vars, piece: biggest ?? 'piece' })} ${PRACTICE_HINT[l]}`),
+      text: both((l) => `${fill(LINE_TEXT[l], { line: lineSan(pos, line) })} ${fill(end[l], { ...vars, piece: biggest ?? 'piece' })} ${PRACTICE_HINT[l]}`),
       practice: { fen: m.fen, side: pos.turn },
     });
   }
@@ -394,8 +440,14 @@ function material(pos: ReturnType<typeof positionFromFen>, color: 'white' | 'bla
   return n;
 }
 
+/** A motif's moments: the classic examples first, then the legends' games that really show it. */
+function momentsOf(motif: string): Moment[] {
+  const genuine = GENUINE[motif] ?? (() => true);
+  return [...(EXTRA[motif] ?? []), ...((MOMENTS as Record<string, Moment[]>)[motif] ?? []).filter(genuine)].filter((m) => uciToMove(m.move) && positionFromFen(m.fen).isLegal(uciToMove(m.move)!));
+}
+
 function build(def: MotifLesson): Lesson {
-  const moments = ((MOMENTS as Record<string, Moment[]>)[def.motif] ?? []).filter((m) => uciToMove(m.move) && positionFromFen(m.fen).isLegal(uciToMove(m.move)!));
+  const moments = momentsOf(def.motif);
   const first = moments[0];
   const slides: Slide[] = def.intro.map((text) => ({ fen: first ? first.fen : START_FEN, text, practice: false as const, orientation: first ? positionFromFen(first.fen).turn : 'white' }));
   const seen = new Set<string>();
@@ -413,7 +465,7 @@ export const TACTIC_LESSONS: LessonEntry[] = LESSONS.map((def) => ({
   level: def.level,
   title: def.title,
   blurb: def.blurb,
-  legends: [...new Set(((MOMENTS as Record<string, Moment[]>)[def.motif] ?? []).map((m) => m.game.legend))],
+  legends: [...new Set(momentsOf(def.motif).map((m) => m.game.legend))],
   load: async () => build(def),
 }));
 

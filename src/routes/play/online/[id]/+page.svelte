@@ -10,7 +10,7 @@
   import MoveList from '$lib/components/MoveList.svelte';
   import MoveNav from '$lib/components/MoveNav.svelte';
   import PlayerBar from '$lib/components/PlayerBar.svelte';
-  import { lichessToken, startSignIn } from '$lib/auth';
+  import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import { destsOf, fenOf, keyOf, materialOf, moveFromKeys, moveToUci } from '$lib/chess/position';
   import { OnlineGame } from '$lib/game/onlineGame';
   import { PremoveQueue } from '$lib/game/premoves';
@@ -270,7 +270,7 @@
   <div class="card gate">
     <h1 class="title">Sign in to play online</h1>
     <p class="label">Online games are played on Lichess with your Lichess account.</p>
-    <button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button>
+    <button class="btn primary" onclick={() => startLichessSignIn($session.status === 'in')}>{$session.status === 'in' ? 'Connect your Lichess account' : 'Sign in with Lichess'}</button>
   </div>
 {:else}
   <div class="game">

@@ -16,7 +16,7 @@
   <div class="btns">
     {#if $session.status !== 'in'}
       <button class="btn primary" onclick={() => startSignIn()}>
-        {launchOn($planSettings.launch) ? `Sign in: ${PLAN_INFO[$planSettings.launch.plan].name} free for ${$planSettings.launch.days} days` : 'Sign in with Lichess'}
+        {launchOn($planSettings.launch) ? `Sign in: ${PLAN_INFO[$planSettings.launch.plan].name} free for ${$planSettings.launch.days} days` : 'Sign in'}
       </button>
     {/if}
     <a class="btn" class:primary={$session.status === 'in'} href="/plans"><Icon name="crown" size={16} />See plans</a>

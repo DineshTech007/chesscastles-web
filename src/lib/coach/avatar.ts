@@ -13,7 +13,7 @@ export interface AvatarInfo {
 }
 
 export const AVATARS: AvatarInfo[] = [
-  { id: 'guruji', name: 'Guruji', about: 'A kind Indian grandmaster with a white beard' },
+  { id: 'guruji', name: 'Guruji', about: 'A kind Indian chess teacher with a white beard' },
   { id: 'hoot', name: 'Professor Hoot', about: 'A wise owl in a graduation cap' },
   { id: 'robo', name: 'Robo', about: 'A friendly chess robot' },
   { id: 'gaja', name: 'Gaja', about: 'A wise elephant, the bishop of chaturanga' },

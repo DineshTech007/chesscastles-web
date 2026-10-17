@@ -92,7 +92,7 @@
       </div>
     </div>
     {#if $session.status !== 'in'}
-      <p class="label">Only signed-in players appear. <button class="link" onclick={() => startSignIn()}>Sign in with Lichess</button> to join; every answer is checked by our server, so the board stays fair.</p>
+      <p class="label">Only signed-in players appear. <button class="link" onclick={() => startSignIn()}>Sign in</button> to join; every answer is checked by our server, so the board stays fair.</p>
     {/if}
     {#if !list}
       <div class="skel"></div>

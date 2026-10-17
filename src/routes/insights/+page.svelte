@@ -16,7 +16,7 @@
   import { formatDate } from '$lib/format';
   import { applyToStudyPlan, buildWeeklyPlan, saveWeeklyPlan } from '$lib/insights/plan';
   import { loadInsights, saveInsights, type InsightsData } from '$lib/insights/store';
-  import { session } from '$lib/auth';
+  import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import { PLANS, PLAN_INFO, planSettings, currentPlan, useFeature } from '$lib/plans';
 
   let site = $state<Site>('chesscom');
@@ -26,6 +26,8 @@
   let phase = $state<'idle' | 'fetching' | 'analysing'>('idle');
   let progress = $state({ done: 0, total: 0 });
   let error = $state('');
+  /** Lichess chosen without a Lichess login. */
+  let needsLichess = $state(false);
   let stop = false;
   type Tab = 'overview' | 'weak' | 'openings' | 'games' | 'plan';
   let tab = $state<Tab>('overview');
@@ -47,11 +49,14 @@
     error = '';
     stop = false;
     if (count > maxGames) count = maxGames;
+    // Lichess shares game archives only with a Lichess login: ask first (before a report is counted).
+    needsLichess = site === 'lichess' && !lichessToken();
+    if (needsLichess) return;
     // One report of the plan's reports (the same player again in the same period is free).
     if (!(await useFeature('insights', `${site}:${username.trim().toLowerCase()}`))) return;
     phase = 'fetching';
     try {
-      const fetched = site === 'chesscom' ? await chessComGames(username, count) : await lichessGames(username, count);
+      const fetched = site === 'chesscom' ? await chessComGames(username, count) : await lichessGames(username, count, lichessToken()?.token);
       if (!fetched.length) throw new Error('No standard games found for this player yet.');
       // Games analysed before are kept; only new ones go to the engine.
       const known = new Map((data?.username.toLowerCase() === username.toLowerCase() && data.site === site ? data.games : []).map((g) => [g.game.url, g]));
@@ -150,6 +155,12 @@
     <p class="label">Checking every move: game {Math.min(progress.done + 1, progress.total)} of {progress.total}. Keep this page open (about 10–20 seconds a game). The report fills in as it goes.</p>
   {/if}
   {#if error}<p class="err">{error}</p>{/if}
+  {#if needsLichess && site === 'lichess'}
+    <div class="card lich-need" role="note">
+      <p>Lichess shares game archives only with apps you have signed in to. Connect your free Lichess account once, then analyse any player’s Lichess games.</p>
+      <button class="btn primary" onclick={() => startLichessSignIn($session.status === 'in')}>{$session.status === 'in' ? 'Connect your Lichess account' : 'Sign in with Lichess'}</button>
+    </div>
+  {/if}
 
   {#if !report && phase === 'idle' && !error}
     <section class="how">
@@ -304,6 +315,17 @@
 </div>
 
 <style>
+  .lich-need {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  }
+  .lich-need p {
+    margin: 0;
+  }
   .page {
     max-width: 1000px;
     margin: 0 auto;

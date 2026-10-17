@@ -103,7 +103,7 @@
 
 <div class="live">
   {#if $session.status === 'out'}
-    <div class="card"><p>Sign in to watch your friends' games.</p><button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button></div>
+    <div class="card"><p>Sign in to watch your friends' games.</p><button class="btn primary" onclick={() => startSignIn()}>Sign in</button></div>
   {:else if error && !game}
     <div class="card msg">
       <p>{error}</p>

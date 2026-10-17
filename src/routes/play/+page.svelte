@@ -18,7 +18,8 @@
   type ColorChoice = 'white' | 'random' | 'black';
 
   let mode = $state<Mode>('fide');
-  let rating = $state(1800);
+  /** First visit: 1200, a friendly level for a child; then the last one chosen. */
+  let rating = $state(1200);
   /** The player's own FIDE rating (0: not given). */
   let tc = $state(2);
   let color = $state<ColorChoice>('random');
@@ -153,9 +154,9 @@
       <div class="group">
         <h2 class="title h">You play</h2>
         <div class="segmented" role="group" aria-label="Your colour">
-          <button aria-pressed={color === 'white'} onclick={() => (color = 'white')} aria-label="White"><span class="disc w"></span></button>
-          <button aria-pressed={color === 'random'} onclick={() => (color = 'random')} aria-label="Random"><span class="disc r"></span></button>
-          <button aria-pressed={color === 'black'} onclick={() => (color = 'black')} aria-label="Black"><span class="disc b"></span></button>
+          <button aria-pressed={color === 'white'} onclick={() => (color = 'white')} aria-label="White"><span class="disc w"></span><span class="cl">White</span></button>
+          <button aria-pressed={color === 'random'} onclick={() => (color = 'random')} aria-label="Random"><span class="disc r"></span><span class="cl">Random</span></button>
+          <button aria-pressed={color === 'black'} onclick={() => (color = 'black')} aria-label="Black"><span class="disc b"></span><span class="cl">Black</span></button>
         </div>
       </div>
       {#if mode === 'fide'}
@@ -190,7 +191,7 @@
       </div>
     {/if}
 
-    <button class="btn primary big block" onclick={start}>
+    <button class="btn primary big block start-cta" onclick={start}>
       <Icon name="play" size={18} fill color="currentColor" />
       {mode === 'fide' ? `Play ${rating} · ${tcLabel(TIME_CONTROLS[tc])}` : `Play ${LEVELS[level].name}`}
     </button>
@@ -198,7 +199,7 @@
     {#if mode === 'fide'}
       <a class="promo" href="/play/tournament">
         <span class="promo-icon">🏆</span>
-        <span class="promo-text"><strong>Play a FIDE tournament</strong><span class="label">5 to 10 FIDE-rated players, standings and trophies</span></span>
+        <span class="promo-text"><strong>Play a FIDE tournament</strong><span class="label">5 to 10 computer opponents, standings and trophies</span></span>
         <Icon name="chevron" color="var(--muted)" />
       </a>
     {/if}
@@ -425,9 +426,20 @@
     height: 20px;
     accent-color: var(--action);
   }
+  .cl {
+    margin-left: 6px;
+    font-size: 13.5px;
+  }
   @media (max-width: 767px) {
     .preview {
       display: none;
+    }
+    /* The Play button stays in reach above the tab bar while the settings scroll. */
+    .start-cta {
+      position: sticky;
+      bottom: calc(76px + env(safe-area-inset-bottom));
+      z-index: 5;
+      box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.6);
     }
     .setup {
       max-width: none;

@@ -398,7 +398,7 @@
       </a>
       <a class="task" href="/play">
         <i style="background: var(--gold)"></i>
-        <span class="t-text"><strong>Play a FIDE-rated player</strong><span class="label">+10 points for a finished game</span></span>
+        <span class="t-text"><strong>Play a FIDE-rated opponent</strong><span class="label">+10 points for a finished game</span></span>
         <Icon name="chevron" size={18} color="var(--muted)" />
       </a>
     </section>
@@ -665,7 +665,7 @@
     font-size: 13px;
   }
   .lvl {
-    font-size: 11.5px;
+    font-size: 12px;
     text-transform: capitalize;
   }
   .learn {
@@ -737,7 +737,7 @@
     text-align: center;
   }
   .wd .label {
-    font-size: 11.5px;
+    font-size: 12px;
   }
   .wbar {
     display: block;

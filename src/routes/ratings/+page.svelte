@@ -124,7 +124,7 @@
       {#if $session.status !== 'in'}
         <div class="signin">
           <p>Chess Castles leaderboards show the players with the highest puzzle, blitz and rapid ratings in the app and on the website.</p>
-          <button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess to see them</button>
+          <button class="btn primary" onclick={() => startSignIn()}>Sign in to see them</button>
         </div>
       {:else}
         <div class="chips" role="group" aria-label="Leaderboard">

@@ -143,7 +143,7 @@
   {#if $session.status === 'out'}
     <div class="card empty">
       <p>Friends, messages and challenges need a Chess Castles account.</p>
-      <button class="btn primary" onclick={() => startSignIn()}>Sign in with Lichess</button>
+      <button class="btn primary" onclick={() => startSignIn()}>Sign in</button>
     </div>
   {:else if error}
     <p class="label">{error}</p>

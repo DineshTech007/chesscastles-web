@@ -85,7 +85,11 @@
       study.log('puzzle', POINTS.puzzleSolved, `Theme puzzle: ${theme}`);
     }
   }
-  const nameOf = (t: string) => THEME_NAMES[t] ?? t;
+  /** "Hanging piece", "Mate in 2": the theme as a label. */
+  const nameOf = (t: string) => {
+    const n = THEME_NAMES[t] ?? t;
+    return n[0].toUpperCase() + n.slice(1);
+  };
 </script>
 
 <svelte:head><title>{nameOf(theme)} puzzles · Chess Castles</title></svelte:head>
@@ -105,7 +109,7 @@
       <button class="chip" aria-pressed={theme === t} onclick={() => pickTheme(t)}>{nameOf(t)}{#if !allThemes && !BASIC.includes(t)} <Icon name="lock" size={12} />{/if}</button>
     {/each}
   </div>
-  {#if !allThemes}<p class="label">Pawn has {BASIC.length} themes; {PLAN_INFO[$planSettings.config.gates.themed_puzzles].name} and up have all {THEMES.length}.</p>{/if}
+  {#if !allThemes}<p class="label">The free Pawn plan has {BASIC.length} themes; the {PLAN_INFO[$planSettings.config.gates.themed_puzzles].name} plan and up have all {THEMES.length}.</p>{/if}
 
   {#if limited}
     <LimitReached feature="puzzle" back="/puzzles" backLabel="Daily puzzle" />
@@ -115,7 +119,8 @@
     <div class="body">
       <section class="board-box">
         {#key round}
-          <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} onresult={done} />
+          <!-- One retry after a wrong move, as a coach would allow. -->
+          <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} tries={2} onresult={done} />
         {/key}
       </section>
       <section class="card side">
@@ -177,6 +182,23 @@
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+  }
+  /* Phones: the themes in one row to swipe, so the board comes first. */
+  @media (max-width: 767px) {
+    .chips {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin: 0 -16px;
+      padding: 0 16px 4px;
+      mask-image: linear-gradient(90deg, #000 85%, transparent);
+    }
+    .chips::-webkit-scrollbar {
+      display: none;
+    }
+    .chips :global(.chip) {
+      flex: none;
+    }
   }
   .body {
     display: flex;

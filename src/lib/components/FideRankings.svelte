@@ -6,7 +6,7 @@
    * the list (and across FIDE when it isn't there). From FIDE's monthly
    * combined list (scripts/build-fide-list.py).
    */
-  import { myFideId, myPhoto, photoSrc } from '$lib/stores/me';
+  import { myCountry, myFideId, myPhoto, photoSrc } from '$lib/stores/me';
   import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
   import { displayName, fideSearch, rankResults, type FidePlayer } from '$lib/api';
@@ -36,6 +36,8 @@
     try {
       const s = JSON.parse(localStorage.getItem(KEY) ?? '{}');
       if (typeof s.fed === 'string') fed = s.fed;
+      // First visit: the player's own country (e.g. India), not the whole world.
+      else if ($myCountry) fed = $myCountry;
       if (['all', 'women', 'juniors', 'girls'].includes(s.group)) group = s.group;
       if (['classical', 'rapid', 'blitz', 'age'].includes(s.sort)) sort = s.sort;
     } catch {
@@ -155,6 +157,11 @@
   {:else if !rows}
     <div class="skel"></div>
   {:else}
+    <div class="sort-s" role="group" aria-label="Rating shown">
+      {#each SORTS.filter((s) => s.k !== 'age') as s (s.k)}
+        <button class="chip" aria-pressed={sort === s.k || (sort === 'age' && s.k === 'classical')} onclick={() => ((sort = s.k), (shown = 100))}>{s.label}</button>
+      {/each}
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -162,7 +169,8 @@
             <th class="rk">Rank</th>
             <th>Player</th>
             {#each SORTS as s (s.k)}
-              <th class="r" class:hide-s={s.k === 'age'}>
+              <!-- Phones: only the rating the list is sorted by. -->
+              <th class="r" class:hide-s={s.k === 'age' || s.k !== (sort === 'age' ? 'classical' : sort)}>
                 <button class="sort" class:on={sort === s.k} onclick={() => ((sort = s.k), (shown = 100))}>{s.label}{sort === s.k ? ' ▼' : ' ⇅'}</button>
               </th>
             {/each}
@@ -188,9 +196,9 @@
                   </span>
                 </a>
               </td>
-              <td class="r num" class:strong={sort === 'classical'}>{r[4] || '—'}</td>
-              <td class="r num" class:strong={sort === 'rapid'}>{r[5] || '—'}</td>
-              <td class="r num" class:strong={sort === 'blitz'}>{r[6] || '—'}</td>
+              <td class="r num" class:strong={sort === 'classical'} class:hide-s={sort !== 'classical' && sort !== 'age'}>{r[4] || '—'}</td>
+              <td class="r num" class:strong={sort === 'rapid'} class:hide-s={sort !== 'rapid'}>{r[5] || '—'}</td>
+              <td class="r num" class:strong={sort === 'blitz'} class:hide-s={sort !== 'blitz'}>{r[6] || '—'}</td>
               <td class="r num hide-s label">{age(r) ?? ''}</td>
             </tr>
           {/each}
@@ -392,9 +400,17 @@
   .skel {
     height: 400px;
   }
+  .sort-s {
+    display: none;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
   @media (max-width: 600px) {
     .hide-s {
       display: none;
+    }
+    .sort-s {
+      display: flex;
     }
     .rk {
       width: 44px;

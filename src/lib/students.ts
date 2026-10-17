@@ -40,7 +40,7 @@ export const WORK_PRESETS: { kind: WorkKind; title: string; ref: string }[] = [
   { kind: 'puzzles', title: '10 mate-in-2 puzzles', ref: '/puzzles/themes?theme=mateIn2&n=10' },
   { kind: 'puzzles', title: '10 endgame puzzles', ref: '/puzzles/themes?theme=endgame&n=10' },
   { kind: 'lesson', title: 'A Vision Gym blindfold session', ref: '/vision/blind' },
-  { kind: 'lesson', title: 'Play 3 games against a FIDE-rated player', ref: '/play' },
+  { kind: 'lesson', title: 'Play 3 games against a FIDE-rated opponent', ref: '/play' },
   { kind: 'lesson', title: 'Review your last game with Guru', ref: '/games' },
   { kind: 'opening', title: 'Practise your opening in the trainer', ref: '/learn' },
 ];

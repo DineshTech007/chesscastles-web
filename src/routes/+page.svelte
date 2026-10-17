@@ -73,7 +73,7 @@
     </div>
     {#if $session.status === 'in' && $session.profile}
       <div class="stats" aria-label="Your Chess Castles ratings">
-        <a class="kf" href="/profile" title="Your Chess Castles rating ({SPEED_LABEL[$kfide.speed]}, the speed you play most)"><span class="label">CC Rating {SPEED_LABEL[$kfide.speed]}</span><strong class="title num">{$kfide.rating}{$kfide.provisional ? '?' : ''}</strong></a>
+        <a class="kf" href="/profile" title="Your Chess Castles rating ({SPEED_LABEL[$kfide.speed]}, the speed you play most)"><span class="label">CC Rating {SPEED_LABEL[$kfide.speed]}</span><strong class="title num">{$kfide.rating}{$kfide.provisional ? ' (new)' : ''}</strong></a>
         <div><span class="label">Puzzles</span><strong class="title num">{$session.profile.ratings.puzzle}</strong></div>
         <div><span class="label">Blitz</span><strong class="title num">{$session.profile.ratings.blitz}</strong></div>
         <div><span class="label">Rapid</span><strong class="title num">{$session.profile.ratings.rapid}</strong></div>
@@ -81,7 +81,7 @@
       </div>
     {:else if stats.played}
       <div class="stats" aria-label="Your results on this site">
-        <a class="kf" href="/profile" title="Your Chess Castles rating ({SPEED_LABEL[$kfide.speed]}, the speed you play most)"><span class="label">CC Rating {SPEED_LABEL[$kfide.speed]}</span><strong class="title num">{$kfide.rating}{$kfide.provisional ? '?' : ''}</strong></a>
+        <a class="kf" href="/profile" title="Your Chess Castles rating ({SPEED_LABEL[$kfide.speed]}, the speed you play most)"><span class="label">CC Rating {SPEED_LABEL[$kfide.speed]}</span><strong class="title num">{$kfide.rating}{$kfide.provisional ? ' (new)' : ''}</strong></a>
         <div><span class="label">Played</span><strong class="title num">{stats.played}</strong></div>
         <div><span class="label">Won</span><strong class="title num" style="color: var(--win)">{stats.won}</strong></div>
         <div><span class="label">Drawn</span><strong class="title num">{stats.drawn}</strong></div>
@@ -104,7 +104,7 @@
 
   {#if !showLanding}
     <section class="only-strip" aria-labelledby="only-h">
-      <h2 id="only-h" class="label only-h"><Icon name="sparkle" size={14} color="var(--accent)" /> Only on Chess Castles</h2>
+      <h2 id="only-h" class="label only-h"><Icon name="sparkle" size={14} color="var(--accent)" /> Signature features</h2>
       <div class="only-row">
         {#each HERO_FEATURES as f (f.id)}
           <a class="only-tile card" href={f.href}>
@@ -126,7 +126,7 @@
         <a class="option primary" href="/play">
           <Icon name="users" size={28} color="currentColor" />
           <span class="opt-text">
-            <span class="title">A FIDE-rated player <span class="badge-new">NEW</span></span>
+            <span class="title">A FIDE-rated opponent <span class="badge-new">NEW</span></span>
             <span class="opt-sub">A real tournament feel, at the rating you pick</span>
           </span>
           <Icon name="chevron" size={20} color="currentColor" />

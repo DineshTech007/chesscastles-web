@@ -4,12 +4,12 @@
   import { goto } from '$app/navigation';
   import { onDestroy, onMount } from 'svelte';
   import Icon from './Icon.svelte';
-  import { lichessToken, session, startSignIn } from '$lib/auth';
+  import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import * as api from '$lib/lichessBoard';
   import { lichessRatings } from '$lib/lichess';
   import { lobbyLeave, lobbySeek, lobbyState, type LobbyRole, type LobbySeek, type LobbyState } from '$lib/social';
 
-  /** `onfide`: switches the Play page to the FIDE-rated players (offered when no one is free). */
+  /** `onfide`: switches the Play page to the FIDE-rated opponents (offered when no one is free). */
   let { onfide }: { onfide?: () => void } = $props();
 
   type Kind = 'pair' | 'lobby' | 'friend' | 'ai';
@@ -180,7 +180,8 @@
 
   /** Your Lichess rating at the speed (shown to the others in the lobby). */
   async function myRating(t: Tc): Promise<number> {
-    const id = $session.status === 'in' ? $session.uid.replace(/^lichess:/, '') : '';
+    // The Lichess login (a Google account may have connected one of any name).
+    const id = (lichessToken()?.username ?? '').toLowerCase();
     if (!ratingCache && id) {
       const u = (await lichessRatings([id]).catch(() => new Map())).get(id);
       ratingCache = Object.fromEntries(Object.entries(u?.perfs ?? {}).map(([k, v]) => [k, (v as { rating: number }).rating]));
@@ -325,8 +326,13 @@
 {#if !token}
   <div class="gate">
     <Icon name="globe" size={30} color="var(--accent)" />
-    <p>Play real opponents online: quick pairing, the lobby, a friend or the computer.</p>
-    <button class="btn primary big block" onclick={() => startSignIn()}>Sign in with Lichess</button>
+    {#if $session.status === 'in'}
+      <p>Online games use a free Lichess account. Connect yours once to play real opponents: quick pairing, the lobby, a friend or the computer.</p>
+      <button class="btn primary big block" onclick={() => startLichessSignIn(true)}>Connect your Lichess account</button>
+    {:else}
+      <p>Play real opponents online: quick pairing, the lobby, a friend or the computer.</p>
+      <button class="btn primary big block" onclick={() => startLichessSignIn()}>Sign in with Lichess</button>
+    {/if}
   </div>
 {:else if waiting}
   <div class="waiting">
@@ -341,7 +347,7 @@
             {#if !lichessWide(pool.tc)}
               <button class="btn" onclick={() => switchTo(TCS[4])}>Play 10+0 instead</button>
             {/if}
-            {#if onfide}<button class="btn" onclick={() => (cancel(), onfide())}>A FIDE-rated player now</button>{/if}
+            {#if onfide}<button class="btn" onclick={() => (cancel(), onfide())}>A FIDE-rated opponent now</button>{/if}
           </div>
         </div>
       {/if}

@@ -105,7 +105,7 @@ export const adminLog = () => call<{ log: { id: number; admin: string; action: s
 export const PAGE_NAMES: Record<string, string> = {
   '/': 'Home',
   '/play': 'Play',
-  '/play/fide': 'Game vs FIDE-rated player',
+  '/play/fide': 'Game vs FIDE-rated opponent',
   '/play/computer': 'Game vs computer',
   '/play/online/[id]': 'Lichess game',
   '/play/tournament': 'FIDE tournament',
@@ -150,7 +150,7 @@ export const PAGE_NAMES: Record<string, string> = {
 };
 export const FEATURE_NAMES: Record<string, string> = {
   feedback: 'Sent feedback',
-  fide_game: 'Game vs FIDE-rated player',
+  fide_game: 'Game vs FIDE-rated opponent',
   tournament: 'FIDE tournament',
   review: 'Game Review',
   insights: 'Insights report',
