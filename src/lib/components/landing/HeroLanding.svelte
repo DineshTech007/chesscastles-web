@@ -285,6 +285,13 @@
       animation: none;
     }
   }
+  /* Off-screen sections are not drawn (nor their animations run) until they scroll near. */
+  .only,
+  .all,
+  .close {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+  }
   /* ---- the five */
   .sec-head {
     text-align: center;

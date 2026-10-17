@@ -17,7 +17,7 @@ const config = {
         'default-src': ['self'],
         // Cloudflare Web Analytics (cookieless) adds its beacon on the live site.
         // Google sign-in loads Google's helper script (apis.google.com) only when used.
-        'script-src': ['self', 'wasm-unsafe-eval', 'https://static.cloudflareinsights.com', 'https://apis.google.com', 'sha256-n2bxny/PgIgvQI8qcMSC06vXufnXQxVJew/RA1jOxFA='],
+        'script-src': ['self', 'wasm-unsafe-eval', 'https://static.cloudflareinsights.com', 'https://apis.google.com', 'sha256-BE8mZDhwlTNZpnJmDDCjmCBAV2Uizqb2dp4NXzg+GZE='],
         'style-src': ['self', 'unsafe-inline'],
         'font-src': ['self', 'data:'],
         'img-src': ['self', 'data:', 'blob:', 'https:'],

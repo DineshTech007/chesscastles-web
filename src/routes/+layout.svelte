@@ -75,6 +75,8 @@
   const banner = $derived($planSettings.banner);
 
   onMount(() => {
+    // The app is up: the first screen from app.html goes.
+    document.getElementById('boot')?.remove();
     myGames.load();
     keepReferral(page.url);
     void loadPlanSettings();

@@ -5,10 +5,11 @@
    * chooser (see avatar.ts).
    */
   let { id, size = 64, talking = false }: { id: 'hoot' | 'guruji' | 'robo' | 'gaja'; size?: number; talking?: boolean } = $props();
+  import { offscreen } from '$lib/offscreen';
   const uid = $props.id();
 </script>
 
-<span class="face" class:talking>
+<span class="face" class:talking use:offscreen>
 {#if id === 'hoot'}
   <svg class="av" width={size} height={size} viewBox="0 0 160 160" role="img" aria-label="Professor Hoot, a wise owl">
             <defs>
@@ -209,6 +210,7 @@
   @keyframes glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
   @keyframes eq { from { transform: scaleY(0.25); } to { transform: scaleY(1); } }
   @keyframes sway { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-4deg); } }
+  .face:global([data-off]) :global(*) { animation-play-state: paused !important; }
   @media (prefers-reduced-motion: reduce) {
     .face :global(*) { animation: none !important; }
   }

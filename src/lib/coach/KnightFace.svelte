@@ -4,10 +4,11 @@
    * moustache and a gold scarf. He blinks, and his mouth moves while he talks.
    */
   let { size = 64, talking = false, ring = true }: { size?: number; talking?: boolean; ring?: boolean } = $props();
+  import { offscreen } from '$lib/offscreen';
   const uid = $props.id();
 </script>
 
-<svg class="guru" class:talking width={size} height={size} viewBox="0 0 160 160" role="img" aria-label="Chess Guru">
+<svg use:offscreen class="guru" class:talking width={size} height={size} viewBox="0 0 160 160" role="img" aria-label="Chess Guru">
   <defs>
     <linearGradient id="gBg-{uid}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#2a3f6e" />
@@ -133,5 +134,8 @@
     .talking .brow {
       animation: none;
     }
+  }
+  .guru:global([data-off]) :global(*) {
+    animation-play-state: paused !important;
   }
 </style>

@@ -223,6 +223,13 @@ export async function signOut(): Promise<void> {
 /** Keeps `session` in step with Firebase and loads the profile. */
 export function watchSession(): () => void {
   return onAuthStateChanged(auth, async (user) => {
+    // A hint for the first screen in app.html (shown before the app loads).
+    try {
+      if (user) localStorage.setItem('k24.in', '1');
+      else localStorage.removeItem('k24.in');
+    } catch {
+      /* storage blocked */
+    }
     if (!user) {
       session.set({ status: 'out' });
       return;

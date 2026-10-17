@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { Chess } from 'chessops/chess';
   import type { NormalMove } from 'chessops/types';
   import type { Key } from '@lichess-org/chessground/types';
@@ -116,6 +116,13 @@
   let orientation = $state<'white' | 'black'>('white');
   let title = $state('Analysis board');
   let engineOn = $state(true);
+  /** The engine (1 MB) starts once the page is on screen, so a slow phone shows the board first. */
+  let pageDrawn = $state(false);
+  onMount(() => {
+    const ready = () => (pageDrawn = true);
+    const t = setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(ready, { timeout: 1000 }) : ready()), 400);
+    return () => clearTimeout(t);
+  });
   let info = $state<EngineInfo | undefined>();
   /** The engine's three best lines in this position. */
   let lines = $state<EngineInfo[]>([]);
@@ -402,6 +409,7 @@
       return;
     }
     lines = [];
+    if (!pageDrawn) return;
     void engine.analyse(
       f,
       (i) => {

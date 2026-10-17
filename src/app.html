@@ -23,10 +23,41 @@
     <link rel="preload" href="/fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
     <link rel="preload" href="/fonts/barlow-condensed-800-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
     <!-- The saved theme before the first paint (allowed by its hash in svelte.config.js). -->
-    <script>try{const t=localStorage.getItem('k24.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch{}</script>
+    <script>try{const d=document.documentElement,t=localStorage.getItem('k24.theme');if(t==='light'||t==='dark')d.dataset.theme=t;if(location.pathname==='/'&&!localStorage.getItem('k24.in'))d.dataset.boot='hero'}catch{}</script>
+    <!-- The first screen, drawn before the app loads (the app removes it). -->
+    <style>
+      #boot{max-width:1200px;margin:0 auto;padding:12px 16px}
+      #boot .b-top{display:flex;align-items:center;gap:10px;height:48px}
+      #boot .b-top img{height:36px;width:auto}
+      #boot .b-lt,:root[data-theme='light'] #boot .b-dk{display:none}
+      :root[data-theme='light'] #boot .b-lt{display:block}
+      #boot .b-text{display:flex;flex-direction:column;gap:4px}
+      #boot .b-name{font:800 15px/1 Cinzel,Georgia,serif;letter-spacing:.03em;color:var(--text)}
+      #boot .b-name span,#boot h1 span{color:var(--gold)}
+      #boot .b-slo{font-size:10px;font-weight:600;letter-spacing:.1em;line-height:1;color:var(--muted)}
+      #boot .b-hero{display:none;padding-top:28px;max-width:640px}
+      :root[data-boot='hero'] #boot .b-hero{display:block}
+      #boot .b-eye{margin:0;color:var(--accent);font-weight:800;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase}
+      #boot h1{margin:12px 0 14px;font-family:var(--font-display);font-weight:800;font-size:clamp(32px,4.4vw,54px);line-height:1.05;letter-spacing:-.01em}
+      #boot .b-sub{margin:0 0 18px;font-size:clamp(16px,1.4vw,19px);color:var(--text-2)}
+      #boot .b-cta{display:inline-flex;align-items:center;min-height:52px;padding:0 22px;border-radius:14px;background:var(--accent);color:#1a1205;font-weight:700;font-size:17px;text-decoration:none}
+    </style>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">
+    <div id="boot" aria-hidden="true">
+      <div class="b-top">
+        <img class="b-dk" src="/brand/chesscastles-crest-dark.svg" alt="" width="32" height="36" />
+        <img class="b-lt" src="/brand/chesscastles-crest-light.svg" alt="" width="32" height="36" />
+        <span class="b-text"><span class="b-name">CHESS <span>CASTLES</span></span><span class="b-slo">LEARN · PLAY · CONQUER</span></span>
+      </div>
+      <div class="b-hero">
+        <p class="b-eye">Learn · Play · Conquer</p>
+        <h1>Everything chess. <span>Plus five things you won’t find together anywhere else.</span></h1>
+        <p class="b-sub">Play online, solve puzzles, analyse and watch the world’s best live, all free. Then go further with five features built only for Chess Castles.</p>
+        <a class="b-cta" href="/play?mode=fide">Play a FIDE-rated opponent<sup>*</sup></a>
+      </div>
+    </div>
     <div style="display: contents">%sveltekit.body%</div>
   </body>
 </html>
