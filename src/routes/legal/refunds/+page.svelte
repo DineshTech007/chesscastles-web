@@ -54,8 +54,12 @@
   <h2>6. Complaints</h2>
   <p>
     If you are not happy with how a payment or refund was handled, write to <a href="mailto:support@chesscastles.com">support@chesscastles.com</a>. We
-    acknowledge complaints within 48 hours and aim to resolve them within one month. The contact details of our grievance
-    officer will be shown here before paid plans go on sale.
+    acknowledge complaints within 48 hours and aim to resolve them within one month.
+  </p>
+  <p>
+    <strong>Grievance Officer</strong><br />
+    Grievance Officer, Chess Castles<br />
+    Email: <a href="mailto:support@chesscastles.com">support@chesscastles.com</a> (subject “Grievance”)
   </p>
 
   <h2>7. Changes</h2>
