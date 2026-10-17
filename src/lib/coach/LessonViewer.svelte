@@ -14,6 +14,7 @@
   import { POINTS, study } from '$lib/study/progress';
   import type { Lesson, Slide } from '$lib/coach/types';
   import { speak, speaking, stopSpeaking, voicesReady } from '$lib/coach/voice';
+  import { playMoveSound } from '$lib/sound';
 
   /** A lesson's slides, shown one by one with the board, Guru's words and the voice. */
   let { lesson, back = '/coach', backLabel = 'All lessons' }: { lesson: Lesson; back?: string; backLabel?: string } = $props();
@@ -68,6 +69,7 @@
         if (t !== token) return;
         const m = uciToMove(uci);
         if (!m || !pos.isLegal(m)) break;
+        playMoveSound(pos, m);
         const next = pos.clone();
         next.play(m);
         pos = next;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { playMoveSound } from '$lib/sound';
   import FeatureGate from '$lib/components/FeatureGate.svelte';
   import { page } from '$app/state';
   import { onDestroy, onMount } from 'svelte';
@@ -127,6 +128,7 @@
   function playEdge(e: TreeEdge) {
     const m = uciToMove(e.uci);
     if (!m || !pos) return;
+    playMoveSound(pos, m);
     pos.play(m);
     show(pos, [keyOf(m.from), keyOf(m.to)]);
   }

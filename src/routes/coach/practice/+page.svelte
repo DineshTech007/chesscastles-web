@@ -5,6 +5,9 @@
   import type { NormalMove } from 'chessops/types';
   import type { DrawShape } from '@lichess-org/chessground/draw';
   import type { Key } from '@lichess-org/chessground/types';
+  import { makeBoardFen } from 'chessops/fen';
+  import { PremoveQueue } from '$lib/game/premoves';
+  import { playMoveSound } from '$lib/sound';
   import Board from '$lib/components/Board.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import { destsOf, fenOf, keyOf, moveFromKeys, positionFromFen, sanOf, START_FEN, uciToMove } from '$lib/chess/position';
@@ -40,8 +43,23 @@
   /** Human-like Maia-3, or Stockfish. */
   let opponent = $state<'maia' | 'stockfish'>('maia');
   let token = 0;
+  // Premoves while the opponent thinks (as in games): several in a row, the first played at once on your turn.
+  const queue = new PremoveQueue();
+  let queued = $state(0);
+  let board: Board | undefined = $state();
 
-  const fen = $derived(fenOf(pos));
+  const realFen = $derived(fenOf(pos));
+  /** While the opponent thinks, the board shows where the queued premoves put your pieces. */
+  const preview = $derived(queued > 0 && pos.turn !== side && !pos.isEnd());
+  const fen = $derived(preview ? `${makeBoardFen(queue.preview(pos.board))} ${pos.turn[0]} - - 0 1` : realFen);
+  const premoveShapes = $derived.by((): DrawShape[] => {
+    void queued;
+    return queue.moves.map((m) => ({ orig: keyOf(m.from), dest: keyOf(m.to), brush: 'blue' }));
+  });
+  const queuedKeys = $derived.by((): Key[] => {
+    void queued;
+    return queue.moves.flatMap((m) => [keyOf(m.from), keyOf(m.to)]);
+  });
   const myTurn = $derived(pos.turn === side && !pos.isEnd() && !thinking);
   const result = $derived.by(() => {
     if (pos.isCheckmate()) return pos.turn === side ? 'You were checkmated. Try again!' : 'Checkmate! You won.';
@@ -105,6 +123,7 @@
   }
 
   function apply(m: NormalMove) {
+    playMoveSound(pos, m);
     history = [...history, { fen: fenOf(pos), lastMove }];
     sans = [...sans, sanOf(pos, m)];
     const next = pos.clone();
@@ -123,7 +142,34 @@
     const m = await engineReply(pos.clone());
     if (t !== token) return;
     thinking = false;
-    if (m && pos.isLegal(m)) apply(m);
+    if (m && pos.isLegal(m)) {
+      apply(m);
+      playPremove();
+    }
+  }
+
+  /** Your turn again: the first queued premove goes at once (an illegal one drops the queue). */
+  function playPremove() {
+    if (!queue.length || pos.turn !== side || pos.isEnd()) return;
+    const next = queue.takeNext(pos);
+    queued = queue.length;
+    if (!next) return;
+    apply(next);
+    void maybeEngine();
+  }
+
+  function onpremove(orig: Key, dest: Key) {
+    const shown = pos.clone();
+    shown.board = queue.preview(shown.board);
+    queue.add(moveFromKeys(shown, orig, dest));
+    queued = queue.length;
+    board?.cancelPremove();
+  }
+
+  function cancelPremoves() {
+    queue.clear();
+    queued = 0;
+    board?.cancelPremove();
   }
 
   function onmove(orig: Key, dest: Key) {
@@ -152,6 +198,7 @@
   function undo() {
     token++;
     thinking = false;
+    cancelPremoves();
     // Take back to the last position where it was the student's turn.
     let h = [...history];
     let s = [...sans];
@@ -174,6 +221,7 @@
   function restart() {
     token++;
     thinking = false;
+    cancelPremoves();
     pos = positionFromFen(startFen);
     history = [];
     sans = [];
@@ -185,6 +233,7 @@
   }
 
   function switchSide() {
+    cancelPremoves();
     side = side === 'white' ? 'black' : 'white';
     void maybeEngine();
   }
@@ -219,16 +268,20 @@
       {/if}
       <div class="board-box">
         <Board
+          bind:this={board}
           {fen}
           orientation={side}
           turnColor={pos.turn}
-          movable={myTurn ? side : undefined}
+          movable={pos.isEnd() ? undefined : side}
           dests={myTurn ? destsOf(pos) : new Map()}
           {lastMove}
-          check={pos.isCheck()}
-          {shapes}
+          check={!preview && pos.isCheck()}
+          shapes={[...shapes, ...premoveShapes]}
+          premovable={!pos.isEnd()}
+          queued={queuedKeys}
           label="Practice board"
           {onmove}
+          {onpremove}
         />
       </div>
     </div>
@@ -279,6 +332,9 @@
       <button class="btn" onclick={restart}><Icon name="replay" size={18} />Restart</button>
       <button class="btn" onclick={switchSide}><Icon name="flip" size={18} />Play {side === 'white' ? 'Black' : 'White'}</button>
     </div>
+    {#if queued}
+      <button class="btn" onclick={cancelPremoves}><Icon name="undo" size={18} />Cancel premoves ({queued})</button>
+    {/if}
     <label class="toggle">
       <input type="checkbox" bind:checked={showEval} onchange={() => showEval && evaluate()} />
       Show the evaluation bar
