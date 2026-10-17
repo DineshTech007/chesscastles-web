@@ -11,7 +11,7 @@
 
   <h2>1. Free plans</h2>
   <ul>
-    <li>Pawn is free, and plans given free (the launch offer, invite rewards, or by Chess Castles) cost nothing, so there is nothing to refund.</li>
+    <li>Free is free, and plans given free (the launch offer, invite rewards, or by Chess Castles) cost nothing, so there is nothing to refund.</li>
     <li>Free plans have no cash value and cannot be exchanged for money.</li>
   </ul>
 
@@ -25,7 +25,7 @@
   <h2>3. Cancelling</h2>
   <ul>
     <li>You can cancel at any time. Your plan stays active until the end of the month or year you have paid for, and you are not charged again.</li>
-    <li>When it ends, your account moves to Pawn (free). Your games, ratings and progress are kept.</li>
+    <li>When it ends, your account moves to Free. Your games, ratings and progress are kept.</li>
   </ul>
 
   <h2>4. Refunds</h2>

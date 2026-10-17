@@ -106,7 +106,7 @@
   {#if closing}
   <section class="close card">
     <div class="pieces" aria-hidden="true">
-      <PlanBadge plan="pawn" size={40} /><PlanBadge plan="bishop" size={44} /><PlanBadge plan="rook" size={48} /><PlanBadge plan="queen" size={56} />
+      <PlanBadge plan="free" size={44} /><PlanBadge plan="premium" size={50} /><PlanBadge plan="elite" size={56} />
     </div>
     <h2 class="display">Every pawn can become a Queen.</h2>
     <p>Start free today. Your castle is waiting.</p>

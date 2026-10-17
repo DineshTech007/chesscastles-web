@@ -7,7 +7,7 @@
   import type { Lesson } from '$lib/coach/types';
   import GameReport from '$lib/review/GameReport.svelte';
   import { myGames, type SavedGame } from '$lib/stores/myGames';
-  import { useFeature } from '$lib/plans';
+  import { quota, useFeature } from '$lib/plans';
   import LimitReached from '$lib/components/LimitReached.svelte';
 
   let lesson = $state<Lesson | undefined>();
@@ -35,7 +35,7 @@
       return;
     }
     try {
-      const r = await analyseGame(g, (p) => (progress = p));
+      const r = await analyseGame(g, (p) => (progress = p), quota('review_depth'));
       if (!alive) return;
       game = g;
       review = r;

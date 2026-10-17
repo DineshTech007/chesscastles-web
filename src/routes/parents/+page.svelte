@@ -48,11 +48,11 @@
   <section class="card block" aria-labelledby="cost-h">
     <h2 id="cost-h" class="title">What does it cost?</h2>
     <ul>
-      <li><PlanBadge plan="pawn" size={18} /> <strong>{PLAN_INFO.pawn.name} is free</strong>, for ever: games, puzzles, lessons, books and the analysis board, with a few daily limits.</li>
+      <li><PlanBadge plan="free" size={18} /> <strong>{PLAN_INFO.free.name} is free</strong>, for ever: games, puzzles, lessons, books and the analysis board, with a few daily limits.</li>
       {#if launchOn(launch)}
         <li><PlanBadge plan={launch.plan} size={18} /> <strong>Launch offer:</strong> every new account gets {PLAN_INFO[launch.plan].name} free for {launch.days} days. No card is asked for.</li>
       {/if}
-      <li>Paid plans start at ₹{$planSettings.config.prices.bishop.month} a month. Paid plans are not on sale yet, so nobody can be charged by accident.</li>
+      <li>Paid plans start at ₹{$planSettings.config.prices.premium.month} a month. Paid plans are not on sale yet, so nobody can be charged by accident.</li>
       <li>When they are: cancel any time, a full refund within 7 days of the first payment, and a refund if your child paid without your permission. See the <a href="/legal/refunds">refund policy</a>.</li>
     </ul>
     <a class="more" href="/plans">Compare the plans <Icon name="chevron" size={16} /></a>

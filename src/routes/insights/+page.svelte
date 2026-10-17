@@ -43,7 +43,7 @@
 
   /** How many games a report may have on your plan, and the lowest plan allowing more. */
   const maxGames = $derived($planSettings.config.quotas.insights_games[$currentPlan]);
-  const planFor = (n: number) => PLANS.find((p) => $planSettings.config.quotas.insights_games[p] >= n) ?? 'rook';
+  const planFor = (n: number) => PLANS.find((p) => $planSettings.config.quotas.insights_games[p] >= n) ?? 'premium';
 
   async function run() {
     error = '';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  /** Chess Castles plans: Pawn (free), Bishop, Rook and Queen, with what each includes. */
+  /** Chess Castles plans: Free, Premium and Elite, with what each includes. */
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -34,8 +34,8 @@
 
   const config = $derived($planSettings.config);
   const launch = $derived($planSettings.launch);
-  const price = (p: Plan) => (p === 'pawn' ? 0 : yearly ? config.prices[p].year : config.prices[p].month);
-  const perMonth = (p: Plan) => (p === 'pawn' ? 0 : Math.round(config.prices[p].year / 12));
+  const price = (p: Plan) => (p === 'free' ? 0 : yearly ? config.prices[p].year : config.prices[p].month);
+  const perMonth = (p: Plan) => (p === 'free' ? 0 : Math.round(config.prices[p].year / 12));
   const offerEnds = $derived(new Date(launch.until + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }));
 
   /** The few lines on each card. */
@@ -47,9 +47,9 @@
       return x.n === null ? `Unlimited ${FEATURE_INFO[f].many}` : `${x.n} ${x.n === 1 ? FEATURE_INFO[f].one : FEATURE_INFO[f].many}${PER[x.per]}`;
     };
     const out = [line('fide_game'), line('review'), line('guru'), line('insights')];
-    if (p === 'pawn') out.push('Online play, puzzles, books and friends: free');
+    if (p === 'free') out.push('Online play, puzzles, books and friends: free');
     if (RANK[p] >= RANK[config.gates.bot_opening]) out.push('Choose the bot’s opening');
-    if (p === 'queen') out.push('Coach tools for your students');
+    if (p === 'elite') out.push('Coach tools for your students');
     return out;
   };
   const gateCell = (g: Gate, p: Plan) => RANK[p] >= RANK[config.gates[g]];
@@ -84,7 +84,7 @@
 
 <svelte:head>
   <title>Plans · Chess Castles</title>
-  <meta name="description" content="Chess Castles plans: Pawn (free), Bishop, Rook and Queen. Every pawn can become a Queen." />
+  <meta name="description" content="Chess Castles plans: Free, Premium and Elite. Every pawn can become a Queen." />
 </svelte:head>
 
 <section class="hero">
@@ -119,15 +119,15 @@
   {#each PLANS as p (p)}
     {@const info = PLAN_INFO[p]}
     {@const mine = $session.status === 'in' && $currentPlan === p}
-    <article class="plan card" class:featured={p === 'rook'} class:mine>
-      {#if p === 'rook'}<span class="ribbon">Most popular</span>{/if}
+    <article class="plan card" class:featured={p === 'premium'} class:mine>
+      {#if p === 'premium'}<span class="ribbon">Most popular</span>{/if}
       <header>
         <PlanBadge plan={p} size={58} />
         <h2 class="title">{info.name}</h2>
         <span class="label">{info.tag}</span>
       </header>
       <p class="price">
-        {#if p === 'pawn'}<strong class="num">₹0</strong> <span class="label">forever</span>
+        {#if p === 'free'}<strong class="num">₹0</strong> <span class="label">forever</span>
         {:else}<strong class="num">₹{price(p).toLocaleString('en-IN')}</strong> <span class="label">/ {yearly ? 'year' : 'month'}</span>
           {#if yearly}<span class="label pm">₹{perMonth(p)} a month</span>{/if}
         {/if}
@@ -138,7 +138,7 @@
       </ul>
       {#if mine}
         <span class="btn block current">Your plan</span>
-      {:else if p === 'pawn'}
+      {:else if p === 'free'}
         {#if $session.status !== 'in'}<button class="btn block" onclick={() => startSignIn()}>Start free</button>{/if}
       {:else if interested === p}
         <p class="thanks" role="status">Thanks! Paid plans open soon{launchOn(launch) ? `; until then ${PLAN_INFO[launch.plan].name} is free in the launch offer` : ''}.</p>
@@ -197,8 +197,8 @@
 
 {#if $session.status === 'in' && $myPlan}
   <section class="invite card" aria-labelledby="inv-h">
-    <h2 id="inv-h" class="title">Invite friends, get {PLAN_INFO.bishop.name} free</h2>
-    <p>Each friend who joins with your link gives you {$myPlan.referral.days} days of {PLAN_INFO.bishop.name}, after any plan you have now. {$myPlan.referral.invited ? `You’ve invited ${$myPlan.referral.invited} so far.` : ''}</p>
+    <h2 id="inv-h" class="title">Invite friends, get {PLAN_INFO.premium.name} free</h2>
+    <p>Each friend who joins with your link gives you {$myPlan.referral.days} days of {PLAN_INFO.premium.name}, after any plan you have now. {$myPlan.referral.invited ? `You’ve invited ${$myPlan.referral.invited} so far.` : ''}</p>
     <div class="link-row">
       <input readonly value={inviteLink($myPlan.referral.code)} aria-label="Your invite link" onfocus={(e) => (e.currentTarget as HTMLInputElement).select()} />
       <button class="btn" onclick={() => copyInvite($myPlan!.referral.code)}><Icon name="copy" size={16} />{copied ? 'Copied' : 'Copy'}</button>
@@ -212,7 +212,7 @@
   <details><summary>How do I pay?</summary><p>Paid plans open soon, with UPI and cards. Until then, nobody is charged: the launch offer and invite rewards are free.</p></details>
   <details><summary>Can I cancel or get a refund?</summary><p>Cancel any time and keep your plan until the end of the period you paid for. Your first payment for a plan is refunded in full if you ask within 7 days. See the <a href="/legal/refunds">refund policy</a>.</p></details>
   <details><summary>What happens when a limit is reached?</summary><p>That feature waits until the next day (or week). Everything else keeps working. Limits reset at midnight, India time.</p></details>
-  <details><summary>Is Queen only for coaches?</summary><p>Queen has everything in Rook, plus coach tools: share a link, students join, and you see their progress and games and set them homework. Students stay on their own plan.</p></details>
+  <details><summary>Is Elite only for coaches?</summary><p>Elite has everything in Premium, plus coach tools: share a link, students join, and you see their progress and games and set them homework. Students stay on their own plan.</p></details>
   <details><summary>Can children use Chess Castles?</summary><p>Yes. Messages are only between friends, and a parent should agree before any paid plan. See the <a href="/legal/privacy">privacy policy</a>.</p></details>
 </section>
 
@@ -271,7 +271,7 @@
   }
   .cards {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
     align-items: stretch;
   }

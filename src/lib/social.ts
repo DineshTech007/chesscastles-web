@@ -12,7 +12,7 @@ import type { SavedGame } from '$lib/stores/myGames';
 
 export interface Player {
   uid: string;
-  /** Their plan (Pawn, Bishop, Rook or Queen): the badge beside the name. */
+  /** Their plan (Free, Premium or Elite): the badge beside the name. */
   plan?: Plan;
   username: string;
   name: string;
@@ -121,7 +121,7 @@ export async function smallPhoto(b64: string): Promise<string | undefined> {
 
 export interface KfideLeader {
   uid: string;
-  /** Their plan (Pawn, Bishop, Rook or Queen): the badge beside the name. */
+  /** Their plan (Free, Premium or Elite): the badge beside the name. */
   plan?: Plan;
   name: string;
   username: string;

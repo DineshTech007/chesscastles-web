@@ -17,7 +17,7 @@
   const THEMES = ['fork', 'pin', 'skewer', 'hangingPiece', 'discoveredAttack', 'mateIn1', 'mateIn2', 'backRankMate', 'sacrifice', 'defensiveMove', 'opening', 'middlegame', 'endgame', 'rookEndgame', 'pawnEndgame', 'crushing', 'short'];
   const KEY = 'k24.themePuzzles';
 
-  /** Pawn's themes; every theme comes with the plan that has themed_puzzles (Bishop). */
+  /** Free's themes; every theme comes with the plan that has themed_puzzles (Premium). */
   const BASIC = ['fork', 'pin', 'mateIn1', 'mateIn2'];
   const allThemes = $derived(RANK[$currentPlan] >= RANK[$planSettings.config.gates.themed_puzzles]);
   let theme = $state(page.url.searchParams.get('theme') ?? 'fork');
@@ -109,7 +109,7 @@
       <button class="chip" aria-pressed={theme === t} onclick={() => pickTheme(t)}>{nameOf(t)}{#if !allThemes && !BASIC.includes(t)} <Icon name="lock" size={12} />{/if}</button>
     {/each}
   </div>
-  {#if !allThemes}<p class="label">The free Pawn plan has {BASIC.length} themes; the {PLAN_INFO[$planSettings.config.gates.themed_puzzles].name} plan and up have all {THEMES.length}.</p>{/if}
+  {#if !allThemes}<p class="label">The Free plan has {BASIC.length} themes; the {PLAN_INFO[$planSettings.config.gates.themed_puzzles].name} plan and up have all {THEMES.length}.</p>{/if}
 
   {#if limited}
     <LimitReached feature="puzzle" back="/puzzles" backLabel="Daily puzzle" />

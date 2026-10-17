@@ -24,7 +24,7 @@
   import { gamesDb } from '$lib/games/gamesDb';
   import { playMoveSound } from '$lib/sound';
   import { analyseGame, type GameReview } from '$lib/coach/review';
-  import { reviewKey, useFeature } from '$lib/plans';
+  import { quota, reviewKey, useFeature } from '$lib/plans';
   import { track } from '$lib/analytics';
   import { BADGE_ORDER, BADGES, boardBadge, type MoveClass } from '$lib/review/badges';
   import MoveBadge from '$lib/review/MoveBadge.svelte';
@@ -331,7 +331,7 @@
       const result = await analyseGame(
         { id: 'analysis', playedAt: 0, kind: 'computer', white: 'White', black: 'Black', userSide: orientation, result: '*', reason: '', timeControl: '', startFen: fenOf(start), uci: ucis },
         (p) => run === reviewRun && (reviewing = p),
-        13,
+        quota('review_depth'),
         () => run !== reviewRun,
       );
       if (run === reviewRun) review = { ucis, result };

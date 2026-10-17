@@ -1,5 +1,5 @@
 <script lang="ts">
-  /** Coach tools (Queen): your students' progress and games, and the work you set them. */
+  /** Coach tools (Elite): your students' progress and games, and the work you set them. */
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import FriendGames from '$lib/components/FriendGames.svelte';
@@ -76,8 +76,8 @@
   <div class="card gate"><button class="btn primary" onclick={() => startSignIn()}>Sign in</button></div>
 {:else if !allowed && !data}
   <div class="card gate">
-    <PlanBadge plan="queen" size={56} />
-    <h2 class="title">Coach tools come with {PLAN_INFO.queen.name}</h2>
+    <PlanBadge plan="elite" size={56} />
+    <h2 class="title">Coach tools come with {PLAN_INFO.elite.name}</h2>
     <p>Share one link with your students. See their CC Rating, games and study at a glance, and set them puzzles, openings and lessons.</p>
     <a class="btn primary" href="/plans">See plans</a>
   </div>

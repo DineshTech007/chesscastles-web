@@ -58,7 +58,7 @@
 
   <h2>7. Plans</h2>
   <ul>
-    <li>Pawn is free. Bishop, Rook and Queen include more of some features; what each plan includes and its limits are on the <a href="/plans">Plans page</a> and may change.</li>
+    <li>Free is free. Premium and Elite include more of some features; what each plan includes and its limits are on the <a href="/plans">Plans page</a> and may change.</li>
     <li>Plans given free (the launch offer, invite rewards, or by Chess Castles) last for the days shown and then end. Paid plans are not on sale yet; their terms will be shown before anyone pays, and a parent or guardian must agree for anyone under 18. Cancellations and refunds follow the <a href="/legal/refunds">refund policy</a>.</li>
     <li>Invite rewards are for real friends who join. Accounts made only to collect rewards lose them.</li>
   </ul>

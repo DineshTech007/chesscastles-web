@@ -22,6 +22,7 @@
   import { kfideText, SPEED_LABEL, speedOf } from '$lib/kfide';
   import { session } from '$lib/auth';
   import { analyseGame } from '$lib/coach/review';
+  import { quota } from '$lib/plans';
   import { lowTimeMs, playMoveSound, sounds } from '$lib/sound';
   import { clearResume, saveResume } from '$lib/game/resume';
   import { shareLive, uploadGame } from '$lib/social';
@@ -86,7 +87,7 @@
     if (!g || g.uci.length < 4) return;
     reviewing = 0;
     try {
-      const r = await analyseGame(g, (p) => (reviewing = p), 13, () => gone);
+      const r = await analyseGame(g, (p) => (reviewing = p), quota('review_depth'), () => gone);
       badges = g.uci.map((_, i) => r.all.find((m) => m.ply === i)?.cls);
     } catch {
       /* left the page, or the engine can't run */

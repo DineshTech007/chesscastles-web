@@ -19,7 +19,7 @@
   let msg = $state('');
 
   // Give a plan.
-  let gPlan = $state<Plan>('rook');
+  let gPlan = $state<Plan>('premium');
   let gDays = $state(30);
   let gNote = $state('');
   // Account actions.
@@ -137,7 +137,7 @@
 
       <h3 class="title">Plans</h3>
       {#if !open.grants.length}
-        <p class="label">Never had a plan: Pawn (free).</p>
+        <p class="label">Never had a plan: Free.</p>
       {:else}
         <ul class="grants">
           {#each open.grants as g (g.id)}
@@ -152,7 +152,7 @@
       {/if}
       {#if can.includes('grant')}
         <form class="give" onsubmit={(e) => (e.preventDefault(), act(() => grant(u.uid, gPlan, gDays, gNote), `${PLAN_INFO[gPlan].name} given for ${gDays} days.`))}>
-          <select bind:value={gPlan} aria-label="Plan">{#each PLANS.filter((p) => p !== 'pawn') as p (p)}<option value={p}>{PLAN_INFO[p].name}</option>{/each}</select>
+          <select bind:value={gPlan} aria-label="Plan">{#each PLANS.filter((p) => p !== 'free') as p (p)}<option value={p}>{PLAN_INFO[p].name}</option>{/each}</select>
           <input type="number" min="1" max="3660" bind:value={gDays} aria-label="Days" />
           <span class="label">days</span>
           <input class="note" bind:value={gNote} placeholder="Why (e.g. coach, prize, paid by UPI)" aria-label="Note" />
@@ -287,8 +287,8 @@
     border: 1px solid var(--border);
     white-space: nowrap;
   }
-  .pchip.rook,
-  .pchip.queen {
+  .pchip.premium,
+  .pchip.elite {
     border-color: var(--gold);
   }
   .when {

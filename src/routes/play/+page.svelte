@@ -59,7 +59,7 @@
       // The opponent plays against your CC Rating at this speed (once you have one).
       const mine = $kfideAll[speedOf(tcLabel(TIME_CONTROLS[tc]))];
       const me = mine.games ? `&me=${mine.rating}` : '';
-      // Choosing the bot's opening comes with Bishop and up.
+      // Choosing the bot's opening comes with Premium and up.
       const o = opening && hasGate('bot_opening') ? `&o=${opening}` : '';
       goto(`/play/fide?r=${rating}&tc=${tc}&c=${side}${me}${o}`);
     } else {

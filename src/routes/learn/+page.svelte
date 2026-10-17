@@ -110,7 +110,7 @@
   );
 
   function addLine() {
-    // Your own lines come with Rook and up.
+    // Your own lines come with Premium and up.
     if (!requireGate('own_lines')) return;
     const r = addCustomOpening(newMoves, newSide);
     if (typeof r === 'string') {

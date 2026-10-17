@@ -1,4 +1,4 @@
-/** Coach tools (the Queen plan): a coach's students and the work set for them (server/api-worker/src/students.ts). */
+/** Coach tools (the Elite plan): a coach's students and the work set for them (server/api-worker/src/students.ts). */
 import { call, type Player } from '$lib/social';
 
 export type WorkKind = 'puzzles' | 'opening' | 'lesson' | 'note';

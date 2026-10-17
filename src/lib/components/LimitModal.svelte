@@ -33,11 +33,11 @@
   <div class="scrim" role="presentation" onclick={close}></div>
   <div class="dialog card" role="dialog" aria-modal="true" aria-labelledby="limit-h">
     <button class="x" onclick={close} aria-label="Close"><Icon name="close" size={18} /></button>
-    <span class="piece"><PlanBadge plan={better ?? 'rook'} size={56} /></span>
+    <span class="piece"><PlanBadge plan={better ?? 'premium'} size={56} /></span>
     <h2 id="limit-h" class="title">{title}</h2>
     {#if hit.feature}
       <p>
-        {PLAN_INFO[hit.plan].name}{hit.plan === 'pawn' ? ' (free)' : ''} includes {limitText(config.limits[hit.feature][hit.plan]).toLowerCase()}.
+        {PLAN_INFO[hit.plan].name}{hit.plan === 'free' ? ' (free)' : ''} includes {limitText(config.limits[hit.feature][hit.plan]).toLowerCase()}.
         {#if hit.next}The next one is free {nextText(hit.next)}.{/if}
         {#if better}{PLAN_INFO[better].name}: {limitText(config.limits[hit.feature][better]).toLowerCase()}.{/if}
       </p>
@@ -56,7 +56,7 @@
         <button class="btn" onclick={() => (close(), goto('/plans'))}>See plans</button>
       </div>
     {:else}
-      <p class="label">Paid plans open soon. Invite friends to Chess Castles and get {PLAN_INFO.bishop.name} free for a week for each friend who joins.</p>
+      <p class="label">Paid plans open soon. Invite friends to Chess Castles and get {PLAN_INFO.premium.name} free for a week for each friend who joins.</p>
       <div class="btns">
         <button class="btn primary" onclick={() => (close(), goto('/plans'))}><Icon name="crown" size={16} />See plans</button>
         <button class="btn" onclick={close}>Not now</button>

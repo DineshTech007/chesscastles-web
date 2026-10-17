@@ -81,7 +81,7 @@
     </div>
     <h3 class="title">Prices (₹)</h3>
     <div class="prices">
-      {#each ['bishop', 'rook', 'queen'] as const as p (p)}
+      {#each ['premium', 'elite'] as const as p (p)}
         <div class="price">
           <strong><PlanBadge plan={p} /> {PLAN_INFO[p].name}</strong>
           <label>Month <input type="number" min="0" bind:value={s.config.prices[p].month} /></label>
@@ -97,7 +97,7 @@
     <p class="label">Every player who signs in while it is on gets the plan free for the days set, once.</p>
     <div class="row">
       <label class="check"><input type="checkbox" bind:checked={s.launch.on} />On</label>
-      <label>Plan <select bind:value={s.launch.plan}>{#each PLANS.filter((p) => p !== 'pawn') as p (p)}<option value={p}>{PLAN_INFO[p].name}</option>{/each}</select></label>
+      <label>Plan <select bind:value={s.launch.plan}>{#each PLANS.filter((p) => p !== 'free') as p (p)}<option value={p}>{PLAN_INFO[p].name}</option>{/each}</select></label>
       <label>Days <input type="number" min="1" max="366" bind:value={s.launch.days} /></label>
       <label>For sign-ins until <input type="date" bind:value={s.launch.until} /></label>
     </div>

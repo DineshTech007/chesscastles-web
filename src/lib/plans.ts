@@ -1,10 +1,9 @@
 /**
- * Chess Castles plans on the website: Pawn (free), Bishop, Rook and Queen.
- * "Every pawn can become a Queen."
+ * Chess Castles plans on the website: Free, Premium and Elite.
  *
  * The API worker (server/api-worker/src/plans.ts) is the judge: useFeature()
  * asks it before a limited feature starts, and it counts the use. Visitors
- * who are not signed in get Pawn's limits, counted in this browser, and are
+ * who are not signed in get Free's limits, counted in this browser, and are
  * asked to sign in (free, with the launch offer).
  *
  * DEFAULT_CONFIG matches the server's defaults; the live numbers (the admin
@@ -16,9 +15,9 @@ import { session } from '$lib/auth';
 import { call } from '$lib/social';
 import { track } from '$lib/analytics';
 
-export type Plan = 'pawn' | 'bishop' | 'rook' | 'queen';
-export const PLANS: Plan[] = ['pawn', 'bishop', 'rook', 'queen'];
-export const RANK: Record<Plan, number> = { pawn: 0, bishop: 1, rook: 2, queen: 3 };
+export type Plan = 'free' | 'premium' | 'elite';
+export const PLANS: Plan[] = ['free', 'premium', 'elite'];
+export const RANK: Record<Plan, number> = { free: 0, premium: 1, elite: 2 };
 export type Per = 'day' | 'week' | 'month' | 'ever';
 export interface Limit {
   n: number | null;
@@ -27,12 +26,13 @@ export interface Limit {
 export type Feature = 'fide_game' | 'tournament' | 'review' | 'insights' | 'guru' | 'puzzle' | 'vision' | 'opening';
 export const FEATURES: Feature[] = ['fide_game', 'tournament', 'review', 'insights', 'guru', 'puzzle', 'vision', 'opening'];
 export type Gate = 'bot_opening' | 'themed_puzzles' | 'own_lines' | 'coach_tools';
-export type Quota = 'insights_games' | 'history';
+/** review_depth: the engine depth a Game Review runs at. */
+export type Quota = 'insights_games' | 'history' | 'review_depth';
 export interface PlanConfig {
   limits: Record<Feature, Record<Plan, Limit>>;
   gates: Record<Gate, Plan>;
   quotas: Record<Quota, Record<Plan, number>>;
-  prices: Record<Exclude<Plan, 'pawn'>, { month: number; year: number }>;
+  prices: Record<Exclude<Plan, 'free'>, { month: number; year: number }>;
 }
 export interface Launch {
   on: boolean;
@@ -50,30 +50,30 @@ const L = (n: number | null, per: Per = 'day'): Limit => ({ n, per });
 const UNLIMITED = L(null);
 export const DEFAULT_CONFIG: PlanConfig = {
   limits: {
-    fide_game: { pawn: L(3), bishop: L(15), rook: UNLIMITED, queen: UNLIMITED },
-    tournament: { pawn: L(1, 'week'), bishop: L(1), rook: UNLIMITED, queen: UNLIMITED },
-    review: { pawn: L(2), bishop: L(10), rook: UNLIMITED, queen: UNLIMITED },
-    insights: { pawn: L(1, 'month'), bishop: L(1, 'week'), rook: UNLIMITED, queen: UNLIMITED },
-    guru: { pawn: L(5), bishop: L(30), rook: UNLIMITED, queen: UNLIMITED },
-    puzzle: { pawn: L(15), bishop: UNLIMITED, rook: UNLIMITED, queen: UNLIMITED },
-    vision: { pawn: L(3), bishop: UNLIMITED, rook: UNLIMITED, queen: UNLIMITED },
-    opening: { pawn: L(3, 'ever'), bishop: L(10, 'ever'), rook: UNLIMITED, queen: UNLIMITED },
+    fide_game: { free: L(3), premium: UNLIMITED, elite: UNLIMITED },
+    tournament: { free: L(1, 'week'), premium: UNLIMITED, elite: UNLIMITED },
+    review: { free: L(2), premium: UNLIMITED, elite: UNLIMITED },
+    insights: { free: L(1, 'month'), premium: UNLIMITED, elite: UNLIMITED },
+    guru: { free: L(5), premium: UNLIMITED, elite: UNLIMITED },
+    puzzle: { free: L(15), premium: UNLIMITED, elite: UNLIMITED },
+    vision: { free: L(3), premium: UNLIMITED, elite: UNLIMITED },
+    opening: { free: L(3, 'ever'), premium: UNLIMITED, elite: UNLIMITED },
   },
-  gates: { bot_opening: 'bishop', themed_puzzles: 'bishop', own_lines: 'rook', coach_tools: 'queen' },
+  gates: { bot_opening: 'premium', themed_puzzles: 'premium', own_lines: 'premium', coach_tools: 'elite' },
   quotas: {
-    insights_games: { pawn: 20, bishop: 50, rook: 200, queen: 200 },
-    history: { pawn: 50, bishop: 500, rook: 2000, queen: 2000 },
+    insights_games: { free: 20, premium: 200, elite: 300 },
+    history: { free: 50, premium: 2000, elite: 3000 },
+    review_depth: { free: 13, premium: 13, elite: 18 },
   },
-  prices: { bishop: { month: 99, year: 799 }, rook: { month: 249, year: 1999 }, queen: { month: 499, year: 3999 } },
+  prices: { premium: { month: 149, year: 1499 }, elite: { month: 249, year: 1999 } },
 };
-export const DEFAULT_LAUNCH: Launch = { on: true, plan: 'rook', days: 90, until: '2027-01-17' };
+export const DEFAULT_LAUNCH: Launch = { on: true, plan: 'premium', days: 30, until: '2027-01-17' };
 
 /** How each plan presents itself. */
-export const PLAN_INFO: Record<Plan, { name: string; piece: string; tag: string; blurb: string }> = {
-  pawn: { name: 'Pawn', piece: '♟', tag: 'Free forever', blurb: 'Everything to start: play, analyse, puzzles, books and friends.' },
-  bishop: { name: 'Bishop', piece: '♝', tag: 'For regular players', blurb: 'More FIDE-rated games, Game Reviews and Guru lessons every day.' },
-  rook: { name: 'Rook', piece: '♜', tag: 'For serious students', blurb: 'Unlimited FIDE-rated opponents, reviews, Insights and tournaments.' },
-  queen: { name: 'Queen', piece: '♛', tag: 'For coaches and academies', blurb: 'Everything in Rook, plus coach tools for up to 200 students: their progress, games and homework. Students keep their own plan.' },
+export const PLAN_INFO: Record<Plan, { name: string; tag: string; blurb: string }> = {
+  free: { name: 'Free', tag: 'Free forever', blurb: 'Everything to start: play, analyse, puzzles, books and friends.' },
+  premium: { name: 'Premium', tag: 'For regular players', blurb: 'Unlimited FIDE-rated opponents, Game Reviews, Guru lessons, Insights and tournaments, plus all 17 puzzle themes.' },
+  elite: { name: 'Elite', tag: 'For coaches and academies', blurb: 'Everything in Premium, plus coach tools for up to 200 students, deeper Game Review and more games kept in Insights and history.' },
 };
 
 /** Each limited feature, for tables and messages. */
@@ -89,13 +89,14 @@ export const FEATURE_INFO: Record<Feature, { label: string; one: string; many: s
 };
 export const GATE_INFO: Record<Gate, string> = {
   bot_opening: 'Choose the opening a FIDE-rated opponent plays',
-  themed_puzzles: 'All 17 puzzle themes (Pawn has 4)',
+  themed_puzzles: 'All 17 puzzle themes (Free has 4)',
   own_lines: 'Your own opening lines in the trainer',
   coach_tools: 'Coach tools: students, progress, homework',
 };
 export const QUOTA_INFO: Record<Quota, string> = {
   insights_games: 'Games in each Insights report',
   history: 'Games kept in your account',
+  review_depth: 'Game Review engine depth',
 };
 const PER_TEXT: Record<Per, string> = { day: 'a day', week: 'a week', month: 'a month', ever: 'in all' };
 /** "3 a day", "Unlimited", "1 a week". */
@@ -137,8 +138,8 @@ export async function refreshMyPlan() {
     /* offline: keep what we had */
   }
 }
-/** Your plan now (Pawn when signed out). */
-export const currentPlan = derived([session, myPlan], ([s, p]) => (s.status === 'in' ? (p?.plan ?? 'pawn') : 'pawn'));
+/** Your plan now (Free when signed out). */
+export const currentPlan = derived([session, myPlan], ([s, p]) => (s.status === 'in' ? (p?.plan ?? 'free') : 'free'));
 
 // ---------- limits
 
@@ -189,8 +190,8 @@ export async function useFeature(feature: Feature, ref?: string): Promise<boolea
       return true;
     }
   }
-  // Signed out: Pawn's limits, in this browser.
-  const l = get(planSettings).config.limits[feature].pawn;
+  // Signed out: Free's limits, in this browser.
+  const l = get(planSettings).config.limits[feature].free;
   if (l.n === null) return true;
   const all = localUses();
   const from = l.per === 'ever' ? '' : daysAgo({ day: 0, week: 6, month: 29 }[l.per]);
@@ -198,7 +199,7 @@ export async function useFeature(feature: Feature, ref?: string): Promise<boolea
   if (ref && list.some((u) => u.ref === ref)) return true;
   if (list.length >= l.n) {
     track('limit', feature);
-    limitHit.set({ feature, plan: 'pawn', limit: l.n, per: l.per, signedOut: true });
+    limitHit.set({ feature, plan: 'free', limit: l.n, per: l.per, signedOut: true });
     return false;
   }
   all[feature] = [...list, { day: today(), ref }].slice(-500);
@@ -252,7 +253,7 @@ export function upgradeFor(hit: LimitHit, config: PlanConfig): Plan | undefined 
   });
 }
 
-/** "Rook until 15 Jan 2027". */
+/** "Premium until 15 Jan 2027". */
 export const untilText = (t?: number) => (t ? new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
 // ---------- invites

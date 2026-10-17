@@ -150,7 +150,7 @@
       {/if}
     </div>
     <div class="who">
-      <h1 class="display">{name}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'pawn'} size={30} />{/if}</h1>
+      <h1 class="display">{name}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'free'} size={30} />{/if}</h1>
       <p class="label">
         {#if $session.status === 'in'}{$session.uid.startsWith('lichess:') ? `Signed in with Lichess as ${$session.username}` : 'Signed in with Google'}{:else}Not signed in: your photo and games stay on this device.{/if}
       </p>
@@ -214,7 +214,7 @@
         <span class="label">{$myPlan.until ? `Until ${untilText($myPlan.until)}` : 'Free forever'}{$myPlan.source === 'launch' ? ' · launch offer' : $myPlan.source === 'referral' ? ' · invite reward' : ''}</span>
       </div>
       <div class="plinks">
-        {#if RANK[$myPlan.plan] >= RANK.queen}<a class="btn" href="/students">My students</a>{/if}
+        {#if RANK[$myPlan.plan] >= RANK.elite}<a class="btn" href="/students">My students</a>{/if}
         <a class="btn primary" href="/plans">Plans and invites</a>
       </div>
     </section>

@@ -10,9 +10,9 @@
 </script>
 
 <div class="card reached">
-  <PlanBadge plan="rook" size={56} />
+  <PlanBadge plan="premium" size={56} />
   <h1 class="title">Limit reached for {FEATURE_INFO[feature].many}</h1>
-  <p>{PLAN_INFO[$currentPlan].name}{$currentPlan === 'pawn' ? ' (free)' : ''} includes {limitText(l).toLowerCase()}. Limits reset at midnight, India time.</p>
+  <p>{PLAN_INFO[$currentPlan].name}{$currentPlan === 'free' ? ' (free)' : ''} includes {limitText(l).toLowerCase()}. Limits reset at midnight, India time.</p>
   <div class="btns">
     {#if $session.status !== 'in'}
       <button class="btn primary" onclick={() => startSignIn()}>
