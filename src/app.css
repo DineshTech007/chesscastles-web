@@ -320,11 +320,56 @@ button {
   color: var(--engine);
 }
 
-/* The board: classic wood (cream and brown), a warm last move, darker premoves. */
+/* The board: classic wood (cream and brown) by default, a warm last move, darker
+   premoves. The square colours are a site-wide choice (see boardTheme.ts): picking
+   a theme sets --board-light/--board-dark on <html>, and every board follows it. */
+:root {
+  --board-light: #f0d9b5;
+  --board-dark: #b58863;
+  --board-coord: rgba(16, 26, 60, 0.7);
+}
+:root[data-board='walnut'] {
+  --board-light: #e9c49a;
+  --board-dark: #8b5a2b;
+}
+:root[data-board='forest'] {
+  --board-light: #eeeed2;
+  --board-dark: #769656;
+}
+:root[data-board='ocean'] {
+  --board-light: #dee9f2;
+  --board-dark: #4b7fa6;
+}
+:root[data-board='coral'] {
+  --board-light: #ffe8d6;
+  --board-dark: #ef8354;
+}
+:root[data-board='candy'] {
+  --board-light: #ffe1f0;
+  --board-dark: #ff7eb6;
+}
+:root[data-board='lemon'] {
+  --board-light: #fff6d6;
+  --board-dark: #e8b923;
+}
+:root[data-board='midnight'] {
+  --board-light: #4a5068;
+  --board-dark: #2b2f42;
+  --board-coord: rgba(255, 255, 255, 0.65);
+}
 .cg-wrap cg-board {
-  background-color: #f0d9b5;
-  background-image: repeating-conic-gradient(#b58863 0 25%, #f0d9b5 0 50%);
+  background-color: var(--board-light);
+  background-image: repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
   background-size: 25% 25%;
+}
+/* Walnut gets a faint grain, so it reads as wood rather than a flat brown. */
+:root[data-board='walnut'] .cg-wrap cg-board {
+  background-image:
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%),
+    repeating-linear-gradient(95deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 7px);
+  background-size:
+    25% 25%,
+    auto;
 }
 .cg-wrap cg-board square.last-move {
   background-color: rgba(205, 210, 106, 0.62);
@@ -366,7 +411,7 @@ html .cg-wrap coords {
   opacity: 1;
 }
 html .cg-wrap coords coord {
-  color: rgba(16, 26, 60, 0.7);
+  color: var(--board-coord, rgba(16, 26, 60, 0.7));
 }
 /* Coordinates inside the edge squares: ranks top-left, files bottom-right. */
 html .cg-wrap coords.ranks {

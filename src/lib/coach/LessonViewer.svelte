@@ -133,7 +133,7 @@
 <div class="lesson">
     <section class="board-col" aria-label="Board">
       <div class="board-box">
-        <Board {fen} orientation={slide?.orientation ?? 'white'} turnColor={pos.turn} {lastMove} check={pos.isCheck()} {shapes} viewOnly label="Lesson board" />
+        <Board {fen} orientation={slide?.orientation ?? 'white'} turnColor={pos.turn} {lastMove} check={pos.isCheck()} {shapes} viewOnly label="Lesson board" onswipe={(d) => go(d === 'forward' ? 1 : -1)} />
       </div>
       <div class="nav">
         <button class="icon-btn" onclick={() => go(-1)} disabled={index === 0} aria-label="Previous slide"><Icon name="back" /></button>

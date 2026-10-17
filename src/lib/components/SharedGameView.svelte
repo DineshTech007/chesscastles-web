@@ -92,7 +92,7 @@
   <div class="shared">
     <section class="board-col">
       <div class="who top">{orientation === 'white' ? game.black : game.white}</div>
-      <Board fen={fenOf(pos)} {orientation} turnColor={pos.turn} lastMove={last} check={pos.isCheck()} viewOnly label="Shared game" />
+      <Board fen={fenOf(pos)} {orientation} turnColor={pos.turn} lastMove={last} check={pos.isCheck()} viewOnly label="Shared game" onswipe={(d) => go(ply + (d === 'forward' ? 1 : -1))} />
       <div class="who">{orientation === 'white' ? game.white : game.black}</div>
     </section>
     <aside class="side">

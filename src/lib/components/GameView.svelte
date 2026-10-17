@@ -2,13 +2,16 @@
   import { myInitials, myName } from '$lib/stores/me';
   import { onDestroy, onMount } from 'svelte';
   import type { Key } from '@lichess-org/chessground/types';
+  import type { Role } from 'chessops/types';
   import Board from './Board.svelte';
   import Icon from './Icon.svelte';
   import ShareGame from './ShareGame.svelte';
   import MoveList from './MoveList.svelte';
   import MoveNav from '$lib/components/MoveNav.svelte';
   import PlayerBar from './PlayerBar.svelte';
-  import { destsOf, fenOf, keyOf, materialOf, moveFromKeys, moveToUci } from '$lib/chess/position';
+  import { destsOf, fenOf, isPromotion, keyOf, materialOf, moveFromKeys, moveToUci } from '$lib/chess/position';
+  import PromotionPicker from './PromotionPicker.svelte';
+  import { autoQueen, premovesOn } from '$lib/preferences';
   import { makeBoardFen } from 'chessops/fen';
   import { opposite, tcLabel, type Color, type FideGame } from '$lib/game/fideGame';
   import { PremoveQueue } from '$lib/game/premoves';
@@ -269,9 +272,25 @@
     }
   });
 
+  // A promotion with auto-queen off: ask which piece before the move is played.
+  let promoting = $state<{ orig: Key; dest: Key } | undefined>();
   function onmove(orig: Key, dest: Key) {
     const pos = game.position;
+    if (!$autoQueen && isPromotion(pos, orig, dest)) {
+      promoting = { orig, dest };
+      return;
+    }
     if (!game.play(moveFromKeys(pos, orig, dest))) v++;
+  }
+  function pickPromotion(role: Role) {
+    if (!promoting) return;
+    const { orig, dest } = promoting;
+    promoting = undefined;
+    if (!game.play(moveFromKeys(game.position, orig, dest, role))) v++;
+  }
+  function cancelPromotion() {
+    promoting = undefined;
+    board?.resync();
   }
 
   function onpremove(orig: Key, dest: Key) {
@@ -353,6 +372,10 @@
 
 <svelte:window onblur={onBlur} onkeydown={onkey} />
 
+{#if promoting}
+  <PromotionPicker color={game.position.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
+{/if}
+
 <div class="game">
   <section class="board-col" aria-label="Board">
     <PlayerBar {...top} />
@@ -366,12 +389,13 @@
         dests={view.dests}
         lastMove={view.lastMove}
         check={view.check}
-        premovable={!g.isOver && viewPly === undefined}
+        premovable={$premovesOn && !g.isOver && viewPly === undefined}
         queued={view.queued}
         shapes={view.shapes}
         label="Game board"
         {onmove}
         {onpremove}
+        onswipe={(d) => go((viewPly ?? g.sans.length) + (d === 'forward' ? 1 : -1))}
       />
     </div>
     <PlayerBar {...bottom} />

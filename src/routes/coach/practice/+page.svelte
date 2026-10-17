@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { onDestroy, onMount } from 'svelte';
   import type { Chess } from 'chessops/chess';
-  import type { NormalMove } from 'chessops/types';
+  import type { NormalMove, Role } from 'chessops/types';
   import type { DrawShape } from '@lichess-org/chessground/draw';
   import type { Key } from '@lichess-org/chessground/types';
   import { makeBoardFen } from 'chessops/fen';
@@ -10,7 +10,9 @@
   import { playMoveSound } from '$lib/sound';
   import Board from '$lib/components/Board.svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import { destsOf, fenOf, keyOf, moveFromKeys, positionFromFen, sanOf, START_FEN, uciToMove } from '$lib/chess/position';
+  import { destsOf, fenOf, isPromotion, keyOf, moveFromKeys, positionFromFen, sanOf, START_FEN, uciToMove } from '$lib/chess/position';
+  import PromotionPicker from '$lib/components/PromotionPicker.svelte';
+  import { autoQueen, premovesOn } from '$lib/preferences';
   import { engine, evalLabel, whiteChances, type EngineInfo } from '$lib/engine/stockfish';
   import { engineMove, maiaPick } from '$lib/game/engineMove';
   import { maia, maiaStatus } from '$lib/engine/maia';
@@ -172,12 +174,30 @@
     board?.cancelPremove();
   }
 
+  let promoting = $state<{ orig: Key; dest: Key } | undefined>();
   function onmove(orig: Key, dest: Key) {
     if (!myTurn) return;
+    if (!$autoQueen && isPromotion(pos, orig, dest)) {
+      promoting = { orig, dest };
+      return;
+    }
     const m = moveFromKeys(pos, orig, dest);
     if (!pos.isLegal(m)) return;
     apply(m);
     void maybeEngine();
+  }
+  function pickPromotion(role: Role) {
+    if (!promoting) return;
+    const { orig, dest } = promoting;
+    promoting = undefined;
+    const m = moveFromKeys(pos, orig, dest, role);
+    if (!pos.isLegal(m)) return;
+    apply(m);
+    void maybeEngine();
+  }
+  function cancelPromotion() {
+    promoting = undefined;
+    board?.resync();
   }
 
   async function evaluate() {
@@ -257,6 +277,10 @@
 
 <svelte:head><title>Practice · Coach · Chess Castles</title></svelte:head>
 
+{#if promoting}
+  <PromotionPicker color={pos.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
+{/if}
+
 <div class="practice">
   <section class="board-col" aria-label="Board">
     <div class="board-row">
@@ -277,7 +301,7 @@
           {lastMove}
           check={!preview && pos.isCheck()}
           shapes={[...shapes, ...premoveShapes]}
-          premovable={!pos.isEnd()}
+          premovable={$premovesOn && !pos.isEnd()}
           queued={queuedKeys}
           label="Practice board"
           {onmove}

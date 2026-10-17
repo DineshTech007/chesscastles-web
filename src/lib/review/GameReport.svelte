@@ -91,7 +91,7 @@
 
 <div class="report">
   <div class="board-col">
-    <Board {fen} viewOnly orientation={game.userSide} lastMove={current ? [key(current.move.from), key(current.move.to)] : undefined} {shapes} label="Review board" />
+    <Board {fen} viewOnly orientation={game.userSide} lastMove={current ? [key(current.move.from), key(current.move.to)] : undefined} {shapes} label="Review board" onswipe={(d) => go(at + (d === 'forward' ? 1 : -1))} />
     <section class="explain card" aria-live="polite">
       {#if current}
         <div class="head">

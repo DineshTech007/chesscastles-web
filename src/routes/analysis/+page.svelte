@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { onDestroy, onMount } from 'svelte';
   import { Chess } from 'chessops/chess';
-  import type { NormalMove } from 'chessops/types';
+  import type { NormalMove, Role } from 'chessops/types';
   import type { Key } from '@lichess-org/chessground/types';
   import Board from '$lib/components/Board.svelte';
   import DbPanel from '$lib/components/DbPanel.svelte';
@@ -12,7 +12,9 @@
   import MoveNav from '$lib/components/MoveNav.svelte';
   import BoardEditor from '$lib/components/BoardEditor.svelte';
   import { CloudBook } from '$lib/book/book';
-  import { START_FEN, destsOf, fenOf, keyOf, moveFromKeys, moveToUci, positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
+  import { START_FEN, destsOf, fenOf, isPromotion, keyOf, moveFromKeys, moveToUci, positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
+  import PromotionPicker from '$lib/components/PromotionPicker.svelte';
+  import { autoQueen } from '$lib/preferences';
   import { engine, evalLabel, whiteChances, type EngineInfo } from '$lib/engine/stockfish';
   import { myGames, type SavedGame } from '$lib/stores/myGames';
   import { POINTS, study } from '$lib/study/progress';
@@ -394,7 +396,25 @@
     cursor = path.length;
   }
 
-  const onmove = (orig: Key, dest: Key) => play(moveFromKeys(pos, orig, dest));
+  let board: Board | undefined = $state();
+  let promoting = $state<{ orig: Key; dest: Key } | undefined>();
+  function onmove(orig: Key, dest: Key) {
+    if (!$autoQueen && isPromotion(pos, orig, dest)) {
+      promoting = { orig, dest };
+      return;
+    }
+    play(moveFromKeys(pos, orig, dest));
+  }
+  function pickPromotion(role: Role) {
+    if (!promoting) return;
+    const { orig, dest } = promoting;
+    promoting = undefined;
+    play(moveFromKeys(pos, orig, dest, role));
+  }
+  function cancelPromotion() {
+    promoting = undefined;
+    board?.resync();
+  }
   const go = (ply: number) => {
     const to = Math.max(0, Math.min(line.length, ply));
     if (to === cursor + 1) playMoveSound(cursor ? line[cursor - 1].after : start, line[cursor].move);
@@ -534,6 +554,10 @@
 </script>
 
 <svelte:head><title>{title} · Chess Castles</title></svelte:head>
+
+{#if promoting}
+  <PromotionPicker color={pos.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
+{/if}
 <svelte:window onkeydown={onkey} />
 
 {#if editing}
@@ -561,6 +585,7 @@
       {/if}
       <div class="board-box">
         <Board
+          bind:this={board}
           {fen}
           {orientation}
           turnColor={pos.turn}
@@ -574,6 +599,7 @@
           ]}
           label="Analysis board"
           {onmove}
+          onswipe={(d) => go(cursor + (d === 'forward' ? 1 : -1))}
         />
       </div>
     </div>

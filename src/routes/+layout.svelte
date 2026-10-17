@@ -24,6 +24,8 @@
   import { afterNavigate } from '$app/navigation';
   import LimitModal from '$lib/components/LimitModal.svelte';
   import SignInModal from '$lib/components/SignInModal.svelte';
+  import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
+  import { boardThemeOpen } from '$lib/boardTheme';
   import { flush, pageView, setSignedIn } from '$lib/analytics';
   import { keepReferral, loadPlanSettings, planSettings, refreshMyPlan, sendReferral } from '$lib/plans';
 
@@ -213,7 +215,10 @@
       <div class="focus-top">
         <button class="focus-back" onclick={() => history.back()} aria-label="Leave the game page"><Icon name="back" size={18} />Back</button>
         <span class="focus-name">CHESS <span class="gold">CASTLES</span></span>
-        <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'}><Icon name={$soundOn ? 'speaker' : 'mute'} size={18} /></button>
+        <span class="focus-actions">
+          <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'}><Icon name={$soundOn ? 'speaker' : 'mute'} size={18} /></button>
+          <button class="icon-btn" onclick={() => ($boardThemeOpen = true)} aria-label="Board colour" title="Board colour"><Icon name="palette" size={18} /></button>
+        </span>
       </div>
     {:else}
     <header class="top">
@@ -233,6 +238,9 @@
       </button>
       <button class="icon-btn" onclick={toggleTheme} aria-label={theme === 'dark' ? 'Light theme' : 'Dark theme'}>
         <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
+      </button>
+      <button class="icon-btn" onclick={() => ($boardThemeOpen = true)} aria-label="Board colour" title="Board colour">
+        <Icon name="palette" size={20} />
       </button>
       <a class="top-me" href="/profile" title="Your profile" aria-label="Your profile">
         <span class="top-av">
@@ -279,6 +287,7 @@
 
 <LimitModal />
 <SignInModal />
+<BoardThemeModal bind:open={$boardThemeOpen} />
 
 {#if phone && !focusGame}
   <nav class="tabs" aria-label="Main">
@@ -473,10 +482,16 @@
     cursor: pointer;
   }
   .focus-name {
+    flex: 1;
+    text-align: center;
     font-family: 'Cinzel', serif;
     font-weight: 800;
     font-size: 14px;
     letter-spacing: 0.04em;
+  }
+  .focus-actions {
+    display: flex;
+    gap: 2px;
   }
   .focus-name .gold {
     color: var(--gold);

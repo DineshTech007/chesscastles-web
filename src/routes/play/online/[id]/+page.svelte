@@ -11,7 +11,10 @@
   import MoveNav from '$lib/components/MoveNav.svelte';
   import PlayerBar from '$lib/components/PlayerBar.svelte';
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
-  import { destsOf, fenOf, keyOf, materialOf, moveFromKeys, moveToUci } from '$lib/chess/position';
+  import { destsOf, fenOf, isPromotion, keyOf, materialOf, moveFromKeys, moveToUci } from '$lib/chess/position';
+  import PromotionPicker from '$lib/components/PromotionPicker.svelte';
+  import { autoQueen, premovesOn } from '$lib/preferences';
+  import type { Role } from 'chessops/types';
   import { OnlineGame } from '$lib/game/onlineGame';
   import { PremoveQueue } from '$lib/game/premoves';
   import * as api from '$lib/lichessBoard';
@@ -151,12 +154,27 @@
     }
   }
 
+  let promoting = $state<{ orig: Key; dest: Key } | undefined>();
   function onmove(orig: Key, dest: Key) {
     if (!game.myTurn) {
       v++;
       return;
     }
+    if (!$autoQueen && isPromotion(game.position, orig, dest)) {
+      promoting = { orig, dest };
+      return;
+    }
     void send(moveFromKeys(game.position, orig, dest));
+  }
+  function pickPromotion(role: Role) {
+    if (!promoting) return;
+    const { orig, dest } = promoting;
+    promoting = undefined;
+    void send(moveFromKeys(game.position, orig, dest, role));
+  }
+  function cancelPromotion() {
+    promoting = undefined;
+    board?.resync();
   }
 
   function onpremove(orig: Key, dest: Key) {
@@ -266,6 +284,10 @@
 
 <svelte:window onkeydown={onkey} />
 
+{#if promoting}
+  <PromotionPicker color={game.position.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
+{/if}
+
 {#if !token}
   <div class="card gate">
     <h1 class="title">Sign in to play online</h1>
@@ -285,12 +307,13 @@
         dests={view.dests}
         lastMove={view.lastMove}
         check={view.pos.isCheck()}
-        premovable={!game.isOver && viewPly === undefined}
+        premovable={$premovesOn && !game.isOver && viewPly === undefined}
         queued={view.queued}
         shapes={view.shapes}
         label="Online game board"
         {onmove}
         {onpremove}
+        onswipe={(d) => go((viewPly ?? game.plies.length) + (d === 'forward' ? 1 : -1))}
       />
       <PlayerBar {...bottom} />
     </section>

@@ -47,13 +47,18 @@ export const destsOf = (pos: Chess) => chessgroundDests(pos);
 export const keyOf = (sq: Square): Key => makeSquare(sq) as Key;
 export const squareOfKey = (k: string): Square => parseSquare(k)!;
 
+/** Whether a drag from `orig` to `dest` is a pawn reaching the last rank (so it needs a promotion piece). */
+export function isPromotion(pos: Chess, orig: string, dest: string): boolean {
+  const piece = pos.board.get(squareOfKey(orig));
+  const rank = Math.floor(squareOfKey(dest) / 8);
+  return piece?.role === 'pawn' && (rank === 0 || rank === 7);
+}
+
 /** The board move a chessground drag means, with promotion when needed. */
 export function moveFromKeys(pos: Chess, orig: string, dest: string, promotion?: Role): NormalMove {
   const from = squareOfKey(orig);
   const to = squareOfKey(dest);
-  const piece = pos.board.get(from);
-  const rank = Math.floor(to / 8);
-  const promo = piece?.role === 'pawn' && (rank === 0 || rank === 7);
+  const promo = isPromotion(pos, orig, dest);
   return promo ? { from, to, promotion: promotion ?? 'queen' } : { from, to };
 }
 

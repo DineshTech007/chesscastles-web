@@ -140,6 +140,7 @@
             lastMove={cursor ? [keyOf(game.plies[cursor - 1].move.from), keyOf(game.plies[cursor - 1].move.to)] : undefined}
             check={pos.isCheck()}
             label="{h('White')} against {h('Black')}"
+            onswipe={(d) => go(cursor + (d === 'forward' ? 1 : -1))}
           />
         </div>
       </div>

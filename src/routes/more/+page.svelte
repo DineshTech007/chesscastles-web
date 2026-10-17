@@ -16,6 +16,7 @@
 
   const links: { href: string; label: string; icon: IconName }[] = [
     { href: '/profile', label: 'Profile, photo and CC Rating', icon: 'users' },
+    { href: '/settings', label: 'Settings: premoves, auto-queen, sound, board colour', icon: 'settings' },
     { href: '/plans', label: 'Plans: Pawn, Bishop, Rook, Queen', icon: 'crown' },
     { href: '/students', label: 'My students (coach tools)', icon: 'coach' },
     { href: '/friends', label: 'Friends and messages', icon: 'users' },

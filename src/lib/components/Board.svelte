@@ -23,6 +23,7 @@
     label = 'Chess board',
     onmove,
     onpremove,
+    onswipe,
   }: {
     fen: string;
     orientation?: Color;
@@ -41,12 +42,38 @@
     label?: string;
     onmove?: (orig: Key, dest: Key) => void;
     onpremove?: (orig: Key, dest: Key) => void;
+    /** A finger swipe on an empty part of the board (not a piece): step through the move history, as Lichess and chess.com do on phones. */
+    onswipe?: (dir: 'back' | 'forward') => void;
   } = $props();
 
+  // A swipe that didn't start on a piece (so it never competes with dragging one).
+  // Listened for in the capture phase, straight on the wrapper: chessground attaches its
+  // own handlers on the board underneath and stops them bubbling, so a plain bubble-phase
+  // listener up here would never see a touch that started on the board at all.
+  let touch: { x: number; y: number; t: number; onPiece: boolean } | undefined;
+  function onpointerdown(e: PointerEvent) {
+    if (!onswipe || e.pointerType !== 'touch') return;
+    touch = { x: e.clientX, y: e.clientY, t: Date.now(), onPiece: !!(e.target as HTMLElement).closest('piece') };
+  }
+  function onpointerup(e: PointerEvent) {
+    if (!touch) return;
+    const { x, y, t, onPiece } = touch;
+    touch = undefined;
+    if (onPiece) return;
+    const dx = e.clientX - x;
+    const dy = e.clientY - y;
+    if (Date.now() - t < 600 && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) onswipe?.(dx < 0 ? 'forward' : 'back');
+  }
+
+  let wrap: HTMLDivElement;
   let el: HTMLDivElement;
   let cg: Api | undefined = $state();
 
   onMount(() => {
+    const oncancel = () => (touch = undefined);
+    wrap.addEventListener('pointerdown', onpointerdown, { capture: true, passive: true });
+    wrap.addEventListener('pointerup', onpointerup, { capture: true, passive: true });
+    wrap.addEventListener('pointercancel', oncancel, { capture: true, passive: true });
     cg = Chessground(el, {
       fen,
       orientation,
@@ -69,6 +96,9 @@
     return () => {
       ro.disconnect();
       cg?.destroy();
+      wrap.removeEventListener('pointerdown', onpointerdown, { capture: true });
+      wrap.removeEventListener('pointerup', onpointerup, { capture: true });
+      wrap.removeEventListener('pointercancel', oncancel, { capture: true });
     };
   });
 
@@ -95,9 +125,15 @@
   export function cancelPremove() {
     cg?.cancelPremove();
   }
+
+  /** Snaps the board back to its current `fen`: used after a promotion choice is cancelled,
+   * since chessground had already moved the pawn to the back rank on its own. */
+  export function resync() {
+    cg?.set({ fen });
+  }
 </script>
 
-<div class="board" role="group" aria-label={label}>
+<div class="board" role="group" aria-label={label} bind:this={wrap}>
   <div bind:this={el} class="cg-host"></div>
 </div>
 
