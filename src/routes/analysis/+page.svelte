@@ -398,6 +398,12 @@
   const go = (ply: number) => {
     const to = Math.max(0, Math.min(line.length, ply));
     if (to === cursor + 1) playMoveSound(cursor ? line[cursor - 1].after : start, line[cursor].move);
+    // Going back: forward from there follows the main continuation again (back to the game's
+    // own move after trying a variation), not the side line just looked at.
+    if (to < cursor) {
+      const node = to ? path[to - 1] : root;
+      path = [...path.slice(0, to), ...follow(node.children[0])];
+    }
     cursor = to;
   };
 

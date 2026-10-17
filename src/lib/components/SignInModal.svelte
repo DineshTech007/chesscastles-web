@@ -97,6 +97,16 @@
     color: var(--muted);
     cursor: pointer;
   }
+  /* One crest: the one for the theme. */
+  .crest.logo-light {
+    display: none;
+  }
+  :global(:root[data-theme='light']) .crest.logo-light {
+    display: block;
+  }
+  :global(:root[data-theme='light']) .crest.logo-dark {
+    display: none;
+  }
   h2 {
     margin: 0;
     font-size: 21px;
