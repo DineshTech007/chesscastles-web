@@ -28,9 +28,19 @@
   } from '$lib/study/openingTree';
   import { Recall } from '$lib/study/srs';
   import { POINTS, study } from '$lib/study/progress';
+  import { masterOf, masterOpening, RepertoireBook } from '$lib/masters/repertoire';
+  import { studyById, studyOpening } from '$lib/study/openingStudy';
+  import { gamesDb, type GameHeader } from '$lib/games/gamesDb';
 
   const MAX_TRIES = 3;
-  const opening = findOpening(page.params.id!);
+  const opening = findOpening(page.params.id!) ?? masterOpening(page.params.id!) ?? studyOpening(page.params.id!);
+  /** Opened from the opening study section: back goes there. */
+  const studied = studyOpening(page.params.id!)?.study;
+  const backHref = studied ? `/learn/study/${studied}` : '/learn';
+  const backLabel = studied ? (studyById(studied)?.name ?? 'Opening study') : 'Learn';
+  /** A great player's repertoire ("m-carlsen-white"), built from their own games. */
+  const master = masterOf(page.params.id!);
+  const otherSide = master ? `/learn/openings/m-${master.teacher}-${master.side === 'white' ? 'black' : 'white'}` : '';
 
   // Building.
   let tree = $state<OpeningTree | undefined>();
@@ -53,6 +63,8 @@
   let tries = $state(0);
   let reveal = $state<TreeEdge | undefined>();
   let stats = $state({ right: 0, missed: 0, lines: 0 });
+  /** Strong players' games that reached the end of the line just trained. */
+  let models = $state<{ h: GameHeader; href: string }[]>([]);
   let confirmRemove = false;
   let v = $state(0);
   let thinkingSince = 0;
@@ -83,17 +95,17 @@
     buildError = '';
     try {
       const t = await buildTree({
-        book: new CloudBook(),
+        book: master ? new RepertoireBook(master.teacher, master.side) : new CloudBook(),
         openingId: opening.id,
         rootSans: opening.sans,
-        userSide: side,
+        userSide: master ? master.side : side,
         depth,
-        ratingFloor: floor,
+        ratingFloor: master ? 0 : floor,
         maxReplies: allLines ? 3 : 1,
         onProgress: (done, queued) => (progress = { done, queued }),
       });
       if (!userNodes(t).length) {
-        buildError = 'Not enough games from that rating for this opening. Try a lower rating.';
+        buildError = master ? 'Not enough games to build this repertoire.' : 'Not enough games from that rating for this opening. Try a lower rating.';
         return;
       }
       saveTree(t);
@@ -137,6 +149,7 @@
     if (!tree || !pos) return;
     if (index >= line.length) {
       phase = 'done';
+      void loadModels(pos.clone());
       stats.lines++;
       study.log('trainer', POINTS.trainerLine, `${opening?.name} line`);
       return;
@@ -155,6 +168,21 @@
         index++;
         advance();
       });
+    }
+  }
+
+  async function loadModels(at: Chess) {
+    const t = token;
+    models = [];
+    try {
+      const refs = (await gamesDb.refs(at)).sort((a, b) => b.elo - a.elo).slice(0, 10);
+      const key = polyglotKey(at).toString(16);
+      const got = await Promise.all(refs.map(async (r) => ({ h: await gamesDb.header(r.gameId), href: `/analysis?db=${r.gameId}&key=${key}` })));
+      // Classical games only: no blitz, rapid or online events.
+      const fast = /blitz|rapid|bullet|armageddon|online|titled|\binv\b|invitational|speed|blind|960/i;
+      if (t === token) models = got.filter((g): g is { h: GameHeader; href: string } => !!g.h && !fast.test(g.h.event)).slice(0, 3);
+    } catch {
+      /* offline: no games shown */
     }
   }
 
@@ -262,17 +290,23 @@
 
 <svelte:head><title>{opening?.name ?? 'Opening'} · Opening trainer · Chess Castles</title></svelte:head>
 
-<FeatureGate feature="opening" ref={page.params.id} back="/learn" backLabel="Learn">
+<FeatureGate feature="opening" ref={page.params.id} back={backHref} {backLabel}>
 {#if !opening}
   <div class="card missing">That opening isn't in the list. <a href="/learn">Back to Learn</a></div>
 {:else if !tree}
   <div class="setup-wrap">
     <section class="panel setup" aria-labelledby="build-h">
-      <a class="back" href="/learn"><Icon name="back" size={16} />Learn</a>
+      <a class="back" href={backHref}><Icon name="back" size={16} />{backLabel}</a>
       <h1 id="build-h" class="display">{opening.name}</h1>
       <p class="label sans">{opening.sans}</p>
-      <p class="intro">{opening.blurb} Chess Castles builds this opening from 5.4 million tournament games: at your turns the move strong players chose most, at your opponent's turns their popular replies.</p>
+      {#if master}
+        <p class="intro">{opening.blurb}</p>
+        <a class="label switch" href={otherSide} data-sveltekit-reload>Train the openings with {master.side === 'white' ? 'Black' : 'White'} instead</a>
+      {:else}
+        <p class="intro">{opening.blurb} Chess Castles builds this opening from 5.4 million tournament games: at your turns the move strong players chose most, at your opponent's turns their popular replies.</p>
+      {/if}
 
+      {#if !master}
       <div class="group">
         <h2 class="title h">You play</h2>
         <div class="segmented" role="group" aria-label="Your side">
@@ -280,6 +314,7 @@
           <button aria-pressed={side === 'black'} onclick={() => (side = 'black')}>Black</button>
         </div>
       </div>
+      {/if}
       <div class="group">
         <h2 class="title h">How deep</h2>
         <div class="segmented" role="group" aria-label="Depth">
@@ -295,16 +330,19 @@
           <button aria-pressed={!allLines} onclick={() => (allLines = false)}>Main line (fast)</button>
           <button aria-pressed={allLines} onclick={() => (allLines = true)}>All common replies</button>
         </div>
-        <p class="label hint">{allLines ? 'Every reply strong players often meet: thorough.' : 'Only the most popular reply at each turn: ready in seconds.'}</p>
+        <p class="label hint">{allLines ? (master ? 'Every reply that came up often in these games: thorough.' : 'Every reply strong players often meet: thorough.') : 'Only the most popular reply at each turn: ready in seconds.'}</p>
       </div>
+      {#if !master}
       <div class="group">
         <h2 class="title h">Learn from players rated</h2>
         <div class="segmented" role="group" aria-label="Rating">
-          {#each [1800, 2000, 2200, 2400] as f (f)}
+          {#each [1800, 2000, 2200, 2500] as f (f)}
             <button aria-pressed={floor === f} onclick={() => (floor = f)}>{f}+</button>
           {/each}
         </div>
+        {#if floor === 2500}<p class="label hint">Grandmaster level: only games where the player was rated 2500 or more.</p>{/if}
       </div>
+      {/if}
 
       {#if building}
         <div class="building">
@@ -339,7 +377,7 @@
 
     <aside class="side">
       <div class="card">
-        <a class="back" href="/learn"><Icon name="back" size={16} />Learn</a>
+        <a class="back" href={backHref}><Icon name="back" size={16} />{backLabel}</a>
         <h1 class="title t-title">{opening.name}</h1>
         <div class="stats">
           <div><strong class="num">{view.due}</strong><span class="label">due</span></div>
@@ -355,6 +393,17 @@
           {/each}
         </p>
         {#if phase === 'done'}
+          {#if models.length}
+            <div class="models">
+              <span class="label">Strong players' games that reached this position:</span>
+              {#each models as g (g.h.id)}
+                <a class="model" href={g.href}>
+                  <span>{g.h.white} – {g.h.black}</span>
+                  <span class="label">{g.h.result.replace('1/2-1/2', '½-½')} · {!g.h.year || g.h.event.includes(String(g.h.year)) ? g.h.event : `${g.h.event}, ${g.h.year}`}</span>
+                </a>
+              {/each}
+            </div>
+          {/if}
           <button class="btn primary block" onclick={startLine}><Icon name="replay" size={18} />Next line</button>
         {/if}
       </div>
@@ -371,6 +420,30 @@
 </FeatureGate>
 
 <style>
+  .switch {
+    display: inline-block;
+    margin-top: -4px;
+    color: var(--brand);
+  }
+  .models {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .model {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--raised);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .model:hover {
+    outline: 1px solid var(--brand);
+    text-decoration: none;
+  }
   .missing {
     max-width: 600px;
     margin: 20px auto;

@@ -8,6 +8,7 @@
   import { opponentPace } from '$lib/preferences';
   import { bookGuard, humanMove } from '$lib/game/engineMove';
   import { OPENINGS } from '$lib/openings';
+  import { studyOpening } from '$lib/study/openingStudy';
   import { resumeFor, routeOf } from '$lib/game/resume';
   import { onMount } from 'svelte';
   import { maia } from '$lib/engine/maia';
@@ -25,7 +26,8 @@
   const me = Number(q.get('me')) || 0;
   const playerRating = me >= 400 && me <= 3000 ? me : undefined;
   const human: Color = q.get('c') === 'black' ? 'black' : 'white';
-  const opening = OPENINGS.find((o) => o.id === q.get('o'));
+  // A catalogue opening, or a line from the opening study section.
+  const opening = OPENINGS.find((o) => o.id === q.get('o')) ?? studyOpening(q.get('o') ?? '');
 
   /** Opened to resume a game cut off by a lost connection or a closed browser. */
   const resumed = resumeFor(page.url);

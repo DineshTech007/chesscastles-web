@@ -16,6 +16,7 @@
   import { formatDate } from '$lib/format';
   import { applyToStudyPlan, buildWeeklyPlan, saveWeeklyPlan } from '$lib/insights/plan';
   import { loadInsights, saveInsights, type InsightsData } from '$lib/insights/store';
+  import { isWeak, resultText, studyHref, studyLineName } from '$lib/study/fromGames';
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import { PLANS, PLAN_INFO, planSettings, currentPlan, useFeature } from '$lib/plans';
 
@@ -193,6 +194,17 @@
     </div>
 
     {#if tab === 'overview'}
+      {#each report.study.filter(isWeak).slice(0, 2) as st (st.opening + st.line)}
+        <section class="card block study-call">
+          <h2 class="title">You keep losing in the {studyLineName(st)}</h2>
+          <p class="label">{resultText(st)}{st.firstSlip ? `. Your first mistake usually came around move ${st.firstSlip}.` : '.'} The opening study has this line ready for you:</p>
+          <div class="study-acts">
+            <a class="btn primary" href={studyHref(st.opening, st.line, 'games')}>Model games</a>
+            <a class="btn" href={studyHref(st.opening, st.line, 'puzzles')}>Puzzles from this line</a>
+            <a class="btn" href={studyHref(st.opening, st.line, 'plans')}>The plans</a>
+          </div>
+        </section>
+      {/each}
       <section class="card block">
         <h2 class="title">Where you lose points</h2>
         <p class="label">Centipawns lost per move in each part of the game. Shorter is better; red is your weakest phase.</p>
@@ -261,6 +273,28 @@
           </table>
         </div>
       </section>
+      {#if report.study.length}
+        <section class="card block">
+          <h2 class="title">Your lines in the opening study</h2>
+          <p class="label">Your games in the openings of the study section, line by line, found from the moves (any move order).</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Line</th><th class="r">Games</th><th class="r">Score</th><th class="r">W · D · L</th><th></th></tr></thead>
+              <tbody>
+                {#each report.study as st (st.opening + st.line)}
+                  <tr>
+                    <td>{studyLineName(st)}</td>
+                    <td class="r num">{st.games}</td>
+                    <td class="r num" class:good={st.score >= 0.55} class:poor={st.score < 0.45}>{Math.round(st.score * 100)}%</td>
+                    <td class="r num">{st.wins} · {st.draws} · {st.losses}</td>
+                    <td class="r"><a href={studyHref(st.opening, st.line, isWeak(st) ? 'games' : 'plans')}>{isWeak(st) ? 'Fix it' : 'Study'} →</a></td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      {/if}
     {:else if tab === 'games'}
       <section class="card block">
         <h2 class="title">Games analysed</h2>
@@ -618,6 +652,14 @@
   }
   .tile strong {
     font-size: 32px;
+  }
+  .study-call {
+    border-color: color-mix(in srgb, var(--loss) 45%, var(--border));
+  }
+  .study-acts {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .block {
     padding: 16px 18px;

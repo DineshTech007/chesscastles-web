@@ -130,6 +130,14 @@ export const LEGENDS: Record<string, { name: string; bio: L10n }> = {
     name: 'Vasily Smyslov',
     bio: { en: 'Vasily Smyslov was World Champion from 1957 to 1958.', hi: 'Vasily Smyslov 1957 से 1958 तक World Champion रहे।', mr: 'Vasily Smyslov 1957 ते 1958 World Champion होते.' },
   },
+  giri: {
+    name: 'Anish Giri',
+    bio: { en: 'Anish Giri of the Netherlands became a grandmaster at 14 and is known for very solid, careful play.', hi: 'Netherlands के Anish Giri 14 साल की उम्र में grandmaster बने और अपने बहुत solid, सधे हुए खेल के लिए जाने जाते हैं।', mr: 'Netherlands चा Anish Giri 14 व्या वर्षी grandmaster झाला आणि तो अतिशय solid, काळजीपूर्वक खेळासाठी ओळखला जातो.' },
+  },
+  rubinstein: {
+    name: 'Akiba Rubinstein',
+    bio: { en: 'Akiba Rubinstein from Poland was one of the best players in the world before 1914, famous for his rook endgames.', hi: 'Poland के Akiba Rubinstein 1914 से पहले दुनिया के सबसे अच्छे players में से थे, अपने rook endgames के लिए मशहूर।', mr: 'Poland चे Akiba Rubinstein 1914 पूर्वी जगातल्या सगळ्यात चांगल्या players पैकी होते, त्यांच्या rook endgames साठी प्रसिद्ध.' },
+  },
   steinitz: {
     name: 'Wilhelm Steinitz',
     bio: { en: 'Wilhelm Steinitz was the first official World Champion, in 1886.', hi: 'Wilhelm Steinitz 1886 में पहले official World Champion बने।', mr: 'Wilhelm Steinitz 1886 मध्ये पहिले official World Champion झाले.' },

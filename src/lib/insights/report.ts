@@ -1,5 +1,6 @@
 import { CONFIG, isError, type AnalyzedGame, type MoveFacts, type Phase, type Tactic, TACTICS } from './analysis';
 import { openingFamily, userRating, userScore, type ImportedGame } from './games';
+import { studyStats, type StudyLineStat } from '$lib/study/fromGames';
 
 /**
  * Guru's report on a player's analysed games (a port of the app's
@@ -73,6 +74,8 @@ export interface Report {
   weaknesses: Weakness[];
   /** Strong points, for encouragement. */
   strengths: string[];
+  /** The player's results in the opening study's lines (weakest first). */
+  study: StudyLineStat[];
   averageRating?: number;
 }
 
@@ -286,6 +289,7 @@ export function buildReport(all: AnalyzedGame[]): Report {
     byColor,
     weaknesses: found.slice(0, 5),
     strengths,
+    study: studyStats(all),
     averageRating: ratings.length ? Math.round(avg(ratings)) : undefined,
   };
 }

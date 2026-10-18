@@ -5,6 +5,8 @@ import { dayOf, type Activity } from '$lib/study/progress';
 import { loadPlan, savePlan, type Topic } from '$lib/study/plan';
 import { TACTICS } from './analysis';
 import type { MoveRef, Report, Weakness } from './report';
+import { isWeak, resultText, studyHref, studyLineName, type StudyLineStat } from '$lib/study/fromGames';
+import { studyById, studyTrainerId } from '$lib/study/openingStudy';
 
 /**
  * Guru's weekly plan from the report on the player's games (a port of the
@@ -14,7 +16,7 @@ import type { MoveRef, Report, Weakness } from './report';
  * Progress is counted from what the player actually does on the site.
  */
 
-export type TaskKind = 'puzzles' | 'mistakes' | 'lesson' | 'vision' | 'sprint' | 'opening' | 'games' | 'tip';
+export type TaskKind = 'puzzles' | 'mistakes' | 'lesson' | 'vision' | 'sprint' | 'opening' | 'games' | 'tip' | 'study';
 
 export interface Task {
   id: string;
@@ -160,11 +162,28 @@ function tasksFor(w: Weakness, rating: number): Task[] {
   return out.filter((t): t is Task => !!t);
 }
 
-const TOPIC_OF: Record<Task['kind'], Topic> = { puzzles: 'tactics', mistakes: 'tactics', lesson: 'middlegame', vision: 'tactics', sprint: 'tactics', opening: 'openings', games: 'middlegame', tip: 'middlegame' };
+const TOPIC_OF: Record<Task['kind'], Topic> = { puzzles: 'tactics', mistakes: 'tactics', lesson: 'middlegame', vision: 'tactics', sprint: 'tactics', opening: 'openings', games: 'middlegame', tip: 'middlegame', study: 'openings' };
+
+/** A study line the player keeps losing in: its model games, puzzles and trainer (the opening study section). */
+function studyTasks(st: StudyLineStat): Task[] {
+  const name = studyLineName(st);
+  const o = studyById(st.opening);
+  if (!o) return [];
+  const why = `You scored ${Math.round(st.score * 100)}% in ${st.games} games in this line`;
+  const tasks: Task[] = [
+    { id: `s-g-${st.opening}-${st.line}`, kind: 'study', title: `Model games: ${name}`, detail: `${why}. See how strong players handle it.`, href: studyHref(st.opening, st.line, 'games'), target: 2, minutes: 15, counts: `Model game: ${name}` },
+    { id: `s-p-${st.opening}-${st.line}`, kind: 'study', title: `Puzzles from the ${name}`, detail: `Tactics from real games in this line${st.firstSlip ? `: your first mistake usually came around move ${st.firstSlip}` : ''}.`, href: studyHref(st.opening, st.line, 'puzzles'), target: 6, minutes: 12, counts: `Opening puzzle: ${name}` },
+  ];
+  if (st.line !== 'other') tasks.push({ id: `s-t-${st.opening}-${st.line}`, kind: 'opening', title: `Train the ${name}`, detail: 'Learn the moves of the line by heart in the opening trainer.', href: `/learn/openings/${studyTrainerId(st.opening, st.line)}`, target: 1, minutes: 10, counts: 'Trainer' });
+  return tasks;
+}
 
 /** Builds the week from the report, starting today. */
 export function buildWeeklyPlan(r: Report, source: string): WeeklyPlan {
-  const sections = r.weaknesses.map((w) => ({ w, tasks: tasksFor(w, r.averageRating ?? 1200) })).filter((s) => s.tasks.length);
+  const sections: { tasks: Task[] }[] = r.weaknesses.map((w) => ({ tasks: tasksFor(w, r.averageRating ?? 1200) })).filter((s) => s.tasks.length);
+  // A study line the player keeps losing in comes second (after the costliest weakness), or first when nothing else stands out.
+  const weakLine = (r.study ?? []).find(isWeak);
+  if (weakLine) sections.splice(sections.length ? 1 : 0, 0, { tasks: studyTasks(weakLine) });
   const days: DayPlan[] = [];
   const start = new Date();
   for (let d = 0; d < 7; d++) {
@@ -184,12 +203,14 @@ export function buildWeeklyPlan(r: Report, source: string): WeeklyPlan {
     const kinds = tasks.map((t) => t.kind);
     const topic: Topic = tasks.some((t) => t.lessonId && CATALOG.find((l) => l.id === t.lessonId)?.category === 'endgame') || tasks.some((t) => t.theme?.includes('ndgame'))
       ? 'endgame'
-      : kinds.includes('opening') || tasks.some((t) => t.theme === 'opening' || t.lessonId?.startsWith('opening'))
+      : kinds.includes('opening') || kinds.includes('study') || tasks.some((t) => t.theme === 'opening' || t.lessonId?.startsWith('opening'))
         ? 'openings'
         : TOPIC_OF[tasks[0].kind];
     days.push({ day: dayOf(date.getTime()), topic, tasks: tasks.map((t, i) => ({ ...t, id: `${d}-${i}-${t.id}` })) });
   }
-  return { created: Date.now(), source, rating: r.averageRating ?? 1200, focus: r.weaknesses.slice(0, 3).map((w) => ({ title: w.title, evidence: w.evidence })), days, ticked: [] };
+  const focus = r.weaknesses.slice(0, 3).map((w) => ({ title: w.title, evidence: w.evidence }));
+  if (weakLine) focus.splice(Math.min(1, focus.length), 0, { title: `Study the ${studyLineName(weakLine)}`, evidence: resultText(weakLine) });
+  return { created: Date.now(), source, rating: r.averageRating ?? 1200, focus: focus.slice(0, 3), days, ticked: [] };
 }
 
 /** How much of a task is done: from the study log (on or after its day) and the Coach's finished lessons. */

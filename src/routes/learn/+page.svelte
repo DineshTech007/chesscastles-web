@@ -9,6 +9,12 @@
   import { course, loadPlan, nextStep, savePlan, topicOn, TOPICS, WEEKDAYS, type StudyPlan, type Topic } from '$lib/study/plan';
   import { reminderSupport, setReminders } from '$lib/study/reminders';
   import { loadCoach } from '$lib/coach/progress';
+  import { LEGENDS } from '$lib/coach/content/legends';
+  import { TEACHERS } from '$lib/masters/content';
+  import TeacherBadge from '$lib/masters/TeacherBadge.svelte';
+  import { STUDY_OPENINGS } from '$lib/study/openingStudy';
+  import { loadInsights } from '$lib/insights/store';
+  import { isWeak, studyStats, type StudyLineStat } from '$lib/study/fromGames';
   import { loadWeeklyPlan, progressOf, saveWeeklyPlan, weekProgress, type WeeklyPlan } from '$lib/insights/plan';
   import {
     badges,
@@ -33,6 +39,8 @@
   let newSide = $state<'white' | 'black'>('white');
   let addError = $state('');
   const allOpenings = $derived([...OPENINGS, ...customs]);
+  /** Study lines the player keeps losing in (from the games imported for Insights). */
+  let studyWeak = $state<StudyLineStat[]>([]);
   const now = Date.now();
   let plan = $state<StudyPlan>({ days: ['rest', 'rest', 'rest', 'rest', 'rest', 'rest', 'rest'], time: '18:00', minutes: 30, remind: false, streakTime: '20:30' });
   let done = $state<Record<string, number>>({});
@@ -42,6 +50,8 @@
   let guru = $state<WeeklyPlan | undefined>();
 
   onMount(() => {
+    const ins = loadInsights();
+    if (ins) studyWeak = studyStats(ins.games).filter(isWeak);
     plan = loadPlan();
     done = loadCoach().done;
     guru = loadWeeklyPlan();
@@ -404,6 +414,30 @@
     </section>
   </div>
 
+  <section aria-labelledby="study-h" class="study">
+    <div class="spread">
+      <h2 id="study-h" class="title section-h">Opening study</h2>
+      <a class="label" href="/learn/study">All openings</a>
+    </div>
+    <div class="s-grid">
+      {#each STUDY_OPENINGS as o (o.id)}
+        {@const weakLine = studyWeak.find((x) => x.opening === o.id)}
+        <a class="s-card" href={weakLine ? `/learn/study/${o.id}?line=${weakLine.line}&tab=games` : `/learn/study/${o.id}`}>
+          <span class="side {o.side}" title="You play {o.side}"></span>
+          <span class="s-text">
+            <span class="title s-name">{o.name}</span>
+            {#if weakLine}
+              <span class="label weak-note">From your games: {weakLine.losses} losses in the {o.lines.find((l) => l.id === weakLine.line)?.name ?? 'other lines'}</span>
+            {:else}
+              <span class="label">Lines & plans · trainer · model games · puzzles · play it</span>
+            {/if}
+          </span>
+          <Icon name="chevron" size={16} color="var(--muted)" />
+        </a>
+      {/each}
+    </div>
+  </section>
+
   <section aria-labelledby="courses-h" class="courses">
     <div class="spread">
       <h2 id="courses-h" class="title section-h">Courses with Guru</h2>
@@ -432,10 +466,30 @@
     {/each}
   </section>
 
+  <section aria-labelledby="masters-h" class="masters card">
+    <div class="m-text">
+      <h2 id="masters-h" class="title section-h">Endgames with the masters</h2>
+      <p class="label">Choose a great player as your teacher and play their real tournament endgames, move by move, with Guru explaining every idea. Gukesh, Pragg, Arjun, Carlsen, Humpy, Capablanca and more.</p>
+      <a class="btn primary" href="/learn/masters"><Icon name="crown" size={18} />Choose your teacher</a>
+    </div>
+    <div class="m-faces" aria-hidden="true">
+      {#each TEACHERS.slice(0, 8) as t (t.id)}<TeacherBadge id={t.id} group={t.group} size={46} />{/each}
+    </div>
+  </section>
+
   <section aria-labelledby="open-h" class="openings" id="openings">
     <div class="spread">
       <h2 id="open-h" class="title section-h">Opening trainer</h2>
-      <span class="label">Built from strong players' games (2000+). Spaced repetition, three tries per move.</span>
+      <span class="label">Built from strong players' games (2000+, or grandmasters at 2500+). Spaced repetition, three tries per move.</span>
+    </div>
+    <div class="rep">
+      <span class="title rep-h">Learn a master's openings</span>
+      <span class="label">The moves a great player chose in their own games.</span>
+      <div class="rep-list">
+        {#each TEACHERS as t (t.id)}
+          <a class="chip" href="/learn/openings/m-{t.id}-white">{LEGENDS[t.id]?.name ?? t.id}</a>
+        {/each}
+      </div>
     </div>
     <div class="o-grid">
       {#each allOpenings as o (o.id)}
@@ -615,6 +669,91 @@
   }
   .plan-edit .note {
     margin: 0;
+  }
+  .study {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .s-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    gap: 12px;
+  }
+  .s-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--r-card);
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .s-card:hover {
+    border-color: var(--brand);
+    text-decoration: none;
+  }
+  .s-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+  }
+  .s-name {
+    font-size: 18px;
+  }
+  .weak-note {
+    color: var(--loss);
+  }
+  .masters {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    flex-wrap: wrap;
+  }
+  .m-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+    flex: 1 1 320px;
+    min-width: 0;
+  }
+  .m-text .section-h {
+    margin: 0;
+  }
+  .m-text p {
+    margin: 0;
+    line-height: 1.5;
+    max-width: 620px;
+  }
+  .m-faces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 230px;
+  }
+  .rep {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .rep-h {
+    font-size: 17px;
+  }
+  .rep-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .rep-list .chip {
+    text-decoration: none;
   }
   .courses {
     display: flex;
