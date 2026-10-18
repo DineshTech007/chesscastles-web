@@ -234,6 +234,8 @@ export class FideGame {
         const key = polyglotKey(after);
         this.seen.set(key, (this.seen.get(key) ?? 0) + 1);
       }
+      // Show the line's position at once, also when the player moves first from it.
+      if (this.moves.length) this.notify();
     }
     if (this.moves.length) this.tick();
     if (this.isOver) return this.notify();

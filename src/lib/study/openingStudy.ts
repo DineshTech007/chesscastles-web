@@ -205,7 +205,7 @@ export function studyTrainerId(opening: string, line?: string) {
 
 /** The trainer's "opening" for a study opening or one of its lines. */
 export function studyOpening(id: string): (Opening & { study: string }) | undefined {
-  const m = /^st-([a-z-]+?)(?:--([a-z0-9]+))?$/.exec(id);
+  const m = /^st-([a-z-]+?)(?:--([a-z0-9-]+))?$/.exec(id);
   const o = m && studyById(m[1]);
   if (!o) return undefined;
   const line = m![2] ? o.lines.find((l) => l.id === m![2]) : undefined;

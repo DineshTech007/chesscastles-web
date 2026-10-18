@@ -33,6 +33,7 @@ describe('opening study', () => {
     expect(whole).toMatchObject({ side: 'black', sans: 'e4 c6 d4 d5', study: 'caro-kann' });
     const line = studyOpening(studyTrainerId('jobava-london', 'c5'));
     expect(line).toMatchObject({ side: 'white', sans: 'd4 d5 Nc3 Nf6 Bf4 c5', name: 'Jobava London: 3...c5' });
+    expect(studyOpening(studyTrainerId('jobava-london', 'bf5-f3'))).toMatchObject({ sans: 'd4 d5 Nc3 Nf6 Bf4 Bf5 f3', study: 'jobava-london' });
     expect(studyOpening('st-chebanenko--nope')).toBeUndefined();
     expect(studyOpening('st-nothing')).toBeUndefined();
   });
