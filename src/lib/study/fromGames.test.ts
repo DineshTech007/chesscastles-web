@@ -34,12 +34,12 @@ const game = (sans: string, userColor: 'white' | 'black', result: ImportedGame['
 
 describe('study lines in the player\'s own games', () => {
   it('finds the line by position, in any move order', () => {
-    expect(studyLineOf(uciOf('e4 c6 d4 d5 e5 Bf5 Nf3 e6'), 'black')).toEqual({ opening: 'caro-kann', line: 'advance' });
+    expect(studyLineOf(uciOf('e4 c6 d4 d5 e5 Bf5 Nf3 e6'), 'black')).toMatchObject({ opening: 'caro-kann', line: 'advance', at: 6 });
     // 3.Nd2 instead of 3.Nc3 reaches the same Classical position.
-    expect(studyLineOf(uciOf('e4 c6 d4 d5 Nd2 dxe4 Nxe4 Bf5 Ng3 Bg6'), 'black')).toEqual({ opening: 'caro-kann', line: 'classical' });
+    expect(studyLineOf(uciOf('e4 c6 d4 d5 Nd2 dxe4 Nxe4 Bf5 Ng3 Bg6'), 'black')).toMatchObject({ opening: 'caro-kann', line: 'classical', at: 8 });
     // 1.d4 Nf6 2.Nc3 d5 3.Bf4 c5: the Jobava London 3...c5.
-    expect(studyLineOf(uciOf('d4 Nf6 Nc3 d5 Bf4 c5 e3'), 'white')).toEqual({ opening: 'jobava-london', line: 'c5' });
-    expect(studyLineOf(uciOf('e4 c6 d4 d5 Bd3'), 'black')).toEqual({ opening: 'caro-kann', line: 'other' });
+    expect(studyLineOf(uciOf('d4 Nf6 Nc3 d5 Bf4 c5 e3'), 'white')).toMatchObject({ opening: 'jobava-london', line: 'c5', at: 6 });
+    expect(studyLineOf(uciOf('e4 c6 d4 d5 Bd3'), 'black')).toMatchObject({ opening: 'caro-kann', line: 'other', at: 4 });
   });
   it('counts only games with the player on the opening\'s side', () => {
     expect(studyLineOf(uciOf('e4 c6 d4 d5 e5 Bf5'), 'white')).toBeUndefined();
@@ -49,7 +49,7 @@ describe('study lines in the player\'s own games', () => {
     const adv = 'e4 c6 d4 d5 e5 Bf5 Nf3 e6';
     const games = [game(adv, 'black', '1-0'), game(adv, 'black', '1-0'), game(adv, 'black', '1/2-1/2'), game(adv, 'black', '1-0'), game('e4 c6 d4 d5 exd5 cxd5 Bd3 Nc6', 'black', '0-1')];
     const stats = studyStats(games);
-    expect(stats[0]).toMatchObject({ opening: 'caro-kann', line: 'advance', games: 4, losses: 3, draws: 1 });
+    expect(stats[0]).toMatchObject({ opening: 'caro-kann', line: 'advance', games: 4, losses: 3, draws: 1, usual: { sans: '4.Nf3 e6', games: 4 } });
     expect(isWeak(stats[0])).toBe(true);
     expect(stats.find((s) => s.line === 'exchange')).toMatchObject({ games: 1, wins: 1 });
     const plan = buildWeeklyPlan({ weaknesses: [], study: stats, averageRating: 1500 } as unknown as Report, 'test');

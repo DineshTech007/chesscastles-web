@@ -13,6 +13,8 @@
   import { findOpening, removeCustomOpening } from '$lib/customOpenings';
   import {
     buildTree,
+    choicePoints,
+    shareOf,
     deleteTree,
     dueCount,
     grade,
@@ -53,7 +55,9 @@
   let buildError = $state('');
 
   // Training.
-  type Phase = 'their' | 'yours' | 'right' | 'retry' | 'reveal' | 'done';
+  type Phase = 'their' | 'yours' | 'right' | 'retry' | 'reveal' | 'done' | 'alt';
+  /** The player played another main move here: offer to make it theirs. */
+  let altOffer = $state<{ key: string; edge: TreeEdge; usual: TreeEdge; share: number } | undefined>();
   let phase = $state<Phase>('their');
   let line = $state<TreeEdge[]>([]);
   let index = $state(0);
@@ -89,8 +93,10 @@
     for (const t of timers) clearTimeout(t);
   });
 
-  async function build() {
+  /** Builds the tree; with `choices` (the player's own moves) a rebuild keeps the settings and what was learnt. */
+  async function build(choices?: Record<string, string>) {
     if (!opening) return;
+    const old = choices ? tree : undefined;
     building = true;
     buildError = '';
     try {
@@ -98,12 +104,14 @@
         book: master ? new RepertoireBook(master.teacher, master.side) : new CloudBook(),
         openingId: opening.id,
         rootSans: opening.sans,
-        userSide: master ? master.side : side,
-        depth,
-        ratingFloor: master ? 0 : floor,
-        maxReplies: allLines ? 3 : 1,
+        userSide: old?.userSide ?? (master ? master.side : side),
+        depth: old?.depth ?? depth,
+        ratingFloor: old?.ratingFloor ?? (master ? 0 : floor),
+        maxReplies: old?.maxReplies ?? (allLines ? 3 : 1),
+        choices: choices ?? {},
         onProgress: (done, queued) => (progress = { done, queued }),
       });
+      if (old) t.cards = old.cards;
       if (!userNodes(t).length) {
         buildError = master ? 'Not enough games to build this repertoire.' : 'Not enough games from that rating for this opening. Try a lower rating.';
         return;
@@ -186,11 +194,34 @@
     }
   }
 
+  /** Makes another main move the player's own at a position, and rebuilds the rest of the line from it. */
+  async function choose(key: string, uci: string) {
+    if (!tree) return;
+    token++;
+    altOffer = undefined;
+    tree = { ...tree };
+    await build({ ...(tree.choices ?? {}), [key]: uci });
+  }
+  function keepUsual() {
+    altOffer = undefined;
+    phase = 'yours';
+    v++;
+  }
+
   function onmove(orig: Key, dest: Key) {
     if (!tree || !pos || (phase !== 'yours' && phase !== 'retry')) return;
     const edge = line[index];
     const key = nodeKey(pos);
     const m = moveFromKeys(pos, orig, dest);
+    // Another main move of strong players: not a mistake, the player may make it theirs.
+    const node = tree.nodes[key];
+    const alt = node?.alts?.find((a) => sameMove(fenOf(pos!), moveToUci(m), a.uci));
+    if (alt && node) {
+      altOffer = { key, edge: alt, usual: edge, share: shareOf(node, alt) };
+      phase = 'alt';
+      v++;
+      return;
+    }
     if (sameMove(fenOf(pos), moveToUci(m), edge.uci)) {
       const q = tries > 0 ? Recall.wrong : Date.now() - thinkingSince < 8000 ? Recall.easy : Recall.slow;
       grade(tree, key, q, Date.now());
@@ -282,6 +313,8 @@
         };
       case 'reveal':
         return { icon: 'close', text: `The move is ${reveal?.san}`, tone: 'var(--loss)' };
+      case 'alt':
+        return { icon: 'check', text: `${altOffer?.edge.san} is also a main move here`, tone: 'var(--live)' };
       case 'done':
         return { icon: 'trophy', text: 'Line complete. Ready for the next one?', tone: 'var(--gold)' };
     }
@@ -350,7 +383,7 @@
           <span class="label">Reading positions from the games database… {progress.done} of {progress.queued}</span>
         </div>
       {:else}
-        <button class="btn primary big block" onclick={build}><Icon name="learn" size={18} />Build and start training</button>
+        <button class="btn primary big block" onclick={() => build()}><Icon name="learn" size={18} />Build and start training</button>
       {/if}
       {#if buildError}<p class="error">{buildError}</p>{/if}
     </section>
@@ -360,8 +393,20 @@
     <section class="board-col" aria-label="Training board">
       <div class="prompt" style="--tone: {prompt.tone}">
         <Icon name={prompt.icon} size={20} color={prompt.tone} />
-        <span>{prompt.text}</span>
+        <span>{building ? 'Building your line…' : prompt.text}</span>
       </div>
+      {#if altOffer && phase === 'alt'}
+        <div class="card alt-offer">
+          <p>
+            <strong>{altOffer.edge.san}</strong> is also a main move here: strong players chose it in {Math.round(altOffer.share * 100)}% of games
+            ({altOffer.edge.games.toLocaleString('en-IN')}). This trainer has been teaching <strong>{altOffer.usual.san}</strong>. Which do you play?
+          </p>
+          <div class="alt-btns">
+            <button class="btn primary" onclick={() => choose(altOffer!.key, altOffer!.edge.uci)} disabled={building}>I play {altOffer.edge.san}: make it my move</button>
+            <button class="btn" onclick={keepUsual}>Keep {altOffer.usual.san}</button>
+          </div>
+        </div>
+      {/if}
       <Board
         fen={view.fen}
         orientation={tree.userSide}
@@ -407,6 +452,25 @@
           <button class="btn primary block" onclick={startLine}><Icon name="replay" size={18} />Next line</button>
         {/if}
       </div>
+      {#if choicePoints(tree).length}
+        <div class="card small choices">
+          <span class="title">Your choices</span>
+          <span class="label">Where strong players have more than one main move, pick the one from your own preparation.</span>
+          {#each choicePoints(tree) as n (n.key)}
+            {@const no = `${Math.floor(n.ply / 2) + 1}${n.ply % 2 === 0 ? '.' : '...'}`}
+            <div class="choice">
+              <span class="label">Move {no}</span>
+              <span class="opts">
+                {#each [...n.next, ...(n.alts ?? [])] as e (e.uci)}
+                  <button class="chip" aria-pressed={e.uci === n.next[0].uci} disabled={building || e.uci === n.next[0].uci} onclick={() => choose(n.key, e.uci)}>
+                    {no}{e.san} · {Math.round(shareOf(n, e) * 100)}%
+                  </button>
+                {/each}
+              </span>
+            </div>
+          {/each}
+        </div>
+      {/if}
       <div class="card small">
         <p class="label">Lines come back when they are due: wrong answers in ten minutes, right ones after a day, then six days, then longer.</p>
         <button class="btn ghost" onclick={reset}><Icon name="trash" size={16} />Start this opening again</button>
@@ -420,6 +484,37 @@
 </FeatureGate>
 
 <style>
+  .alt-offer {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-color: color-mix(in srgb, var(--live) 50%, var(--border));
+  }
+  .alt-offer p {
+    margin: 0;
+    line-height: 1.5;
+  }
+  .alt-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .choice {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
   .switch {
     display: inline-block;
     margin-top: -4px;

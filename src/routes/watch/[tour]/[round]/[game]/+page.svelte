@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { onDestroy, onMount } from 'svelte';
   import Board from '$lib/components/Board.svelte';
@@ -7,7 +6,11 @@
   import MoveList from '$lib/components/MoveList.svelte';
   import MoveNav from '$lib/components/MoveNav.svelte';
   import PlayerBar from '$lib/components/PlayerBar.svelte';
-  import { fenOf, keyOf } from '$lib/chess/position';
+  import type { NormalMove } from 'chessops/types';
+  import type { DrawShape } from '@lichess-org/chessground/draw';
+  import type { Key } from '@lichess-org/chessground/types';
+  import { destsOf, fenOf, keyOf, moveFromKeys, sanOf, uciToMove } from '$lib/chess/position';
+  import { playMoveSound } from '$lib/sound';
   import { clocksAt, readPgn, type PgnGame } from '$lib/chess/pgn';
   import { engine, evalLabel, whiteChances, type EngineInfo } from '$lib/engine/stockfish';
   import { broadcastGamePgn, roundGames, runningClock, type BroadcastGame } from '$lib/lichess';
@@ -58,20 +61,69 @@
   });
 
   const pos = $derived(game ? (cursor === 0 ? game.start : game.plies[cursor - 1].after) : undefined);
-  const fen = $derived(pos ? fenOf(pos) : '');
+  /** The viewer's own analysis: moves tried on the board from the game position at `base`. */
+  let trial = $state<{ base: number; moves: NormalMove[]; sans: string[] } | undefined>();
+  const trialPos = $derived.by(() => {
+    if (!trial || !game) return undefined;
+    const p = (trial.base === 0 ? game.start : game.plies[trial.base - 1].after).clone();
+    for (const m of trial.moves) p.play(m);
+    return p;
+  });
+  /** What the board shows: the analysis, else the game. */
+  const shown = $derived(trialPos ?? pos);
+  const fen = $derived(shown ? fenOf(shown) : '');
   const h = (k: string) => game?.headers.get(k) ?? '';
   const live = $derived(h('Result') === '*');
 
   function go(ply: number) {
     if (!game) return;
+    trial = undefined;
     cursor = Math.max(0, Math.min(game.plies.length, ply));
     following = cursor === game.plies.length;
   }
+  /** Back to the game as it stands now (and keep following it). */
+  function goLive() {
+    if (game) go(game.plies.length);
+  }
+
+  /** A move on the board: the game's next move steps on; any other move starts (or extends) the viewer's analysis. */
+  function onmove(orig: Key, dest: Key) {
+    if (!game || !shown) return;
+    const m = moveFromKeys(shown, orig, dest);
+    if (!shown.isLegal(m)) return;
+    const next = game.plies[cursor];
+    if (!trial && next && next.move.from === m.from && next.move.to === m.to) {
+      playMoveSound(shown, m);
+      return go(cursor + 1);
+    }
+    const san = sanOf(shown, m);
+    playMoveSound(shown, m);
+    trial = trial ? { ...trial, moves: [...trial.moves, m], sans: [...trial.sans, san] } : { base: cursor, moves: [m], sans: [san] };
+    following = false;
+  }
+  function undoTrial() {
+    if (!trial) return;
+    trial = trial.moves.length > 1 ? { base: trial.base, moves: trial.moves.slice(0, -1), sans: trial.sans.slice(0, -1) } : undefined;
+  }
+  const behind = $derived(game && !following ? game.plies.length - cursor : 0);
+  const atLive = $derived(following && !trial);
+  /** The engine's best move, as an arrow. */
+  const shapes = $derived.by((): DrawShape[] => {
+    const m = engineOn && info?.pv[0] ? uciToMove(info.pv[0]) : undefined;
+    return m ? [{ orig: keyOf(m.from), dest: keyOf(m.to), brush: 'blue' }] : [];
+  });
+  const lastMove = $derived.by((): Key[] | undefined => {
+    if (trial) {
+      const m = trial.moves[trial.moves.length - 1];
+      return [keyOf(m.from), keyOf(m.to)];
+    }
+    return cursor && game ? [keyOf(game.plies[cursor - 1].move.from), keyOf(game.plies[cursor - 1].move.to)] : undefined;
+  });
 
   $effect(() => {
     const f = fen;
     info = undefined;
-    if (!engineOn || !f || pos?.isEnd()) {
+    if (!engineOn || !f || shown?.isEnd()) {
       engine.stopAnalysis();
       return;
     }
@@ -81,22 +133,14 @@
   });
 
   function onkey(e: KeyboardEvent) {
-    if (e.key === 'ArrowLeft') go(cursor - 1);
+    if (e.key === 'ArrowLeft' && trial) undoTrial();
+    else if (e.key === 'ArrowLeft') go(cursor - 1);
     else if (e.key === 'ArrowRight') go(cursor + 1);
     else if (e.key === 'Home') go(0);
     else if (e.key === 'End') go(game?.plies.length ?? 0);
     else if (e.key === 'f') orientation = orientation === 'white' ? 'black' : 'white';
     else return;
     e.preventDefault();
-  }
-
-  function analyse() {
-    try {
-      sessionStorage.setItem('k24.importPgn', pgnText);
-    } catch {
-      /* storage blocked */
-    }
-    goto(`/analysis?import=1&ply=${cursor}`);
   }
 
   function bar(side: 'white' | 'black') {
@@ -153,10 +197,13 @@
           <Board
             {fen}
             {orientation}
-            turnColor={pos.turn}
-            viewOnly
-            lastMove={cursor ? [keyOf(game.plies[cursor - 1].move.from), keyOf(game.plies[cursor - 1].move.to)] : undefined}
-            check={pos.isCheck()}
+            turnColor={shown!.turn}
+            movable={shown!.isEnd() ? undefined : 'both'}
+            dests={shown!.isEnd() ? new Map() : destsOf(shown!)}
+            {lastMove}
+            {shapes}
+            {onmove}
+            check={shown!.isCheck()}
             label="{h('White')} against {h('Black')}"
             onswipe={(d) => go(cursor + (d === 'forward' ? 1 : -1))}
           />
@@ -171,9 +218,27 @@
         <h1 class="title g-title">{h('White')} – {h('Black')}</h1>
         <p class="label">{[h('Event').replace(/^Round [^:]+: .*$/, h('BroadcastName')) || h('BroadcastName'), h('Opening')].filter(Boolean).join(' · ')}</p>
         <div class="status">
-          {#if live}<span class="pill live"><span class="dot"></span>Live</span>{:else}<span class="tag title">{h('Result').replace('1/2-1/2', '½-½')}</span>{/if}
-          {#if !following && live}<button class="btn small" onclick={() => go(game!.plies.length)}>Follow live</button>{/if}
+          {#if live}
+            <button class="pill live" class:away={!atLive} onclick={goLive} title={atLive ? 'Following the game live' : 'Back to the live position'}>
+              <span class="dot"></span>{atLive ? 'Live' : `Back to live${behind ? ` · ${behind} new` : ''}`}
+            </button>
+          {:else}
+            <span class="tag title">{h('Result').replace('1/2-1/2', '½-½')}</span>
+            {#if trial || cursor !== game.plies.length}<button class="btn small" onclick={goLive}>Final position</button>{/if}
+          {/if}
         </div>
+        {#if trial}
+          <div class="trial">
+            <span class="label">Your analysis from move {Math.floor(trial.base / 2) + 1}:</span>
+            <span class="trial-moves">{trial.sans.join(' ')}</span>
+            <span class="trial-btns">
+              <button class="btn small" onclick={undoTrial}><Icon name="undo" size={14} />Undo</button>
+              <button class="btn small" onclick={() => go(trial!.base)}>Back to the game</button>
+            </span>
+          </div>
+        {:else}
+          <p class="label hint">Move the pieces to try your own ideas; turn on the engine to check them.</p>
+        {/if}
         <label class="toggle">
           <input type="checkbox" bind:checked={engineOn} />
           <span>Engine {engineOn && info ? `· ${evalLabel(info)} (depth ${info.depth})` : ''}</span>
@@ -183,12 +248,40 @@
         <MoveList sans={game.plies.map((p) => p.san)} current={cursor} onselect={go} />
         <MoveNav ply={cursor} max={game.plies.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
       </div>
-      <button class="btn primary" onclick={analyse}><Icon name="analyse" size={18} />Analyse this game</button>
     </aside>
   {/if}
 </div>
 
 <style>
+  button.pill.live {
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+  }
+  button.pill.live.away {
+    background: color-mix(in srgb, var(--live) 22%, transparent);
+    outline: 1px solid var(--live);
+  }
+  .trial {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--raised);
+  }
+  .trial-moves {
+    font-weight: 600;
+    word-break: break-word;
+  }
+  .trial-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .hint {
+    margin: 0;
+    font-size: 13px;
+  }
   .viewer {
     display: flex;
     flex-wrap: wrap;

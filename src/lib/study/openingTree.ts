@@ -18,6 +18,10 @@ export interface TreeNode {
   ply: number;
   /** The player's turn: exactly one edge (the move to learn). Else the popular replies. */
   next: TreeEdge[];
+  /** The player's turn: other main moves strong players choose here (15%+ of games), which the player may make theirs. */
+  alts?: TreeEdge[];
+  /** Games that reached this position (the player's turns), for the shares. */
+  total?: number;
 }
 
 /** An opening to train, built from the FIDE games book and kept in the browser. */
@@ -30,6 +34,10 @@ export interface OpeningTree {
   cards: Record<string, SrsCard>;
   built: number;
   ratingFloor: number;
+  /** The player's own choices at their turns (position key -> move), kept when the tree is rebuilt. */
+  choices?: Record<string, string>;
+  depth?: number;
+  maxReplies?: number;
 }
 
 export interface BuildOptions {
@@ -44,8 +52,13 @@ export interface BuildOptions {
   /** An opponent reply must be at least this share of games. */
   minShare?: number;
   maxReplies?: number;
+  /** The player's own move at some of their turns (position key -> UCI), instead of the most played one. */
+  choices?: Record<string, string>;
   onProgress?: (done: number, queued: number) => void;
 }
+
+/** Another move counts as a main move when strong players chose it in at least this share of games. */
+export const ALT_SHARE = 0.15;
 
 const keyOf = (pos: Chess) => polyglotKey(pos).toString(16);
 
@@ -82,9 +95,17 @@ export async function buildTree(o: BuildOptions): Promise<OpeningTree> {
         const total = moves.reduce((s, m) => s + m.games, 0);
         if (!total) return;
         const userTurn = pos.turn === o.userSide;
+        // The player's own choice here, else the most played move.
+        const own = userTurn ? o.choices?.[node.key] : undefined;
+        const mine = own ? moves.find((m) => moveToUci(m.move) === own) : undefined;
         const chosen = userTurn
-          ? moves.slice(0, 1)
+          ? [mine ?? moves[0]]
           : moves.filter((m) => m.games / total >= minShare).slice(0, maxReplies);
+        if (userTurn) {
+          node.total = total;
+          const alts = moves.filter((m) => m !== chosen[0] && m.games / total >= ALT_SHARE).slice(0, 3);
+          if (alts.length) node.alts = alts.map((m) => ({ uci: moveToUci(m.move), san: sanOf(pos, m.move), games: m.games, child: '' }));
+        }
         for (const m of chosen) {
           const after = pos.clone();
           after.play(m.move);
@@ -111,6 +132,9 @@ export async function buildTree(o: BuildOptions): Promise<OpeningTree> {
     cards: {},
     built: Date.now(),
     ratingFloor: floor,
+    choices: o.choices ?? {},
+    depth,
+    maxReplies,
   };
 }
 
@@ -201,6 +225,19 @@ export function sameMove(fen: string, played: string, expected: string): boolean
   // e1g1 and e1h1 are the same castling move.
   const side = (sq: number) => (sq % 8 > a.from % 8 ? 'k' : 'q');
   return Math.abs((a.to % 8) - (a.from % 8)) >= 2 && Math.abs((b.to % 8) - (b.from % 8)) >= 2 && side(a.to) === side(b.to);
+}
+
+/** The share of games a move at the player's turn was chosen in (the learnt move and its alternatives). */
+export function shareOf(n: TreeNode, e: TreeEdge): number {
+  const total = n.total ?? [...n.next, ...(n.alts ?? [])].reduce((s, x) => s + x.games, 0);
+  return total ? e.games / total : 0;
+}
+
+/** The player's turns that have other main moves to choose from, in move order. */
+export function choicePoints(t: OpeningTree): TreeNode[] {
+  return userNodes(t)
+    .filter((n) => n.alts?.length)
+    .sort((a, b) => a.ply - b.ply);
 }
 
 const STORE = (id: string) => `k24.trainer.${id}`;

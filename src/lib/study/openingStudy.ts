@@ -123,9 +123,17 @@ export const PLANS: Record<string, Plans> = {
       },
       bf5: {
         plans: [
-          T('Black copies with ...Bf5. White\'s sharpest plan is f3 and g4 to chase the bishop and grab space on the kingside.', 'Black ...Bf5 से नक़ल करता है। White का सबसे तीखा plan है f3 और g4, bishop का पीछा करना और kingside पर space लेना।', 'Black ...Bf5 ने नक्कल करतो. White चा सगळ्यात धारदार plan आहे f3 आणि g4, bishop चा पाठलाग करणं आणि kingside वर space घेणं.'),
-          T('A calmer plan is e3, Nb5 and Bd3 to trade off Black\'s good bishop.', 'एक शांत plan है e3, Nb5 और Bd3, ताकि Black का अच्छा bishop trade हो जाए।', 'एक शांत plan आहे e3, Nb5 आणि Bd3, म्हणजे Black चा चांगला bishop trade होईल.'),
+          T('Black copies with ...Bf5. Strong players are split almost evenly between 4.e3 and the sharp 4.f3 with g4 (which has its own line here, "3...Bf5 4.f3").', 'Black ...Bf5 से नक़ल करता है। Strong players लगभग बराबर बँटे हुए हैं: 4.e3 और तीखा 4.f3 g4 के साथ (जिसकी यहाँ अपनी अलग line है, "3...Bf5 4.f3")।', 'Black ...Bf5 ने नक्कल करतो. Strong players जवळपास सारखे विभागलेले आहेत: 4.e3 आणि धारदार 4.f3 g4 सोबत (ज्याची इथे स्वतंत्र line आहे, "3...Bf5 4.f3").'),
+          T('With 4.e3, a calmer plan is Nb5 and Bd3 to trade off Black\'s good bishop.', 'एक शांत plan है e3, Nb5 और Bd3, ताकि Black का अच्छा bishop trade हो जाए।', 'एक शांत plan आहे e3, Nb5 आणि Bd3, म्हणजे Black चा चांगला bishop trade होईल.'),
         ],
+      },
+      'bf5-f3': {
+        plans: [
+          T('4.f3 prepares g4, chasing the f5 bishop and grabbing space on the kingside. After 4...e6, strong players answer 5.g4 in almost every game.', '4.f3 से g4 की तैयारी होती है, जो f5 वाले bishop का पीछा करता है और kingside पर space लेता है। 4...e6 के बाद strong players लगभग हर game में 5.g4 खेलते हैं।', '4.f3 ने g4 ची तयारी होते, जो f5 वरच्या bishop चा पाठलाग करतो आणि kingside वर space घेतो. 4...e6 नंतर strong players जवळपास प्रत्येक game मध्ये 5.g4 खेळतात.'),
+          T('After 5...Bg6, h4 threatens h5, when the bishop on g6 has no good square left. Black answers with ...h5 or ...h6.', '5...Bg6 के बाद h4 से h5 की धमकी होती है, जिसके बाद g6 वाले bishop के पास कोई अच्छा square नहीं बचता। Black ...h5 या ...h6 से जवाब देता है।', '5...Bg6 नंतर h4 ने h5 ची धमकी येते, त्यानंतर g6 वरच्या bishop ला चांगला square उरत नाही. Black ...h5 किंवा ...h6 ने उत्तर देतो.'),
+          T('White then plays e3, Qd2 or Nge2, often castles queenside, and uses the kingside pawns to attack; Black usually hits back in the centre with ...c5.', 'फिर White e3, Qd2 या Nge2 खेलता है, अक्सर queenside castling करता है, और kingside pawns से attack करता है; Black आमतौर पर centre में ...c5 से जवाब देता है।', 'मग White e3, Qd2 किंवा Nge2 खेळतो, बऱ्याचदा queenside castling करतो, आणि kingside pawns ने attack करतो; Black सहसा centre मध्ये ...c5 ने उत्तर देतो.'),
+        ],
+        watch: T("Pushing f3, g4 and h4 also loosens White's own position: White's king is usually safest on the queenside.", 'f3, g4 और h4 धकेलने से White की अपनी position भी ढीली होती है: White का king आमतौर पर queenside पर सबसे safe रहता है।', 'f3, g4 आणि h4 ढकलल्याने White ची स्वतःची position पण सैल होते: White चा king सहसा queenside वर सगळ्यात safe असतो.'),
       },
       a6: {
         plans: [

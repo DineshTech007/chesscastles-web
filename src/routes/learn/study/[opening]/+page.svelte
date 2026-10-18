@@ -204,21 +204,30 @@
     </header>
 
     {#if mine.length}
-      {@const weak = mine.find(isWeak)}
-      <section class="card mine" class:weak={!!weak}>
-        {#if weak}
-          <p><strong>From your {mineFrom}:</strong> you keep losing in the {lineName(weak.line)}: {resultText(weak)}{weak.firstSlip ? `, with your first mistake around move ${weak.firstSlip}` : ''}. Start with this line:</p>
-          <div class="acts">
-            <button class="btn primary" onclick={() => show('games', weak.line)}><Icon name="book" size={16} />Its model games</button>
-            <button class="btn" onclick={() => show('puzzles', weak.line)}><Icon name="puzzle" size={16} />Its puzzles</button>
-            <button class="btn" onclick={() => show('plans', weak.line)}><Icon name="learn" size={16} />Its plans</button>
-          </div>
-        {:else}
-          <p>
-            <strong>From your {mineFrom}:</strong>
-            {mine.map((x) => `${lineName(x.line)} ${x.games} ${x.games === 1 ? 'game' : 'games'}, ${Math.round(x.score * 100)}%`).join(' · ')}.
-          </p>
-        {/if}
+      <section class="card mine" aria-labelledby="mine-h">
+        <h2 id="mine-h" class="title">Lines from your recent {mineFrom}</h2>
+        <p class="label">
+          For reference: the lines of the {opening.name} that came up in your own games. Everything you learn here (trainer, model games and
+          puzzles) comes from the database of strong players' games.
+        </p>
+        <ul class="mine-list">
+          {#each [...mine].sort((a, b) => b.games - a.games) as m (m.line)}
+            <li class:weak={isWeak(m)}>
+              <div class="mine-top">
+                <span class="title">{lineName(m.line)}</span>
+                <span class="label">{m.games} {m.games === 1 ? 'game' : 'games'} · {m.wins}-{m.draws}-{m.losses} · {Math.round(m.score * 100)}%</span>
+                {#if isWeak(m)}<span class="pill bad">You keep losing here</span>{/if}
+              </div>
+              {#if m.usual}<span class="label">Usually continued: {m.usual.sans}{m.usual.games > 1 ? ` (${m.usual.games} games)` : ''}{m.firstSlip ? ` · your first mistake around move ${m.firstSlip}` : ''}</span>{/if}
+              <div class="acts">
+                {#if m.line !== 'other'}<a class="btn small-btn" href="/learn/openings/{studyTrainerId(opening.id, m.line)}">Train</a>{/if}
+                <button class="btn small-btn" onclick={() => show('games', m.line)}>Model games</button>
+                <button class="btn small-btn" onclick={() => show('puzzles', m.line)}>Puzzles</button>
+                <button class="btn small-btn" onclick={() => show('play', m.line)}>Play it</button>
+              </div>
+            </li>
+          {/each}
+        </ul>
       </section>
     {/if}
 
@@ -455,8 +464,43 @@
     margin: 0;
     line-height: 1.5;
   }
-  .mine.weak {
-    border-color: color-mix(in srgb, var(--loss) 45%, var(--border));
+  .mine h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+  .mine-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mine-list li {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--raised);
+  }
+  .mine-list li.weak {
+    outline: 1px solid color-mix(in srgb, var(--loss) 55%, transparent);
+  }
+  .mine-top {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pill.bad {
+    color: var(--loss);
+    font-size: 12px;
+  }
+  .small-btn {
+    height: 34px;
+    padding: 0 12px;
+    font-size: 14px;
   }
   .lines {
     display: flex;
