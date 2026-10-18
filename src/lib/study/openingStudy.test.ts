@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { playSans } from '$lib/chess/position';
-import { PLANS, STUDY_OPENINGS, studyOpening, studyTrainerId } from './openingStudy';
+import { curatedFor, planOf, PLANS, STUDY_OPENINGS, studyOpening, studyTrainerId } from './openingStudy';
 
 describe('opening study', () => {
   it('has the three openings, with legal lines', () => {
@@ -8,7 +8,7 @@ describe('opening study', () => {
     for (const o of STUDY_OPENINGS) {
       const root = playSans(o.root);
       expect(root.fullmoves, o.id).toBeGreaterThan(1);
-      for (const l of o.lines) {
+      for (const l of [...o.curated, ...o.lines]) {
         // playSans stops at the first illegal move: every move must be played.
         const words = l.sans.split(' ');
         let pos = playSans('');
@@ -21,7 +21,9 @@ describe('opening study', () => {
     for (const o of STUDY_OPENINGS) {
       const p = PLANS[o.id];
       expect(p.overview.en && p.overview.hi && p.overview.mr).toBeTruthy();
-      for (const l of [...o.lines.map((x) => x.id), 'other']) {
+      // Every hand-picked line has written plans, itself or through its options.
+      for (const c of o.curated) expect(planOf(o, c) || curatedFor(o, c).some((x) => planOf(o, x)), `${o.id} ${c.id}`).toBeTruthy();
+      for (const l of [...new Set(o.curated.map((x) => x.plan ?? x.id).filter((id) => p.lines[id])), 'other']) {
         const lp = p.lines[l];
         expect(lp?.plans.length, `${o.id} ${l}`).toBeGreaterThan(0);
         for (const t of [...lp.plans, ...(lp.watch ? [lp.watch] : [])]) expect(t.en && t.hi && t.mr, `${o.id} ${l}`).toBeTruthy();
@@ -32,7 +34,7 @@ describe('opening study', () => {
     const whole = studyOpening(studyTrainerId('caro-kann'));
     expect(whole).toMatchObject({ side: 'black', sans: 'e4 c6 d4 d5', study: 'caro-kann' });
     const line = studyOpening(studyTrainerId('jobava-london', 'c5'));
-    expect(line).toMatchObject({ side: 'white', sans: 'd4 d5 Nc3 Nf6 Bf4 c5', name: 'Jobava London: 3...c5' });
+    expect(line).toMatchObject({ side: 'white', sans: 'd4 d5 Nc3 Nf6 Bf4 c5', study: 'jobava-london' });
     expect(studyOpening(studyTrainerId('jobava-london', 'bf5-f3'))).toMatchObject({ sans: 'd4 d5 Nc3 Nf6 Bf4 Bf5 f3', study: 'jobava-london' });
     expect(studyOpening('st-chebanenko--nope')).toBeUndefined();
     expect(studyOpening('st-nothing')).toBeUndefined();

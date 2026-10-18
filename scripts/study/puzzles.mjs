@@ -202,14 +202,23 @@ if (phase === 'check') {
   console.log(`done ${out.length} puzzles from ${all.length} games`);
 } else if (phase === 'build') {
   const [work, outDir] = args;
-  const models = JSON.parse(readFileSync(join(work, 'models.json'), 'utf8'));
-  const stats = JSON.parse(readFileSync(join(work, 'stats.json'), 'utf8'));
+  // Model games per chapter (repertoire.py: <opening>.models.json), or the older single models.json.
+  const models = {};
+  for (const f of readdirSync(work).filter((f) => f.endsWith('.models.json'))) models[f.replace('.models.json', '')] = JSON.parse(readFileSync(join(work, f), 'utf8'));
+  if (!Object.keys(models).length) Object.assign(models, JSON.parse(readFileSync(join(work, 'models.json'), 'utf8')));
+  let stats = {};
+  try {
+    stats = JSON.parse(readFileSync(join(work, 'stats.json'), 'utf8'));
+  } catch {
+    /* the chapters carry their own counts */
+  }
   let lichess = {};
   try {
     lichess = JSON.parse(readFileSync(join(work, 'lichess.json'), 'utf8'));
   } catch {
     /* no Lichess puzzles built */
   }
+  mkdirSync(join(work, 'puzzles'), { recursive: true });
   const puzzles = readdirSync(join(work, 'puzzles'))
     .filter((f) => f.endsWith('.json'))
     .flatMap((f) => JSON.parse(readFileSync(join(work, 'puzzles', f), 'utf8')));
@@ -231,7 +240,7 @@ if (phase === 'check') {
     kept.push(...(lichess[oid] ?? []));
     const games = {};
     for (const [line, list] of Object.entries(models[oid])) games[line] = list;
-    writeFileSync(join(outDir, `${oid}.json`), JSON.stringify({ stats: stats[oid], models: games, puzzles: kept }));
+    writeFileSync(join(outDir, `${oid}.json`), JSON.stringify({ stats: stats[oid] ?? {}, models: games, puzzles: kept }));
     const by = (f) => kept.reduce((m, p) => ((m[f(p)] = (m[f(p)] ?? 0) + 1), m), {});
     console.log(oid, 'models', Object.values(games).flat().length, 'puzzles', kept.length, by((p) => p.phase), by((p) => p.level), by((p) => p.line));
   }

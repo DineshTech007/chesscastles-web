@@ -174,6 +174,11 @@ export const SAY = {
     hi: '{full} बनाम {opponent}, {event}। तुम {teacher} के pieces से खेलोगे।',
     mr: '{full} विरुद्ध {opponent}, {event}. तू {teacher} चे pieces खेळणार आहेस.',
   },
+  middlegame: {
+    en: 'The opening is over. Your task: play the middlegame the way {teacher} did, move by move.',
+    hi: 'Opening ख़त्म हो गई। तुम्हारा काम: middlegame वैसे ही खेलो जैसे {teacher} ने खेला, एक-एक move करके।',
+    mr: 'Opening संपली. तुझं काम: middlegame तसाच खेळ जसा {teacher} ने खेळला, एक-एक move करत.',
+  },
   yourMove: { en: 'Your move: what did {teacher} play?', hi: 'तुम्हारी move: {teacher} ने क्या खेला?', mr: 'तुझी move: {teacher} ने काय खेळलं?' },
   correct: { en: 'Yes! {teacher} played {san}.', hi: 'हाँ! {teacher} ने {san} खेला।', mr: 'हो! {teacher} ने {san} खेळलं.' },
   only: { en: 'This was the only good move!', hi: 'यही एक अच्छी move थी!', mr: 'हीच एकमेव चांगली move होती!' },

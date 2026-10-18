@@ -1,6 +1,9 @@
 import type { L10n } from '$lib/coach/i18n';
+import { polyglotKey } from '$lib/chess/polyglot';
+import { playSans } from '$lib/chess/position';
 import type { Opening } from '$lib/openings';
 import REPS from './repertoires.json';
+import CHAPTERS from './chapters.json';
 
 /**
  * The opening study section: an opening (from repertoires.json, shared with
@@ -12,23 +15,86 @@ import REPS from './repertoires.json';
 export interface StudyLine {
   id: string;
   name: string;
+  /** The moves from the start to the chapter's position. */
   sans: string;
+  /** Chapters found from the games (scripts/study/repertoire.py): */
+  /** The opponent's move that starts the chapter ("3...Bf5"). */
+  title?: string;
+  /** The opening's name for the position (Lichess's names), if any. */
+  openingName?: string;
+  games?: number;
+  /** The student's side's score in those games. */
+  score?: number;
+  /** Variations of a full repertoire of the chapter, and their average length in the student's moves. */
+  variations?: number;
+  depth?: number;
+  /** Position key at the chapter's start (hex). */
+  key?: string;
+  /** Hand-picked lines: one of the student's own options inside a line (it ends with the student's move). */
+  option?: boolean;
+  /** The written plans it uses (default: its id). */
+  plan?: string;
 }
 export interface StudyOpening {
   id: string;
   name: string;
   side: 'white' | 'black';
   root: string;
+  /** The chapters found from the opening's games (or the hand-picked lines until they are built). */
   lines: StudyLine[];
+  /** The hand-picked main lines, with written plans. */
+  curated: StudyLine[];
+  /** Games of the opening in the database. */
+  games?: number;
 }
 
-export const STUDY_OPENINGS: StudyOpening[] = Object.entries(REPS as Record<string, Omit<StudyOpening, 'id'> & { eco: string[] }>).map(([id, r]) => ({
-  id,
-  name: r.name,
-  side: r.side,
-  root: r.root,
-  lines: r.lines,
-}));
+type ChapterFile = Record<string, { games: number; chapters: { id: string; title: string; name: string; sans: string; games: number; score: number; variations: number; depth: number; key: string }[] }>;
+
+export const STUDY_OPENINGS: StudyOpening[] = Object.entries(REPS as Record<string, Omit<StudyOpening, 'id' | 'curated'> & { eco: string[] }>).map(([id, r]) => {
+  const found = (CHAPTERS as ChapterFile)[id];
+  return {
+    id,
+    name: r.name,
+    side: r.side,
+    root: r.root,
+    curated: r.lines,
+    games: found?.games,
+    lines: found?.chapters.length
+      ? found.chapters.map((c) => ({ id: c.id, name: c.name ? `${c.title} · ${c.name.replace(/^[^:]*: /, '')}` : c.title, sans: c.sans, title: c.title, openingName: c.name, games: c.games, score: c.score, variations: c.variations, depth: c.depth, key: c.key }))
+      : r.lines.filter((l) => !l.option),
+  };
+});
+
+/** Position keys along a line's moves (after each move), cached. */
+const pathKeys = new Map<string, string[]>();
+function keysOf(sans: string): string[] {
+  let k = pathKeys.get(sans);
+  if (!k) {
+    const words = sans.split(' ').filter(Boolean);
+    k = words.map((_, i) => polyglotKey(playSans(words.slice(0, i + 1).join(' '))).toString(16));
+    pathKeys.set(sans, k);
+  }
+  return k;
+}
+
+/**
+ * The hand-written plans that belong to a line (a chapter found from the
+ * games): the hand-picked lines that pass through its position, in any move
+ * order. Those that go on with the student's own move are options ("if you
+ * play 3...c5").
+ */
+export function curatedFor(o: StudyOpening, line: StudyLine): StudyLine[] {
+  const own = keysOf(line.sans);
+  const at = own[own.length - 1];
+  return o.curated.filter((c) => {
+    const theirs = keysOf(c.sans);
+    // The line's position is on the hand-picked line's way, or the hand-picked line ends on the way to the line.
+    return theirs.includes(at) || (!c.option && own.includes(theirs[theirs.length - 1]));
+  });
+}
+
+/** The plans of a hand-picked line. */
+export const planOf = (o: StudyOpening, c: StudyLine) => PLANS[o.id]?.lines[c.plan ?? c.id];
 
 export const studyById = (id: string) => STUDY_OPENINGS.find((o) => o.id === id);
 
@@ -55,6 +121,13 @@ export const PLANS: Record<string, Plans> = {
           T('The knights usually go to d7 and e7 (the e7 knight can head for f5 or c6), because ...Nf6 is not possible with a pawn on e5.', 'Knights आमतौर पर d7 और e7 पर जाते हैं (e7 वाला knight f5 या c6 की तरफ़ जा सकता है), क्योंकि e5 पर pawn होने से ...Nf6 नहीं खेल सकते।', 'Knights सहसा d7 आणि e7 वर जातात (e7 वरचा knight f5 किंवा c6 कडे जाऊ शकतो), कारण e5 वर pawn असताना ...Nf6 खेळता येत नाही.'),
         ],
         watch: T('White often gains space with g4 and h4 to chase the f5 bishop: keep a safe square ready for it.', 'White अक्सर g4 और h4 से space लेकर f5 वाले bishop का पीछा करता है: उसके लिए एक safe square तैयार रखो।', 'White बऱ्याचदा g4 आणि h4 ने space घेऊन f5 वरच्या bishop चा पाठलाग करतो: त्याच्यासाठी एक safe square तयार ठेव.'),
+      },
+      'advance-c5': {
+        plans: [
+          T("3...c5 hits White's centre at once, before the bishop comes out: a sharp alternative to 3...Bf5.", '3...c5 bishop निकालने से पहले ही White के centre पर तुरंत वार करता है: 3...Bf5 का एक तीखा विकल्प।', '3...c5 bishop बाहेर काढण्याआधीच White च्या centre वर लगेच वार करतो: 3...Bf5 चा एक धारदार पर्याय.'),
+          T('If White takes on c5, Black usually plays ...e6 or ...Nc6 and wins the pawn back with ...Bxc5; against 4.c3 or 4.Nf3, Black develops with ...Nc6 and brings the c8 bishop to g4 or f5 while the centre stays tense.', 'अगर White c5 पर लेता है, तो Black आमतौर पर ...e6 या ...Nc6 खेलकर ...Bxc5 से pawn वापस जीतता है; 4.c3 या 4.Nf3 के ख़िलाफ़ Black ...Nc6 से develop करता है और c8 वाले bishop को g4 या f5 पर लाता है, जबकि centre तना रहता है।', 'White ने c5 वर घेतलं तर Black सहसा ...e6 किंवा ...Nc6 खेळून ...Bxc5 ने pawn परत जिंकतो; 4.c3 किंवा 4.Nf3 विरुद्ध Black ...Nc6 ने develop करतो आणि c8 वरचा bishop g4 किंवा f5 वर आणतो, तोपर्यंत centre ताणलेलं राहतं.'),
+        ],
+        watch: T("With the pawns locked on d5 and e5 the position is close to a French Advance: White's extra space on the kingside can become an attack, so get your king to safety in time.", 'd5 और e5 पर pawns अटके होने से position French Advance जैसी होती है: kingside पर White का ज़्यादा space attack बन सकता है, इसलिए अपने king को समय पर safe करो।', 'd5 आणि e5 वर pawns अडकल्याने position French Advance सारखी असते: kingside वरची White ची जास्त space attack बनू शकते, म्हणून तुझा king वेळेत safe कर.'),
       },
       classical: {
         plans: [
@@ -208,12 +281,12 @@ export function studyOpening(id: string): (Opening & { study: string }) | undefi
   const m = /^st-([a-z-]+?)(?:--([a-z0-9-]+))?$/.exec(id);
   const o = m && studyById(m[1]);
   if (!o) return undefined;
-  const line = m![2] ? o.lines.find((l) => l.id === m![2]) : undefined;
+  const line = m![2] ? (o.lines.find((l) => l.id === m![2]) ?? o.curated.find((l) => l.id === m![2])) : undefined;
   if (m![2] && !line) return undefined;
   return {
     id,
     study: o.id,
-    name: line ? `${o.name}: ${line.name}` : o.name,
+    name: line ? `${o.name}: ${line.title ?? line.name}` : o.name,
     sans: line ? line.sans : o.root,
     side: o.side,
     blurb: line ? `The ${line.name} of the ${o.name}.` : `The ${o.name}, all main lines.`,

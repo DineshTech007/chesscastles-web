@@ -12,13 +12,18 @@
   import PuzzleBoard from '$lib/components/PuzzleBoard.svelte';
   import LimitReached from '$lib/components/LimitReached.svelte';
   import GameViewer from '$lib/study/GameViewer.svelte';
+  import ChoicePicker from '$lib/study/ChoicePicker.svelte';
+  import RepertoireTree from '$lib/study/RepertoireTree.svelte';
+  import { StudyBook } from '$lib/study/studyBook';
   import { fenOf, playSans } from '$lib/chess/position';
   import { polyglotKey } from '$lib/chess/polyglot';
   import { LANGS, tr, type Lang } from '$lib/coach/i18n';
   import { loadCoach, updateCoach } from '$lib/coach/progress';
   import { dueCount, learnedCount, loadTree, userNodes, type OpeningTree } from '$lib/study/openingTree';
-  import { PLANS, studyById, studyTrainerId, type StudyLine } from '$lib/study/openingStudy';
-  import { eventYear, LEVELS, loadSolved, loadStudy, puzzleId, saveSolved, type ModelGame, type StudyData, type StudyPuzzle } from '$lib/study/studyData';
+  import { curatedFor, planOf, PLANS, studyById, studyTrainerId, type StudyLine } from '$lib/study/openingStudy';
+  import { eventYear, LEVELS, loadMiddlegame, loadSolved, loadStudy, puzzleId, saveSolved, type MiddlegameLesson, type ModelGame, type StudyData, type StudyPuzzle } from '$lib/study/studyData';
+  import { loadStars } from '$lib/masters/data';
+  import { playerName } from '$lib/masters/content';
   import { POINTS, study } from '$lib/study/progress';
   import { TIME_CONTROLS, tcLabel } from '$lib/game/fideGame';
   import { kfideAll } from '$lib/stores/me';
@@ -27,16 +32,20 @@
   import { loadInsights } from '$lib/insights/store';
   import { isWeak, resultText, studyStats, type StudyLineStat } from '$lib/study/fromGames';
 
-  type Tab = 'plans' | 'trainer' | 'games' | 'puzzles' | 'play';
-  const TABS: { id: Tab; label: string; icon: 'learn' | 'tree' | 'book' | 'puzzle' | 'play' }[] = [
+  type Tab = 'plans' | 'tree' | 'trainer' | 'games' | 'middlegame' | 'puzzles' | 'play';
+  const TABS: { id: Tab; label: string; icon: 'learn' | 'tree' | 'book' | 'puzzle' | 'play' | 'crown' }[] = [
     { id: 'plans', label: 'Lines & plans', icon: 'learn' },
+    { id: 'tree', label: 'Browse tree', icon: 'tree' },
     { id: 'trainer', label: 'Trainer', icon: 'tree' },
     { id: 'games', label: 'Model games', icon: 'book' },
+    { id: 'middlegame', label: 'Middlegame', icon: 'crown' },
     { id: 'puzzles', label: 'Puzzles', icon: 'puzzle' },
     { id: 'play', label: 'Play it', icon: 'play' },
   ];
 
   const opening = studyById(page.params.opening!);
+  /** The opening's own book, for the "your move here" pickers. */
+  const ownBook = new StudyBook(page.params.opening!);
   const plans = opening ? PLANS[opening.id] : undefined;
   const q = page.url.searchParams;
 
@@ -46,6 +55,8 @@
   let data = $state<StudyData | undefined>();
   let failed = $state(false);
   let trees = $state<Record<string, OpeningTree | undefined>>({});
+  let mg = $state<MiddlegameLesson[]>([]);
+  let mgStars = $state<Record<string, number>>({});
   /** The player's own results in this opening's lines (from the games imported for Insights). */
   let mine = $state<StudyLineStat[]>([]);
   let mineFrom = $state('');
@@ -85,6 +96,8 @@
     const t: Record<string, OpeningTree | undefined> = { [studyTrainerId(opening.id)]: loadTree(studyTrainerId(opening.id)) };
     for (const l of opening.lines) t[studyTrainerId(opening.id, l.id)] = loadTree(studyTrainerId(opening.id, l.id));
     trees = t;
+    mgStars = loadStars();
+    void loadMiddlegame(opening.id).then((l) => (mg = l), () => {});
     try {
       data = await loadStudy(opening.id);
     } catch {
@@ -111,6 +124,7 @@
     return { fen: fenOf(p), key: polyglotKey(p).toString(16) };
   };
   const shownLines = $derived(opening ? opening.lines.filter((l) => line === 'all' || l.id === line) : []);
+  const totalVariations = $derived(opening ? opening.lines.reduce((s, l) => s + (l.variations ?? 0), 0) : 0);
 
   // Model games for the chosen line(s).
   const models = $derived.by(() => {
@@ -158,6 +172,8 @@
 
   // Play.
   const playLine = $derived(line === 'all' || line === 'other' ? undefined : line);
+  /** "Play from here" in the tree: these moves instead of a line. */
+  const fromMoves = q.get('moves') ?? '';
   function play() {
     if (!opening || !requireGate('bot_opening')) return;
     const mine = $kfideAll[speedOf(tcLabel(TIME_CONTROLS[tc]))];
@@ -168,7 +184,8 @@
     } catch {
       /* private mode */
     }
-    goto(`/play/fide?r=${rating}&tc=${tc}&c=${opening.side}${me}&o=${studyTrainerId(opening.id, playLine)}${fromPosition ? '&start=line' : ''}`);
+    const moves = fromMoves && line === 'all' ? `&moves=${encodeURIComponent(fromMoves)}` : '';
+    goto(`/play/fide?r=${rating}&tc=${tc}&c=${opening.side}${me}&o=${studyTrainerId(opening.id, moves ? undefined : playLine)}${moves}${fromPosition ? '&start=line' : ''}`);
   }
   const treeOf = (id: string) => trees[id];
   /** Opens a model game (and counts it for Guru's weekly plan). */
@@ -233,11 +250,22 @@
       </section>
     {/if}
 
-    <div class="lines" role="group" aria-label="Line">
-      <button class="chip" aria-pressed={line === 'all'} onclick={() => (line = 'all')}>All lines</button>
-      {#each opening.lines as l (l.id)}
-        <button class="chip" aria-pressed={line === l.id} onclick={() => (line = l.id)}>{l.name}</button>
-      {/each}
+    <div class="picker">
+      <label class="pick">
+        <span class="title">Line</span>
+        <select bind:value={line} aria-label="Line">
+          <option value="all">All lines ({opening.lines.length}{totalVariations ? ` chapters · ${totalVariations} variations` : ''})</option>
+          {#each opening.lines as l (l.id)}
+            <option value={l.id}>{l.name}{l.games ? ` · ${l.games.toLocaleString('en-IN')} games` : ''}</option>
+          {/each}
+        </select>
+      </label>
+      <div class="lines" role="group" aria-label="Main lines">
+        <button class="chip" aria-pressed={line === 'all'} onclick={() => (line = 'all')}>All lines</button>
+        {#each opening.lines.slice(0, 6) as l (l.id)}
+          <button class="chip" aria-pressed={line === l.id} onclick={() => (line = l.id)}>{l.title ?? l.name}</button>
+        {/each}
+      </div>
     </div>
 
     <div class="tabs" role="tablist" aria-label="Study">
@@ -249,19 +277,31 @@
     {#if tab === 'plans'}
       <div class="line-list">
         {#each shownLines as l (l.id)}
-          {@const p = plans.lines[l.id]}
+          {@const written = curatedFor(opening, l).filter((c) => planOf(opening, c))}
           {@const end = endOf(l.sans)}
           <article class="card line-card">
             <div class="mini" aria-hidden="true"><Board fen={end.fen} orientation={opening.side} viewOnly coordinates={false} label={l.name} /></div>
             <div class="line-text">
-              <h2 class="title">{l.name}</h2>
-              <p class="label sans">{lineSans(l) || l.sans}{data?.stats[l.id] ? ` · ${data.stats[l.id].toLocaleString('en-IN')} games in the database` : ''}</p>
-              {#if p}
+              <h2 class="title">{l.title ?? l.name}{#if l.openingName}<span class="oname"> · {l.openingName}</span>{/if}</h2>
+              <p class="label sans">{l.sans}</p>
+              {#if l.games}
+                <p class="label stats">
+                  {l.games.toLocaleString('en-IN')} games · {opening.side === 'white' ? 'White' : 'Black'} scores {Math.round((l.score ?? 0) * 100)}%{l.variations ? ` · ${l.variations} variations, about ${l.depth} of your moves each` : ''}
+                </p>
+              {/if}
+              {#each written as c (c.id)}
+                {@const p = planOf(opening, c)!}
+                {@const yours = !!c.option}
+                {#if yours || written.length > 1}<p class="sub-h title">{yours ? `If you play ${c.name}` : c.name}</p>{/if}
                 <ul class="plans">
                   {#each p.plans as item, i (i)}<li>{tr(item, lang)}</li>{/each}
                   {#if p.watch}<li class="watch"><strong>Watch out:</strong> {tr(p.watch, lang)}</li>{/if}
                 </ul>
+              {/each}
+              {#if !written.length}
+                <p class="label">The general ideas of the {opening.name} (above) apply here; its model games show how strong players handle the middlegame.</p>
               {/if}
+              {#key l.id}<ChoicePicker opening={opening.id} sans={l.sans} side={opening.side} book={ownBook} />{/key}
               <div class="acts">
                 <a class="btn primary" href="/learn/openings/{studyTrainerId(opening.id, l.id)}"><Icon name="tree" size={16} />Train this line</a>
                 <button class="btn" onclick={() => show('games', l.id)}><Icon name="book" size={16} />Model games</button>
@@ -272,6 +312,10 @@
           </article>
         {/each}
       </div>
+    {:else if tab === 'tree'}
+      {#key line}
+        <RepertoireTree {opening} book={ownBook} start={line !== 'all' && line !== 'other' ? opening.lines.find((l) => l.id === line)?.sans : undefined} />
+      {/key}
     {:else if tab === 'trainer'}
       <p class="label intro">Learn the moves by heart with spaced repetition: at your turns the move strong players chose most, at your opponent's turns their popular replies. Lines come back when they are due.</p>
       <div class="t-grid">
@@ -318,6 +362,29 @@
               <span class="title g-names">{g.black} <span class="label">{g.be}</span></span>
               <span class="label">{eventYear(g)}</span>
             </button>
+          {/each}
+        </div>
+      {/if}
+    {:else if tab === 'middlegame'}
+      {@const shownMg = mg.filter((l) => line === 'all' || l.chapter === line)}
+      <p class="label intro">
+        Take over a model game right after the opening and play the middlegame like the strong player did: find each move, and Guru explains the idea.
+        Moves the engine rates as just as good count too.
+      </p>
+      {#if !shownMg.length}
+        <div class="card note">No middlegame lessons for this line yet. Try "All lines".</div>
+      {:else}
+        <div class="g-grid">
+          {#each shownMg as l (l.game)}
+            {@const got = mgStars[`study-${opening.id}/${l.game}`] ?? 0}
+            <a class="g-card" href="/learn/study/{opening.id}/middlegame/{l.game}">
+              <span class="g-top"><span class="pill">{lineName(l.chapter)}</span><span class="label">{l.plies.filter((p) => p.e !== undefined).length} moves</span></span>
+              <span class="title g-names">Play as {playerName(l.color === 'white' ? l.white : l.black)}</span>
+              <span class="label">vs {playerName(l.color === 'white' ? l.black : l.white)} · {eventYear(l)}</span>
+              <span class="stars" aria-label="{got} of 3 stars">
+                {#each [1, 2, 3] as st (st)}<Icon name="star" size={14} color={st <= got ? 'var(--gold)' : 'var(--border)'} />{/each}
+              </span>
+            </a>
           {/each}
         </div>
       {/if}
@@ -372,16 +439,17 @@
       {/if}
     {:else if tab === 'play'}
       <section class="card play">
-        <h2 class="title">Play {playLine ? lineName(playLine) : `the ${opening.name}`} against a FIDE-rated opponent</h2>
+        <h2 class="title">Play {fromMoves && line === 'all' ? 'from your position' : playLine ? lineName(playLine) : `the ${opening.name}`} against a FIDE-rated opponent</h2>
+        {#if fromMoves && line === 'all'}<p class="label sans">Position from the tree: {fromMoves}</p>{/if}
         <p class="label">
           You play {opening.side}. From the line, the opponent plays like a real FIDE-rated player at the rating you choose.
         </p>
         <div class="group">
           <span class="title h">Line</span>
-          <div class="lines">
-            <button class="chip" aria-pressed={!playLine} onclick={() => (line = 'all')}>Whole opening</button>
-            {#each opening.lines as l (l.id)}<button class="chip" aria-pressed={playLine === l.id} onclick={() => (line = l.id)}>{l.name}</button>{/each}
-          </div>
+          <select bind:value={line} aria-label="Line to play">
+            <option value="all">Whole opening</option>
+            {#each opening.lines as l (l.id)}<option value={l.id}>{l.name}</option>{/each}
+          </select>
         </div>
         <div class="group">
           <span class="title h">Start</span>
@@ -512,6 +580,39 @@
     padding: 0 12px;
     font-size: 14px;
   }
+  .picker {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .pick {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  select {
+    font: inherit;
+    color: var(--text);
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    max-width: 100%;
+    min-width: 0;
+    flex: 1;
+  }
+  .oname {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 15px;
+  }
+  .stats {
+    margin: 0;
+  }
+  .sub-h {
+    margin: 6px 0 0;
+    font-size: 15px;
+  }
   .lines {
     display: flex;
     flex-wrap: wrap;
@@ -628,6 +729,10 @@
   }
   .res {
     font-weight: 700;
+  }
+  .stars {
+    display: flex;
+    gap: 2px;
   }
   .g-names {
     font-size: 15px;

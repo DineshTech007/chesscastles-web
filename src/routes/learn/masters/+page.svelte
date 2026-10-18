@@ -25,17 +25,17 @@
 </script>
 
 <svelte:head>
-  <title>Endgames with the masters · Chess Castles</title>
-  <meta name="description" content="Learn endgames from the real tournament games of great players: choose your teacher, play their moves and see how they win, outplay and defend." />
+  <title>Learn endgames from masters' games · Chess Castles</title>
+  <meta name="description" content="Study real endgames from the tournament games of great players: play one side, find the moves that were played, and see how endgames are won, outplayed and defended." />
 </svelte:head>
 
 <div class="page">
   <a class="back" href="/learn"><Icon name="back" size={16} />Learn</a>
   <header class="head">
-    <h1 class="display">Endgames with the masters</h1>
+    <h1 class="display">Learn endgames from masters' games</h1>
     <p class="intro">
-      Choose a great player as your teacher. Every lesson is a real endgame from their tournament games: you play their pieces, find their moves,
-      and Guru explains the idea behind each one. Every move was checked with the engine.
+      Pick your favourite master and study real endgames from their tournament games: you play their side, find the moves that were played, and Guru explains
+      the idea behind each one. Every move was checked with the engine.
     </p>
   </header>
 
@@ -70,8 +70,8 @@
   {/each}
 
   <p class="label source">
-    Games from CaissaBase (classical over-the-board games only). Players are named only as the players of their games; Chess Castles is not
-    connected with them.
+    The games are public records of classical over-the-board tournament play (CaissaBase). Players are named only as the players of these games:
+    Chess Castles is not affiliated with, sponsored or endorsed by any of them.
   </p>
 </div>
 

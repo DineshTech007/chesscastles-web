@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Chess } from 'chessops/chess';
   import type { NormalMove } from 'chessops/types';
-  import { CloudBook, movesInRange } from '$lib/book/book';
+  import { movesInRange, type BookSource } from '$lib/book/book';
   import { sanOf } from '$lib/chess/position';
   import { gamesDb, type GameHeader, type RefEntry } from '$lib/games/gamesDb';
 
@@ -13,7 +13,7 @@
     onopen,
   }: {
     pos: Chess;
-    book: CloudBook;
+    book: BookSource;
     onplay: (m: NormalMove) => void;
     /** The move played next in the game being analysed, to compare. */
     played?: NormalMove;

@@ -14,6 +14,7 @@
   import {
     buildTree,
     choicePoints,
+    pathTo,
     shareOf,
     deleteTree,
     dueCount,
@@ -27,15 +28,27 @@
     userNodes,
     type OpeningTree,
     type TreeEdge,
+    type TreeNode,
   } from '$lib/study/openingTree';
   import { Recall } from '$lib/study/srs';
   import { POINTS, study } from '$lib/study/progress';
   import { masterOf, masterOpening, RepertoireBook } from '$lib/masters/repertoire';
   import { studyById, studyOpening } from '$lib/study/openingStudy';
+  import { StudyBook } from '$lib/study/studyBook';
+  import { loadChoices, setChoices, STUDY_ALT_GAMES, STUDY_ALT_SHARE } from '$lib/study/choices';
+  import { engine, evalLabel, type EngineInfo } from '$lib/engine/stockfish';
+  import DbPanel from '$lib/components/DbPanel.svelte';
+  import { openingNotes } from '$lib/coach/facts';
+  import { noteText } from '$lib/coach/explain';
+  import { loadCoach } from '$lib/coach/progress';
   import { gamesDb, type GameHeader } from '$lib/games/gamesDb';
 
   const MAX_TRIES = 3;
-  const opening = findOpening(page.params.id!) ?? masterOpening(page.params.id!) ?? studyOpening(page.params.id!);
+  const baseOpening = findOpening(page.params.id!) ?? masterOpening(page.params.id!) ?? studyOpening(page.params.id!);
+  /** "Train from here" in the opening study's tree: any position of the opening (its own progress, kept apart). */
+  const fromSans = studyOpening(page.params.id!) ? page.url.searchParams.get('from')?.trim() : undefined;
+  const hashOf = (t: string) => [...t].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
+  const opening = baseOpening && fromSans ? { ...baseOpening, sans: fromSans, id: `${baseOpening.id}@${hashOf(fromSans)}`, name: `${baseOpening.name}: from ${fromSans.split(' ').slice(-4).join(' ')}` } : baseOpening;
   /** Opened from the opening study section: back goes there. */
   const studied = studyOpening(page.params.id!)?.study;
   const backHref = studied ? `/learn/study/${studied}` : '/learn';
@@ -101,14 +114,19 @@
     buildError = '';
     try {
       const t = await buildTree({
-        book: master ? new RepertoireBook(master.teacher, master.side) : new CloudBook(),
+        // A study opening learns from its own games (and every reply its opponents tried); a master's repertoire from their games.
+        book: studied ? new StudyBook(studied) : master ? new RepertoireBook(master.teacher, master.side) : new CloudBook(),
         openingId: opening.id,
         rootSans: opening.sans,
         userSide: old?.userSide ?? (master ? master.side : side),
         depth: old?.depth ?? depth,
-        ratingFloor: old?.ratingFloor ?? (master ? 0 : floor),
-        maxReplies: old?.maxReplies ?? (allLines ? 3 : 1),
-        choices: choices ?? {},
+        ratingFloor: old?.ratingFloor ?? (master || studied ? 0 : floor),
+        maxReplies: old?.maxReplies ?? (allLines ? (studied ? 4 : 3) : 1),
+        minShare: studied ? 0.05 : undefined,
+        // A study opening: the student's repertoire choices, kept for the whole opening.
+        choices: choices ?? (studied ? loadChoices(studied) : {}),
+        altShare: studied ? STUDY_ALT_SHARE : undefined,
+        altMinGames: studied ? STUDY_ALT_GAMES : undefined,
         onProgress: (done, queued) => (progress = { done, queued }),
       });
       if (old) t.cards = old.cards;
@@ -139,6 +157,7 @@
     token++;
     line = nextLine(tree, Date.now());
     index = 0;
+    why = '';
     reveal = undefined;
     pos = positionFromFen(tree.nodes[tree.rootKey].fen);
     show(pos);
@@ -164,6 +183,7 @@
     }
     if (turnOf(fenOf(pos)) === tree.userSide) {
       tries = 0;
+      explored = engineOn || dbOn;
       thinkingSince = Date.now();
       phase = 'yours';
       v++;
@@ -195,13 +215,104 @@
   }
 
   /** Makes another main move the player's own at a position, and rebuilds the rest of the line from it. */
-  async function choose(key: string, uci: string) {
+  /** Earlier sets of choices, for Undo. */
+  let history = $state<Record<string, string>[]>([]);
+  /** Rebuilds the tree with these choices (kept for the whole opening in a study). */
+  async function applyChoices(all: Record<string, string>) {
     if (!tree) return;
     token++;
     altOffer = undefined;
-    tree = { ...tree };
-    await build({ ...(tree.choices ?? {}), [key]: uci });
+    history = [...history.slice(-9), { ...(tree.choices ?? {}) }];
+    if (studied) setChoices(studied, all);
+    await build(all);
   }
+  const choose = (key: string, uci: string) => applyChoices({ ...(tree?.choices ?? {}), [key]: uci });
+  /** Back to the most played move at a position. */
+  function mostPlayed(key: string) {
+    const all = { ...(tree?.choices ?? {}) };
+    delete all[key];
+    void applyChoices(all);
+  }
+  async function undoChoice() {
+    const prev = history[history.length - 1];
+    if (!prev || !tree) return;
+    history = history.slice(0, -1);
+    token++;
+    if (studied) setChoices(studied, prev);
+    await build(prev);
+  }
+  /** The options at a choice point: the current move and the most played others, three at most, most played first. */
+  function optionsAt(n: TreeNode): TreeEdge[] {
+    const all = [...n.next, ...(n.alts ?? [])].sort((a, b) => b.games - a.games);
+    const top = all.slice(0, 3);
+    return top.includes(n.next[0]) ? top : [...top.slice(0, 2), n.next[0]];
+  }
+  /** Show every choice point, or (default) only those on the line being trained. */
+  let allChoicePoints = $state(false);
+  const sortedChoices = $derived.by(() => {
+    if (!tree) return [];
+    const onLine = new Set([tree.rootKey, ...line.map((e) => e.child)]);
+    const all = choicePoints(tree).sort((a, b) => Number(onLine.has(b.key)) - Number(onLine.has(a.key)) || a.ply - b.ply);
+    return allChoicePoints ? all : all.filter((n) => onLine.has(n.key));
+  });
+  const choiceCount = $derived(tree ? choicePoints(tree).length : 0);
+  const lineKeys = $derived(new Set(tree ? [tree.rootKey, ...line.map((e) => e.child)] : []));
+  /** The engine's score for each option at a choice point (for the side choosing), in pawns. */
+  let evals = $state<Record<string, number | 'busy'>>({});
+  // Explore: the engine and the database on the position, to understand the move before learning it.
+  let engineOn = $state(false);
+  let dbOn = $state(false);
+  let explored = false;
+  let evalInfo = $state<EngineInfo | undefined>();
+  /** Why the move just learnt is good: checked facts and how strong players chose and scored with it. */
+  let why = $state('');
+  const exploreBook = $derived(studied ? new StudyBook(studied) : master ? new RepertoireBook(master.teacher, master.side) : new CloudBook());
+
+  $effect(() => {
+    void v;
+    const p = pos;
+    evalInfo = undefined;
+    if (!engineOn || !p || p.isEnd()) {
+      engine.stopAnalysis();
+      return;
+    }
+    const f = fenOf(p);
+    void engine.analyse(f, (i) => {
+      if (i.fen === f) evalInfo = i;
+    }, 18);
+  });
+  // Looking at the engine or the database before answering counts as a hint.
+  $effect(() => {
+    if ((engineOn || dbOn) && (phase === 'yours' || phase === 'retry')) explored = true;
+  });
+
+  function explain(before: Chess, e: TreeEdge) {
+    const m = uciToMove(e.uci);
+    if (!m || !tree) return;
+    const lang = loadCoach().lang;
+    const notes = openingNotes(before, m).slice(0, 2).map((n) => noteText(n, lang));
+    const node = tree.nodes[nodeKey(before)];
+    const share = node ? shareOf(node, e) : 0;
+    const stat = e.games ? `Strong players chose ${e.san} in ${Math.round(share * 100)}% of ${e.games.toLocaleString('en-IN')} games${e.score !== undefined ? ` and scored ${Math.round(e.score * 100)}%` : ''}.` : '';
+    why = [...notes, stat].filter(Boolean).join(' ');
+  }
+  async function checkWithEngine(n: TreeNode) {
+    for (const e of [...n.next, ...(n.alts ?? [])]) {
+      const k = `${n.key}:${e.uci}`;
+      if (evals[k] !== undefined) continue;
+      evals = { ...evals, [k]: 'busy' };
+      const p = positionFromFen(n.fen);
+      const m = uciToMove(e.uci);
+      if (!m || !p.isLegal(m)) continue;
+      const mover = p.turn;
+      p.play(m);
+      const info = await engine.evaluate(fenOf(p), 14, 1, 2500);
+      const white = info ? (info.mate !== undefined ? (info.mate > 0 ? 99 : -99) : (info.cp ?? 0) / 100) : 0;
+      evals = { ...evals, [k]: mover === 'white' ? white : -white };
+    }
+  }
+  const evalText = (v: number | 'busy' | undefined) => (v === undefined ? '' : v === 'busy' ? '…' : Math.abs(v) >= 99 ? (v > 0 ? 'mates' : 'loses') : `${v > 0 ? '+' : ''}${v.toFixed(1)}`);
+
   function keepUsual() {
     altOffer = undefined;
     phase = 'yours';
@@ -223,7 +334,8 @@
       return;
     }
     if (sameMove(fenOf(pos), moveToUci(m), edge.uci)) {
-      const q = tries > 0 ? Recall.wrong : Date.now() - thinkingSince < 8000 ? Recall.easy : Recall.slow;
+      const q = tries > 0 ? Recall.wrong : explored ? Recall.slow : Date.now() - thinkingSince < 8000 ? Recall.easy : Recall.slow;
+      explain(pos.clone(), edge);
       grade(tree, key, q, Date.now());
       saveTree(tree);
       if (tries === 0) {
@@ -256,6 +368,7 @@
     saveTree(tree);
     phase = 'reveal';
     reveal = edge;
+    explain(pos.clone(), edge);
     show(pos, last);
     later(1100, () => {
       playEdge(edge);
@@ -335,11 +448,13 @@
       {#if master}
         <p class="intro">{opening.blurb}</p>
         <a class="label switch" href={otherSide} data-sveltekit-reload>Train the openings with {master.side === 'white' ? 'Black' : 'White'} instead</a>
+      {:else if studied}
+        <p class="intro">{opening.blurb} Built from the real games of this opening only: at your turns the move its players choose most (you can make another main move yours as you train), at your opponent's turns every reply that comes up in 5% of games or more.</p>
       {:else}
         <p class="intro">{opening.blurb} Chess Castles builds this opening from 5.4 million tournament games: at your turns the move strong players chose most, at your opponent's turns their popular replies.</p>
       {/if}
 
-      {#if !master}
+      {#if !master && !studied}
       <div class="group">
         <h2 class="title h">You play</h2>
         <div class="segmented" role="group" aria-label="Your side">
@@ -355,6 +470,7 @@
           <button aria-pressed={depth === 12} onclick={() => (depth = 12)}>6 moves</button>
           <button aria-pressed={depth === 16} onclick={() => (depth = 16)}>8 moves</button>
           <button aria-pressed={depth === 20} onclick={() => (depth = 20)}>10 moves</button>
+          {#if studied}<button aria-pressed={depth === 26} onclick={() => (depth = 26)}>13 moves</button>{/if}
         </div>
       </div>
       <div class="group">
@@ -365,7 +481,7 @@
         </div>
         <p class="label hint">{allLines ? (master ? 'Every reply that came up often in these games: thorough.' : 'Every reply strong players often meet: thorough.') : 'Only the most popular reply at each turn: ready in seconds.'}</p>
       </div>
-      {#if !master}
+      {#if !master && !studied}
       <div class="group">
         <h2 class="title h">Learn from players rated</h2>
         <div class="segmented" role="group" aria-label="Rating">
@@ -414,10 +530,23 @@
         movable={view.movable}
         dests={view.dests}
         lastMove={last}
-        shapes={view.shapes}
+        shapes={engineOn && evalInfo?.pv[0] && uciToMove(evalInfo.pv[0]) ? [...view.shapes, { orig: keyOf(uciToMove(evalInfo.pv[0])!.from), dest: keyOf(uciToMove(evalInfo.pv[0])!.to), brush: 'blue' }] : view.shapes}
         label="Opening trainer board"
         {onmove}
       />
+      <div class="explore">
+        <label class="toggle"><input type="checkbox" bind:checked={engineOn} /><span>Engine{engineOn && evalInfo ? ` ${evalLabel(evalInfo)}` : ''}</span></label>
+        <label class="toggle"><input type="checkbox" bind:checked={dbOn} /><span>Database</span></label>
+        <span class="label">Looking before you answer counts as a hint.</span>
+      </div>
+      {#if why}<p class="why"><strong>Why:</strong> {why}</p>{/if}
+      {#if dbOn && pos}
+        <div class="card db-card">
+          {#key fenOf(pos)}
+            <DbPanel pos={pos} book={exploreBook} onplay={(m) => onmove(keyOf(m.from), keyOf(m.to))} />
+          {/key}
+        </div>
+      {/if}
     </section>
 
     <aside class="side">
@@ -452,23 +581,48 @@
           <button class="btn primary block" onclick={startLine}><Icon name="replay" size={18} />Next line</button>
         {/if}
       </div>
-      {#if choicePoints(tree).length}
+      {#if choiceCount}
         <div class="card small choices">
-          <span class="title">Your choices</span>
-          <span class="label">Where strong players have more than one main move, pick the one from your own preparation.</span>
-          {#each choicePoints(tree) as n (n.key)}
-            {@const no = `${Math.floor(n.ply / 2) + 1}${n.ply % 2 === 0 ? '.' : '...'}`}
-            <div class="choice">
-              <span class="label">Move {no}</span>
-              <span class="opts">
-                {#each [...n.next, ...(n.alts ?? [])] as e (e.uci)}
-                  <button class="chip" aria-pressed={e.uci === n.next[0].uci} disabled={building || e.uci === n.next[0].uci} onclick={() => choose(n.key, e.uci)}>
-                    {no}{e.san} · {Math.round(shareOf(n, e) * 100)}%
-                  </button>
-                {/each}
-              </span>
-            </div>
-          {/each}
+          <div class="choices-head">
+            <span class="title">Your choices</span>
+            <span class="choices-btns">
+              <button class="link-btn label" onclick={undoChoice} disabled={!history.length || building}>Undo</button>
+              {#if Object.keys(tree.choices ?? {}).length}<button class="link-btn label" onclick={() => applyChoices({})} disabled={building}>Reset all</button>{/if}
+            </span>
+          </div>
+          <span class="label">Where players have more than one main move, pick the one from your own preparation.</span>
+          <div class="segmented scope" role="group" aria-label="Which choices">
+            <button aria-pressed={!allChoicePoints} onclick={() => (allChoicePoints = false)}>This line</button>
+            <button aria-pressed={allChoicePoints} onclick={() => (allChoicePoints = true)}>All ({choiceCount})</button>
+          </div>
+          {#if !sortedChoices.length}<span class="label">No other main moves on this line.</span>{/if}
+          <div class="choice-list">
+            {#each sortedChoices as n (n.key)}
+              {@const path = pathTo(tree, n.key)}
+              {@const no = `${Math.floor(n.ply / 2) + 1}${n.ply % 2 === 0 ? '.' : '...'}`}
+              {@const opts = optionsAt(n)}
+              {@const top = [...n.next, ...(n.alts ?? [])].sort((x, y) => y.games - x.games)[0]}
+              <div class="choice" class:current={lineKeys.has(n.key)}>
+                <span class="choice-h">
+                  <span class="label ctx">After {[...tree.rootSans.split(' ').filter(Boolean), ...path].slice(-6).join(' ') || 'the start'}</span>
+                  <button class="link-btn label" onclick={() => checkWithEngine(n)}>Engine</button>
+                </span>
+                <span class="opts">
+                  {#each opts as e (e.uci)}
+                    {@const ev = evals[`${n.key}:${e.uci}`]}
+                    <button class="chip opt" aria-pressed={e.uci === n.next[0].uci} disabled={building || e.uci === n.next[0].uci} onclick={() => choose(n.key, e.uci)}
+                      title="{e.games} games{e.score !== undefined ? `, scored ${Math.round(e.score * 100)}%` : ''}">
+                      {no}{e.san}
+                      <span class="opt-meta">{e === top ? 'most played · ' : ''}{Math.round(shareOf(n, e) * 100)}%{e.score !== undefined ? ` · ${Math.round(e.score * 100)}% score` : ''}{ev !== undefined ? ` · ${evalText(ev)}` : ''}</span>
+                    </button>
+                  {/each}
+                </span>
+                {#if tree.choices?.[n.key] && n.next[0].uci !== top.uci}
+                  <button class="link-btn label" onclick={() => mostPlayed(n.key)} disabled={building}>Back to the most played ({no}{top.san})</button>
+                {/if}
+              </div>
+            {/each}
+          </div>
         </div>
       {/if}
       <div class="card small">
@@ -484,6 +638,30 @@
 </FeatureGate>
 
 <style>
+  .explore {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .toggle {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    cursor: pointer;
+  }
+  .why {
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--raised);
+    line-height: 1.5;
+  }
+  .db-card {
+    padding: 12px;
+    max-height: 420px;
+    overflow-y: auto;
+  }
   .alt-offer {
     padding: 12px 14px;
     display: flex;
@@ -499,6 +677,62 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+  }
+  .choices-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .choices-btns {
+    display: flex;
+    gap: 12px;
+  }
+  .scope {
+    align-self: flex-start;
+  }
+  .choice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .choice.current {
+    border-left: 3px solid var(--brand);
+    padding-left: 8px;
+  }
+  .ctx {
+    font-size: 12px;
+  }
+  .link-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .choice-h {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .link-btn {
+    border: 0;
+    background: none;
+    color: var(--brand);
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+  }
+  .opt {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    height: auto;
+    padding: 5px 10px;
+  }
+  .opt-meta {
+    font-size: 11px;
+    opacity: 0.8;
   }
   .choices {
     display: flex;

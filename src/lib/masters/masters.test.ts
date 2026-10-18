@@ -59,6 +59,6 @@ describe('masters content', () => {
   it('reads a master repertoire id', () => {
     expect(masterOf('m-carlsen-black')).toEqual({ teacher: 'carlsen', side: 'black' });
     expect(masterOf('m-nobody-white')).toBeUndefined();
-    expect(masterOpening('m-gukesh-white')?.name).toBe("Gukesh D's openings with White");
+    expect(masterOpening('m-gukesh-white')?.name).toBe("Openings from Gukesh D's games (White)");
   });
 });

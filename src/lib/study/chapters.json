@@ -1,0 +1,490 @@
+{
+ "caro-kann": {
+  "games": 112492,
+  "chapters": [
+   {
+    "id": "77a46738",
+    "title": "3.e5",
+    "name": "Caro-Kann Defense: Advance Variation",
+    "sans": "e4 c6 d4 d5 e5",
+    "games": 27972,
+    "score": 0.439,
+    "variations": 88,
+    "depth": 9.0,
+    "key": "31606dfc03d2d72d"
+   },
+   {
+    "id": "e0b454a4",
+    "title": "3.Nc3",
+    "name": "Caro-Kann Defense",
+    "sans": "e4 c6 d4 d5 Nc3",
+    "games": 23807,
+    "score": 0.472,
+    "variations": 110,
+    "depth": 9.8,
+    "key": "ab8e63a3c52e7390"
+   },
+   {
+    "id": "8b2fd9f3",
+    "title": "3.Nd2",
+    "name": "Caro-Kann Defense: Modern Variation",
+    "sans": "e4 c6 d4 d5 Nd2",
+    "games": 12283,
+    "score": 0.449,
+    "variations": 110,
+    "depth": 9.8,
+    "key": "0977c3639d315979"
+   },
+   {
+    "id": "cc200c85",
+    "title": "4.c4",
+    "name": "Caro-Kann Defense: Panov Attack",
+    "sans": "e4 c6 d4 d5 exd5 cxd5 c4",
+    "games": 11881,
+    "score": 0.474,
+    "variations": 28,
+    "depth": 9.6,
+    "key": "889541213ec615f2"
+   },
+   {
+    "id": "bdc27293",
+    "title": "2.Nc3",
+    "name": "Caro-Kann Defense",
+    "sans": "e4 c6 Nc3",
+    "games": 8977,
+    "score": 0.469,
+    "variations": 143,
+    "depth": 10.4,
+    "key": "ebd16e1d483310f4"
+   },
+   {
+    "id": "edeed330",
+    "title": "4.Bd3",
+    "name": "Caro-Kann Defense: Exchange Variation",
+    "sans": "e4 c6 d4 d5 exd5 cxd5 Bd3",
+    "games": 7381,
+    "score": 0.503,
+    "variations": 55,
+    "depth": 8.6,
+    "key": "51bb7fa744497c86"
+   },
+   {
+    "id": "ab715f54",
+    "title": "2.Nf3",
+    "name": "Caro-Kann Defense",
+    "sans": "e4 c6 Nf3",
+    "games": 4727,
+    "score": 0.451,
+    "variations": 134,
+    "depth": 9.5,
+    "key": "cb229a49e237f310"
+   },
+   {
+    "id": "37b92ab6",
+    "title": "3.f3",
+    "name": "Caro-Kann Defense: Mar\u00f3czy Variation",
+    "sans": "e4 c6 d4 d5 f3",
+    "games": 3039,
+    "score": 0.447,
+    "variations": 14,
+    "depth": 5.2,
+    "key": "3ea89d30a7061e38"
+   },
+   {
+    "id": "a6c754f3",
+    "title": "2.d3",
+    "name": "Caro-Kann Defense: Breyer Variation",
+    "sans": "e4 c6 d3",
+    "games": 2949,
+    "score": 0.465,
+    "variations": 40,
+    "depth": 8.0,
+    "key": "bee2b56ace4129f9"
+   },
+   {
+    "id": "ea050f3e",
+    "title": "3.exd5",
+    "name": "Caro-Kann Defense: Accelerated Panov Attack",
+    "sans": "e4 c6 c4 d5 exd5",
+    "games": 2691,
+    "score": 0.451,
+    "variations": 99,
+    "depth": 9.9,
+    "key": "3ed0c1c28f65350a"
+   },
+   {
+    "id": "9c1f5d1e",
+    "title": "3.cxd5",
+    "name": "Caro-Kann Defense: Accelerated Panov Attack",
+    "sans": "e4 c6 c4 d5 cxd5",
+    "games": 1470,
+    "score": 0.428,
+    "variations": 71,
+    "depth": 9.7,
+    "key": "17255042f7c46311"
+   }
+  ]
+ },
+ "jobava-london": {
+  "games": 7427,
+  "chapters": [
+   {
+    "id": "9611684d",
+    "title": "3...d5",
+    "name": "Rapport-Jobava System",
+    "sans": "d4 Nf6 Bf4 g6 Nc3 d5",
+    "games": 1398,
+    "score": 0.523,
+    "variations": 22,
+    "depth": 5.4,
+    "key": "94fd022b167b249f"
+   },
+   {
+    "id": "5899df72",
+    "title": "3...e6",
+    "name": "Rapport-Jobava System",
+    "sans": "d4 Nf6 Bf4 d5 Nc3 e6",
+    "games": 957,
+    "score": 0.491,
+    "variations": 11,
+    "depth": 4.7,
+    "key": "0b3ea34175d62686"
+   },
+   {
+    "id": "c7b544a7",
+    "title": "3...c5",
+    "name": "Rapport-Jobava System",
+    "sans": "d4 Nf6 Bf4 d5 Nc3 c5",
+    "games": 625,
+    "score": 0.515,
+    "variations": 13,
+    "depth": 6.6,
+    "key": "9b3880de92b3bda9"
+   },
+   {
+    "id": "09f64d03",
+    "title": "3...a6",
+    "name": "Rapport-Jobava System",
+    "sans": "d4 Nf6 Bf4 d5 Nc3 a6",
+    "games": 583,
+    "score": 0.481,
+    "variations": 14,
+    "depth": 5.7,
+    "key": "afbea0838ad44e08"
+   },
+   {
+    "id": "10a11576",
+    "title": "3...Bf5",
+    "name": "Rapport-Jobava System",
+    "sans": "d4 Nf6 Bf4 d5 Nc3 Bf5",
+    "games": 462,
+    "score": 0.535,
+    "variations": 10,
+    "depth": 6.1,
+    "key": "fe5038feda11bf59"
+   },
+   {
+    "id": "a8596bf3",
+    "title": "3...c6",
+    "name": "Rapport-Jobava System",
+    "sans": "d4 Nf6 Bf4 d5 Nc3 c6",
+    "games": 444,
+    "score": 0.547,
+    "variations": 13,
+    "depth": 5.4,
+    "key": "ef33bc9f1a34656f"
+   },
+   {
+    "id": "4597dae6",
+    "title": "2...c5",
+    "name": "Indian Defense: Accelerated London System",
+    "sans": "d4 Nf6 Bf4 c5",
+    "games": 439,
+    "score": 0.426,
+    "variations": 7,
+    "depth": 4.6,
+    "key": "e5c5ba68cc857156"
+   },
+   {
+    "id": "80f6ee26",
+    "title": "3...Bg7",
+    "name": "Indian Defense: Accelerated London System",
+    "sans": "d4 Nf6 Bf4 g6 Nc3 Bg7",
+    "games": 299,
+    "score": 0.592,
+    "variations": 11,
+    "depth": 3.7,
+    "key": "a12b1d8971e8a113"
+   },
+   {
+    "id": "1bc82dc5",
+    "title": "3...Nf6",
+    "name": "Queen's Pawn Game: Veresov Attack, Dutch System",
+    "sans": "d4 f5 Nc3 d5 Bf4 Nf6",
+    "games": 283,
+    "score": 0.641,
+    "variations": 17,
+    "depth": 6.4,
+    "key": "e92637e9d37c9b0a"
+   },
+   {
+    "id": "8e066db6",
+    "title": "2...d6",
+    "name": "Indian Defense: Accelerated London System",
+    "sans": "d4 Nf6 Bf4 d6",
+    "games": 266,
+    "score": 0.489,
+    "variations": 20,
+    "depth": 4.5,
+    "key": "3a0efda7e1ba3346"
+   },
+   {
+    "id": "137f9ce9",
+    "title": "3...c6",
+    "name": "Queen's Pawn Game: Veresov Attack, Dutch System",
+    "sans": "d4 f5 Nc3 d5 Bf4 c6",
+    "games": 142,
+    "score": 0.609,
+    "variations": 5,
+    "depth": 5.6,
+    "key": "20b2eef309460927"
+   },
+   {
+    "id": "bd73205d",
+    "title": "1...e6",
+    "name": "Horwitz Defense",
+    "sans": "d4 e6",
+    "games": 115,
+    "score": 0.443,
+    "variations": 15,
+    "depth": 5.9,
+    "key": "f5794b831f7a418c"
+   },
+   {
+    "id": "a0b6a079",
+    "title": "2...Bf5",
+    "name": "Queen's Pawn Game: Chigorin Variation, Alburt Defense",
+    "sans": "d4 d5 Nc3 Bf5",
+    "games": 106,
+    "score": 0.467,
+    "variations": 15,
+    "depth": 6.1,
+    "key": "7eeaea8aee8b14ac"
+   },
+   {
+    "id": "62a49d20",
+    "title": "1...g6",
+    "name": "Queen's Pawn Game: Modern Defense",
+    "sans": "d4 g6",
+    "games": 89,
+    "score": 0.343,
+    "variations": 3,
+    "depth": 4.0,
+    "key": "6abaeae97cd74395"
+   }
+  ]
+ },
+ "chebanenko": {
+  "games": 23527,
+  "chapters": [
+   {
+    "id": "4379eb91",
+    "title": "5.e3",
+    "name": "Slav Defense: Chebanenko Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 e3",
+    "games": 5033,
+    "score": 0.42,
+    "variations": 37,
+    "depth": 6.5,
+    "key": "1cfa9a8d6bc2354e"
+   },
+   {
+    "id": "60f380b1",
+    "title": "5.c5",
+    "name": "Slav Defense: Chebanenko Variation, Advance System",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 c5",
+    "games": 2877,
+    "score": 0.421,
+    "variations": 18,
+    "depth": 6.4,
+    "key": "de4532676184505a"
+   },
+   {
+    "id": "faa02131",
+    "title": "5.Nf3",
+    "name": "Slav Defense",
+    "sans": "d4 d5 c4 c6 Nc3 Nf6 cxd5 cxd5 Nf3",
+    "games": 2209,
+    "score": 0.51,
+    "variations": 38,
+    "depth": 7.5,
+    "key": "1e7a1d48aa195c91"
+   },
+   {
+    "id": "559f9d9f",
+    "title": "7.e3",
+    "name": "Slav Defense: Exchange Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 cxd5 cxd5 Nc3 Nc6 Bf4 a6 e3",
+    "games": 2135,
+    "score": 0.519,
+    "variations": 24,
+    "depth": 5.9,
+    "key": "1119906ae1976389"
+   },
+   {
+    "id": "dd9de12a",
+    "title": "5.Bf4",
+    "name": "Slav Defense",
+    "sans": "d4 d5 c4 c6 Nc3 Nf6 cxd5 cxd5 Bf4",
+    "games": 2117,
+    "score": 0.452,
+    "variations": 75,
+    "depth": 8.0,
+    "key": "1e4a173f5b9fd7cf"
+   },
+   {
+    "id": "af42fb2a",
+    "title": "5.a4",
+    "name": "Slav Defense: Chebanenko Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 a4",
+    "games": 1887,
+    "score": 0.384,
+    "variations": 21,
+    "depth": 5.8,
+    "key": "da1ea6d3220e6824"
+   },
+   {
+    "id": "f15099b8",
+    "title": "4.Nc3",
+    "name": "Slav Defense: Exchange Variation",
+    "sans": "d4 d5 c4 c6 cxd5 cxd5 Nc3",
+    "games": 1851,
+    "score": 0.496,
+    "variations": 113,
+    "depth": 8.9,
+    "key": "9ef0c54b6f057c3a"
+   },
+   {
+    "id": "7e009eb9",
+    "title": "7.Bd3",
+    "name": "Slav Defense: Exchange Variation",
+    "sans": "d4 d5 c4 c6 cxd5 cxd5 Bf4 Nc6 e3 Nf6 Nc3 a6 Bd3",
+    "games": 1777,
+    "score": 0.46,
+    "variations": 39,
+    "depth": 6.2,
+    "key": "9f70dd3eb0f1c0c7"
+   },
+   {
+    "id": "76040fd1",
+    "title": "5.cxd5",
+    "name": "Slav Defense: Chebanenko Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 cxd5",
+    "games": 1227,
+    "score": 0.467,
+    "variations": 41,
+    "depth": 7.3,
+    "key": "bffd43f2ed53a9f7"
+   },
+   {
+    "id": "df4f4cc5",
+    "title": "5.Bd3",
+    "name": "Slav Defense: Quiet Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 e3 a6 Bd3",
+    "games": 1166,
+    "score": 0.387,
+    "variations": 19,
+    "depth": 7.7,
+    "key": "b260238d90a075e4"
+   },
+   {
+    "id": "a7cdd9e8",
+    "title": "7.Rc1",
+    "name": "Slav Defense: Exchange Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 cxd5 cxd5 Nc3 Nc6 Bf4 a6 Rc1",
+    "games": 1065,
+    "score": 0.439,
+    "variations": 10,
+    "depth": 5.4,
+    "key": "c3af1d9546dabff3"
+   },
+   {
+    "id": "9fcd5968",
+    "title": "5.Qc2",
+    "name": "Slav Defense",
+    "sans": "d4 d5 c4 c6 Nc3 Nf6 e3 a6 Qc2",
+    "games": 1019,
+    "score": 0.378,
+    "variations": 13,
+    "depth": 7.7,
+    "key": "7687046611f26817"
+   },
+   {
+    "id": "fb82ea9f",
+    "title": "5.g3",
+    "name": "Slav Defense: Chebanenko Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 g3",
+    "games": 450,
+    "score": 0.389,
+    "variations": 11,
+    "depth": 6.9,
+    "key": "9d31637eaf4a65d2"
+   },
+   {
+    "id": "a6431121",
+    "title": "5.Nbd2",
+    "name": "Slav Defense: Quiet Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 e3 a6 Nbd2",
+    "games": 444,
+    "score": 0.409,
+    "variations": 5,
+    "depth": 4.4,
+    "key": "be033a4d33dd1fa7"
+   },
+   {
+    "id": "4b8aef93",
+    "title": "5.Ne5",
+    "name": "Slav Defense: Chebanenko Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 Ne5",
+    "games": 397,
+    "score": 0.375,
+    "variations": 6,
+    "depth": 5.8,
+    "key": "6cef07f01410d89c"
+   },
+   {
+    "id": "252d2994",
+    "title": "7.Be2",
+    "name": "Slav Defense: Exchange Variation",
+    "sans": "d4 d5 c4 c6 cxd5 cxd5 Bf4 Nc6 e3 Nf6 Nc3 a6 Be2",
+    "games": 329,
+    "score": 0.375,
+    "variations": 3,
+    "depth": 5.7,
+    "key": "b9fdff6588544817"
+   },
+   {
+    "id": "7cadba1d",
+    "title": "7.Rc1",
+    "name": "Slav Defense: Exchange Variation",
+    "sans": "d4 d5 c4 c6 cxd5 cxd5 Bf4 Nc6 e3 Nf6 Nc3 a6 Rc1",
+    "games": 316,
+    "score": 0.421,
+    "variations": 9,
+    "depth": 5.9,
+    "key": "b5e6b3d10a63566a"
+   },
+   {
+    "id": "09104edb",
+    "title": "5.Qc2",
+    "name": "Slav Defense: Quiet Variation",
+    "sans": "d4 d5 c4 c6 Nf3 Nf6 e3 a6 Qc2",
+    "games": 315,
+    "score": 0.335,
+    "variations": 18,
+    "depth": 6.8,
+    "key": "5674f032bbf68bf3"
+   }
+  ]
+ }
+}

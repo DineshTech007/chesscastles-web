@@ -61,6 +61,36 @@ export function loadStudy(id: string): Promise<StudyData> {
   return p;
 }
 
+/** A middlegame lesson: a model game of a chapter, continued right after the opening (scripts/study/middlegame.mjs). */
+export interface MiddlegameLesson {
+  chapter: string;
+  game: number;
+  white: string;
+  black: string;
+  whiteElo: number;
+  blackElo: number;
+  event: string;
+  year: number;
+  result: string;
+  color: 'white' | 'black';
+  fen: string;
+  ply: number;
+  plies: { u: string; e?: number; c?: 1 }[];
+  critical: number;
+  end: 'end' | 'decisive' | 'cut' | 'error';
+}
+
+const mgCache = new Map<string, Promise<MiddlegameLesson[]>>();
+export function loadMiddlegame(id: string): Promise<MiddlegameLesson[]> {
+  let p = mgCache.get(id);
+  if (!p) {
+    p = fetch(`/data/study/middlegame/${id}.json`).then((r) => (r.ok ? (r.json() as Promise<MiddlegameLesson[]>) : []));
+    p.catch(() => mgCache.delete(id));
+    mgCache.set(id, p);
+  }
+  return p;
+}
+
 export const LEVELS: { id: 1 | 2 | 3; name: string }[] = [
   { id: 1, name: 'Beginner' },
   { id: 2, name: 'Intermediate' },

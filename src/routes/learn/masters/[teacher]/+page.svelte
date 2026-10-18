@@ -39,7 +39,7 @@
 </script>
 
 <svelte:head>
-  <title>{legend?.name ?? 'Master'} · Endgames with the masters · Chess Castles</title>
+  <title>{legend?.name ?? 'Player'} · Learn endgames from masters' games · Chess Castles</title>
 </svelte:head>
 
 <div class="page">

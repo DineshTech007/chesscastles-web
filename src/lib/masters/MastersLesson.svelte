@@ -25,20 +25,47 @@
   import { CATS, GOALS, KIND_TIP, SAY, shortName, type Teacher } from './content';
   import { eventLabel, lessonTitle, opponentOf, saveStars, type MasterLesson } from './data';
   import { endgameNotes, endNoteText, type EndNote } from './notes';
+  import { noteText, type Note } from '$lib/coach/explain';
+  import { openingNotes } from '$lib/coach/facts';
 
-  let { lesson, teacher, nextHref }: { lesson: MasterLesson; teacher: Teacher; nextHref?: string } = $props();
+  /**
+   * `teacher`: one of the endgame teachers. Or, for a middlegame lesson from a
+   * model game (opening study), `player` names the strong player, `tips` are
+   * the intro (the line's plans), `title` the lesson's name and `starsId` where
+   * the stars are kept.
+   */
+  let {
+    lesson,
+    teacher,
+    nextHref,
+    player,
+    tips,
+    title,
+    starsId,
+  }: {
+    lesson: MasterLesson;
+    teacher?: Teacher;
+    nextHref?: string;
+    player?: string;
+    tips?: L10n[];
+    title?: string;
+    starsId?: string;
+  } = $props();
+  const middlegame = $derived(!teacher);
 
   type Phase = 'intro' | 'yours' | 'checking' | 'theirs' | 'done';
+  /** Why a move is good: an endgame fact, or an opening and tactics fact (middlegame lessons). */
+  type AnyNote = { end: EndNote } | { open: Note };
   interface Line {
     text: L10n;
     vars: Record<string, string | number>;
-    notes?: EndNote[];
+    notes?: AnyNote[];
     tone: 'guru' | 'good' | 'only' | 'miss' | 'reply' | 'end';
   }
 
-  const name = $derived(LEGENDS[teacher.id]?.name ?? teacher.id);
+  const name = $derived(teacher ? (LEGENDS[teacher.id]?.name ?? teacher.id) : (player ?? ''));
   const opponent = $derived(opponentOf(lesson));
-  const cat = $derived(CATS.find((c) => c.id === lesson.cat)!);
+  const cat = $derived(CATS.find((c) => c.id === lesson.cat));
   const teacherMoves = $derived(lesson.plies.filter((p) => p.e !== undefined).length);
 
   let lang = $state<Lang>('en');
@@ -85,15 +112,16 @@
   });
 
   const vars = $derived({ teacher: shortName(name), full: name, opponent, event: eventLabel(lesson) });
-  const lineText = (l: Line) => [fill(tr(l.text, lang), l.vars), ...(l.notes ?? []).map((n) => endNoteText(n, lang))].join(' ');
+  const lineText = (l: Line) => [fill(tr(l.text, lang), l.vars), ...(l.notes ?? []).map((n) => ('end' in n ? endNoteText(n.end, lang) : noteText(n.open, lang)))].join(' ');
 
-  function say(text: L10n, tone: Line['tone'], extra: Record<string, string | number> = {}, notes?: EndNote[], voice = true) {
+  function say(text: L10n, tone: Line['tone'], extra: Record<string, string | number> = {}, notes?: AnyNote[], voice = true) {
     const l: Line = { text, vars: { ...vars, ...extra }, notes, tone };
     lines = [...lines.slice(-5), l];
     if (voice && voiceOn) void speak(lineText(l), lang, voiceName);
   }
 
   const introText = $derived.by(() => {
+    if (!cat) return [fill(tr(SAY.game, lang), vars), fill(tr(SAY.middlegame, lang), vars), ...(tips ?? []).map((t) => tr(t, lang))];
     const tip = lesson.cat === 'minor' && lesson.kind ? KIND_TIP[lesson.kind] : cat.tip;
     return [fill(tr(SAY.game, lang), vars), fill(tr(GOALS[lesson.goal].text, lang), vars), tr(tip, lang)];
   });
@@ -126,11 +154,13 @@
   }
 
   /** Plays a ply of the game on the real position. */
-  function play(uci: string): { san: string; notes: EndNote[] } | undefined {
+  function play(uci: string): { san: string; notes: AnyNote[] } | undefined {
     const m = uciToMove(uci);
     if (!m || !pos.isLegal(m)) return undefined;
     const san = sanOf(pos, m);
-    const notes = endgameNotes(pos, m);
+    const notes: AnyNote[] = endgameNotes(pos, m).map((n) => ({ end: n }));
+    // In the middlegame, the opening and tactics facts (development, castling, pins, forks...) too.
+    if (middlegame && notes.length < 2) for (const n of openingNotes(pos, m).slice(0, 2 - notes.length)) notes.push({ open: n });
     playMoveSound(pos, m);
     const next = pos.clone();
     next.play(m);
@@ -244,7 +274,7 @@
     shapes = [];
     const slips = misses + hints;
     stars = slips === 0 ? 3 : slips <= 2 ? 2 : 1;
-    if (saveStars(teacher.id, lesson.game, stars)) study.log('lesson', POINTS.lessonFinished, `${name}: ${lessonTitle(lesson)}`);
+    if (saveStars(teacher?.id ?? starsId ?? 'study', lesson.game, stars)) study.log('lesson', POINTS.lessonFinished, `${name}: ${title ?? lessonTitle(lesson)}`);
     const won = lesson.result !== '1/2-1/2';
     const text = lesson.end === 'end' ? (won ? SAY.endWin : SAY.endDraw) : lesson.end === 'decisive' ? SAY.decisive : won ? SAY.laterWin : SAY.laterDraw;
     say(text, 'end');
@@ -297,15 +327,20 @@
 
   <aside class="panel side" aria-label="Lesson">
     <div class="who">
-      <TeacherBadge id={teacher.id} group={teacher.group} size={44} />
+      {#if teacher}<TeacherBadge id={teacher.id} group={teacher.group} size={44} />{:else}<span class="initials" aria-hidden="true">{name.split(/[ ,]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}</span>{/if}
       <div class="who-text">
         <span class="title">{name}</span>
         <span class="label">vs {opponent} · {eventLabel(lesson)}</span>
       </div>
     </div>
     <div class="meta">
-      <span class="pill goal {lesson.goal}">{GOALS[lesson.goal].label}</span>
-      <span class="label">{lessonTitle(lesson).split(' vs ')[0]}</span>
+      {#if cat}
+        <span class="pill goal {lesson.goal}">{GOALS[lesson.goal].label}</span>
+        <span class="label">{lessonTitle(lesson).split(' vs ')[0]}</span>
+      {:else}
+        <span class="pill goal win">Middlegame</span>
+        {#if title}<span class="label">{title}</span>{/if}
+      {/if}
       {#if phase !== 'intro'}<span class="label progress">Move {moveNo} of {teacherMoves}</span>{/if}
     </div>
 
@@ -362,6 +397,20 @@
 </div>
 
 <style>
+  .initials {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--live);
+    background: color-mix(in srgb, var(--live) 16%, var(--card));
+    border: 2px solid color-mix(in srgb, var(--live) 60%, transparent);
+  }
   .lesson {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 380px;

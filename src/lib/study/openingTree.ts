@@ -8,6 +8,8 @@ export interface TreeEdge {
   uci: string;
   san: string;
   games: number;
+  /** The score of the side that played the move (0..1), when known. */
+  score?: number;
   /** Key of the position the move leads to. */
   child: string;
 }
@@ -54,6 +56,9 @@ export interface BuildOptions {
   maxReplies?: number;
   /** The player's own move at some of their turns (position key -> UCI), instead of the most played one. */
   choices?: Record<string, string>;
+  /** Other moves at the player's turns worth offering: this share of games and this many games (default 15%, any). */
+  altShare?: number;
+  altMinGames?: number;
   onProgress?: (done: number, queued: number) => void;
 }
 
@@ -61,6 +66,7 @@ export interface BuildOptions {
 export const ALT_SHARE = 0.15;
 
 const keyOf = (pos: Chess) => polyglotKey(pos).toString(16);
+const scoreOf = (m: { games: number; wins: number; draws: number }) => (m.games ? (m.wins + m.draws / 2) / m.games : undefined);
 
 /**
  * Builds a training tree from the FIDE games book: at the player's turns the
@@ -103,14 +109,15 @@ export async function buildTree(o: BuildOptions): Promise<OpeningTree> {
           : moves.filter((m) => m.games / total >= minShare).slice(0, maxReplies);
         if (userTurn) {
           node.total = total;
-          const alts = moves.filter((m) => m !== chosen[0] && m.games / total >= ALT_SHARE).slice(0, 3);
-          if (alts.length) node.alts = alts.map((m) => ({ uci: moveToUci(m.move), san: sanOf(pos, m.move), games: m.games, child: '' }));
+          const share = o.altShare ?? ALT_SHARE;
+          const alts = moves.filter((m) => m !== chosen[0] && m.games / total >= share && m.games >= (o.altMinGames ?? 1)).slice(0, 4);
+          if (alts.length) node.alts = alts.map((m) => ({ uci: moveToUci(m.move), san: sanOf(pos, m.move), games: m.games, score: scoreOf(m), child: '' }));
         }
         for (const m of chosen) {
           const after = pos.clone();
           after.play(m.move);
           const key = keyOf(after);
-          node.next.push({ uci: moveToUci(m.move), san: sanOf(pos, m.move), games: m.games, child: key });
+          node.next.push({ uci: moveToUci(m.move), san: sanOf(pos, m.move), games: m.games, score: scoreOf(m), child: key });
           if (!nodes[key]) {
             nodes[key] = { key, fen: fenOf(after), ply: node.ply + 1, next: [] };
             next.push(after);
@@ -238,6 +245,26 @@ export function choicePoints(t: OpeningTree): TreeNode[] {
   return userNodes(t)
     .filter((n) => n.alts?.length)
     .sort((a, b) => a.ply - b.ply);
+}
+
+/** The moves (SAN) from the tree's start to a position, by the shortest way. */
+export function pathTo(t: OpeningTree, key: string): string[] {
+  const prev = new Map<string, { from: string; san: string }>();
+  const queue = [t.rootKey];
+  const seen = new Set(queue);
+  while (queue.length) {
+    const k = queue.shift()!;
+    if (k === key) break;
+    for (const e of t.nodes[k]?.next ?? []) {
+      if (seen.has(e.child)) continue;
+      seen.add(e.child);
+      prev.set(e.child, { from: k, san: e.san });
+      queue.push(e.child);
+    }
+  }
+  const out: string[] = [];
+  for (let k = key; prev.has(k); k = prev.get(k)!.from) out.unshift(prev.get(k)!.san);
+  return out;
 }
 
 const STORE = (id: string) => `k24.trainer.${id}`;

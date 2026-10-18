@@ -27,7 +27,10 @@
   const playerRating = me >= 400 && me <= 3000 ? me : undefined;
   const human: Color = q.get('c') === 'black' ? 'black' : 'white';
   // A catalogue opening, or a line from the opening study section.
-  const opening = OPENINGS.find((o) => o.id === q.get('o')) ?? studyOpening(q.get('o') ?? '');
+  const studyLine = studyOpening(q.get('o') ?? '');
+  // From the opening study's tree: any position of the opening ("moves" in SAN).
+  const custom = studyLine && q.get('moves') ? { ...studyLine, sans: q.get('moves')!.trim(), name: `${studyLine.name} (your position)` } : undefined;
+  const opening = OPENINGS.find((o) => o.id === q.get('o')) ?? custom ?? studyLine;
   const fromLine = q.get('start') === 'line';
 
   /** Opened to resume a game cut off by a lost connection or a closed browser. */

@@ -3,41 +3,188 @@
     "name": "Caro-Kann Defence",
     "side": "black",
     "root": "e4 c6 d4 d5",
-    "eco": ["B10", "B11", "B12", "B13", "B14", "B15", "B16", "B17", "B18", "B19"],
+    "eco": [
+      "B10",
+      "B11",
+      "B12",
+      "B13",
+      "B14",
+      "B15",
+      "B16",
+      "B17",
+      "B18",
+      "B19"
+    ],
     "lines": [
-      { "id": "advance", "name": "Advance Variation", "sans": "e4 c6 d4 d5 e5 Bf5" },
-      { "id": "classical", "name": "Classical (4...Bf5)", "sans": "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5" },
-      { "id": "karpov", "name": "Karpov Variation (4...Nd7)", "sans": "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Nd7" },
-      { "id": "exchange", "name": "Exchange Variation", "sans": "e4 c6 d4 d5 exd5 cxd5 Bd3" },
-      { "id": "panov", "name": "Panov Attack", "sans": "e4 c6 d4 d5 exd5 cxd5 c4 Nf6 Nc3" },
-      { "id": "fantasy", "name": "Fantasy Variation", "sans": "e4 c6 d4 d5 f3" }
+      {
+        "id": "advance",
+        "name": "Advance Variation (3.e5)",
+        "sans": "e4 c6 d4 d5 e5"
+      },
+      {
+        "id": "advance-bf5",
+        "name": "3...Bf5",
+        "sans": "e4 c6 d4 d5 e5 Bf5",
+        "option": true,
+        "plan": "advance"
+      },
+      {
+        "id": "advance-c5",
+        "name": "3...c5",
+        "sans": "e4 c6 d4 d5 e5 c5",
+        "option": true,
+        "plan": "advance-c5"
+      },
+      {
+        "id": "mainline",
+        "name": "Main line (3.Nc3 dxe4 4.Nxe4)",
+        "sans": "e4 c6 d4 d5 Nc3 dxe4 Nxe4"
+      },
+      {
+        "id": "classical",
+        "name": "4...Bf5 (Classical)",
+        "sans": "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5",
+        "option": true
+      },
+      {
+        "id": "karpov",
+        "name": "4...Nd7 (Karpov)",
+        "sans": "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Nd7",
+        "option": true
+      },
+      {
+        "id": "mainline-nd2",
+        "name": "Main line (3.Nd2 dxe4 4.Nxe4)",
+        "sans": "e4 c6 d4 d5 Nd2 dxe4 Nxe4"
+      },
+      {
+        "id": "classical-nd2",
+        "name": "4...Bf5 (Classical)",
+        "sans": "e4 c6 d4 d5 Nd2 dxe4 Nxe4 Bf5",
+        "option": true,
+        "plan": "classical"
+      },
+      {
+        "id": "karpov-nd2",
+        "name": "4...Nd7 (Karpov)",
+        "sans": "e4 c6 d4 d5 Nd2 dxe4 Nxe4 Nd7",
+        "option": true,
+        "plan": "karpov"
+      },
+      {
+        "id": "exchange",
+        "name": "Exchange Variation (4.Bd3)",
+        "sans": "e4 c6 d4 d5 exd5 cxd5 Bd3"
+      },
+      {
+        "id": "panov",
+        "name": "Panov Attack (4.c4)",
+        "sans": "e4 c6 d4 d5 exd5 cxd5 c4"
+      },
+      {
+        "id": "fantasy",
+        "name": "Fantasy Variation (3.f3)",
+        "sans": "e4 c6 d4 d5 f3"
+      }
     ]
   },
   "jobava-london": {
     "name": "Jobava London",
     "side": "white",
     "root": "d4 d5 Nc3 Nf6 Bf4",
-    "eco": ["D00", "D01", "D02", "A45", "A46", "A48", "A40", "A41"],
+    "eco": [
+      "D00",
+      "D01",
+      "D02",
+      "A45",
+      "A46",
+      "A48",
+      "A40",
+      "A41"
+    ],
     "lines": [
-      { "id": "c5", "name": "3...c5", "sans": "d4 d5 Nc3 Nf6 Bf4 c5" },
-      { "id": "e6", "name": "3...e6", "sans": "d4 d5 Nc3 Nf6 Bf4 e6" },
-      { "id": "bf5", "name": "3...Bf5", "sans": "d4 d5 Nc3 Nf6 Bf4 Bf5" },
-      { "id": "bf5-f3", "name": "3...Bf5 4.f3 (g4 plan)", "sans": "d4 d5 Nc3 Nf6 Bf4 Bf5 f3" },
-      { "id": "a6", "name": "3...a6", "sans": "d4 d5 Nc3 Nf6 Bf4 a6" },
-      { "id": "g6", "name": "Against ...g6", "sans": "d4 Nf6 Nc3 g6 Bf4" }
+      {
+        "id": "c5",
+        "name": "3...c5",
+        "sans": "d4 d5 Nc3 Nf6 Bf4 c5"
+      },
+      {
+        "id": "e6",
+        "name": "3...e6",
+        "sans": "d4 d5 Nc3 Nf6 Bf4 e6"
+      },
+      {
+        "id": "bf5",
+        "name": "3...Bf5",
+        "sans": "d4 d5 Nc3 Nf6 Bf4 Bf5"
+      },
+      {
+        "id": "bf5-f3",
+        "name": "4.f3 (the g4 plan)",
+        "sans": "d4 d5 Nc3 Nf6 Bf4 Bf5 f3",
+        "option": true
+      },
+      {
+        "id": "bf5-e3",
+        "name": "4.e3",
+        "sans": "d4 d5 Nc3 Nf6 Bf4 Bf5 e3",
+        "option": true,
+        "plan": "bf5"
+      },
+      {
+        "id": "a6",
+        "name": "3...a6",
+        "sans": "d4 d5 Nc3 Nf6 Bf4 a6"
+      },
+      {
+        "id": "g6",
+        "name": "Against ...g6 (2...g6)",
+        "sans": "d4 Nf6 Nc3 g6"
+      }
     ]
   },
   "chebanenko": {
     "name": "Chebanenko Slav",
     "side": "black",
     "root": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6",
-    "eco": ["D10", "D11", "D12", "D13", "D14", "D15", "D16", "D17", "D18", "D19"],
+    "eco": [
+      "D10",
+      "D11",
+      "D12",
+      "D13",
+      "D14",
+      "D15",
+      "D16",
+      "D17",
+      "D18",
+      "D19"
+    ],
     "lines": [
-      { "id": "e3", "name": "5.e3", "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 e3" },
-      { "id": "c5", "name": "5.c5", "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 c5" },
-      { "id": "a4", "name": "5.a4", "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 a4" },
-      { "id": "exchange", "name": "Exchange (5.cxd5)", "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 cxd5 cxd5" },
-      { "id": "quiet", "name": "4.e3 a6", "sans": "d4 d5 c4 c6 Nf3 Nf6 e3 a6" }
+      {
+        "id": "e3",
+        "name": "5.e3",
+        "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 e3"
+      },
+      {
+        "id": "c5",
+        "name": "5.c5",
+        "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 c5"
+      },
+      {
+        "id": "a4",
+        "name": "5.a4",
+        "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 a4"
+      },
+      {
+        "id": "exchange",
+        "name": "Exchange (5.cxd5)",
+        "sans": "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 cxd5"
+      },
+      {
+        "id": "quiet",
+        "name": "4.e3",
+        "sans": "d4 d5 c4 c6 Nf3 Nf6 e3"
+      }
     ]
   }
 }

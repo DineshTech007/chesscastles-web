@@ -199,7 +199,9 @@ export function endgameNotes(pos: Chess, move: NormalMove): EndNote[] {
       const dr = Math.abs(squareRank(enemyKing) - squareRank(move.to));
       if ((df === 0 && dr === 2) || (dr === 0 && df === 2)) add({ k: 'opposition' });
     }
-    if (out.length < 2 && !target) {
+    // King walks are endgame advice: only once the queens are off.
+    const queensOff = !pos.board.pieces('white', 'queen').nonEmpty() && !pos.board.pieces('black', 'queen').nonEmpty();
+    if (out.length < 2 && !target && queensOff) {
       const mine = passers(pos, me);
       const enemyPawns = [...pos.board.pieces(them, 'pawn')];
       if (centreDist(move.to) < centreDist(move.from) && centreDist(move.from) >= 2) add({ k: 'kingCentre' });

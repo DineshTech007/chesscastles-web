@@ -31,7 +31,7 @@
 </script>
 
 <svelte:head>
-  <title>{lesson ? `${lessonTitle(lesson)} · ${name}` : name} · Endgames with the masters · Chess Castles</title>
+  <title>{lesson ? `${lessonTitle(lesson)} · ${name}` : name} · Learn endgames from masters' games · Chess Castles</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 

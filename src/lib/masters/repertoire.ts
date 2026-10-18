@@ -71,7 +71,7 @@ export function masterOpening(id: string): Opening | undefined {
   const colour = m.side === 'white' ? 'White' : 'Black';
   return {
     id,
-    name: `${name}'s openings with ${colour}`,
+    name: `Openings from ${name}'s games (${colour})`,
     sans: '',
     side: m.side,
     blurb: `Learn the openings ${name} played with ${colour} in classical tournament games: at your turns, the move ${name} chose most often; at your opponent's turns, the replies ${name} met most.`,

@@ -8,7 +8,13 @@ intermediate 1400-1899, advanced 1900+. The endgame themes make an endgame
 puzzle, anything else counts as middlegame (early tactics included). At most
 PER puzzles per opening, line, part and level, spread over the ratings.
 
-Run: python scripts/study/lichess_puzzles.py F:/dev/gamesdb_work/puzzles/lichess_db_puzzle.csv.zst F:/dev/gamesdb_work/study/lichess.json
+With src/lib/study/chapters.json (repertoire.py) the puzzles go to the
+chapters: a chapter's Lichess opening name gives its tag ("Caro-Kann Defense:
+Advance Variation" -> Caro-Kann_Defense_Advance_Variation); a tag shared by
+several chapters goes to the one with the most games; the family tag to
+"other".
+
+Run: python scripts/study/lichess_puzzles.py F:/dev/gamesdb_work/puzzles/lichess_db_puzzle.csv.zst F:/dev/gamesdb_work/study/lichess.json [src/lib/study/chapters.json]
 """
 
 import csv
@@ -42,12 +48,67 @@ MAP = {
 ENDGAME = {"endgame", "rookEndgame", "pawnEndgame", "queenEndgame", "bishopEndgame", "knightEndgame", "queenRookEndgame"}
 
 
+FAMILY = {"caro-kann": "Caro-Kann_Defense", "jobava-london": "Rapport-Jobava_System", "chebanenko": "Slav_Defense_Chebanenko_Variation"}
+
+
+def tag_of(name):
+    """Lichess's puzzle tag for an opening name: the family and its first variation."""
+    family, _, rest = name.partition(":")
+    variation = rest.split(",")[0].strip()
+    t = f"{family.strip()} {variation}".strip() if variation else family.strip()
+    return t.replace("'", "").replace(" ", "_")
+
+
+# Only tags that belong to the opening itself (no London System or general Slav puzzles in it).
+ALLOWED = {"caro-kann": ("Caro-Kann_Defense",), "jobava-london": ("Rapport-Jobava_System",), "chebanenko": ("Slav_Defense_Chebanenko_Variation",)}
+# Lichess names for the student's own choices inside a chapter: the tag goes to the chapter (by its moves).
+EXTRA = {
+    "caro-kann": {
+        "Caro-Kann_Defense_Classical_Variation": "e4 c6 d4 d5 Nc3",
+        "Caro-Kann_Defense_Main_Line": "e4 c6 d4 d5 Nc3",
+        "Caro-Kann_Defense_Karpov_Variation": "e4 c6 d4 d5 Nc3",
+        "Caro-Kann_Defense_Tartakower_Variation": "e4 c6 d4 d5 Nc3",
+        "Caro-Kann_Defense_Bronstein-Larsen_Variation": "e4 c6 d4 d5 Nc3",
+        "Caro-Kann_Defense_Two_Knights_Attack": "e4 c6 Nc3",
+    },
+    "jobava-london": {"Rapport-Jobava_System_with_e6": "d4 Nf6 Bf4 d5 Nc3 e6"},
+}
+
+
+def chapter_map(path):
+    """opening -> [(tag, chapter id)], most specific tag first; the family tag goes to "other"."""
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    out = {}
+    for oid, d in data.items():
+        best = {}
+        for c in d["chapters"]:
+            if not c.get("name"):
+                continue
+            t = tag_of(c["name"])
+            if not t.startswith(ALLOWED[oid]):
+                continue
+            if t not in best or best[t][1] < c["games"]:
+                best[t] = (c["id"], c["games"])
+        by_sans = {c["sans"]: c["id"] for c in d["chapters"]}
+        for t, sans in EXTRA.get(oid, {}).items():
+            if sans in by_sans:
+                best[t] = (by_sans[sans], 10**9)
+        pairs = sorted(((cid, t) for t, (cid, _) in best.items() if t != FAMILY[oid]), key=lambda x: -len(x[1]))
+        # (chapter, tag), as MAP: the most specific tags first, the family tag last.
+        out[oid] = pairs + [("other", FAMILY[oid])]
+    return out
+
+
 def level(rating):
     return 1 if rating < 1400 else 2 if rating < 1900 else 3
 
 
 def main():
     src, out = sys.argv[1], sys.argv[2]
+    if len(sys.argv) > 3:
+        MAP.clear()
+        MAP.update(chapter_map(sys.argv[3]))
     random.seed(7)
     buckets = {}  # (opening, line, phase, level) -> (seen, list)
     with open(src, "rb") as f:

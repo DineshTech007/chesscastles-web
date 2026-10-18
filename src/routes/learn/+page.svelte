@@ -468,9 +468,9 @@
 
   <section aria-labelledby="masters-h" class="masters card">
     <div class="m-text">
-      <h2 id="masters-h" class="title section-h">Endgames with the masters</h2>
-      <p class="label">Choose a great player as your teacher and play their real tournament endgames, move by move, with Guru explaining every idea. Gukesh, Pragg, Arjun, Carlsen, Humpy, Capablanca and more.</p>
-      <a class="btn primary" href="/learn/masters"><Icon name="crown" size={18} />Choose your teacher</a>
+      <h2 id="masters-h" class="title section-h">Learn endgames from masters' games</h2>
+      <p class="label">Real endgames from tournament games of great players, past and present: you play one side, find the moves that were played, and Guru explains every idea.</p>
+      <a class="btn primary" href="/learn/masters"><Icon name="crown" size={18} />Pick your favourite master</a>
     </div>
     <div class="m-faces" aria-hidden="true">
       {#each TEACHERS.slice(0, 8) as t (t.id)}<TeacherBadge id={t.id} group={t.group} size={46} />{/each}
@@ -483,8 +483,8 @@
       <span class="label">Built from strong players' games (2000+, or grandmasters at 2500+). Spaced repetition, three tries per move.</span>
     </div>
     <div class="rep">
-      <span class="title rep-h">Learn a master's openings</span>
-      <span class="label">The moves a great player chose in their own games.</span>
+      <span class="title rep-h">Openings from great players' games</span>
+      <span class="label">The moves a great player chose in their own tournament games.</span>
       <div class="rep-list">
         {#each TEACHERS as t (t.id)}
           <a class="chip" href="/learn/openings/m-{t.id}-white">{LEGENDS[t.id]?.name ?? t.id}</a>
