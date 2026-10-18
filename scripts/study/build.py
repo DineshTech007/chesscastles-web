@@ -33,6 +33,15 @@ from caissa import mainline_bytes, ordered_legal_moves, position_key  # noqa: E4
 CLASSIFY_PLIES = 30
 VALUE = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9}
 PUZZLE_GAMES_PER_LINE = 1200
+ENDGAME_GAMES_PER_LINE = 300
+
+
+def is_endgame(b):
+    """No queens and at most a rook and a minor piece each, or very little material left."""
+    w = sum(VALUE[p.piece_type] for p in b.piece_map().values() if p.color and p.piece_type not in (chess.PAWN, chess.KING))
+    k = sum(VALUE[p.piece_type] for p in b.piece_map().values() if not p.color and p.piece_type not in (chess.PAWN, chess.KING))
+    queens = bool(b.pieces(chess.QUEEN, chess.WHITE) or b.pieces(chess.QUEEN, chess.BLACK))
+    return (not queens and w <= 8 and k <= 8) or w + k <= 13
 MODELS_PER_LINE = 10
 
 
@@ -102,7 +111,7 @@ def main():
     events = dict(db.execute("SELECT ID, Name FROM Events"))
     sites = dict(db.execute("SELECT ID, Name FROM Sites"))
 
-    models, candidates, stats = {}, [], {}
+    models, candidates, stats, endgames = {}, [], {}, []
     for oid, rep in reps.items():
         root = key_after(rep["root"])
         lines = sorted(((ln["id"], key_after(ln["sans"]), len(ln["sans"].split())) for ln in rep["lines"]), key=lambda x: -x[2])
@@ -151,10 +160,22 @@ def main():
             models[oid][ln] = [{k: v for k, v in g.items() if k != "raw"} for g in picked]
             # Puzzle candidates: the stronger and more recent games first.
             sample = sorted(gs, key=lambda g: (min(g["year"], 2024), g["we"] + g["be"]), reverse=True)[:PUZZLE_GAMES_PER_LINE]
+            eg_count = 0
             for g in sample:
                 moves = decode(g["raw"] or b"")
                 if not moves:
                     continue
+                # The game's endgame, for puzzles found by the engine (puzzles.mjs scan).
+                if eg_count < ENDGAME_GAMES_PER_LINE:
+                    b = chess.Board()
+                    for i, m in enumerate(moves):
+                        if i >= 20 and is_endgame(b):
+                            if len(moves) - i >= 10:
+                                endgames.append({"opening": oid, "line": ln, "game": g["id"], "white": g["white"], "black": g["black"], "we": g["we"],
+                                                 "be": g["be"], "year": g["year"], "event": g["event"], "fen": b.fen(), "moves": [x.uci() for x in moves[i : i + 70]]})
+                                eg_count += 1
+                            break
+                        b.push(m)
                 plies, boards = puzzle_candidates(moves)
                 for p in plies:
                     candidates.append({
@@ -167,6 +188,9 @@ def main():
         json.dump(models, f)
     with open(os.path.join(out_dir, "candidates.json"), "w", encoding="utf-8") as f:
         json.dump(candidates, f)
+    with open(os.path.join(out_dir, "endgames.json"), "w", encoding="utf-8") as f:
+        json.dump(endgames, f)
+    print(len(endgames), "endgames for the engine scan")
     with open(os.path.join(out_dir, "stats.json"), "w", encoding="utf-8") as f:
         json.dump(stats, f)
     print(len(candidates), "puzzle candidates")

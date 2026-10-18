@@ -119,9 +119,15 @@
   const lineEndKey = (id: string) => endOf(opening!.lines.find((l) => l.id === id)?.sans ?? opening!.root).key;
 
   // Puzzles for the chosen line, phase and level; unsolved ones first.
-  const pool = $derived((data?.puzzles ?? []).filter((p) => (line === 'all' || p.line === line) && p.phase === puzzlePhase && p.level === level));
-  const countOf = (ph: 'middlegame' | 'endgame', lv?: number) =>
-    (data?.puzzles ?? []).filter((p) => (line === 'all' || p.line === line) && p.phase === ph && (lv === undefined || p.level === lv)).length;
+  const linePool = $derived((data?.puzzles ?? []).filter((p) => (line === 'all' || p.line === line) && p.phase === puzzlePhase && p.level === level));
+  /** No puzzles for this line at this level: the whole opening's instead. */
+  const widened = $derived(line !== 'all' && !linePool.length);
+  const pool = $derived(widened ? (data?.puzzles ?? []).filter((p) => p.phase === puzzlePhase && p.level === level) : linePool);
+  const countOf = (ph: 'middlegame' | 'endgame', lv?: number) => {
+    const all = (data?.puzzles ?? []).filter((p) => p.phase === ph && (lv === undefined || p.level === lv));
+    const mine = all.filter((p) => line === 'all' || p.line === line).length;
+    return mine || all.length;
+  };
   const solvedHere = $derived(pool.filter((p) => solved[puzzleId(p)]).length);
 
   async function nextPuzzle() {
@@ -332,16 +338,21 @@
             {/key}
           </div>
           <aside class="card pz-side">
-            <span class="pill">{lineName(puzzle.line)} · {LEVELS[puzzle.level - 1].name}</span>
+            <span class="pill">{lineName(puzzle.line)} · {LEVELS[puzzle.level - 1].name}{puzzle.rating ? ` · rated ${puzzle.rating}` : ''}</span>
+            {#if widened}<p class="label">No puzzles for the {lineName(line)} at this level yet, so these come from the whole {opening.name}.</p>{/if}
             <p>
               The opponent has just played a move. {puzzle.side === 'white' ? 'White' : 'Black'} to move: find the winning
               {puzzle.mate ? `checkmate (mate in ${puzzle.mate})` : solverMoves(puzzle) > 1 ? `line (${solverMoves(puzzle)} moves)` : 'move'}.
             </p>
             {#if puzzleResult !== undefined}
-              <p class="from label">From {puzzle.white} ({puzzle.we}) – {puzzle.black} ({puzzle.be}), {eventYear(puzzle)}.</p>
+              {#if puzzle.game}
+                <p class="from label">From {puzzle.white} ({puzzle.we}) – {puzzle.black} ({puzzle.be}), {eventYear({ event: puzzle.event ?? '', year: puzzle.year ?? 0 })}.</p>
+              {:else}
+                <p class="from label">From a real game played on Lichess, in the {lineName(puzzle.line) === 'Other lines' ? opening.name : lineName(puzzle.line)}.</p>
+              {/if}
               <div class="acts">
                 <button class="btn primary" onclick={nextPuzzle}>Next puzzle<Icon name="chevron" size={16} /></button>
-                <a class="btn ghost" href="/analysis?db={puzzle.game}">See the game</a>
+                {#if puzzle.game}<a class="btn ghost" href="/analysis?db={puzzle.game}">See the game</a>{/if}
               </div>
             {/if}
             <span class="label">{solvedHere} of {pool.length} solved at this level</span>

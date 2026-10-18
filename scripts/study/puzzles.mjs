@@ -1,6 +1,11 @@
 // Turns the study openings' puzzle candidates (build.py) into checked puzzles.
 //
 //   node scripts/study/puzzles.mjs check <candidates.json> <out.json> <shard> <shards>
+//   node scripts/study/puzzles.mjs scan  <endgames.json> <out.json> <shard> <shards>
+//     follows each game's endgame with the engine; where the opponent's move
+//     turns a balanced position (+1 at most) into a win (+3 or more), the
+//     winning reply becomes a puzzle (checked the same way as above, but the
+//     solution is the engine's, so a chance the player missed counts too).
 //   node scripts/study/puzzles.mjs build <work dir> <static/data/study>
 //
 // A puzzle starts with the opponent's move from the game (the mistake), then
@@ -12,6 +17,9 @@
 import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { Chess } from 'chessops/chess';
+import { makeFen, parseFen } from 'chessops/fen';
+import { parseUci } from 'chessops/util';
 
 const require = createRequire(import.meta.url);
 const [phase, ...args] = process.argv.slice(2);
@@ -138,10 +146,70 @@ if (phase === 'check') {
   }
   writeFileSync(outPath, JSON.stringify(out));
   console.log(`done ${out.length} puzzles from ${all.length}`);
+} else if (phase === 'scan') {
+  const [inPath, outPath, shard, shards] = args;
+  const all = JSON.parse(readFileSync(inPath, 'utf8')).filter((_, i) => i % Number(shards) === Number(shard));
+  const { search } = engine();
+  const out = [];
+  let n = 0;
+  for (const g of all) {
+    n++;
+    if (n % 20 === 0) console.log(`${n}/${all.length}, ${out.length} puzzles`);
+    // Every position of the endgame, and its score for the side to move.
+    const fens = [g.fen];
+    const pos = Chess.fromSetup(parseFen(g.fen).unwrap()).unwrap();
+    for (const u of g.moves) {
+      const m = parseUci(u);
+      if (!m || !pos.isLegal(m)) break;
+      pos.play(m);
+      fens.push(makeFen(pos.toSetup()));
+    }
+    const score = [];
+    for (let i = 0; i < fens.length; i++) {
+      const [b] = await search(fens[i], [], 10);
+      score.push(b ? b.score : undefined);
+    }
+    let found = 0;
+    for (let i = 1; i < fens.length - 1 && found < 2; i++) {
+      if (score[i] === undefined || score[i - 1] === undefined) continue;
+      const before = -score[i - 1]; // for the side to move at i
+      if (before > 100 || score[i] < 300) continue;
+      const [best, second] = await search(fens[i], [], 14, 2);
+      if (!unique(best, second)) continue;
+      const moves = [g.moves[i - 1], best.move];
+      let mine = 1;
+      const mate = isMate(best.score) ? MATE - best.score : 0;
+      while (mine < 4 && !(isMate(best.score) && MATE - best.score <= 1)) {
+        const [reply] = await search(fens[i - 1], moves, 12);
+        if (!reply) break;
+        const [b2, s2] = await search(fens[i - 1], [...moves, reply.move], 13, 2);
+        if (!b2 || !unique(b2, s2)) break;
+        moves.push(reply.move, b2.move);
+        mine++;
+        if (isMate(b2.score) && MATE - b2.score <= 1) break;
+      }
+      const capture = !!playOn(boardOf(fens[i - 1]), g.moves[i - 1])[best.move.slice(2, 4)];
+      out.push({
+        opening: g.opening, line: g.line, game: g.game, white: g.white, black: g.black, we: g.we, be: g.be, year: g.year, event: g.event,
+        fen: fens[i - 1], moves, side: fens[i].split(' ')[1] === 'w' ? 'white' : 'black', phase: phaseOf(fens[i - 1]),
+        level: Math.min(3, mine + (capture || mate ? 0 : 1)), ...(mate ? { mate } : {}),
+      });
+      found++;
+      i += 6;
+    }
+  }
+  writeFileSync(outPath, JSON.stringify(out));
+  console.log(`done ${out.length} puzzles from ${all.length} games`);
 } else if (phase === 'build') {
   const [work, outDir] = args;
   const models = JSON.parse(readFileSync(join(work, 'models.json'), 'utf8'));
   const stats = JSON.parse(readFileSync(join(work, 'stats.json'), 'utf8'));
+  let lichess = {};
+  try {
+    lichess = JSON.parse(readFileSync(join(work, 'lichess.json'), 'utf8'));
+  } catch {
+    /* no Lichess puzzles built */
+  }
   const puzzles = readdirSync(join(work, 'puzzles'))
     .filter((f) => f.endsWith('.json'))
     .flatMap((f) => JSON.parse(readFileSync(join(work, 'puzzles', f), 'utf8')));
@@ -160,6 +228,7 @@ if (phase === 'check') {
       void _o;
       kept.push(rest);
     }
+    kept.push(...(lichess[oid] ?? []));
     const games = {};
     for (const [line, list] of Object.entries(models[oid])) games[line] = list;
     writeFileSync(join(outDir, `${oid}.json`), JSON.stringify({ stats: stats[oid], models: games, puzzles: kept }));

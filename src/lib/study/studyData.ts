@@ -14,13 +14,20 @@ export interface ModelGame {
 
 export interface StudyPuzzle {
   line: string;
-  game: number;
-  white: string;
-  black: string;
-  we: number;
-  be: number;
-  year: number;
-  event: string;
+  /** From the Lichess puzzle database (CC0); otherwise found by the engine in a CaissaBase game. */
+  src?: 'lichess';
+  /** The Lichess puzzle id. */
+  pid?: string;
+  /** The Lichess puzzle rating. */
+  rating?: number;
+  /** The CaissaBase game (engine-found puzzles). */
+  game?: number;
+  white?: string;
+  black?: string;
+  we?: number;
+  be?: number;
+  year?: number;
+  event?: string;
   /** The position before the opponent's move (the mistake). */
   fen: string;
   /** UCI: the opponent's move, then the solution and replies. */
@@ -60,7 +67,7 @@ export const LEVELS: { id: 1 | 2 | 3; name: string }[] = [
   { id: 3, name: 'Advanced' },
 ];
 
-export const puzzleId = (p: StudyPuzzle) => `${p.game}:${p.moves[0]}`;
+export const puzzleId = (p: StudyPuzzle) => (p.pid ? `l${p.pid}` : `${p.game}:${p.moves[0]}`);
 
 const KEY = 'k24.studyPuzzles';
 /** Puzzles solved (id -> true), kept in this browser. */
