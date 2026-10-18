@@ -155,6 +155,33 @@ describe('FideGame', () => {
     g.dispose();
   });
 
+  it("starts at a line's position: its moves on the board, clocks from the moves after it", async () => {
+    const clock = { t: 0 };
+    const g = new FideGame({
+      bot: new FideBot(new FakeBook({ 'e4 c6 d4 d5 e5 Bf5 Nf3': [e(72, 'e7e6', 10)] }), noEngine, seeded(1)),
+      rating: 1800,
+      human: 'white',
+      timeControl: blitz,
+      prelude: 'e4 c6 d4 d5 e5 Bf5'.split(' '),
+      now: () => clock.t,
+      wait: async (ms) => {
+        clock.t += ms;
+      },
+      random: seeded(1),
+    });
+    g.begin();
+    expect(g.sans).toEqual(['e4', 'c6', 'd4', 'd5', 'e5', 'Bf5']);
+    expect(g.myTurn).toBe(true);
+    expect(g.canAbort).toBe(true);
+    clock.t = 30_000;
+    // The player's clock doesn't run on their first move from the line.
+    expect(g.remaining('white')).toBe(300_000);
+    expect(g.play(m('g1f3'))).toBe(true);
+    await flush();
+    expect(g.sans.slice(6)).toEqual(['Nf3', 'e6']);
+    g.dispose();
+  });
+
   it('clocks start after both first moves and add the increment', async () => {
     const { g, clock } = game(new FakeBook({ e4: [e(72, 'e7e5', 10)], 'e4 e5 Nf3': [e(72, 'b8c6', 10)] }));
     g.begin();

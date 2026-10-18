@@ -28,6 +28,7 @@
   const human: Color = q.get('c') === 'black' ? 'black' : 'white';
   // A catalogue opening, or a line from the opening study section.
   const opening = OPENINGS.find((o) => o.id === q.get('o')) ?? studyOpening(q.get('o') ?? '');
+  const fromLine = q.get('start') === 'line';
 
   /** Opened to resume a game cut off by a lost connection or a closed browser. */
   const resumed = resumeFor(page.url);
@@ -51,6 +52,8 @@
       human,
       timeControl,
       opening: opening?.sans.split(' '),
+      // "Play it" from the opening study: the game starts at the line's position.
+      prelude: fromLine && opening ? opening.sans.split(' ') : undefined,
       memory: browserOpeningMemory,
       pace: get(opponentPace),
     });

@@ -63,6 +63,8 @@
   // Play.
   let rating = $state(1600);
   let tc = $state(2);
+  /** Start at the line's position (its moves already played), or play the line's moves yourself from the start. */
+  let fromPosition = $state(true);
 
   onMount(async () => {
     lang = loadCoach().lang;
@@ -166,7 +168,7 @@
     } catch {
       /* private mode */
     }
-    goto(`/play/fide?r=${rating}&tc=${tc}&c=${opening.side}${me}&o=${studyTrainerId(opening.id, playLine)}`);
+    goto(`/play/fide?r=${rating}&tc=${tc}&c=${opening.side}${me}&o=${studyTrainerId(opening.id, playLine)}${fromPosition ? '&start=line' : ''}`);
   }
   const treeOf = (id: string) => trees[id];
   /** Opens a model game (and counts it for Guru's weekly plan). */
@@ -372,7 +374,7 @@
       <section class="card play">
         <h2 class="title">Play {playLine ? lineName(playLine) : `the ${opening.name}`} against a FIDE-rated opponent</h2>
         <p class="label">
-          You play {opening.side}. The opponent follows the line{playLine ? '' : ' (the main moves of the opening)'} while you do, then plays like a real FIDE-rated player at the rating you choose.
+          You play {opening.side}. From the line, the opponent plays like a real FIDE-rated player at the rating you choose.
         </p>
         <div class="group">
           <span class="title h">Line</span>
@@ -380,6 +382,14 @@
             <button class="chip" aria-pressed={!playLine} onclick={() => (line = 'all')}>Whole opening</button>
             {#each opening.lines as l (l.id)}<button class="chip" aria-pressed={playLine === l.id} onclick={() => (line = l.id)}>{l.name}</button>{/each}
           </div>
+        </div>
+        <div class="group">
+          <span class="title h">Start</span>
+          <div class="segmented" role="group" aria-label="Start">
+            <button aria-pressed={fromPosition} onclick={() => (fromPosition = true)}>From the line's position</button>
+            <button aria-pressed={!fromPosition} onclick={() => (fromPosition = false)}>From move 1</button>
+          </div>
+          <span class="label sans">{fromPosition ? `The game begins after ${(playLine ? opening.lines.find((l) => l.id === playLine)?.sans : opening.root) ?? ''}.` : "You play the line's moves yourself; the opponent follows the line while you do."}</span>
         </div>
         <div class="group">
           <span class="title h">Opponent rating: <span class="num">{rating}</span> FIDE</span>

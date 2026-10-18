@@ -1,6 +1,7 @@
 import { Chess } from 'chessops/chess';
 import type { NormalMove } from 'chessops/types';
 import { makeUci, parseUci } from 'chessops/util';
+import { parseSan } from 'chessops/san';
 import { polyglotKey } from '$lib/chess/polyglot';
 import { sanOf } from '$lib/chess/position';
 import { FideBot, VARIETY_PLIES, type BotChoice, type MoveSource } from '$lib/bot/fideBot';
@@ -91,6 +92,8 @@ export interface FideGameOptions {
   human: Color;
   timeControl: TimeControl;
   opening?: string[];
+  /** Moves (SAN) already played when the game starts: a game from a line's position. The clocks start with the moves after them. */
+  prelude?: string[];
   memory?: OpeningMemory;
   /**
    * How the opponent spends its thinking time: 'real' uses its clock like a
@@ -116,6 +119,7 @@ export class FideGame {
   readonly timeControl: TimeControl;
   readonly pace: 'real' | 'quick';
   readonly opening?: string[];
+  readonly prelude: string[];
   readonly start = Chess.default();
   readonly moves: PlayedMove[] = [];
 
@@ -143,6 +147,7 @@ export class FideGame {
     this.human = o.human;
     this.timeControl = o.timeControl;
     this.opening = o.opening;
+    this.prelude = o.prelude ?? [];
     this.memory = o.memory;
     this.pace = o.pace ?? 'real';
     this.now = o.now ?? (() => Date.now());
@@ -179,7 +184,7 @@ export class FideGame {
     return this.timeControl.minutes > 0;
   }
   private get clockRunning(): boolean {
-    return this.timed && this.moves.length >= 2 && !this.isOver;
+    return this.timed && this.moves.length - this.prelude.length >= 2 && !this.isOver;
   }
   get canAbort(): boolean {
     return !this.isOver && !this.moves.some((m) => m.source === undefined);
@@ -217,6 +222,19 @@ export class FideGame {
   begin(): void {
     if (this.memory) this.bot.recentOpenings = this.memory.load();
     this.seen.set(polyglotKey(this.start), (this.seen.get(polyglotKey(this.start)) ?? 0) + 1);
+    // A game from a line's position: its moves are on the board at once (a resumed game has them already).
+    if (!this.moves.length) {
+      for (const san of this.prelude) {
+        const pos = this.position;
+        const move = parseSan(pos, san);
+        if (!move || !('from' in move) || !pos.isLegal(move)) break;
+        const after = pos.clone();
+        after.play(move);
+        this.moves.push({ move, san: sanOf(pos, move), after, source: 'opening', games: 0, window: 0 });
+        const key = polyglotKey(after);
+        this.seen.set(key, (this.seen.get(key) ?? 0) + 1);
+      }
+    }
     if (this.moves.length) this.tick();
     if (this.isOver) return this.notify();
     if (this.position.turn !== this.human) void this.botTurn();
@@ -282,7 +300,7 @@ export class FideGame {
       const ms = 500 + this.random() * 900 + (c < 0.5 ? 1000 + this.random() * 1500 : 0);
       return Math.round(Math.min(ms, (this.position.turn === 'white' ? this.white : this.black) / 10));
     }
-    if (this.moves.length < 2) return Math.round(1000 + this.random() * 2000);
+    if (this.moves.length - this.prelude.length < 2) return Math.round(1000 + this.random() * 2000);
     const pos = this.position;
     const kind: MoveKind =
       countLegal(pos) === 1 ? 'forced' : source === 'opening' || (source === 'book' && pos.fullmoves <= 10) ? 'theory' : move && this.isRecapture(move) ? 'recapture' : 'normal';
