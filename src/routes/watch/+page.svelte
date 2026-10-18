@@ -1,11 +1,32 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import { topBroadcasts, type Broadcast } from '$lib/lichess';
+  import { topBroadcasts, type Broadcast, type BroadcastLists } from '$lib/lichess';
 
-  let list = $state<Broadcast[] | undefined>();
+  let lists = $state<BroadcastLists | undefined>();
   let error = $state(false);
-  onMount(() => topBroadcasts().then((b) => (list = b), () => (error = true)));
+  let tab = $state<'live' | 'soon' | 'finished'>('live');
+  onMount(() =>
+    topBroadcasts().then(
+      (b) => {
+        lists = b;
+        // Nothing live right now: open on what's coming up.
+        if (!b.live.length) tab = b.soon.length ? 'soon' : 'finished';
+      },
+      () => (error = true),
+    ),
+  );
+  const shown = $derived(lists ? lists[tab] : undefined);
+
+  /** "in 3 hours", "tomorrow, 14:30", "Sat, 14:30". */
+  function startsText(t?: number): string {
+    if (!t) return '';
+    const mins = Math.round((t - Date.now()) / 60_000);
+    if (mins <= 0) return 'Starting now';
+    if (mins < 60) return `Starts in ${mins} min`;
+    if (mins < 12 * 60) return `Starts in ${Math.round(mins / 60)} h`;
+    return 'Starts ' + new Date(t).toLocaleString('en-IN', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+  }
 </script>
 
 <svelte:head><title>Watch · Chess Castles</title></svelte:head>
@@ -16,17 +37,27 @@
     <p class="label">Top tournaments, live. Open one to follow every board, with clocks and the engine.</p>
   </header>
 
+  {#if lists}
+    <div class="tabs segmented" role="group" aria-label="Tournaments">
+      <button aria-pressed={tab === 'live'} onclick={() => (tab = 'live')}>
+        {#if lists.live.length}<span class="dot"></span>{/if}Live now <span class="n">{lists.live.length}</span>
+      </button>
+      <button aria-pressed={tab === 'soon'} onclick={() => (tab = 'soon')}>Coming up <span class="n">{lists.soon.length}</span></button>
+      <button aria-pressed={tab === 'finished'} onclick={() => (tab = 'finished')}>Finished <span class="n">{lists.finished.length}</span></button>
+    </div>
+  {/if}
+
   {#if error}
     <div class="card">The live events couldn't load. Check your connection and try again.</div>
-  {:else if !list}
+  {:else if !shown}
     <div class="grid">
       {#each [0, 1, 2, 3, 4, 5] as i (i)}<div class="tile skeleton"></div>{/each}
     </div>
-  {:else if !list.length}
-    <div class="card">No broadcasts right now. Check back soon.</div>
+  {:else if !shown.length}
+    <div class="card">{tab === 'live' ? 'No tournament is being played right now.' : tab === 'soon' ? 'Nothing coming up yet. Check back soon.' : 'No finished tournaments to show.'}</div>
   {:else}
     <div class="grid">
-      {#each list as b (b.id)}
+      {#each shown as b (b.id)}
         <a class="tile" href="/watch/{b.id}">
           <div class="img">
             {#if b.image}<img src={b.image} alt="" loading="lazy" />{/if}
@@ -34,10 +65,10 @@
           </div>
           <div class="body">
             <span class="title name">{b.name}</span>
-            <span class="label">{b.round}</span>
+            <span class="label">{b.round}{#if tab === 'soon' && b.startsAt} · {startsText(b.startsAt)}{:else if tab === 'finished'} · Finished{/if}</span>
             <span class="label meta">{[b.location, b.timeControl].filter(Boolean).join(' · ')}</span>
           </div>
-          <span class="go">Watch all boards<Icon name="chevron" size={16} /></span>
+          <span class="go">{tab === 'soon' ? 'See the rounds' : tab === 'finished' ? 'Replay the games' : 'Watch all boards'}<Icon name="chevron" size={16} /></span>
         </a>
       {/each}
     </div>
@@ -58,6 +89,19 @@
   header .label {
     margin: 6px 0 0;
     font-size: 15px;
+  }
+  .tabs {
+    max-width: 520px;
+  }
+  .tabs button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .tabs .n {
+    font-size: 12px;
+    opacity: 0.7;
   }
   .grid {
     display: grid;

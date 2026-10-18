@@ -69,7 +69,7 @@
             <Icon name="chevron" color="var(--muted)" />
           </a>
           <div class="acts">
-            <a class="btn small review" href="/coach/review/{g.id}" title="Review this game with Chess Guru"><Icon name="coach" size={16} />Review</a>
+            <a class="btn small review" href="/analysis?game={g.id}" title="Review this game: engine, database or Chess Guru"><Icon name="analyse" size={16} />Review</a>
             {#if g.result !== '*'}<ShareGame game={() => g} small />{/if}
           </div>
         </li>

@@ -92,6 +92,12 @@ export interface FideGameOptions {
   timeControl: TimeControl;
   opening?: string[];
   memory?: OpeningMemory;
+  /**
+   * How the opponent spends its thinking time: 'real' uses its clock like a
+   * tournament player (sometimes half a minute on a hard move), 'quick' moves
+   * within a few seconds (its clock still runs). Default 'real'.
+   */
+  pace?: 'real' | 'quick';
   now?: () => number;
   wait?: (ms: number) => Promise<void>;
   random?: () => number;
@@ -108,6 +114,7 @@ export class FideGame {
   readonly playerRating?: number;
   readonly human: Color;
   readonly timeControl: TimeControl;
+  readonly pace: 'real' | 'quick';
   readonly opening?: string[];
   readonly start = Chess.default();
   readonly moves: PlayedMove[] = [];
@@ -137,6 +144,7 @@ export class FideGame {
     this.timeControl = o.timeControl;
     this.opening = o.opening;
     this.memory = o.memory;
+    this.pace = o.pace ?? 'real';
     this.now = o.now ?? (() => Date.now());
     this.wait = o.wait ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
     this.random = o.random ?? Math.random;
@@ -268,6 +276,12 @@ export class FideGame {
   /** How long the bot "thinks" before playing (see moveTime). */
   thinkTime(source: MoveSource, confidence?: number, move?: NormalMove): number {
     if (!this.timed) return 500 + Math.round(this.random() * 900);
+    if (this.pace === 'quick') {
+      // Quick: a short, natural pause, a little longer when the move is not obvious.
+      const c = confidence ?? 0.5;
+      const ms = 500 + this.random() * 900 + (c < 0.5 ? 1000 + this.random() * 1500 : 0);
+      return Math.round(Math.min(ms, (this.position.turn === 'white' ? this.white : this.black) / 10));
+    }
     if (this.moves.length < 2) return Math.round(1000 + this.random() * 2000);
     const pos = this.position;
     const kind: MoveKind =

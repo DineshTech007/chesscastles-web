@@ -282,6 +282,32 @@
 
 <svelte:head><title>Online game · Chess Castles</title></svelte:head>
 
+{#snippet playControls()}
+{#if view.theyOfferDraw}
+  <div class="notice offer">
+    <span>{game.opponent.name} offers a draw.</span>
+    <button class="btn" onclick={() => act(() => api.draw(token!, gameId, false))}>Decline</button>
+    <button class="btn primary" onclick={() => act(() => api.draw(token!, gameId, true))}>Accept</button>
+  </div>
+{/if}
+<div class="actions">
+  {#if game.canAbort}
+    <button class="btn" onclick={() => act(() => api.abort(token!, gameId))}><Icon name="close" size={18} />Abort</button>
+  {:else if confirmResign}
+    <button class="btn primary" onclick={() => act(() => api.resign(token!, gameId))}>Yes, resign</button>
+    <button class="btn" onclick={() => (confirmResign = false)}>Keep playing</button>
+  {:else}
+    <button class="btn" onclick={() => (confirmResign = true)}><Icon name="flag" size={18} />Resign</button>
+    <button class="btn" disabled={view.iOfferDraw} onclick={() => act(() => api.draw(token!, gameId, true))}>
+      {view.iOfferDraw ? 'Draw offered' : 'Offer draw'}
+    </button>
+  {/if}
+  {#if queue.length}
+    <button class="btn" onclick={() => (queue.clear(), board?.cancelPremove(), v++)}>Cancel premoves ({queue.length})</button>
+  {/if}
+</div>
+{/snippet}
+
 <svelte:window onkeydown={onkey} />
 
 {#if promoting}
@@ -316,6 +342,12 @@
         onswipe={(d) => go((viewPly ?? game.plies.length) + (d === 'forward' ? 1 : -1))}
       />
       <PlayerBar {...bottom} />
+      <!-- Phones: the move buttons and Resign / Draw right under the board, no scrolling. -->
+      <div class="phone-controls">
+        <MoveNav ply={viewPly ?? view.sans.length} max={view.sans.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
+        {#if viewPly !== undefined && !game.isOver}<div class="looking-row"><button class="btn primary back-live" onclick={() => go(view.sans.length)}>Back to the game</button></div>{/if}
+        {#if !game.isOver && game.me}{@render playControls()}{/if}
+      </div>
     </section>
 
     <aside class="side">
@@ -330,8 +362,8 @@
           </button>
         </div>
         <MoveList sans={view.sans} current={viewPly ?? view.sans.length} onselect={go} />
-        <MoveNav ply={viewPly ?? view.sans.length} max={view.sans.length} {go} />
-        {#if viewPly !== undefined && !game.isOver}<div class="looking-row"><button class="btn primary back-live" onclick={() => go(view.sans.length)}>Back to the game</button></div>{/if}
+        <div class="wide-only"><MoveNav ply={viewPly ?? view.sans.length} max={view.sans.length} {go} /></div>
+        {#if viewPly !== undefined && !game.isOver}<div class="looking-row wide-only"><button class="btn primary back-live" onclick={() => go(view.sans.length)}>Back to the game</button></div>{/if}
       </div>
 
       {#if notice}<div class="notice">{notice}</div>{/if}
@@ -352,29 +384,7 @@
           </div>
         </div>
       {:else if game.me}
-        {#if view.theyOfferDraw}
-          <div class="notice offer">
-            <span>{game.opponent.name} offers a draw.</span>
-            <button class="btn" onclick={() => act(() => api.draw(token, gameId, false))}>Decline</button>
-            <button class="btn primary" onclick={() => act(() => api.draw(token, gameId, true))}>Accept</button>
-          </div>
-        {/if}
-        <div class="actions">
-          {#if game.canAbort}
-            <button class="btn" onclick={() => act(() => api.abort(token, gameId))}><Icon name="close" size={18} />Abort</button>
-          {:else if confirmResign}
-            <button class="btn primary" onclick={() => act(() => api.resign(token, gameId))}>Yes, resign</button>
-            <button class="btn" onclick={() => (confirmResign = false)}>Keep playing</button>
-          {:else}
-            <button class="btn" onclick={() => (confirmResign = true)}><Icon name="flag" size={18} />Resign</button>
-            <button class="btn" disabled={view.iOfferDraw} onclick={() => act(() => api.draw(token, gameId, true))}>
-              {view.iOfferDraw ? 'Draw offered' : 'Offer draw'}
-            </button>
-          {/if}
-          {#if queue.length}
-            <button class="btn" onclick={() => (queue.clear(), board?.cancelPremove(), v++)}>Cancel premoves ({queue.length})</button>
-          {/if}
-        </div>
+        <div class="wide-only">{@render playControls()}</div>
       {/if}
     </aside>
   </div>
@@ -508,9 +518,27 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
+  .phone-controls {
+    display: none;
+  }
   @media (max-width: 767px) {
     .side {
       max-width: none;
+    }
+    .wide-only {
+      display: none !important;
+    }
+    .phone-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .phone-controls :global(.nav) {
+      padding: 0;
+      border-top: 0;
+    }
+    .phone-controls :global(.nb) {
+      height: 44px;
     }
     .panel-card :global(.moves) {
       height: 160px;

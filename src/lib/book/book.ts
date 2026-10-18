@@ -114,7 +114,7 @@ export class BookShard {
   }
 }
 
-export const shardOf = (key: bigint): number => Number(key >> (64n - SHARD_BITS));
+export const shardOf = (key: bigint, bits = SHARD_BITS): number => Number(key >> (64n - bits));
 
 /** Sums entries for players rated minRating..maxRating (inclusive), most played first. */
 export function movesInRange(entries: BookEntry[], minRating: number, maxRating = 9999): BookMove[] {
@@ -137,10 +137,19 @@ export function movesInRange(entries: BookEntry[], minRating: number, maxRating 
 export const movesInWindow = (entries: BookEntry[], rating: number, window: number) =>
   movesInRange(entries, rating - window, rating + window - 1);
 
+/**
+ * A rating today as it was before FIDE's change of 1 March 2024, which raised
+ * every rating under 2000 by 0.4 × (2000 − rating) and the floor from 1000 to
+ * 1400 (today's 1400 was 1000, 1640 was 1400, 1880 was 1800; 2000+ unchanged).
+ */
+export const pre2024Rating = (rating: number) => (rating < 2000 ? Math.round((rating - 800) / 0.6) : rating);
+
 /** Where book moves come from; a fake in tests. */
 export interface BookSource {
   entries(pos: Chess): Promise<BookEntry[]>;
   prefetch(positions: Chess[]): void;
+  /** The rating in this book's bands for a player rated `rating` today (omitted: the same). */
+  bookRating?(rating: number): number;
 }
 
 /**
@@ -159,16 +168,23 @@ export class CloudBook implements BookSource {
     private readonly base = BOOK_URL,
     private readonly timeoutMs = 6000,
     private readonly fetchFn: typeof fetch = (...a) => fetch(...a),
+    /** Shard files = 2^bits: 14 for the big book, fewer for small ones. */
+    private readonly shardBits = SHARD_BITS,
   ) {}
+
+  /** The current book's games are mostly from before 2024, with ratings on the old scale. */
+  bookRating(rating: number): number {
+    return this.base === BOOK_URL ? pre2024Rating(rating) : rating;
+  }
 
   async entries(pos: Chess): Promise<BookEntry[]> {
     const key = polyglotKey(pos);
-    const shard = await this.shard(shardOf(key));
+    const shard = await this.shard(shardOf(key, this.shardBits));
     return shard?.lookup(key) ?? [];
   }
 
   prefetch(positions: Chess[]): void {
-    for (const p of positions) void this.shard(shardOf(polyglotKey(p)));
+    for (const p of positions) void this.shard(shardOf(polyglotKey(p), this.shardBits));
   }
 
   private shard(id: number): Promise<BookShard | null> {
@@ -188,7 +204,7 @@ export class CloudBook implements BookSource {
 
   private async load(id: number): Promise<BookShard | null> {
     if (Date.now() < this.offlineUntil) return null;
-    const name = id.toString(16).padStart(4, '0');
+    const name = id.toString(16).padStart(Math.ceil(Number(this.shardBits) / 4), '0');
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), this.timeoutMs);
     try {
@@ -207,5 +223,30 @@ export class CloudBook implements BookSource {
     } finally {
       clearTimeout(timer);
     }
+  }
+}
+
+/**
+ * Several books in order, most specific first (a girls' U12 book, then girls',
+ * then everyone's): a position is answered by the first book that has at
+ * least `minGames` games within +-100 points of `rating`, else by the last.
+ */
+export class LayeredBook implements BookSource {
+  constructor(
+    private readonly layers: BookSource[],
+    private readonly rating: number,
+    private readonly minGames = 2,
+  ) {}
+
+  async entries(pos: Chess): Promise<BookEntry[]> {
+    for (let i = 0; i < this.layers.length - 1; i++) {
+      const e = await this.layers[i].entries(pos);
+      if (movesInWindow(e, this.layers[i].bookRating?.(this.rating) ?? this.rating, 100).reduce((s, x) => s + x.games, 0) >= this.minGames) return e;
+    }
+    return this.layers[this.layers.length - 1].entries(pos);
+  }
+
+  prefetch(positions: Chess[]): void {
+    for (const l of this.layers) l.prefetch(positions);
   }
 }

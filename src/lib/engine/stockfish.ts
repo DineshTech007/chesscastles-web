@@ -20,7 +20,7 @@ type Job =
   | { kind: 'play'; fen: string; elo: number; ms: number; resolve: (uci: string | null) => void }
   | { kind: 'score'; fen: string; moves: string[]; ms: number; scores: Map<string, number>; resolve: (s: Map<string, number>) => void }
   | { kind: 'analyse'; fen: string; depth: number; multipv: number; lines: EngineInfo[]; onInfo: (i: EngineInfo) => void; onLines?: (l: EngineInfo[]) => void; onDone?: () => void }
-  | { kind: 'eval'; fen: string; depth: number; multipv: number; second?: EngineInfo; onInfo: (i: EngineInfo) => void; onDone: () => void };
+  | { kind: 'eval'; fen: string; depth: number; multipv: number; maxMs?: number; second?: EngineInfo; onInfo: (i: EngineInfo) => void; onDone: () => void };
 
 const ENGINE_URL = '/engine/stockfish-19-lite-single.js';
 
@@ -133,7 +133,8 @@ class Stockfish {
       this.send('setoption name UCI_LimitStrength value false');
       this.send(`setoption name MultiPV value ${job.multipv}`);
       this.send(`position fen ${job.fen}`);
-      this.send(`go depth ${job.depth}`);
+      // An evaluation may also have a time cap: it stops at the depth or the time, whichever comes first.
+      this.send(`go depth ${job.depth}${job.kind === 'eval' && job.maxMs ? ` movetime ${job.maxMs}` : ''}`);
     }
   }
 
@@ -196,7 +197,7 @@ class Stockfish {
    * Evaluations are queued: a later one never stops an earlier one, so every
    * result is searched to the full depth (a move's grade depends on it).
    */
-  async evaluate(fen: string, depth = 12, multipv = 1): Promise<EngineInfo | undefined> {
+  async evaluate(fen: string, depth = 12, multipv = 1, maxMs?: number): Promise<EngineInfo | undefined> {
     await this.start();
     if (!this.worker) return undefined;
     return new Promise((resolve) => {
@@ -206,6 +207,7 @@ class Stockfish {
         fen,
         depth,
         multipv,
+        maxMs,
         onInfo: (i) => (last = i),
         onDone: () => resolve(last && job.second ? { ...last, second: job.second } : last),
       };

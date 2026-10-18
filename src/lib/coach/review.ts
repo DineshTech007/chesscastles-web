@@ -49,14 +49,43 @@ export interface GameReview {
 
 const TACTICAL = new Set(['capture', 'pins', 'attacks', 'fork', 'check', 'mate']);
 
-/** Analyses the student's moves (onProgress: 0..1). */
+/** The first look: every position to this depth, or this long, whichever comes first. */
+const FIRST_DEPTH = 13;
+const FIRST_MS = 1200;
+/** Moves still in the named opening are labelled "book": a light look is enough. */
+const BOOK_DEPTH = 8;
+const CACHE_KEY = 'k24.reviews';
+const CACHE_MAX = 30;
+
+/** A finished review, kept so opening the same game again is instant. */
+function cached(key: string): GameReview | undefined {
+  try {
+    return (JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}') as Record<string, GameReview>)[key];
+  } catch {
+    return undefined;
+  }
+}
+function keep(key: string, review: GameReview) {
+  try {
+    const all = JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}') as Record<string, GameReview>;
+    delete all[key];
+    all[key] = review;
+    const keys = Object.keys(all);
+    for (const k of keys.slice(0, Math.max(0, keys.length - CACHE_MAX))) delete all[k];
+    localStorage.setItem(CACHE_KEY, JSON.stringify(all));
+  } catch {
+    /* storage full or blocked: the review just isn't kept */
+  }
+}
+
 /**
- * Reviews a game: every position at `depth`, then the positions around each
- * move about to be called brilliant, an only move, a mistake or a blunder
- * again at `depth + 5`, so the labels people notice are not shallow guesses
- * (and the same game gets the same labels each time).
+ * Reviews a game: every position at depth 13 (capped at about a second, so a
+ * hard position can't hold a phone up), then the positions around each move
+ * about to be called brilliant, an only move, a mistake or a blunder again,
+ * deeper (`recheckDepth`: the plan's review depth), so the labels people
+ * notice are not shallow guesses. A finished review is kept on the device.
  */
-export async function analyseGame(g: SavedGame, onProgress: (p: number) => void, depth = 13, stopped: () => boolean = () => false): Promise<GameReview> {
+export async function analyseGame(g: SavedGame, onProgress: (p: number) => void, recheckDepth = 18, stopped: () => boolean = () => false): Promise<GameReview> {
   const positions: Chess[] = [positionFromFen(g.startFen)];
   const moves: NormalMove[] = [];
   for (const uci of g.uci) {
@@ -67,14 +96,21 @@ export async function analyseGame(g: SavedGame, onProgress: (p: number) => void,
     moves.push(m);
     positions.push(p);
   }
+  const cacheKey = `${fenOf(positions[0])}|${moves.map(moveToUci).join(' ')}|${g.userSide}|${recheckDepth}`;
+  const hit = cached(cacheKey);
+  if (hit) {
+    onProgress(1);
+    return hit;
+  }
+  const opening = await findOpening(positions[0], moves);
   const evals: (EngineInfo | undefined)[] = [];
   for (let i = 0; i < positions.length; i++) {
     if (stopped()) throw new Error('stopped');
+    const book = !!opening && i < opening.plies;
     // The second-best line tells an only move from an easy one.
-    evals.push(positions[i].isEnd() ? undefined : await engine.evaluate(fenOf(positions[i]), depth, 2));
+    evals.push(positions[i].isEnd() ? undefined : await engine.evaluate(fenOf(positions[i]), book ? BOOK_DEPTH : FIRST_DEPTH, 2, FIRST_MS));
     onProgress((0.8 * (i + 1)) / positions.length);
   }
-  const opening = await findOpening(positions[0], moves);
   // The second look: the positions around every strong label, deeper.
   const recheck = new Set<number>();
   for (let i = 0; i < moves.length; i++) {
@@ -91,7 +127,7 @@ export async function analyseGame(g: SavedGame, onProgress: (p: number) => void,
   const deeper = [...recheck].filter((i) => !positions[i].isEnd());
   for (let k = 0; k < deeper.length; k++) {
     if (stopped()) throw new Error('stopped');
-    evals[deeper[k]] = await engine.evaluate(fenOf(positions[deeper[k]]), depth + 5, 2);
+    evals[deeper[k]] = await engine.evaluate(fenOf(positions[deeper[k]]), recheckDepth, 2, recheckDepth >= 22 ? 8000 : 4000);
     onProgress(0.8 + (0.2 * (k + 1)) / deeper.length);
   }
   onProgress(1);
@@ -124,7 +160,9 @@ export async function analyseGame(g: SavedGame, onProgress: (p: number) => void,
     white: { accuracy: acc.white.n ? Math.round(acc.white.sum / acc.white.n) : 0, classes: acc.white.classes },
     black: { accuracy: acc.black.n ? Math.round(acc.black.sum / acc.black.n) : 0, classes: acc.black.classes },
   };
-  return { accuracy: sides[g.userSide].accuracy, counts, opening, moves: all.filter((m) => m.color === g.userSide), all, sides, fens: positions.map(fenOf) };
+  const review: GameReview = { accuracy: sides[g.userSide].accuracy, counts, opening, moves: all.filter((m) => m.color === g.userSide), all, sides, fens: positions.map(fenOf) };
+  keep(cacheKey, review);
+  return review;
 }
 
 const VALUE: Record<Role, number> = { pawn: 1, knight: 3, bishop: 3, rook: 5, queen: 9, king: 0 };

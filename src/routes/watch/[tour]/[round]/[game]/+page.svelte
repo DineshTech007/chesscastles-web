@@ -10,7 +10,7 @@
   import { fenOf, keyOf } from '$lib/chess/position';
   import { clocksAt, readPgn, type PgnGame } from '$lib/chess/pgn';
   import { engine, evalLabel, whiteChances, type EngineInfo } from '$lib/engine/stockfish';
-  import { broadcastGamePgn } from '$lib/lichess';
+  import { broadcastGamePgn, roundGames, runningClock, type BroadcastGame } from '$lib/lichess';
 
   const { tour, round, game: gameId } = page.params as { tour: string; round: string; game: string };
   let pgnText = '';
@@ -22,8 +22,17 @@
   let info = $state<EngineInfo | undefined>();
   let error = $state('');
   let timer: ReturnType<typeof setInterval> | undefined;
+  /** This game as the round lists it: how long the side to move has been thinking. */
+  let board = $state<BroadcastGame | undefined>();
+  // The clock of the side to move runs on between refreshes, as on Lichess.
+  let now = $state(Date.now());
+  const tick = setInterval(() => (now = Date.now()), 250);
 
   async function load() {
+    roundGames(round).then(
+      (gs) => (board = gs.find((g) => g.id === gameId)),
+      () => {},
+    );
     try {
       const text = await broadcastGamePgn(round, gameId);
       if (text === pgnText) return;
@@ -44,6 +53,7 @@
   });
   onDestroy(() => {
     clearInterval(timer);
+    clearInterval(tick);
     engine.stopAnalysis();
   });
 
@@ -91,25 +101,33 @@
 
   function bar(side: 'white' | 'black') {
     const name = h(side === 'white' ? 'White' : 'Black');
-    const title = h(side === 'white' ? 'WhiteTitle' : 'BlackTitle');
+    const t = h(side === 'white' ? 'WhiteTitle' : 'BlackTitle');
+    const title = t === 'BOT' ? '' : t;
     const elo = h(side === 'white' ? 'WhiteElo' : 'BlackElo');
     const clocks = game ? clocksAt(game, cursor) : {};
+    const latest = live && cursor === (game?.plies.length ?? 0);
+    // Run the clock of the side to move when we're showing the position the round has now.
+    const running = latest && pos?.turn === side && board && board.fen.split(' ')[0] === fen.split(' ')[0];
     return {
       name: `${title ? title + ' ' : ''}${name}`,
       initials: name.split(/[ ,]+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase() || '?',
       subtitle: [elo, h(side === 'white' ? 'WhiteFed' : 'BlackFed')].filter(Boolean).join(' · ') || (side === 'white' ? 'White' : 'Black'),
       toMove: live && pos?.turn === side && cursor === (game?.plies.length ?? 0),
-      clockMs: clocks[side],
+      clockMs: running ? runningClock(clocks[side], board!, now) : clocks[side],
     };
   }
   const top = $derived.by(() => {
     void cursor;
     void game;
+    void now;
+    void board;
     return bar(orientation === 'white' ? 'black' : 'white');
   });
   const bottom = $derived.by(() => {
     void cursor;
     void game;
+    void now;
+    void board;
     return bar(orientation);
   });
 </script>

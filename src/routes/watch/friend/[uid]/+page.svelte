@@ -80,13 +80,22 @@
     return Math.max(0, base - (running ? now - sharedAt : 0));
   };
   const friendName = $derived(friend?.name ?? uid.replace(/^lichess:/, ''));
+  /** Initials as the players see them: a FIDE-rated opponent shows its rating ("12" for 1200). */
+  const initialsOf = (name: string) => {
+    const r = /\b(\d{3,4})\b/.exec(name);
+    if (r) return String(Math.floor(Number(r[1]) / 100));
+    return name.split(/[\s_,]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
+  };
   function bar(side: 'white' | 'black') {
     const isFriend = game?.human === side;
+    const opponent = game?.opponent ?? '';
+    // The opponent's rating, unless its name already says it ("FIDE 1200").
+    const oppRating = game?.opponentRating && !opponent.includes(String(game.opponentRating)) ? `FIDE ${game.opponentRating}` : undefined;
     return {
-      name: isFriend ? friendName : (game?.opponent ?? ''),
+      name: isFriend ? friendName : opponent,
       subtitle: side === 'white' ? 'White' : 'Black',
-      initials: (isFriend ? friendName : (game?.opponent ?? '?')).slice(0, 2).toUpperCase(),
-      rating: isFriend ? (friend?.kfide ? `CC ${friend.kfide}` : undefined) : game?.opponentRating ? `FIDE ${game.opponentRating}` : undefined,
+      initials: initialsOf(isFriend ? friendName : opponent),
+      rating: isFriend ? (friend?.kfide ? `CC ${friend.kfide}` : undefined) : oppRating,
       country: isFriend ? friend?.country || undefined : undefined,
       toMove: !game?.result && view?.turn === side,
       clockMs: clock(side),

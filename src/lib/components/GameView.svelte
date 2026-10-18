@@ -377,6 +377,28 @@
   <PromotionPicker color={game.position.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
 {/if}
 
+{#snippet actionButtons()}
+  {#if g.canAbort}
+    <button class="btn" onclick={() => game.abort()}><Icon name="close" size={18} />Abort</button>
+  {:else if confirmResign}
+    <button class="btn primary" onclick={() => game.resign()}>Yes, resign</button>
+    <button class="btn" onclick={() => (confirmResign = false)}>Keep playing</button>
+  {:else}
+    <button class="btn" onclick={() => (confirmResign = true)}><Icon name="flag" size={18} />Resign</button>
+  {/if}
+  {#if g.queued}
+    <button class="btn" onclick={cancelPremoves}><Icon name="undo" size={18} />Cancel premoves ({g.queued})</button>
+  {/if}
+{/snippet}
+{#snippet lookingRow()}
+  {#if viewPly !== undefined}
+    <div class="looking-row">
+      <span class="looking label">{viewPly === 0 ? 'Start position' : `After ${Math.ceil(viewPly / 2)}${viewPly % 2 ? '.' : '…'} ${g.sans[viewPly - 1]}`}</span>
+      {#if !g.isOver}<button class="btn primary back-live" onclick={() => go(g.sans.length)}>Back to the game</button>{/if}
+    </div>
+  {/if}
+{/snippet}
+
 <div class="game">
   <section class="board-col" aria-label="Board">
     <PlayerBar {...top} />
@@ -400,6 +422,19 @@
       />
     </div>
     <PlayerBar {...bottom} />
+    {#if game.timed && !g.isOver && g.sans.length < 2}
+      <p class="first-move" role="status">
+        <Icon name="history" size={16} />
+        {g.sans.length === 0 && game.human === 'white' ? 'Play your first move.' : g.sans.length === 1 && game.human === 'black' ? 'Your move.' : 'Waiting for the first move.'}
+        The clocks start once each side has made a move, as on Lichess and chess.com.
+      </p>
+    {/if}
+    <!-- Phones: the move buttons and Resign right under the board, no scrolling. -->
+    <div class="phone-controls">
+      <MoveNav ply={viewPly ?? g.sans.length} max={g.sans.length} {go} onflip={() => (orientation = opposite(orientation))} />
+      {@render lookingRow()}
+      {#if !g.isOver}<div class="actions">{@render actionButtons()}</div>{/if}
+    </div>
   </section>
 
   <aside class="side">
@@ -412,13 +447,8 @@
       </div>
       {#if reviewing !== undefined}<p class="label reviewing">Marking every move (brilliant … blunder)… {Math.round(reviewing * 100)}%</p>{/if}
       <MoveList sans={g.sans} sources={g.sources} current={viewPly ?? g.sans.length} onselect={go} {badges} />
-      <div class="nav-wrap"><MoveNav ply={viewPly ?? g.sans.length} max={g.sans.length} {go} /></div>
-      {#if viewPly !== undefined}
-        <div class="looking-row">
-          <span class="looking label">{viewPly === 0 ? 'Start position' : `After ${Math.ceil(viewPly / 2)}${viewPly % 2 ? '.' : '…'} ${g.sans[viewPly - 1]}`}</span>
-          {#if !g.isOver}<button class="btn primary back-live" onclick={() => go(g.sans.length)}>Back to the game</button>{/if}
-        </div>
-      {/if}
+      <div class="nav-wrap wide-only"><MoveNav ply={viewPly ?? g.sans.length} max={g.sans.length} {go} /></div>
+      <div class="wide-only">{@render lookingRow()}</div>
     </div>
 
     {#if g.isOver}
@@ -441,19 +471,7 @@
         <a class="btn ghost" href="/play">Change settings</a>
       </div>
     {:else}
-      <div class="actions">
-        {#if g.canAbort}
-          <button class="btn" onclick={() => game.abort()}><Icon name="close" size={18} />Abort</button>
-        {:else if confirmResign}
-          <button class="btn primary" onclick={() => game.resign()}>Yes, resign</button>
-          <button class="btn" onclick={() => (confirmResign = false)}>Keep playing</button>
-        {:else}
-          <button class="btn" onclick={() => (confirmResign = true)}><Icon name="flag" size={18} />Resign</button>
-        {/if}
-        {#if g.queued}
-          <button class="btn" onclick={cancelPremoves}><Icon name="undo" size={18} />Cancel premoves ({g.queued})</button>
-        {/if}
-      </div>
+      <div class="actions wide-only">{@render actionButtons()}</div>
     {/if}
   </aside>
 </div>
@@ -581,6 +599,9 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
+  .phone-controls {
+    display: none;
+  }
   @media (max-width: 767px) {
     .game {
       gap: 10px;
@@ -591,16 +612,25 @@
       flex-direction: column;
       gap: 10px;
     }
-    /* Phones: the controls right under the board, the move list after them. */
-    .actions {
-      order: -1;
+    /* Phones: the controls are under the board (phone-controls), not in the side panel. */
+    .wide-only {
+      display: none !important;
+    }
+    .phone-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .phone-controls :global(.nav) {
+      padding: 0;
+      border-top: 0;
+    }
+    .phone-controls :global(.nb) {
+      height: 44px;
     }
     .moves-card {
       display: flex;
       flex-direction: column;
-    }
-    .nav-wrap {
-      order: -1;
     }
     .moves-card :global(.moves) {
       height: 132px;
@@ -608,5 +638,14 @@
     .board-col {
       gap: 6px;
     }
+  }
+  .first-move {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    color: var(--text-2);
   }
 </style>

@@ -63,25 +63,49 @@ export interface Broadcast {
   image?: string;
   location?: string;
   timeControl?: string;
+  /** A round is being played now (Lichess's "ongoing"). */
   live: boolean;
+  /** When the next (or current) round starts. */
+  startsAt?: number;
+  /** Lichess's importance, 5 the top events. */
+  tier: number;
 }
 
-/** The top broadcasts on Lichess right now (live and soon). */
-export async function topBroadcasts(): Promise<Broadcast[]> {
+export interface BroadcastLists {
+  live: Broadcast[];
+  soon: Broadcast[];
+  finished: Broadcast[];
+}
+
+const toBroadcast = (b: any): Broadcast => ({
+  id: b.tour.id,
+  name: b.tour.name,
+  round: b.round?.name ?? '',
+  url: b.round?.url ?? b.tour.url,
+  image: b.tour.image,
+  location: b.tour.info?.location,
+  timeControl: b.tour.info?.tc,
+  live: !!b.round?.ongoing,
+  startsAt: b.round?.startsAt,
+  tier: b.tour.tier ?? 0,
+});
+
+/**
+ * The broadcasts on Lichess: live now (most important first), coming up (soonest
+ * first) and recently finished.
+ */
+export async function topBroadcasts(): Promise<BroadcastLists> {
   const res = await fetch(`${API}/broadcast/top?page=1`);
   if (!res.ok) throw new Error(`Lichess answered ${res.status}`);
   const j = await res.json();
-  const now = Date.now();
-  return ((j.active ?? []) as any[]).map((b) => ({
-    id: b.tour.id,
-    name: b.tour.name,
-    round: b.round?.name ?? '',
-    url: b.round?.url ?? b.tour.url,
-    image: b.tour.image,
-    location: b.tour.info?.location,
-    timeControl: b.tour.info?.tc,
-    live: !!b.round?.startsAt && b.round.startsAt <= now && !b.round.finished,
-  }));
+  const all = [...((j.active ?? []) as any[]), ...((j.upcoming ?? []) as any[])].map(toBroadcast);
+  const seen = new Set<string>();
+  const unique = all.filter((b) => !seen.has(b.id) && seen.add(b.id));
+  return {
+    live: unique.filter((b) => b.live).sort((a, b) => b.tier - a.tier),
+    soon: unique.filter((b) => !b.live).sort((a, b) => (a.startsAt ?? Infinity) - (b.startsAt ?? Infinity)),
+    finished: ((j.past?.currentPageResults ?? []) as any[]).map(toBroadcast).filter((b) => !seen.has(b.id)),
+  };
 }
 
 export interface BroadcastPlayer {
@@ -101,6 +125,10 @@ export interface BroadcastGame {
   status: string;
   white: BroadcastPlayer;
   black: BroadcastPlayer;
+  /** Seconds the side to move has been thinking, when it was fetched (live games). */
+  thinkTime?: number;
+  /** When it was fetched (Date.now()), to run the clock on from. */
+  fetchedAt: number;
 }
 
 export interface BroadcastRound {
@@ -156,11 +184,29 @@ export async function broadcastTour(tourId: string): Promise<BroadcastTour> {
 
 /** Every board of a round: position, last move, players, clocks, result. */
 export async function broadcastRound(tour: BroadcastTour, round: BroadcastRound): Promise<BroadcastGame[]> {
-  const j = await (await get(`/broadcast/${tour.slug}/${round.slug}/${round.id}`)).json();
+  return roundGames(round.id);
+}
+
+/** Every board of a round, by the round's id alone. */
+export async function roundGames(roundId: string): Promise<BroadcastGame[]> {
+  const j = await (await get(`/broadcast/-/-/${roundId}`)).json();
+  const fetchedAt = Date.now();
   return (j.games ?? []).map((g: any) => {
-    const p = (x: any): BroadcastPlayer => ({ name: x?.name ?? '?', title: x?.title, rating: x?.rating, fed: x?.fed, clock: x?.clock });
-    return { id: g.id, fen: g.fen, lastMove: g.lastMove, status: g.status ?? '*', white: p(g.players?.[0]), black: p(g.players?.[1]) };
+    // Engines on Lichess carry the title BOT; we show no title for them.
+    const p = (x: any): BroadcastPlayer => ({ name: x?.name ?? '?', title: x?.title === 'BOT' ? undefined : x?.title, rating: x?.rating, fed: x?.fed, clock: x?.clock });
+    return { id: g.id, fen: g.fen, lastMove: g.lastMove, status: g.status ?? '*', white: p(g.players?.[0]), black: p(g.players?.[1]), thinkTime: g.thinkTime, fetchedAt };
   });
+}
+
+/**
+ * A live clock: the time left for the side to move, run on from when the boards
+ * were fetched (Lichess sends how long they have been thinking), so it ticks
+ * between refreshes as it does on Lichess.
+ */
+export function runningClock(clockMs: number | undefined, g: Pick<BroadcastGame, 'thinkTime' | 'fetchedAt' | 'status'>, now: number): number | undefined {
+  if (clockMs === undefined) return undefined;
+  if (g.status !== '*' || g.thinkTime === undefined) return clockMs;
+  return Math.max(0, clockMs - g.thinkTime * 1000 - (now - g.fetchedAt));
 }
 
 /** One broadcast game as PGN (a round is a Lichess study; a game is a chapter). */

@@ -75,7 +75,7 @@ export class FideBot {
     const entries = await this.book.entries(pos);
     if (entries.length) {
       for (const window of this.windows) {
-        const moves = movesInWindow(entries, rating, window).filter((x) => pos.isLegal(x.move));
+        const moves = movesInWindow(entries, this.book.bookRating?.(rating) ?? rating, window).filter((x) => pos.isLegal(x.move));
         const games = moves.reduce((s, x) => s + x.games, 0);
         if (games >= this.minGames) {
           const move = this.pick(pos, playedSans, moves, rating);

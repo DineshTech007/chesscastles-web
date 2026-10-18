@@ -30,6 +30,8 @@ const config = {
           'https://api.chesscastles.com',
           'https://auth.chesscastles.com',
           'https://book.chesscastles.com',
+          'https://book2.chesscastles.com',
+          'https://book3.chesscastles.com',
           'https://games.chesscastles.com',
           'https://refs.chesscastles.com',
           'https://coach.chesscastles.com',

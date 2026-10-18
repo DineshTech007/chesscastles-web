@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { AGES, NEW_BOOKS_LIVE, WHO, isAge, isWho, type AgeGroup, type Who } from '$lib/book/profiles';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { onMount } from 'svelte';
@@ -19,13 +20,16 @@
 
   let mode = $state<Mode>('fide');
   /** First visit: 1200, a friendly level for a child; then the last one chosen. */
-  let rating = $state(1200);
+  let rating = $state(1400);
   /** The player's own FIDE rating (0: not given). */
   let tc = $state(2);
   let color = $state<ColorChoice>('random');
   let opening = $state('');
   let level = $state(1);
   let computerClock = $state(false);
+  /** Who the FIDE-rated opponent plays like (when the newer books are live). */
+  let who = $state<Who>('any');
+  let ageGroup = $state<AgeGroup>('any');
   let openingMenu = $state(false);
 
   const KEY = 'k24.playSetup';
@@ -33,11 +37,13 @@
     try {
       const s = JSON.parse(localStorage.getItem(KEY) ?? '{}');
       if (s.mode) mode = s.mode;
-      if (s.rating) rating = Math.min(2800, Math.max(1000, s.rating));
+      if (s.rating) rating = Math.min(2800, Math.max(1400, s.rating));
       if (Number.isInteger(s.tc)) tc = Math.min(TIME_CONTROLS.length - 1, Math.max(0, s.tc));
       if (s.color) color = s.color;
       if (Number.isInteger(s.level)) level = s.level;
       if (typeof s.computerClock === 'boolean') computerClock = s.computerClock;
+      if (isWho(s.who)) who = s.who;
+      if (isAge(s.age)) ageGroup = s.age;
     } catch {
       /* first visit */
     }
@@ -50,7 +56,7 @@
 
   function start() {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ mode, rating, tc, color, level, computerClock }));
+      localStorage.setItem(KEY, JSON.stringify({ mode, rating, tc, color, level, computerClock, who, age: ageGroup }));
     } catch {
       /* private mode */
     }
@@ -61,7 +67,8 @@
       const me = mine.games ? `&me=${mine.rating}` : '';
       // Choosing the bot's opening comes with Premium and up.
       const o = opening && hasGate('bot_opening') ? `&o=${opening}` : '';
-      goto(`/play/fide?r=${rating}&tc=${tc}&c=${side}${me}${o}`);
+      const prof = NEW_BOOKS_LIVE ? `${who !== 'any' ? `&who=${who}` : ''}${ageGroup !== 'any' ? `&age=${ageGroup}` : ''}` : '';
+      goto(`/play/fide?r=${rating}&tc=${tc}&c=${side}${me}${o}${prof}`);
     } else {
       goto(`/play/computer?l=${LEVELS[level].elo}&c=${side}${computerClock ? `&tc=${tc}` : ''}`);
     }
@@ -99,15 +106,15 @@
           <span class="display rating-num num">{rating}</span>
           <span class="title fide">FIDE</span>
           <span class="grow"></span>
-          <button class="icon-btn" aria-label="25 lower" disabled={rating <= 1000} onclick={() => (rating -= 25)}>−</button>
+          <button class="icon-btn" aria-label="25 lower" disabled={rating <= 1400} onclick={() => (rating -= 25)}>−</button>
           <button class="icon-btn" aria-label="25 higher" disabled={rating >= 2800} onclick={() => (rating += 25)}>+</button>
         </div>
         <label class="slider">
           <span class="sr-only">Opponent rating</span>
-          <input type="range" min="1000" max="2800" step="25" bind:value={rating} />
+          <input type="range" min="1400" max="2800" step="25" bind:value={rating} />
         </label>
         <div class="chips">
-          {#each [1200, 1500, 1800, 2000, 2200, 2500] as r (r)}
+          {#each [1400, 1600, 1800, 2000, 2200, 2500] as r (r)}
             <button class="chip" aria-pressed={rating === r} onclick={() => (rating = r)}>{r}</button>
           {/each}
         </div>
@@ -170,6 +177,24 @@
         </div>
       {/if}
     </div>
+
+    {#if mode === 'fide' && NEW_BOOKS_LIVE}
+      <!-- Who the opponent plays like: for a girls' or an age-group tournament. -->
+      <div class="two">
+        <div class="group">
+          <h2 class="title h">Plays like</h2>
+          <div class="segmented" role="group" aria-label="Plays like">
+            {#each WHO as w (w.id)}<button aria-pressed={who === w.id} onclick={() => (who = w.id)}>{w.label}</button>{/each}
+          </div>
+        </div>
+        <div class="group">
+          <h2 class="title h">Age group</h2>
+          <div class="segmented" role="group" aria-label="Age group">
+            {#each AGES as a (a.id)}<button aria-pressed={ageGroup === a.id} onclick={() => (ageGroup = a.id)}>{a.label}</button>{/each}
+          </div>
+        </div>
+      </div>
+    {/if}
 
     {#if openingMenu && mode === 'fide'}
       <div class="openings" role="listbox" aria-label="Opening to prepare against">

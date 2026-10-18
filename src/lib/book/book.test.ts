@@ -10,6 +10,7 @@ import {
   decodeMove,
   encodeMove,
   movesInRange,
+  pre2024Rating,
   movesInWindow,
   shardOf,
   type BookEntry,
@@ -146,5 +147,20 @@ describe.runIf(existsSync(SHARDS))('the bot on the built book', () => {
     expect(counts['Nc6'] / 2000).toBeGreaterThan(0.76);
     expect(counts['Nc6'] / 2000).toBeLessThan(0.86);
     expect((counts['Qe7'] ?? 0) / 2000).toBeLessThan(0.01);
+  });
+});
+
+describe('ratings before 2024', () => {
+  it('undoes FIDE 2024 change under 2000', () => {
+    expect(pre2024Rating(1400)).toBe(1000);
+    expect(pre2024Rating(1640)).toBe(1400);
+    expect(pre2024Rating(1880)).toBe(1800);
+    expect(pre2024Rating(2000)).toBe(2000);
+    expect(pre2024Rating(2400)).toBe(2400);
+  });
+
+  it('only the current book is on the old scale', () => {
+    expect(new CloudBook().bookRating(1400)).toBe(1000);
+    expect(new CloudBook('https://book2.chesscastles.com/v2').bookRating(1400)).toBe(1400);
   });
 });

@@ -52,7 +52,7 @@
       <ul class="trust" aria-label="Chess Castles in numbers">
         <li><strong class="num">5.4M</strong><span>tournament games</span></li>
         <li><strong class="num">3,865</strong><span>openings</span></li>
-        <li><strong class="num">1000–2800</strong><span>FIDE-rated opponents*</span></li>
+        <li><strong class="num">1400–2800</strong><span>FIDE-rated opponents*</span></li>
       </ul>
     </div>
     <div class="visual" aria-hidden="true">

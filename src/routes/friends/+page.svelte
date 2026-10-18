@@ -398,11 +398,30 @@
   .req > :global(.pc),
   .friend > :global(.pc) {
     flex: 1 1 280px;
+    min-width: 0;
   }
   .req-btns,
   .f-btns {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
+    min-width: 0;
+  }
+  .f-btns .btn,
+  .req-btns .btn {
+    white-space: nowrap;
+  }
+  /* Phones: the buttons share the full width under the player, never wider than the screen. */
+  @media (max-width: 560px) {
+    .req-btns,
+    .f-btns {
+      width: 100%;
+    }
+    .f-btns .btn,
+    .req-btns .btn {
+      flex: 1 1 auto;
+      justify-content: center;
+    }
   }
   .badge {
     margin-left: 6px;

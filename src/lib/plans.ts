@@ -26,7 +26,7 @@ export interface Limit {
 export type Feature = 'fide_game' | 'tournament' | 'review' | 'insights' | 'guru' | 'puzzle' | 'vision' | 'opening';
 export const FEATURES: Feature[] = ['fide_game', 'tournament', 'review', 'insights', 'guru', 'puzzle', 'vision', 'opening'];
 export type Gate = 'bot_opening' | 'themed_puzzles' | 'own_lines' | 'coach_tools';
-/** review_depth: the engine depth a Game Review runs at. */
+/** review_depth: how deep a Game Review takes its second look at the key moves. */
 export type Quota = 'insights_games' | 'history' | 'review_depth';
 export interface PlanConfig {
   limits: Record<Feature, Record<Plan, Limit>>;
@@ -63,7 +63,7 @@ export const DEFAULT_CONFIG: PlanConfig = {
   quotas: {
     insights_games: { free: 20, premium: 200, elite: 300 },
     history: { free: 50, premium: 2000, elite: 3000 },
-    review_depth: { free: 13, premium: 13, elite: 18 },
+    review_depth: { free: 18, premium: 18, elite: 22 },
   },
   prices: { premium: { month: 149, year: 1499 }, elite: { month: 249, year: 1999 } },
 };
@@ -96,7 +96,7 @@ export const GATE_INFO: Record<Gate, string> = {
 export const QUOTA_INFO: Record<Quota, string> = {
   insights_games: 'Games in each Insights report',
   history: 'Games kept in your account',
-  review_depth: 'Game Review engine depth',
+  review_depth: 'Game Review: depth of the second look at key moves',
 };
 const PER_TEXT: Record<Per, string> = { day: 'a day', week: 'a week', month: 'a month', ever: 'in all' };
 /** "3 a day", "Unlimited", "1 a week". */
@@ -111,7 +111,12 @@ export async function loadPlanSettings(force = false) {
   settingsLoaded = true;
   try {
     const res = await fetch(`${API}/plans`);
-    if (res.ok) planSettings.set(await res.json());
+    if (res.ok) {
+      const v = await res.json();
+      // Quotas added since the server's settings were saved keep their built-in values.
+      if (v?.config) v.config.quotas = { ...DEFAULT_CONFIG.quotas, ...v.config.quotas };
+      planSettings.set(v);
+    }
   } catch {
     settingsLoaded = false;
   }
@@ -239,7 +244,8 @@ export function requireGate(gate: Gate): boolean {
   return false;
 }
 /** A number your plan allows (games per Insights report…). */
-export const quota = (q: Quota) => get(planSettings).config.quotas[q][get(currentPlan)];
+/** A quota for the current plan (the built-in value when the server's settings predate it). */
+export const quota = (q: Quota) => get(planSettings).config.quotas[q]?.[get(currentPlan)] ?? DEFAULT_CONFIG.quotas[q][get(currentPlan)];
 
 /** The lowest plan that lifts a limit (or includes a gate). */
 export function upgradeFor(hit: LimitHit, config: PlanConfig): Plan | undefined {

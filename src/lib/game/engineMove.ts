@@ -26,12 +26,16 @@ export async function engineMove(pos: Chess, rating: number): Promise<NormalMove
  * 2200: 3.0% and 0.0%. The old Stockfish bot, limited to the same ratings,
  * blundered 2.7%, 2.0% and 2.0%.) Below 1400 and above 2200 the table
  * extends the trend.
+ *
+ * Those games were played before FIDE's 2024 change, so the table's ratings
+ * are converted to today's scale (old + 0.4 × (2000 − old) under 2000): the
+ * calibration's 1400 and 1800 players are rated 1640 and 1880 today.
  */
 export const STRENGTH: [fide: number, maiaElo: number, tau: number][] = [
-  [600, 1100, 1],
-  [1000, 1600, 1],
-  [1400, 2400, 1],
-  [1800, 2600, 0.3],
+  [1160, 1100, 1],
+  [1400, 1600, 1],
+  [1640, 2400, 1],
+  [1880, 2600, 0.3],
   [2200, 2700, 0.1],
   [2600, 2700, 0.035],
   [3000, 2700, 0.012],
@@ -41,7 +45,7 @@ export const STRENGTH: [fide: number, maiaElo: number, tau: number][] = [
 const TIME_PRESSURE = (tc?: TimeControl) => (!tc || tc.minutes === 0 ? 0 : tc.minutes + tc.increment * 0.67 <= 6 ? 150 : tc.minutes < 30 ? 50 : 0);
 
 export function strengthFor(rating: number, tc?: TimeControl): { elo: number; tau: number } {
-  const r = Math.min(3000, Math.max(600, rating - TIME_PRESSURE(tc)));
+  const r = Math.min(3000, Math.max(STRENGTH[0][0], rating - TIME_PRESSURE(tc)));
   const i = Math.max(1, STRENGTH.findIndex(([f]) => f >= r));
   const [f0, e0, t0] = STRENGTH[i - 1];
   const [f1, e1, t1] = STRENGTH[i];

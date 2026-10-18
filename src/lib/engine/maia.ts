@@ -92,7 +92,11 @@ class Maia {
     this.index = this.moves.then((m) => Object.fromEntries(Object.entries(m).map(([i, u]) => [u, Number(i)])));
   }
 
-  /** Whether the model is loaded, waiting up to `ms` while it loads from the browser's storage. */
+  /**
+   * Whether the model is loaded, waiting up to `ms` while it loads from the
+   * browser's storage. While it is still downloading (a minute or more the
+   * first time) this answers no at once, so a move never waits for it.
+   */
   whenReady(ms = 5000): Promise<boolean> {
     this.init();
     return new Promise((resolve) => {
@@ -105,7 +109,7 @@ class Maia {
       const timer = setTimeout(() => finish(false), ms);
       unsubscribe = maiaStatus.subscribe((s) => {
         if (s === 'ready') finish(true);
-        else if (s === 'no-cache' || s === 'error' || s === 'idle') finish(false);
+        else if (s === 'no-cache' || s === 'error' || s === 'idle' || s === 'downloading') finish(false);
       });
     });
   }

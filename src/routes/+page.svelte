@@ -29,7 +29,7 @@
 
   onMount(() => {
     dailyPuzzle().then((p) => (puzzle = p), () => (puzzleError = true));
-    topBroadcasts().then((b) => (live = b.slice(0, 4)), () => (liveError = true));
+    topBroadcasts().then((b) => (live = [...b.live, ...b.soon].slice(0, 4)), () => (liveError = true));
   });
 
   const stats = $derived.by(() => {

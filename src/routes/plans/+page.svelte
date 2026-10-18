@@ -36,6 +36,9 @@
   const launch = $derived($planSettings.launch);
   const price = (p: Plan) => (p === 'free' ? 0 : yearly ? config.prices[p].year : config.prices[p].month);
   const perMonth = (p: Plan) => (p === 'free' ? 0 : Math.round(config.prices[p].year / 12));
+  /** How much paying yearly saves, in percent, for a plan; and the best of them. */
+  const saving = (p: Exclude<Plan, 'free'>) => Math.round(100 * (1 - config.prices[p].year / (config.prices[p].month * 12)));
+  const bestSaving = $derived(Math.max(saving('premium'), saving('elite')));
   const offerEnds = $derived(new Date(launch.until + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }));
 
   /** The few lines on each card. */
@@ -48,7 +51,7 @@
     };
     const out = [line('fide_game'), line('review'), line('guru'), line('insights')];
     if (p === 'free') out.push('Online play, puzzles, books and friends: free');
-    if (RANK[p] >= RANK[config.gates.bot_opening]) out.push('Choose the bot’s opening');
+    if (RANK[p] >= RANK[config.gates.bot_opening]) out.push('Choose your opponent’s opening');
     if (p === 'elite') out.push('Coach tools for your students');
     return out;
   };
@@ -112,7 +115,7 @@
 
 <div class="toggle segmented" role="group" aria-label="Billing">
   <button aria-pressed={!yearly} onclick={() => (yearly = false)}>Monthly</button>
-  <button aria-pressed={yearly} onclick={() => (yearly = true)}>Yearly · save 33%</button>
+  <button aria-pressed={yearly} onclick={() => (yearly = true)}>Yearly · save up to {bestSaving}%</button>
 </div>
 
 <div class="cards">
@@ -129,7 +132,7 @@
       <p class="price">
         {#if p === 'free'}<strong class="num">₹0</strong> <span class="label">forever</span>
         {:else}<strong class="num">₹{price(p).toLocaleString('en-IN')}</strong> <span class="label">/ {yearly ? 'year' : 'month'}</span>
-          {#if yearly}<span class="label pm">₹{perMonth(p)} a month</span>{/if}
+          {#if yearly}<span class="label pm"><s>₹{config.prices[p].month}</s> ₹{perMonth(p)} a month · save {saving(p)}%</span>{/if}
         {/if}
       </p>
       <p class="blurb">{info.blurb}</p>

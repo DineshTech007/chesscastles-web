@@ -1,9 +1,11 @@
 <script lang="ts">
   import { page } from '$app/state';
   import GameView from '$lib/components/GameView.svelte';
-  import { CloudBook } from '$lib/book/book';
+  import { isAge, isWho, opponentBook, profileLabel } from '$lib/book/profiles';
   import { FideBot } from '$lib/bot/fideBot';
   import { browserOpeningMemory, FideGame, TIME_CONTROLS, type Color } from '$lib/game/fideGame';
+  import { get } from 'svelte/store';
+  import { opponentPace } from '$lib/preferences';
   import { bookGuard, humanMove } from '$lib/game/engineMove';
   import { OPENINGS } from '$lib/openings';
   import { resumeFor, routeOf } from '$lib/game/resume';
@@ -12,9 +14,13 @@
   import { useFeature } from '$lib/plans';
   import LimitReached from '$lib/components/LimitReached.svelte';
 
-  const book = new CloudBook();
   const q = page.url.searchParams;
-  const rating = Math.min(2800, Math.max(1000, Number(q.get('r')) || 1800));
+  const rating = Math.min(2800, Math.max(1400, Number(q.get('r')) || 1800));
+  // Who the opponent plays like (girls, boys, an age group), when chosen.
+  const who = isWho(q.get('who')) ? (q.get('who') as 'any' | 'girl' | 'boy') : 'any';
+  const age = isAge(q.get('age')) ? (q.get('age') as 'any' | 'u12' | 'u16') : 'any';
+  const profile = profileLabel(who, age);
+  const book = opponentBook(rating, who, age);
   const timeControl = TIME_CONTROLS[Number(q.get('tc'))] ?? TIME_CONTROLS[2];
   const me = Number(q.get('me')) || 0;
   const playerRating = me >= 400 && me <= 3000 ? me : undefined;
@@ -44,6 +50,7 @@
       timeControl,
       opening: opening?.sans.split(' '),
       memory: browserOpeningMemory,
+      pace: get(opponentPace),
     });
     if (round === 0 && resumed) g.restore(resumed.snapshot);
     return g;
@@ -59,7 +66,7 @@
   <GameView
     game={newGame()}
     kind="fide"
-    opponent="FIDE {rating}"
+    opponent={profile ? `FIDE ${rating} · ${profile}` : `FIDE ${rating}`}
     opponentInitials={String(Math.floor(rating / 100))}
     opponentSubtitle="Plays like {/^(8|11|18)/.test(String(rating)) ? 'an' : 'a'} {rating} player"
     openingName={opening?.name}

@@ -28,6 +28,7 @@
   import { track } from '$lib/analytics';
   import { BADGE_ORDER, BADGES, boardBadge, type MoveClass } from '$lib/review/badges';
   import MoveBadge from '$lib/review/MoveBadge.svelte';
+  import GuruAvatar from '$lib/coach/GuruAvatar.svelte';
 
   interface Ply {
     move: NormalMove;
@@ -128,7 +129,9 @@
   let info = $state<EngineInfo | undefined>();
   /** The engine's three best lines in this position. */
   let lines = $state<EngineInfo[]>([]);
-  let tab = $state<'engine' | 'database'>('engine');
+  let tab = $state<'engine' | 'database' | 'guru'>('engine');
+  /** The saved game on the board (My games), for a Guru review. */
+  let savedId = $state<string | undefined>();
   let copied = $state('');
   /** Every move's badge (brilliant … blunder), for the line it was worked out on. */
   let review = $state<{ ucis: string[]; result: GameReview } | undefined>();
@@ -144,6 +147,8 @@
     const q = page.url.searchParams;
     // Opened from the menu's "5M game database": straight to the database tab.
     if (q.get('tab') === 'database') tab = 'database';
+    else if (q.get('tab') === 'guru') tab = 'guru';
+    savedId = undefined;
     const id = q.get('game');
     const fen = q.get('fen');
     const dbId = Number(q.get('db'));
@@ -173,6 +178,7 @@
         orientation = g.userSide;
         title = `${g.white} – ${g.black}`;
         cursor = 0;
+        savedId = g.id;
         creditAnalysis(g.id, title);
       }
     } else if (q.get('import')) {
@@ -612,6 +618,7 @@
       <div class="segmented" role="group" aria-label="Panel">
         <button aria-pressed={tab === 'engine'} onclick={() => (tab = 'engine')}>Engine</button>
         <button aria-pressed={tab === 'database'} onclick={() => (tab = 'database')}>Database</button>
+        <button aria-pressed={tab === 'guru'} onclick={() => (tab = 'guru')}>Guru</button>
       </div>
 
       {#if tab === 'engine'}
@@ -646,8 +653,20 @@
             {/if}
           {/if}
         </div>
-      {:else}
+      {:else if tab === 'database'}
         <DbPanel {pos} {book} onplay={play} played={line[cursor]?.move} onopen={openDbGame} />
+      {:else}
+        <div class="guru">
+          <GuruAvatar size={56} />
+          {#if savedId}
+            <p>Chess Guru goes through this game like a coach: the turning points, your best moves, your mistakes and what to practise next, in English, हिन्दी or मराठी.</p>
+            <a class="btn primary block" href="/coach/review/{savedId}" onclick={() => track('feature', 'analysis_guru')}><Icon name="coach" size={16} />Review with Guru</a>
+            <p class="label">The engine and the database stay right here, for the quick look.</p>
+          {:else}
+            <p>Chess Guru reviews the games you play on Chess Castles. Open one from My games and choose Guru.</p>
+            <a class="btn block" href="/games"><Icon name="history" size={16} />My games</a>
+          {/if}
+        </div>
       {/if}
     </div>
 
@@ -1105,5 +1124,16 @@
     .keys {
       display: none;
     }
+  }
+  .guru {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+    padding: 6px 0 2px;
+  }
+  .guru p {
+    margin: 0;
   }
 </style>

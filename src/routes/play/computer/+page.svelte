@@ -5,6 +5,8 @@
   import type { BookSource } from '$lib/book/book';
   import { FideBot } from '$lib/bot/fideBot';
   import { FideGame, TIME_CONTROLS, type Color, type TimeControl } from '$lib/game/fideGame';
+  import { get } from 'svelte/store';
+  import { opponentPace } from '$lib/preferences';
   import { engineMove } from '$lib/game/engineMove';
   import { LEVELS } from '$lib/openings';
   import { resumeFor, routeOf } from '$lib/game/resume';
@@ -24,7 +26,7 @@
   let round = $state(0);
   const newGame = () => {
     track('feature', 'computer_game');
-    const g = new FideGame({ bot: new FideBot(noBook, engineMove), rating: elo, human, timeControl });
+    const g = new FideGame({ bot: new FideBot(noBook, engineMove), rating: elo, human, timeControl, pace: get(opponentPace) });
     if (round === 0 && resumed) g.restore(resumed.snapshot);
     return g;
   };

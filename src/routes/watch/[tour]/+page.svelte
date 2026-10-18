@@ -8,6 +8,7 @@
   import {
     broadcastRound,
     broadcastTour,
+    runningClock,
     type BroadcastGame,
     type BroadcastPlayer,
     type BroadcastRound,
@@ -19,6 +20,9 @@
   let games = $state<BroadcastGame[] | undefined>();
   let error = $state('');
   let timer: ReturnType<typeof setInterval> | undefined;
+  // The clocks of the side to move run on between refreshes.
+  let now = $state(Date.now());
+  const tick = setInterval(() => (now = Date.now()), 250);
 
   onMount(async () => {
     try {
@@ -35,7 +39,10 @@
       error = 'This tournament could not be loaded. Check your connection and try again.';
     }
   });
-  onDestroy(() => clearInterval(timer));
+  onDestroy(() => {
+    clearInterval(timer);
+    clearInterval(tick);
+  });
 
   async function choose(r: BroadcastRound) {
     round = r;
@@ -60,6 +67,13 @@
   const lastMove = (g: BroadcastGame) => (g.lastMove ? ([g.lastMove.slice(0, 2), g.lastMove.slice(2, 4)] as Key[]) : undefined);
   const name = (p: BroadcastPlayer) => `${p.title ? p.title + ' ' : ''}${p.name}`;
   const toMove = (g: BroadcastGame) => (g.fen.split(' ')[1] === 'b' ? 'black' : 'white');
+  /** A player's clock: running for the side to move. */
+  const clockOf = (g: BroadcastGame, side: 'white' | 'black') => {
+    const cs = g[side].clock;
+    if (cs === undefined) return undefined;
+    return toMove(g) === side ? runningClock(cs * 10, g, now) : cs * 10;
+  };
+  const previous = $derived(tour && round ? tour.rounds[tour.rounds.findIndex((r) => r.id === round!.id) - 1] : undefined);
 </script>
 
 <svelte:head><title>{tour?.name ?? 'Tournament'} · Watch · Chess Castles</title></svelte:head>
@@ -94,9 +108,12 @@
       <div class="card">
         {#if round?.startsAt && round.startsAt > Date.now()}
           This round starts {new Date(round.startsAt).toLocaleString('en-IN', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}.
+        {:else if round?.ongoing}
+          The organisers haven't sent the boards of this round yet. They appear here as soon as they do; this page checks every 15 seconds.
         {:else}
-          No games in this round yet.
+          No games in this round.
         {/if}
+        {#if previous}<button class="link prev" onclick={() => choose(previous!)}>See {previous.name}</button>{/if}
       </div>
     {:else}
       <div class="grid">
@@ -104,13 +121,13 @@
           <a class="g" href="/watch/{tour.id}/{round?.id}/{g.id}">
             <div class="pl">
               <span class="who">{name(g.black)}{#if g.black.rating}<span class="label"> {g.black.rating}</span>{/if}</span>
-              {#if g.status === '*' && g.black.clock !== undefined}<span class="clk num" class:on={toMove(g) === 'black'}>{formatClock(g.black.clock * 10)}</span>{/if}
+              {#if g.status === '*' && g.black.clock !== undefined}<span class="clk num" class:on={toMove(g) === 'black'}>{formatClock(clockOf(g, 'black')!)}</span>{/if}
             </div>
             <Board fen={g.fen} viewOnly coordinates={false} lastMove={lastMove(g)} label="{g.white.name} against {g.black.name}" />
             <div class="pl">
               <span class="who">{name(g.white)}{#if g.white.rating}<span class="label"> {g.white.rating}</span>{/if}</span>
               {#if g.status === '*' && g.white.clock !== undefined}
-                <span class="clk num" class:on={toMove(g) === 'white'}>{formatClock(g.white.clock * 10)}</span>
+                <span class="clk num" class:on={toMove(g) === 'white'}>{formatClock(clockOf(g, 'white')!)}</span>
               {:else if g.status !== '*'}
                 <span class="result title">{g.status}</span>
               {/if}
@@ -258,5 +275,16 @@
   }
   .src {
     margin: 0;
+  }
+  .prev {
+    display: block;
+    margin-top: 10px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
   }
 </style>

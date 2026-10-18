@@ -4,9 +4,11 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import GameView from '$lib/components/GameView.svelte';
-  import { CloudBook } from '$lib/book/book';
+  import { opponentBook } from '$lib/book/profiles';
   import { FideBot } from '$lib/bot/fideBot';
   import { browserOpeningMemory, FideGame, TIME_CONTROLS } from '$lib/game/fideGame';
+  import { get } from 'svelte/store';
+  import { opponentPace } from '$lib/preferences';
   import { bookGuard, humanMove } from '$lib/game/engineMove';
   import { page } from '$app/state';
   import { resumeFor } from '$lib/game/resume';
@@ -22,12 +24,13 @@
   const game =
     t && g && opp
       ? new FideGame({
-          bot: new FideBot(new CloudBook(), humanMove(timeControl), Math.random, bookGuard(timeControl)),
-          rating: Math.min(2800, Math.max(1000, opp.rating)),
+          bot: new FideBot(opponentBook(Math.min(2800, Math.max(1400, opp.rating))), humanMove(timeControl), Math.random, bookGuard(timeControl)),
+          rating: Math.min(2800, Math.max(1400, opp.rating)),
           playerRating: me?.rating,
           human: g.white === ME ? 'white' : 'black',
           timeControl,
           memory: browserOpeningMemory,
+          pace: get(opponentPace),
         })
       : undefined;
   /** Opened to resume this round's game after a lost connection: only if it is still this round's game. */

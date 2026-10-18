@@ -6,7 +6,7 @@
   import { session, signOut, startSignIn } from '$lib/auth';
   import { myName } from '$lib/stores/me';
   import { setSound, setSoundTheme, sounds, soundOn, soundTheme } from '$lib/sound';
-  import { autoQueen, premovesOn } from '$lib/preferences';
+  import { autoQueen, opponentPace, premovesOn } from '$lib/preferences';
   import { boardThemeOpen } from '$lib/boardTheme';
   import { currentPlan, PLAN_INFO } from '$lib/plans';
 
@@ -37,6 +37,13 @@
       <span><strong>Auto-queen promotion</strong><span class="label sub">A pawn reaching the last rank becomes a queen at once. Turn this off to be asked which piece every time.</span></span>
       <input type="checkbox" checked={$autoQueen} onchange={(e) => autoQueen.set(e.currentTarget.checked)} />
     </label>
+    <div class="row pace">
+      <span><strong>Computer opponent's pace</strong><span class="label sub">Quick: it moves within a few seconds. Like a real player: it spends its clock as a tournament player would, sometimes half a minute on a hard move. Its clock runs either way.</span></span>
+      <select value={$opponentPace} onchange={(e) => opponentPace.set(e.currentTarget.value === 'real' ? 'real' : 'quick')} aria-label="Computer opponent's pace">
+        <option value="quick">Quick</option>
+        <option value="real">Like a real player</option>
+      </select>
+    </div>
     <label class="row">
       <span><strong>Premoves</strong><span class="label sub">Queue your next move while the opponent is still thinking.</span></span>
       <input type="checkbox" checked={$premovesOn} onchange={(e) => premovesOn.set(e.currentTarget.checked)} />
@@ -165,5 +172,18 @@
     display: grid;
     place-items: center;
     padding: 0;
+  }
+  .pace {
+    align-items: flex-start;
+    cursor: default;
+  }
+  .pace select {
+    flex: none;
+    font: inherit;
+    color: var(--text);
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
   }
 </style>
