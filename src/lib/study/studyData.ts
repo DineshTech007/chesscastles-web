@@ -40,11 +40,25 @@ export interface StudyPuzzle {
   mate?: number;
 }
 
+/** What happens after the opening in a chapter, counted from its games (scripts/study/strategy.py). */
+export interface StrategyFacts {
+  games: number;
+  score: number;
+  castle: { me: Record<string, number>; them: Record<string, number> };
+  /** sq: the move as written (c5, cxd4); push: not a capture. */
+  pawns: { me: { sq: string; share: number; with: number; without: number | null; push?: boolean }[]; them: { sq: string; share: number; with: number; without: number | null; push?: boolean }[] };
+  pieces: { p: string; share: number }[];
+  queens: number;
+  endgames: Record<string, number>;
+}
+
 export interface StudyData {
   /** Classical games per line in the database (2000+ players). */
   stats: Record<string, number>;
   models: Record<string, ModelGame[]>;
   puzzles: StudyPuzzle[];
+  /** Chapter id -> what happens after the opening. */
+  strategy?: Record<string, StrategyFacts>;
 }
 
 const cache = new Map<string, Promise<StudyData>>();

@@ -14,6 +14,7 @@
   import GameViewer from '$lib/study/GameViewer.svelte';
   import ChoicePicker from '$lib/study/ChoicePicker.svelte';
   import RepertoireTree from '$lib/study/RepertoireTree.svelte';
+  import StrategyFacts from '$lib/study/StrategyFacts.svelte';
   import { StudyBook } from '$lib/study/studyBook';
   import { fenOf, playSans } from '$lib/chess/position';
   import { polyglotKey } from '$lib/chess/polyglot';
@@ -302,6 +303,7 @@
                 <p class="label">The general ideas of the {opening.name} (above) apply here; its model games show how strong players handle the middlegame.</p>
               {/if}
               {#key l.id}<ChoicePicker opening={opening.id} sans={l.sans} side={opening.side} book={ownBook} />{/key}
+              {#if data?.strategy?.[l.id]}<StrategyFacts facts={data.strategy[l.id]} side={opening.side} {lang} />{/if}
               <div class="acts">
                 <a class="btn primary" href="/learn/openings/{studyTrainerId(opening.id, l.id)}"><Icon name="tree" size={16} />Train this line</a>
                 <button class="btn" onclick={() => show('games', l.id)}><Icon name="book" size={16} />Model games</button>
@@ -367,6 +369,7 @@
       {/if}
     {:else if tab === 'middlegame'}
       {@const shownMg = mg.filter((l) => line === 'all' || l.chapter === line)}
+      {#if line !== 'all' && data?.strategy?.[line]}<StrategyFacts facts={data.strategy[line]} side={opening.side} {lang} />{/if}
       <p class="label intro">
         Take over a model game right after the opening and play the middlegame like the strong player did: find each move, and Guru explains the idea.
         Moves the engine rates as just as good count too.

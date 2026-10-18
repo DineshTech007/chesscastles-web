@@ -71,6 +71,13 @@ function engine() {
 
 /** The only winning move: winning by 2+ pawns, and the second best line is not. */
 const unique = (best, second) => best && best.score >= 200 && (!second || (second.score <= 150 && best.score - second.score >= 200) || (isMate(best.score) && !isMate(second.score) && second.score < 400));
+/**
+ * For the engine's scan of real games: the best move wins (2+ pawns) and is
+ * clearly the best: the second best doesn't win, or is 2.5+ pawns worse, or
+ * only the best mates.
+ */
+const clearlyBest = (best, second) =>
+  best && best.score >= 200 && (!second || second.score <= 150 || best.score - second.score >= 250 || (isMate(best.score) && !isMate(second.score)));
 
 function boardOf(fen) {
   const rows = fen.split(' ')[0].split('/');
@@ -173,9 +180,10 @@ if (phase === 'check') {
     for (let i = 1; i < fens.length - 1 && found < 2; i++) {
       if (score[i] === undefined || score[i - 1] === undefined) continue;
       const before = -score[i - 1]; // for the side to move at i
-      if (before > 100 || score[i] < 300) continue;
+      // A real swing: from about equal (+1.5 at most) to winning (+2.5 or more, and 2+ pawns better than before).
+      if (before > 150 || score[i] < 250 || score[i] - before < 200) continue;
       const [best, second] = await search(fens[i], [], 14, 2);
-      if (!unique(best, second)) continue;
+      if (!clearlyBest(best, second)) continue;
       const moves = [g.moves[i - 1], best.move];
       let mine = 1;
       const mate = isMate(best.score) ? MATE - best.score : 0;
@@ -183,7 +191,7 @@ if (phase === 'check') {
         const [reply] = await search(fens[i - 1], moves, 12);
         if (!reply) break;
         const [b2, s2] = await search(fens[i - 1], [...moves, reply.move], 13, 2);
-        if (!b2 || !unique(b2, s2)) break;
+        if (!b2 || !clearlyBest(b2, s2)) break;
         moves.push(reply.move, b2.move);
         mine++;
         if (isMate(b2.score) && MATE - b2.score <= 1) break;
@@ -240,7 +248,13 @@ if (phase === 'check') {
     kept.push(...(lichess[oid] ?? []));
     const games = {};
     for (const [line, list] of Object.entries(models[oid])) games[line] = list;
-    writeFileSync(join(outDir, `${oid}.json`), JSON.stringify({ stats: stats[oid] ?? {}, models: games, puzzles: kept }));
+    let strategy = {};
+    try {
+      strategy = JSON.parse(readFileSync(join(work, `${oid}.strategy.json`), 'utf8'));
+    } catch {
+      /* no middlegame facts built */
+    }
+    writeFileSync(join(outDir, `${oid}.json`), JSON.stringify({ stats: stats[oid] ?? {}, models: games, puzzles: kept, strategy }));
     const by = (f) => kept.reduce((m, p) => ((m[f(p)] = (m[f(p)] ?? 0) + 1), m), {});
     console.log(oid, 'models', Object.values(games).flat().length, 'puzzles', kept.length, by((p) => p.phase), by((p) => p.level), by((p) => p.line));
   }
