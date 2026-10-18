@@ -231,7 +231,8 @@ if (phase === 'check') {
     .filter((f) => f.endsWith('.json'))
     .flatMap((f) => JSON.parse(readFileSync(join(work, 'puzzles', f), 'utf8')));
   mkdirSync(outDir, { recursive: true });
-  const CAP = 25; // per line, phase and level
+  const CAP = 40; // per line, phase and level
+  const FILL = 8; // Lichess puzzles only fill a line's level that has fewer of our own than this
   for (const oid of Object.keys(models)) {
     const mine = puzzles.filter((p) => p.opening === oid);
     const kept = [];
@@ -245,7 +246,13 @@ if (phase === 'check') {
       void _o;
       kept.push(rest);
     }
-    kept.push(...(lichess[oid] ?? []));
+    // Our own puzzles (from the line's games, found by the engine) come first; Lichess's only fill the gaps.
+    for (const p of lichess[oid] ?? []) {
+      const k = `${p.line}|${p.phase}|${p.level}`;
+      if ((count[k] ?? 0) >= FILL) continue;
+      count[k] = (count[k] ?? 0) + 1;
+      kept.push(p);
+    }
     const games = {};
     for (const [line, list] of Object.entries(models[oid])) games[line] = list;
     let strategy = {};
