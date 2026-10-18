@@ -186,6 +186,7 @@
     <div class="card">Loading the game…</div>
   {:else}
     <section class="board-col" aria-label="Board">
+      <a class="back-top" href="/watch/{tour}?round={round}"><Icon name="back" size={16} />All boards of this round</a>
       <PlayerBar {...top} />
       <div class="board-row">
         {#if engineOn}
@@ -253,6 +254,15 @@
 </div>
 
 <style>
+  .back-top {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 14px;
+    width: fit-content;
+    padding: 2px 0;
+  }
   button.pill.live {
     border: 0;
     cursor: pointer;
