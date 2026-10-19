@@ -58,6 +58,18 @@ describe('CC Rating', () => {
     expect(k.games).toBe(1);
     expect(k.rating).toBe(1480);
   });
+
+  it("leaves out bullet games the bot lost on time before its clock was fixed", () => {
+    const flag = (at: number, tc: string): SavedGame => ({ ...g(at, '1-0', 2800), timeControl: tc, reason: 'Your opponent ran out of time' });
+    const before = Date.UTC(2026, 9, 19, 12, 0);
+    const after = Date.UTC(2026, 9, 19, 13, 0);
+    // Before the fix: the bullet time-out doesn't count; a blitz one does, and so does one after the fix.
+    expect(computeKfide([flag(before, '1+0')], 1500, 'bullet').games).toBe(0);
+    expect(computeKfide([flag(before, '3+0')], 1500, 'blitz').games).toBe(1);
+    expect(computeKfide([flag(after, '1+0')], 1500, 'bullet').games).toBe(1);
+    // Games the player lost on time, or won on the board, still count.
+    expect(computeKfide([{ ...flag(before, '1+0'), result: '0-1', reason: 'You ran out of time' }, { ...flag(before + 1, '1+0'), reason: 'Checkmate' }], 1500, 'bullet').games).toBe(2);
+  });
 });
 
 describe('CC Rating at each speed', () => {

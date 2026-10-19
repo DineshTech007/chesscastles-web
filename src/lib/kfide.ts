@@ -53,6 +53,15 @@ export function speedOf(timeControl: string): KfideSpeed {
   return total <= 10 ? 'blitz' : total < 60 ? 'rapid' : 'standard';
 }
 
+/**
+ * Until 19 Oct 2026 (18:00 in India) the bullet bots often lost on time: their
+ * engines were too slow for a 1-minute clock, also in won positions. Those
+ * games stay in My games but don't count for the CC Rating.
+ */
+export const BULLET_CLOCK_FIX = Date.UTC(2026, 9, 19, 12, 30);
+export const countsForRating = (g: SavedGame) =>
+  !(g.playedAt < BULLET_CLOCK_FIX && g.reason === 'Your opponent ran out of time' && speedOf(g.timeControl) === 'bullet');
+
 /** A rating the owner set on the admin page: from `at` on, the speed's rating starts from `rating`. */
 export interface RatingSet {
   rating: number;
@@ -61,7 +70,7 @@ export interface RatingSet {
 
 export function computeKfide(games: SavedGame[], start = KFIDE_START, speed?: KfideSpeed, set?: RatingSet): Kfide {
   const rated = games
-    .filter((g) => g.kind === 'fide' && g.opponentRating && outcome(g) !== 'unfinished' && (!speed || speedOf(g.timeControl) === speed))
+    .filter((g) => g.kind === 'fide' && g.opponentRating && outcome(g) !== 'unfinished' && (!speed || speedOf(g.timeControl) === speed) && countsForRating(g))
     .sort((a, b) => a.playedAt - b.playedAt);
   let r = start;
   let setApplied = false;
