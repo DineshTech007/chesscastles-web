@@ -24,6 +24,8 @@ const GAMES = Number(flag('--games', 5));
 const HEADED = args.includes('--headed') || args.includes('--login');
 /** --login: only sign in (in a visible window, for Lichess's human check) and keep the session. */
 const LOGIN_ONLY = args.includes('--login');
+/** --only <section>: sign in and run just that Learn section (tactics, puzzles, strategy…), for checking the tester itself. */
+const ONLY = flag('--only', '');
 const USER = 'chesscastlesTester';
 const PASSWORD = process.env.NIGHT24_TEST_PASSWORD;
 /** A Lichess personal access token of the test account: signs in on /auth/token (Lichess's human check stops an automated browser at its form). */
@@ -115,7 +117,8 @@ const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 }, .
 const page = await ctx.newPage();
 page.on('pageerror', (e) => consoleErrors.push({ url: page.url(), text: `Page error: ${String(e).slice(0, 300)}` }));
 page.on('console', (m) => {
-  if (m.type() === 'error' && !/favicon|ERR_BLOCKED_BY_CLIENT/.test(m.text())) consoleErrors.push({ url: page.url(), text: m.text().slice(0, 300) });
+  // (The engines' own warnings, like onnxruntime's "Unknown CPU vendor", are not the site's errors.)
+  if (m.type() === 'error' && !/favicon|ERR_BLOCKED_BY_CLIENT|onnxruntime/.test(m.text())) consoleErrors.push({ url: page.url(), text: m.text().slice(0, 300) });
 });
 page.on('requestfailed', (r) => {
   if (!/lichess\.org\/api\/(stream|board)|aborted/i.test(`${r.url()} ${r.failure()?.errorText}`)) failedRequests.push({ url: r.url().slice(0, 160), error: r.failure()?.errorText ?? '' });
@@ -326,7 +329,7 @@ async function playGame(n, opp, color, opening) {
         const [w, b] = [...row.children].filter((e) => e.classList.contains('mv'));
         const mine = color === 'white' ? w : b;
         const badge = mine?.querySelector('svg.badge');
-        if (badge && no) out.push({ ply: no * 2 - (color === 'white' ? 1 : 0), san: mine.textContent.trim(), kind: badge.getAttribute('aria-label') });
+        if (badge && no) out.push({ ply: no * 2 - (color === 'white' ? 1 : 0), san: mine.textContent.trim().split(/\s+/)[0], kind: badge.getAttribute('aria-label') });
       }
       return out;
     }, color);
@@ -433,7 +436,7 @@ async function solvePuzzle() {
   await page.waitForTimeout(1200);
   for (let i = 0; i < 8; i++) {
     const text = (await h.innerText().catch(() => '')).trim();
-    if (/Solved|tricky|watch the answer|failed/i.test(text) || /Solved|tricky/i.test(await page.locator('main').innerText().catch(() => ''))) break;
+    if (/Solved!|tricky|watch the answer|failed/i.test(text)) break;
     if (/Get ready/.test(text)) {
       await page.waitForTimeout(1200);
       continue;
@@ -450,8 +453,9 @@ async function solvePuzzle() {
     if (!best || best === '(none)') break;
     const orientation = (await page.locator('.cg-wrap.orientation-black').count()) ? 'black' : 'white';
     await clickSquare(best.slice(0, 2), orientation);
+    await page.waitForTimeout(300);
     await clickSquare(best.slice(2, 4), orientation);
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1800);
   }
   return (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
 }
@@ -500,7 +504,8 @@ async function learnMore(which) {
     const before = (await page.locator('main').innerText().catch(() => '')).match(/(\d{3,4})/)?.[1];
     const results = [];
     for (let i = 0; i < 4; i++) {
-      results.push(/Solved/i.test(await solvePuzzle()) ? 'solved' : 'missed');
+      await solvePuzzle();
+      results.push(/Solved!/.test(await page.locator('.msg[role="status"]').first().innerText().catch(() => '')) ? 'solved' : 'missed');
       const next = page.locator('main button').filter({ hasText: /Next|Skip|Another/i }).first();
       if (!(await next.count())) break;
       await next.click().catch(() => {});
@@ -634,6 +639,12 @@ try {
     log('session kept in', SESSION_FILE);
     await browser.close();
     sf.processCommand('quit');
+    process.exit(0);
+  }
+  if (ONLY) {
+    const f = await learnMore(ONLY);
+    console.log(JSON.stringify(f, null, 1));
+    await browser.close();
     process.exit(0);
   }
   before.menu = await myRating();
