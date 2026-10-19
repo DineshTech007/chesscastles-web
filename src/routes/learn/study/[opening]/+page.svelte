@@ -31,7 +31,10 @@
   import { speedOf } from '$lib/kfide';
   import { hasGate, requireGate, useFeature } from '$lib/plans';
   import { loadInsights } from '$lib/insights/store';
-  import { isWeak, resultText, studyStats, type StudyLineStat } from '$lib/study/fromGames';
+  import { isWeak, resultText, savedAsImported, studyStats, type StudyLineStat } from '$lib/study/fromGames';
+  import { shownGames } from '$lib/stores/me';
+  import type { ImportedGame } from '$lib/insights/games';
+  import type { AnalyzedGame } from '$lib/insights/analysis';
 
   type Tab = 'plans' | 'tree' | 'trainer' | 'games' | 'middlegame' | 'puzzles' | 'play';
   const TABS: { id: Tab; label: string; icon: 'learn' | 'tree' | 'book' | 'puzzle' | 'play' | 'crown' }[] = [
@@ -59,7 +62,19 @@
   let mg = $state<MiddlegameLesson[]>([]);
   let mgStars = $state<Record<string, number>>({});
   /** The player's own results in this opening's lines (from the games imported for Insights). */
-  let mine = $state<StudyLineStat[]>([]);
+  /** The player's games from chess.com or Lichess (Game Insights), and where they came from. */
+  let onlineGames = $state<(ImportedGame | AnalyzedGame)[]>([]);
+  /** The player's own games for the "lines from your games" section: Chess Castles, chess.com/Lichess, or both. */
+  let mineSource = $state<'all' | 'cc' | 'online'>('all');
+  const ccGames = $derived($shownGames.map(savedAsImported).filter((g): g is ImportedGame => !!g));
+  const mine = $derived.by((): StudyLineStat[] => {
+    if (!opening) return [];
+    const games = mineSource === 'cc' ? ccGames : mineSource === 'online' ? onlineGames : [...ccGames, ...onlineGames];
+    return studyStats(games).filter((x) => x.opening === opening.id);
+  });
+  /** Whether each source has games in this opening at all (the switch shows only when both do). */
+  const ccHas = $derived(!!opening && studyStats(ccGames).some((x) => x.opening === opening.id));
+  const onlineHas = $derived(!!opening && studyStats(onlineGames).some((x) => x.opening === opening.id));
   let mineFrom = $state('');
 
   // Model games.
@@ -83,8 +98,8 @@
     solved = loadSolved();
     const ins = loadInsights();
     if (ins && opening) {
-      mine = studyStats(ins.games).filter((x) => x.opening === opening.id);
-      mineFrom = `${ins.site === 'chesscom' ? 'chess.com' : 'Lichess'} games (${ins.username})`;
+      onlineGames = ins.games;
+      mineFrom = `${ins.site === 'chesscom' ? 'chess.com' : 'Lichess'} (${ins.username})`;
     }
     try {
       const s = JSON.parse(localStorage.getItem('k24.playSetup') ?? '{}');
@@ -225,7 +240,17 @@
 
     {#if mine.length}
       <section class="card mine" aria-labelledby="mine-h">
-        <h2 id="mine-h" class="title">Lines from your recent {mineFrom}</h2>
+        <div class="mine-head">
+          <h2 id="mine-h" class="title">Lines from your games</h2>
+          {#if ccHas && onlineHas}
+            <div class="segmented src" role="group" aria-label="Which games">
+              <button aria-pressed={mineSource === 'all'} onclick={() => (mineSource = 'all')}>All my games</button>
+              <button aria-pressed={mineSource === 'cc'} onclick={() => (mineSource = 'cc')}>Chess Castles</button>
+              <button aria-pressed={mineSource === 'online'} onclick={() => (mineSource = 'online')}>{mineFrom.split(' (')[0]}</button>
+            </div>
+          {/if}
+        </div>
+        <p class="label from">From {mineSource === 'cc' || !onlineHas ? 'your games on Chess Castles' : mineSource === 'online' || !ccHas ? `your ${mineFrom} games` : `your games on Chess Castles and ${mineFrom}`}.</p>
         <p class="label">
           For reference: the lines of the {opening.name} that came up in your own games. Everything you learn here (trainer, model games and
           puzzles) comes from the database of strong players' games.
@@ -536,6 +561,19 @@
     margin: 4px 0;
     line-height: 1.55;
     max-width: 720px;
+  }
+  .mine-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .mine-head h2 {
+    margin: 0;
+  }
+  .mine-head .src {
+    min-width: min(100%, 420px);
   }
   .mine {
     padding: 14px 16px;

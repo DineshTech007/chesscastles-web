@@ -4,8 +4,8 @@
   import Icon from '$lib/components/Icon.svelte';
   import FideRankings from '$lib/components/FideRankings.svelte';
   import { displayName, fideSearch, rankResults, type FidePlayer } from '$lib/api';
-  import { session, startSignIn, type Profile } from '$lib/auth';
-  import { leaderboard, type Board } from '$lib/leaderboard';
+  import { session, startSignIn } from '$lib/auth';
+  import CastlePlayers from '$lib/components/CastlePlayers.svelte';
 
   type Tab = 'fide' | 'search' | 'chesscastles';
   let tab = $state<Tab>('fide');
@@ -19,10 +19,6 @@
   let shown = $state(50);
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
-  // Chess Castles.
-  let board = $state<Board>('puzzle');
-  let leaders = $state<Profile[] | undefined>();
-  let leadersError = $state('');
 
   onMount(() => {
     const t = page.url.searchParams.get('tab');
@@ -55,16 +51,6 @@
     }, 350);
   }
 
-  $effect(() => {
-    if (tab !== 'chesscastles' || $session.status !== 'in') return;
-    const b = board;
-    leaders = undefined;
-    leadersError = '';
-    leaderboard(b).then(
-      (l) => (leaders = l),
-      () => (leadersError = 'The leaderboard could not be loaded.'),
-    );
-  });
 
   const me = $derived($session.status === 'in' ? $session.uid : undefined);
 </script>
@@ -123,31 +109,11 @@
     <section class="card">
       {#if $session.status !== 'in'}
         <div class="signin">
-          <p>Chess Castles leaderboards show the players with the highest puzzle, blitz and rapid ratings in the app and on the website.</p>
+          <p>Chess Castles' own players: the best CC Ratings (Classical, Rapid, Blitz and Bullet) and puzzle ratings, with their countries and profiles.</p>
           <button class="btn primary" onclick={() => startSignIn()}>Sign in to see them</button>
         </div>
       {:else}
-        <div class="chips" role="group" aria-label="Leaderboard">
-          <button class="chip" aria-pressed={board === 'puzzle'} onclick={() => (board = 'puzzle')}>Puzzles</button>
-          <button class="chip" aria-pressed={board === 'blitz'} onclick={() => (board = 'blitz')}>Blitz</button>
-          <button class="chip" aria-pressed={board === 'rapid'} onclick={() => (board = 'rapid')}>Rapid</button>
-        </div>
-        {#if leadersError}
-          <p class="label">{leadersError}</p>
-        {:else if !leaders}
-          <div class="skel"></div>
-        {:else}
-          <ol class="leaders">
-            {#each leaders as p, i (p.uid)}
-              <li class:me={p.uid === me}>
-                <span class="pos display" class:gold={i === 0} class:silver={i === 1} class:bronze={i === 2}>{i + 1}</span>
-                <span class="l-name">{p.name}{p.uid === me ? ' (you)' : ''}</span>
-                <span class="label">{p.games.played} games · {p.puzzles.solved} puzzles</span>
-                <span class="l-rating num">{p.ratings[board]}</span>
-              </li>
-            {/each}
-          </ol>
-        {/if}
+        <CastlePlayers {me} />
       {/if}
     </section>
   {/if}
@@ -181,18 +147,6 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-  }
-  .chips {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .skel {
-    height: 280px;
-    border-radius: 12px;
-    background: linear-gradient(90deg, var(--raised), var(--card), var(--raised));
-    background-size: 200% 100%;
-    animation: shimmer 1.4s linear infinite;
   }
   @keyframes shimmer {
     from {
@@ -266,51 +220,6 @@
   .signin p {
     margin: 0;
     color: var(--text-2);
-  }
-  .leaders {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .leaders li {
-    display: grid;
-    grid-template-columns: 44px 1fr auto;
-    align-items: center;
-    gap: 2px 12px;
-    padding: 10px 8px;
-    border-bottom: 1px solid var(--border-soft);
-  }
-  .leaders li .label {
-    grid-column: 2;
-    font-size: 12.5px;
-  }
-  .leaders li.me {
-    background: color-mix(in srgb, var(--brand) 16%, transparent);
-    border-radius: 10px;
-  }
-  .pos {
-    grid-row: 1 / span 2;
-    font-size: 24px;
-    color: var(--muted);
-  }
-  .pos.gold {
-    color: var(--gold);
-  }
-  .pos.silver {
-    color: #c8d2e8;
-  }
-  .pos.bronze {
-    color: #d9a066;
-  }
-  .l-name {
-    font-weight: 600;
-  }
-  .l-rating {
-    grid-column: 3;
-    grid-row: 1 / span 2;
-    font-family: var(--font-title);
-    font-weight: 700;
-    font-size: 18px;
   }
   @media (max-width: 640px) {
     .r-ratings {

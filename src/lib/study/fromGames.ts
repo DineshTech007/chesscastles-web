@@ -1,5 +1,6 @@
 import { polyglotKey } from '$lib/chess/polyglot';
-import { playSans, positionFromFen, START_FEN, uciToMove } from '$lib/chess/position';
+import { playSans, positionFromFen, sanOf, START_FEN, uciToMove } from '$lib/chess/position';
+import type { SavedGame } from '$lib/stores/myGames';
 import type { AnalyzedGame } from '$lib/insights/analysis';
 import { isError } from '$lib/insights/analysis';
 import { userScore, type ImportedGame } from '$lib/insights/games';
@@ -103,6 +104,42 @@ export function studyStats(games: (ImportedGame | AnalyzedGame)[]): StudyLineSta
       ...(slips.length ? { firstSlip: Math.round(slips.reduce((a, b) => a + b, 0) / slips.length) } : {}),
     }))
     .sort((a, b) => a.score - b.score || b.games - a.games);
+}
+
+/**
+ * A game played on Chess Castles, in the shape of an imported game (what
+ * studyStats reads: the moves, the player's colour and the result); none for
+ * an unfinished game or one from a set-up position.
+ */
+export function savedAsImported(g: SavedGame): ImportedGame | undefined {
+  if (g.result !== '1-0' && g.result !== '0-1' && g.result !== '1/2-1/2') return undefined;
+  if (g.startFen && g.startFen.split(' ')[0] !== START_FEN.split(' ')[0]) return undefined;
+  const pos = positionFromFen(START_FEN);
+  const san: string[] = [];
+  const uci: string[] = [];
+  for (const u of g.uci) {
+    const m = uciToMove(u);
+    if (!m || !pos.isLegal(m)) break;
+    san.push(sanOf(pos, m));
+    uci.push(u);
+    pos.play(m);
+  }
+  return {
+    url: `chesscastles:${g.id}`,
+    site: 'lichess',
+    username: '',
+    endTime: g.playedAt,
+    timeClass: '',
+    baseSeconds: 0,
+    increment: 0,
+    white: g.white,
+    black: g.black,
+    result: g.result,
+    userColor: g.userSide,
+    uci,
+    san,
+    clocks: [],
+  } as ImportedGame;
 }
 
 /** "Keeps losing here": at least two losses and under 40% in at least three games. */
