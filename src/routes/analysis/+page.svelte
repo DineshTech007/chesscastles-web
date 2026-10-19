@@ -29,6 +29,7 @@
   import { BADGE_ORDER, BADGES, boardBadge, type MoveClass } from '$lib/review/badges';
   import MoveBadge from '$lib/review/MoveBadge.svelte';
   import ReviewSummary from '$lib/review/ReviewSummary.svelte';
+  import EvalStrip from '$lib/review/EvalStrip.svelte';
   import GuruAvatar from '$lib/coach/GuruAvatar.svelte';
 
   interface Ply {
@@ -135,7 +136,7 @@
   let info = $state<EngineInfo | undefined>();
   /** The engine's three best lines in this position. */
   let lines = $state<EngineInfo[]>([]);
-  let tab = $state<'engine' | 'database' | 'guru'>('engine');
+  let tab = $state<'engine' | 'database' | 'guru' | 'report'>('engine');
   /** The saved game on the board (My games), for a Guru review. */
   let savedId = $state<string | undefined>();
   let copied = $state('');
@@ -146,7 +147,16 @@
   let reviewRun = 0;
 
   // Runs on first load and whenever the address changes (opening a reference game).
-  afterNavigate(() => void loadFromUrl());
+  /** The page the player came from (another page of the site), for the Back button. */
+  let cameFrom = $state<string | undefined>();
+  afterNavigate(({ from }) => {
+    if (from?.url && from.url.pathname !== '/analysis') cameFrom = from.url.pathname + from.url.search;
+    void loadFromUrl();
+  });
+  /** Without a review to show, the Report tab falls back to the engine. */
+  $effect(() => {
+    if (tab === 'report' && (!review || reviewStale)) tab = 'engine';
+  });
   let dbNote = $state('');
 
   async function loadFromUrl() {
@@ -346,7 +356,10 @@
         quota('review_depth'),
         () => run !== reviewRun,
       );
-      if (run === reviewRun) review = { ucis, result };
+      if (run === reviewRun) {
+        review = { ucis, result };
+        tab = 'report';
+      }
     } catch {
       /* stopped, or the engine can't run */
     } finally {
@@ -619,12 +632,18 @@
 
   <aside class="side">
     <div class="card info-card">
+      {#if cameFrom}
+        <button class="back-link" onclick={() => goto(cameFrom!)}><Icon name="back" size={16} />Back</button>
+      {:else}
+        <a class="back-link" href="/games"><Icon name="back" size={16} />My games</a>
+      {/if}
       <h1 class="title page-title">{title}</h1>
       {#if dbNote}<p class="label db-note">{dbNote}</p>{/if}
       <div class="segmented" role="group" aria-label="Panel">
         <button aria-pressed={tab === 'engine'} onclick={() => (tab = 'engine')}>Engine</button>
         <button aria-pressed={tab === 'database'} onclick={() => (tab = 'database')}>Database</button>
         <button aria-pressed={tab === 'guru'} onclick={() => (tab = 'guru')}>Guru</button>
+        {#if review && !reviewStale}<button aria-pressed={tab === 'report'} onclick={() => (tab = 'report')}>Report</button>{/if}
       </div>
 
       {#if tab === 'engine'}
@@ -661,6 +680,8 @@
         </div>
       {:else if tab === 'database'}
         <DbPanel {pos} {book} onplay={play} played={line[cursor]?.move} onopen={openDbGame} />
+      {:else if tab === 'report' && review}
+        <ReviewSummary review={review.result} names={playerNames} current={cursor} onselect={(p) => go(p)} />
       {:else}
         <div class="guru">
           <GuruAvatar size={56} />
@@ -683,7 +704,7 @@
           <div class="bar"><span style="width: {reviewing * 100}%"></span></div>
         </div>
       {:else if review && !reviewStale}
-        <ReviewSummary review={review.result} names={playerNames} current={cursor} onselect={(p) => go(p)} compact />
+        {#if tab !== 'report'}<EvalStrip review={review.result} names={playerNames} current={cursor} onselect={(p) => go(p)} onreport={() => (tab = 'report')} />{/if}
       {:else if line.length >= 2}
         <button class="btn primary review-btn" onclick={reviewMoves}><Icon name="analyse" size={16} />{reviewStale ? 'Review the new moves' : 'Review every move (brilliant … blunder)'}</button>
       {/if}
@@ -786,6 +807,26 @@
   }
   .moves-card :global(.tree) {
     max-height: 300px;
+  }
+  .back-link {
+    align-self: flex-start;
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    margin: -4px 0 -6px -4px;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--brand);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .back-link:hover {
+    background: var(--raised);
   }
   .reviewing,
   .this-move {
@@ -1025,13 +1066,15 @@
       overflow-y: auto;
       overscroll-behavior: contain;
     }
+    /* Enough room that the moves, their buttons and the tools always show;
+       the engine or database panel above scrolls instead. */
     .moves-card {
-      flex: 1 0 320px;
+      flex: 1 0 410px;
       min-height: 0;
     }
     .moves-card :global(.tree) {
       flex: 1 1 0;
-      min-height: 90px;
+      min-height: 64px;
       max-height: none;
       overscroll-behavior: contain;
     }
@@ -1055,7 +1098,7 @@
       font-size: 13.5px;
     }
     .moves-card {
-      flex-basis: 300px;
+      flex-basis: 390px;
     }
   }
   /* Phones and narrow windows: the engine and the database right under the board
