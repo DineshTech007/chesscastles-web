@@ -18,3 +18,6 @@ shots.log
 
 # Python caches of the data scripts.
 __pycache__/
+
+# The site check's report (scripts/e2e/site-check.mjs)
+site-check-report/

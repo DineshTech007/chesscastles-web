@@ -1,0 +1,77 @@
+# Site check: every few hours, uses chesscastles.com on a computer, a phone and
+# a tablet (scripts/e2e/site-check.mjs). When something breaks it opens an
+# issue with the report (screenshots in the run's artifact), adds to it while
+# it stays broken, and closes it when everything works again.
+name: Site check
+
+on:
+  schedule:
+    - cron: '17 */4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: site-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Only Playwright is needed, at the version the site is built with.
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@$(node -p "require('./package.json').devDependencies.playwright")
+          npx playwright install --with-deps chromium
+
+      - name: Use the site
+        id: check
+        continue-on-error: true
+        run: node scripts/e2e/site-check.mjs https://chesscastles.com --out site-check-report
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-check-report
+          path: site-check-report
+          retention-days: 14
+
+      - name: Open, update or close the issue
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        with:
+          script: |
+            const fs = require('fs');
+            const title = 'Site check: something is broken on chesscastles.com';
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const report = fs.existsSync('site-check-report/report.md') ? fs.readFileSync('site-check-report/report.md', 'utf8') : 'The check could not run: see the run log.';
+            const problems = report.split('## Every check')[0].slice(0, 60000);
+            const { data: open } = await github.rest.issues.listForRepo({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', per_page: 100 });
+            const issue = open.find((i) => i.title === title);
+            if (process.env.OUTCOME === 'success') {
+              if (issue) {
+                await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issue.number, body: `All good again: every check passed. [Run](${run})` });
+                await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issue.number, state: 'closed' });
+              }
+              return;
+            }
+            const body = `${problems}\n\nScreenshots of each failure: the **site-check-report** artifact of [this run](${run}).`;
+            if (issue) await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issue.number, body });
+            else await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
+
+      - name: Fail when the site check failed
+        if: steps.check.outcome == 'failure'
+        run: exit 1

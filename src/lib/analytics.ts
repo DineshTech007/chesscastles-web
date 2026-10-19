@@ -4,7 +4,8 @@
  * is kept in this browser (no cookies, nothing about who you are); events
  * are sent in small batches to the API worker (src/analytics.ts), the last
  * ones when the tab is hidden. Browsers asking not to be tracked (Do Not
- * Track) send nothing, and nothing is sent while developing locally.
+ * Track) send nothing, nor automated browsers (the site check and other
+ * bots), and nothing is sent while developing locally.
  */
 import { API } from '$lib/api';
 
@@ -16,7 +17,7 @@ let signedIn = false;
 let sentOnce = false;
 
 const off = () =>
-  typeof window === 'undefined' || location.hostname === 'localhost' || location.hostname === '127.0.0.1' || navigator.doNotTrack === '1' || (navigator as { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
+  typeof window === 'undefined' || location.hostname === 'localhost' || location.hostname === '127.0.0.1' || navigator.doNotTrack === '1' || navigator.webdriver || (navigator as { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
 
 function visitor(): { vid: string; fresh: boolean } {
   try {
