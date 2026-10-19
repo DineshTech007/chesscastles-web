@@ -139,13 +139,21 @@ page.on('response', (r) => {
 });
 
 /** The site's consent dialog ("One quick thing", since 20 Oct 2026): answered as an adult tester, once. */
+let consented = false;
 async function consent() {
-  const dlg = page.locator('[role="dialog"]:has-text("Agree and continue"), .dialog:has-text("Agree and continue")').first();
-  if (!(await dlg.count().catch(() => 0))) return;
-  await dlg.locator('text=/I am 18 or older/').first().click({ timeout: 3000 }).catch(() => {});
-  await dlg.locator('input[type="checkbox"]').first().check({ timeout: 3000 }).catch(() => {});
+  const dlg = page.locator('[role="dialog"]:has-text("Agree and continue")').first();
+  // It opens a moment after the page, once the account is known: wait for it until it has been answered once.
+  const there = consented ? (await dlg.count().catch(() => 0)) > 0 : await dlg.waitFor({ timeout: 5000 }).then(() => true, () => false);
+  if (!there) return;
+  await dlg.locator('input[type="radio"][value="adult"]').check({ timeout: 3000, force: true }).catch(() => {});
+  await dlg.locator('input[type="checkbox"]').first().check({ timeout: 3000, force: true }).catch(() => {});
   await dlg.locator('button:has-text("Agree and continue")').first().click({ timeout: 3000 }).catch(() => {});
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(1500);
+  if (await dlg.count().catch(() => 0)) {
+    bug('The consent dialog does not close after agreeing', 'High', 'Consent dialog', 'Sign in, choose "I am 18 or older", tick the terms box, press "Agree and continue"', 'The dialog closes', 'It stays open', await shot(page, 'consent'));
+    return;
+  }
+  consented = true;
   notes.push('Answered the consent dialog ("One quick thing") as an adult tester.');
   log('consent dialog answered');
 }
@@ -279,6 +287,7 @@ async function playGame(n, opp, color, opening, fromLine = true) {
       break;
     }
     if (pos.turn === color) {
+      if (!consented) await consent();
       const best = await bestMove(makeFen(pos.toSetup()));
       if (!best || best === '(none)') break;
       const m = parseUci(best);
