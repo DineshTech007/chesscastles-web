@@ -11,7 +11,7 @@
   import { session, startSignIn } from '$lib/auth';
   import { track } from '$lib/analytics';
   import { FIDE_DISCLAIMER, HERO_FEATURES } from '$lib/heroFeatures';
-  import { PLAN_INFO, launchOn, planSettings } from '$lib/plans';
+  import { PLAN_INFO, PLANS_ON, launchOn, planSettings } from '$lib/plans';
 
   /** `closing`: end with the "Every pawn can become a Queen" call (the /features page). */
   let { closing = true }: { closing?: boolean } = $props();
@@ -45,7 +45,7 @@
           <button class="btn big" onclick={() => (go('hero_signin'), startSignIn())}>Sign in free</button>
         {/if}
       </div>
-      {#if launchOn(launch) && $session.status !== 'in'}
+      {#if PLANS_ON && launchOn(launch) && $session.status !== 'in'}
         <p class="offer"><PlanBadge plan={launch.plan} size={22} /><span><strong>Launch offer:</strong> {PLAN_INFO[launch.plan].name} free for {launch.days} days. No card needed.</span></p>
       {/if}
       <p class="parents"><a href="/parents"><Icon name="shield" size={16} color="var(--accent)" />For parents: is it safe for my child?</a></p>
@@ -112,7 +112,7 @@
     <p>Start free today. Your castle is waiting.</p>
     <div class="ctas center">
       {#if $session.status !== 'in'}<button class="btn primary big" onclick={() => (go('close_signin'), startSignIn())}>Start free</button>{/if}
-      <a class="btn big" href="/plans">See plans</a>
+      {#if PLANS_ON}<a class="btn big" href="/plans">See plans</a>{/if}
     </div>
   </section>
   {/if}

@@ -15,6 +15,14 @@ import { session } from '$lib/auth';
 import { call } from '$lib/social';
 import { track } from '$lib/analytics';
 
+/**
+ * Plans are switched off until they start (planned for 1 January 2027):
+ * every feature is open to everyone with no limits, and the site shows no
+ * plan names, badges, prices or offers. Coach tools stay with the accounts
+ * that have them (the server checks those). Set to true to bring plans back.
+ */
+export const PLANS_ON = false;
+
 export type Plan = 'free' | 'premium' | 'elite';
 export const PLANS: Plan[] = ['free', 'premium', 'elite'];
 export const RANK: Record<Plan, number> = { free: 0, premium: 1, elite: 2 };
@@ -181,6 +189,7 @@ function localUses(): Record<string, LocalUse> {
  */
 export async function useFeature(feature: Feature, ref?: string): Promise<boolean> {
   track('feature', feature);
+  if (!PLANS_ON) return true;
   if (get(session).status === 'in') {
     try {
       const r = await call<{ ok: boolean; plan: Plan; used?: number; limit?: number | null; per?: Per; next?: string; again?: boolean }>('POST', 'plan/use', { feature, ref });
@@ -235,7 +244,7 @@ export function tabRef(name: string): string {
 }
 
 /** Whether your plan includes a feature (no popup). */
-export const hasGate = (gate: Gate) => RANK[get(currentPlan)] >= RANK[get(planSettings).config.gates[gate]];
+export const hasGate = (gate: Gate) => (!PLANS_ON && gate !== 'coach_tools') || RANK[get(currentPlan)] >= RANK[get(planSettings).config.gates[gate]];
 /** Like hasGate, opening the popup when the plan doesn't include it. */
 export function requireGate(gate: Gate): boolean {
   if (hasGate(gate)) return true;
@@ -245,7 +254,11 @@ export function requireGate(gate: Gate): boolean {
 }
 /** A number your plan allows (games per Insights report…). */
 /** A quota for the current plan (the built-in value when the server's settings predate it). */
-export const quota = (q: Quota) => get(planSettings).config.quotas[q]?.[get(currentPlan)] ?? DEFAULT_CONFIG.quotas[q][get(currentPlan)];
+export const quota = (q: Quota) => {
+  // Without plans, everyone gets Premium's numbers.
+  const plan = PLANS_ON ? get(currentPlan) : 'premium';
+  return get(planSettings).config.quotas[q]?.[plan] ?? DEFAULT_CONFIG.quotas[q][plan];
+};
 
 /** The lowest plan that lifts a limit (or includes a gate). */
 export function upgradeFor(hit: LimitHit, config: PlanConfig): Plan | undefined {

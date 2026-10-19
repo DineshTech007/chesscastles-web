@@ -7,7 +7,7 @@
    * A plan's badge, shown beside player names: a round, polished badge.
    * Free a plain muted ring, Premium a gold star, Elite a royal-purple crown.
    */
-  import { PLAN_INFO, type Plan } from '$lib/plans';
+  import { PLAN_INFO, PLANS_ON, type Plan } from '$lib/plans';
 
   let { plan, size = 18, title }: { plan: Plan; size?: number; title?: string } = $props();
   const id = `pb${next++}`;
@@ -21,6 +21,7 @@
   const label = $derived(title ?? `${PLAN_INFO[plan].name} member`);
 </script>
 
+{#if PLANS_ON}
 <svg class="badge" width={size} height={size} viewBox="0 0 24 24" role="img" aria-label={label}>
   <title>{label}</title>
   <defs>
@@ -51,6 +52,7 @@
     {/if}
   </g>
 </svg>
+{/if}
 
 <style>
   .badge {

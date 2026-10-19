@@ -8,7 +8,7 @@
   import { setSound, setSoundTheme, sounds, soundOn, soundTheme } from '$lib/sound';
   import { autoQueen, opponentPace, premovesOn } from '$lib/preferences';
   import { boardThemeOpen } from '$lib/boardTheme';
-  import { currentPlan, PLAN_INFO } from '$lib/plans';
+  import { currentPlan, PLAN_INFO, PLANS_ON } from '$lib/plans';
 
   let theme = $state<'dark' | 'light'>('dark');
   onMount(() => (theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'));
@@ -73,10 +73,12 @@
     <button class="btn row-btn" onclick={() => ($boardThemeOpen = true)}><Icon name="palette" size={18} />Board colour<Icon name="chevron" size={16} color="var(--muted)" /></button>
   </section>
 
+  {#if PLANS_ON}
   <section class="card block" aria-labelledby="mem-h">
     <h2 id="mem-h" class="title">Membership</h2>
     <a class="btn row-btn" href="/plans"><PlanBadge plan={$currentPlan} size={18} />{PLAN_INFO[$currentPlan].name} plan · compare plans<Icon name="chevron" size={16} color="var(--muted)" /></a>
   </section>
+  {/if}
 
   <section class="card block" aria-labelledby="help-h">
     <h2 id="help-h" class="title">Help & support</h2>

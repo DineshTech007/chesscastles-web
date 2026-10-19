@@ -3,7 +3,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { session, startSignIn } from '$lib/auth';
-  import { PLAN_INFO, launchOn, planSettings } from '$lib/plans';
+  import { PLAN_INFO, PLANS_ON, launchOn, planSettings } from '$lib/plans';
 
   const launch = $derived($planSettings.launch);
   const SAFE = [
@@ -47,6 +47,12 @@
 
   <section class="card block" aria-labelledby="cost-h">
     <h2 id="cost-h" class="title">What does it cost?</h2>
+    {#if !PLANS_ON}
+    <ul>
+      <li><strong>Everything is free right now</strong>: games, puzzles, lessons, Game Review, Insights, books and the analysis board, with no daily limits and no payments.</li>
+      <li>Nobody can be charged: there is nothing to buy.</li>
+    </ul>
+    {:else}
     <ul>
       <li><PlanBadge plan="free" size={18} /> <strong>{PLAN_INFO.free.name} is free</strong>, for ever: games, puzzles, lessons, books and the analysis board, with a few daily limits.</li>
       {#if launchOn(launch)}
@@ -56,6 +62,7 @@
       <li>When they are: cancel any time, a full refund within 7 days of the first payment, and a refund if your child paid without your permission. See the <a href="/legal/refunds">refund policy</a>.</li>
     </ul>
     <a class="more" href="/plans">Compare the plans <Icon name="chevron" size={16} /></a>
+    {/if}
   </section>
 
   <section class="card block" aria-labelledby="start-h">

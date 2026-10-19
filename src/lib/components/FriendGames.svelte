@@ -17,8 +17,11 @@
     );
   });
 
+  /** A player's own saved games call them "You": their name instead. */
+  const theirs = (g: SavedGame): SavedGame => ({ ...g, white: g.white === 'You' ? name : g.white, black: g.black === 'You' ? name : g.black });
+
   function review(g: SavedGame) {
-    sessionStorage.setItem('k24.importPgn', pgnOfSaved(g));
+    sessionStorage.setItem('k24.importPgn', pgnOfSaved(theirs(g)));
     goto('/analysis?import=1&review=1');
   }
   const LETTER = { won: 'W', lost: 'L', draw: '½', unfinished: '–' } as const;

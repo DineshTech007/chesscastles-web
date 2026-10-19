@@ -2,7 +2,7 @@
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import HeroLanding from '$lib/components/landing/HeroLanding.svelte';
   import { HERO_FEATURES } from '$lib/heroFeatures';
-  import { PLAN_INFO, currentPlan } from '$lib/plans';
+  import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
   import { myName } from '$lib/stores/me';
   import { onMount } from 'svelte';
   import Board from '$lib/components/Board.svelte';
@@ -66,7 +66,7 @@
     <div>
       <h1 class="display">
         {greeting}{$session.status === 'in' ? `, ${$myName}` : ''}
-        {#if $session.status === 'in'}<a class="h-plan" href="/plans" title="{PLAN_INFO[$currentPlan].name} member"><PlanBadge plan={$currentPlan} size={34} /></a>{/if}
+        {#if PLANS_ON && $session.status === 'in'}<a class="h-plan" href="/plans" title="{PLAN_INFO[$currentPlan].name} member"><PlanBadge plan={$currentPlan} size={34} /></a>{/if}
         {#if $myCountry}<img class="h-flag" src="/flags/{$myCountry}.svg" alt={fedName($myCountry)} title={fedName($myCountry)} width="30" height="20" />{/if}
       </h1>
       <p class="sub"><strong>Learn</strong> with Chess Guru. <strong>Play</strong> FIDE-rated opponents and friends. <strong>Conquer</strong> your next tournament.</p>

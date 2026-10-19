@@ -7,6 +7,7 @@
   import { FIDE_DISCLAIMER } from '$lib/heroFeatures';
   import { track } from '$lib/analytics';
   import {
+    PLANS_ON,
     FEATURES,
     FEATURE_INFO,
     GATE_INFO,
@@ -90,6 +91,14 @@
   <meta name="description" content="Chess Castles plans: Free, Premium and Elite. Every pawn can become a Queen." />
 </svelte:head>
 
+{#if !PLANS_ON}
+<section class="hero">
+  <p class="eyebrow">Plans</p>
+  <h1 class="title">Everything is free right now</h1>
+  <p class="sub">Play, puzzles, lessons, Game Review, Insights and books: no daily limits and nothing to pay.</p>
+  <p class="sub"><a class="btn primary" href="/">Back to Chess Castles</a></p>
+</section>
+{:else}
 <section class="hero">
   <p class="eyebrow">Plans</p>
   <h1 class="title">Every pawn can become a Queen</h1>
@@ -218,6 +227,8 @@
   <details><summary>Is Elite only for coaches?</summary><p>Elite has everything in Premium, plus coach tools: share a link, students join, and you see their progress and games and set them homework. Students stay on their own plan.</p></details>
   <details><summary>Can children use Chess Castles?</summary><p>Yes. Messages are only between friends, and a parent should agree before any paid plan. See the <a href="/legal/privacy">privacy policy</a>.</p></details>
 </section>
+
+{/if}
 
 <style>
   .fine {

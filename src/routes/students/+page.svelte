@@ -4,7 +4,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import FriendGames from '$lib/components/FriendGames.svelte';
   import { session, startSignIn } from '$lib/auth';
-  import { PLAN_INFO, RANK, currentPlan, planSettings } from '$lib/plans';
+  import { PLAN_INFO, PLANS_ON, RANK, currentPlan, planSettings } from '$lib/plans';
   import { WORK_PRESETS, coachLink, deleteWork, myStudents, removeStudent, setWork, type Assignment, type Student, type WorkKind } from '$lib/students';
   import { SPEED_LABEL, KFIDE_SPEEDS } from '$lib/kfide';
 
@@ -77,9 +77,15 @@
 {:else if !allowed && !data}
   <div class="card gate">
     <PlanBadge plan="elite" size={56} />
-    <h2 class="title">Coach tools come with {PLAN_INFO.elite.name}</h2>
-    <p>Share one link with your students. See their CC Rating, games and study at a glance, and set them puzzles, openings and lessons.</p>
-    <a class="btn primary" href="/plans">See plans</a>
+    {#if PLANS_ON}
+      <h2 class="title">Coach tools come with {PLAN_INFO.elite.name}</h2>
+      <p>Share one link with your students. See their CC Rating, games and study at a glance, and set them puzzles, openings and lessons.</p>
+      <a class="btn primary" href="/plans">See plans</a>
+    {:else}
+      <h2 class="title">Coach tools are for coaches and academies</h2>
+      <p>Share one link with your students. See their CC Rating, games and study at a glance, and set them puzzles, openings and lessons. They are switched on for coaches one by one: write to us and tell us about your class.</p>
+      <a class="btn primary" href="/feedback">Write to us</a>
+    {/if}
   </div>
 {:else if error && !data}
   <p class="error">{error}</p>

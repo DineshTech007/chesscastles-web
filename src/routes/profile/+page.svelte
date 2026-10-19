@@ -15,7 +15,7 @@
   import { myProfile, saveProfile, type Player } from '$lib/social';
   import { myCountry, setMyCountry } from '$lib/stores/me';
   import CoachWork from '$lib/components/CoachWork.svelte';
-  import { PLAN_INFO, RANK, myPlan, untilText } from '$lib/plans';
+  import { PLAN_INFO, PLANS_ON, RANK, hasGate, myPlan, untilText } from '$lib/plans';
 
   let busy = $state(false);
   let message = $state('');
@@ -208,7 +208,12 @@
     </form>
   {/if}
 
-  {#if $session.status === 'in' && $myPlan}
+  {#if !PLANS_ON && $session.status === 'in' && hasGate('coach_tools')}
+    <section class="card plancard" aria-label="Coach tools">
+      <div class="ptext"><h2 class="title">Coach tools</h2><span class="label">Your students' progress, games and the work you set them.</span></div>
+      <div class="plinks"><a class="btn primary" href="/students">My students</a></div>
+    </section>
+  {:else if PLANS_ON && $session.status === 'in' && $myPlan}
     <section class="card plancard" aria-labelledby="plan-h">
       <PlanBadge plan={$myPlan.plan} size={46} />
       <div class="ptext">

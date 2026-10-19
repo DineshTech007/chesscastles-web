@@ -55,6 +55,10 @@ const FIRST_MS = 1200;
 /** Moves still in the named opening are labelled "book": a light look is enough. */
 const BOOK_DEPTH = 8;
 const CACHE_KEY = 'k24.reviews';
+/** The second, deeper look goes to this many key moves at most (each with the position after it)… */
+const RECHECK_MOVES = 20;
+/** …and takes about this long in all, shared between its positions, so a long game doesn't keep the player waiting. */
+const SECOND_LOOK_MS = 20_000;
 const CACHE_MAX = 30;
 
 /** A finished review, kept so opening the same game again is instant. */
@@ -110,9 +114,10 @@ function keep(key: string, review: GameReview) {
 /**
  * Reviews a game: every position at depth 13 (capped at about a second, so a
  * hard position can't hold a phone up), then the positions around each move
- * about to be called brilliant, an only move, a mistake or a blunder again,
- * deeper (`recheckDepth`: the plan's review depth), so the labels people
- * notice are not shallow guesses. A finished review is kept on the device.
+ * about to be called brilliant, an only move, a mistake, a missed win or a
+ * blunder again, deeper (`recheckDepth`), so the labels people notice are not
+ * shallow guesses: the 20 that matter most, in about 20 seconds in all. A
+ * finished review is kept on the device.
  */
 export async function analyseGame(g: SavedGame, onProgress: (p: number) => void, recheckDepth = 18, stopped: () => boolean = () => false): Promise<GameReview> {
   const positions: Chess[] = [positionFromFen(g.startFen)];
@@ -141,7 +146,7 @@ export async function analyseGame(g: SavedGame, onProgress: (p: number) => void,
     onProgress((0.8 * (i + 1)) / positions.length);
   }
   // The second look: the positions around every strong label, deeper.
-  const recheck = new Set<number>();
+  const marked: { i: number; weight: number }[] = [];
   for (let i = 0; i < moves.length; i++) {
     const before = evals[i];
     const after = evals[i + 1];
@@ -151,12 +156,16 @@ export async function analyseGame(g: SavedGame, onProgress: (p: number) => void,
     const grade = gradeMove(before, after, color, moves[i], positions[i]);
     const drop = Math.max(0, mine(before) - mine(after));
     const cls = classify({ pos: positions[i], move: moves[i], prev: i > 0 ? { pos: positions[i - 1], move: moves[i - 1] } : undefined, before, after, prevBefore: evals[i - 1], grade, drop, color, book: !!opening && i < opening.plies });
-    if (cls === 'brilliant' || cls === 'only' || cls === 'mistake' || cls === 'miss' || cls === 'blunder') recheck.add(i).add(i + 1);
+    if (cls === 'brilliant' || cls === 'only' || cls === 'mistake' || cls === 'miss' || cls === 'blunder') marked.push({ i, weight: cls === 'brilliant' || cls === 'only' ? 1 : drop });
   }
+  // The moves that matter most first (the brilliant and only moves, then the biggest losses), at most RECHECK_MOVES.
+  const recheck = new Set<number>();
+  for (const { i } of marked.sort((a, b) => b.weight - a.weight).slice(0, RECHECK_MOVES)) recheck.add(i).add(i + 1);
   const deeper = [...recheck].filter((i) => !positions[i].isEnd());
+  const each = Math.max(600, Math.min(recheckDepth >= 22 ? 3500 : 2000, Math.round(SECOND_LOOK_MS / Math.max(1, deeper.length))));
   for (let k = 0; k < deeper.length; k++) {
     if (stopped()) throw new Error('stopped');
-    evals[deeper[k]] = await engine.evaluate(fenOf(positions[deeper[k]]), recheckDepth, 2, recheckDepth >= 22 ? 8000 : 4000);
+    evals[deeper[k]] = await engine.evaluate(fenOf(positions[deeper[k]]), recheckDepth, 2, each);
     onProgress(0.8 + (0.2 * (k + 1)) / deeper.length);
   }
   onProgress(1);

@@ -6,7 +6,7 @@
   import { kfide, myInitials, myName, myPhoto, photoSrc } from '$lib/stores/me';
   import { SPEED_LABEL } from '$lib/kfide';
   import { socialBadge } from '$lib/social';
-  import { PLAN_INFO, currentPlan } from '$lib/plans';
+  import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
   import { HERO_FEATURES } from '$lib/heroFeatures';
   import { adminMe } from '$lib/admin';
 
@@ -103,7 +103,7 @@
       </a>
       {#if !collapsed}
         <div class="acct-links">
-          <a class="plan-chip" href="/plans" title="Your plan">{PLAN_INFO[$currentPlan].name} plan</a>
+          {#if PLANS_ON}<a class="plan-chip" href="/plans" title="Your plan">{PLAN_INFO[$currentPlan].name} plan</a>{/if}
           <a class="link" href="/settings">Settings</a>
           {#if isAdmin}<a class="link" href="/admin">Admin</a>{/if}
           <button class="link" onclick={() => signOut()}>Sign out</button>
@@ -121,7 +121,7 @@
       </button>
     {/if}
     {#if !collapsed}
-      <nav class="foot" aria-label="Help and policies"><a href="/plans">Plans</a><a href="/settings">Settings</a><a href="/parents">Parents</a><a href="/feedback">Feedback</a><a href="/help">Help</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/legal/fair-play">Fair play</a><a href="/legal/refunds">Refunds</a></nav>
+      <nav class="foot" aria-label="Help and policies">{#if PLANS_ON}<a href="/plans">Plans</a>{/if}<a href="/settings">Settings</a><a href="/parents">Parents</a><a href="/feedback">Feedback</a><a href="/help">Help</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/legal/fair-play">Fair play</a><a href="/legal/refunds">Refunds</a></nav>
     {/if}
   </div>
 </nav>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { myName } from '$lib/stores/me';
   import Icon, { type IconName } from '$lib/components/Icon.svelte';
+  import { PLANS_ON } from '$lib/plans';
   import { session, signOut, startSignIn } from '$lib/auth';
   import { adminMe } from '$lib/admin';
   import { HERO_FEATURES } from '$lib/heroFeatures';
@@ -17,7 +18,7 @@
   const links: { href: string; label: string; icon: IconName }[] = [
     { href: '/profile', label: 'Profile, photo and CC Rating', icon: 'users' },
     { href: '/settings', label: 'Settings: premoves, auto-queen, sound, board colour', icon: 'settings' },
-    { href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' },
+    ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
     { href: '/students', label: 'My students (coach tools)', icon: 'coach' },
     { href: '/friends', label: 'Friends and messages', icon: 'users' },
     { href: '/games', label: 'My games', icon: 'history' },
