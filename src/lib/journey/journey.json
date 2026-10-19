@@ -9,10 +9,10 @@
   "family": "my mother (who set the 6 pm study timer and never let me skip the review), my father (who drives me to every tournament and asks one question after each game: \"which move?\") and my little sister Diya, who learned the moves by watching",
   "coach": "my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school",
   "start": 1500,
-  "now": 1818,
-  "sessions": 17,
-  "games": 76,
-  "record": "49 wins, 9 draws, 18 losses"
+  "now": 1926,
+  "sessions": 20,
+  "games": 91,
+  "record": "62 wins, 9 draws, 20 losses"
  },
  "curve": [
   {
@@ -99,6 +99,21 @@
    "session": 17,
    "date": "2026-10-20",
    "rating": 1818
+  },
+  {
+   "session": 18,
+   "date": "2026-10-20",
+   "rating": 1826
+  },
+  {
+   "session": 19,
+   "date": "2026-10-20",
+   "rating": 1872
+  },
+  {
+   "session": 20,
+   "date": "2026-10-20",
+   "rating": 1926
   }
  ],
  "posts": [
@@ -174,6 +189,29 @@
     "My profile says: accuracy 96%, opening 97, middlegame 96, endgame 96; sharp moments 100 and calm moves undefined. The sharp number is up, which is what the puzzles were for.",
     "One win against an opponent one level up (1900). My mother says that is the one that counts.",
     "All my games so far: 76, 49 wins, 9 draws, 18 losses; 69% as White and 61% as Black. Next stop: 1900."
+   ]
+  },
+  {
+   "slug": "aarav-1900",
+   "milestone": 1900,
+   "date": "2026-10-20",
+   "title": "1900: another hundred",
+   "sessions": [
+    18,
+    19,
+    20
+   ],
+   "games": 15,
+   "record": "13 wins, 0 draws, 2 losses",
+   "body": [
+    "20 October 2026. Today my CC Rating on Chess Castles touched 1926. The last stop was 1800. Between then and now: 3 sessions, 15 rapid games (15+10, never faster: my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school says fast games only teach you about the clock), 13 wins, 0 draws, 2 losses.",
+    "The game I remember most is the one I lost as black against the 1800 in session 18: 16… Qc6 (Mistake) and 17… b6 (Mistake). The review marked the turning point as 17...b6 by me, 13% of the winning chances gone in one move. My father asked his question in the car: \"which move?\" I knew the answer this time, and that is the whole point of the review.",
+    "Openings: the Chebanenko Slav as Black (the Slav with ...a6: hold d5 and get ...b5 in); the Caro-Kann Defence as Black (answer 1.e4 with ...c6 and ...d5, keep the pawns healthy, and be happy to reach an endgame); the Jobava London as White (d4, Nc3 and Bf4 early, with the knight jumping to b5 to hit c7). Each time the same routine from Learn → Openings: the course page, one model game played through, the trainer, and only then the line against a FIDE-rated opponent. From those lines in this stretch: 7 wins, 0 draws, 2 losses.",
+    "New in the trainer: Grünfeld, King's Gambit, Berlin Defence. One opening a session, two moves at a time, and the trainer tells me at once when a move is not the line.",
+    "The rest of Learn, one thing a session: a tactics lesson and a themed puzzle; rated puzzles; Guru's strategy lesson.",
+    "My profile says: accuracy 97%, opening 96, middlegame 96, endgame 97; sharp moments 97 and calm moves undefined. The sharp number is up, which is what the puzzles were for.",
+    "3 wins against an opponent one level up (1900, 1900, 2000). My mother says that is the one that counts.",
+    "All my games so far: 91, 62 wins, 9 draws, 20 losses; 74% as White and 64% as Black. Next stop: 2000."
    ]
   }
  ]
