@@ -15,6 +15,7 @@
   import MoveBadge from './MoveBadge.svelte';
   import { playMoveSound } from '$lib/sound';
   import MoveNav from '$lib/components/MoveNav.svelte';
+  import ReviewSummary from './ReviewSummary.svelte';
 
   let { game, review }: { game: SavedGame; review: GameReview } = $props();
 
@@ -72,7 +73,7 @@
   }
   /** The next move of the student's that is not best: inaccuracies and worse. */
   function nextSlip() {
-    const i = review.all.findIndex((m, j) => j > at && m.color === game.userSide && ['inaccuracy', 'mistake', 'blunder'].includes(m.cls));
+    const i = review.all.findIndex((m, j) => j > at && m.color === game.userSide && ['inaccuracy', 'mistake', 'miss', 'blunder'].includes(m.cls));
     if (i >= 0) go(i);
   }
 
@@ -90,6 +91,9 @@
 <svelte:window onkeydown={onkey} />
 
 <div class="report">
+  <div class="summary-wide card">
+    <ReviewSummary {review} names={{ white: game.userSide === 'white' ? 'You' : game.white, black: game.userSide === 'black' ? 'You' : game.black }} current={current ? current.ply + 1 : 0} onselect={(ply) => go(review.all.findIndex((m) => m.ply === ply - 1))} counts={false} />
+  </div>
   <div class="board-col">
     <Board {fen} viewOnly orientation={game.userSide} lastMove={current ? [key(current.move.from), key(current.move.to)] : undefined} {shapes} label="Review board" onswipe={(d) => go(at + (d === 'forward' ? 1 : -1))} />
     <section class="explain card" aria-live="polite">
@@ -131,7 +135,7 @@
             <tr>
               <th scope="row"><MoveBadge kind={c} size={26} /> <span>{BADGES[c].label}</span></th>
               {#each players as p (p.color)}
-                <td class="num" class:zero={!review.sides[p.color].classes[c]} style="color: {review.sides[p.color].classes[c] ? BADGES[c].color : ''}">{review.sides[p.color].classes[c]}</td>
+                <td class="num" class:zero={!review.sides[p.color].classes[c]} style="color: {review.sides[p.color].classes[c] ? BADGES[c].color : ''}">{review.sides[p.color].classes[c] ?? 0}</td>
               {/each}
             </tr>
           {/each}
@@ -182,6 +186,10 @@
     flex-wrap: wrap;
     gap: 24px;
     align-items: flex-start;
+  }
+  .summary-wide {
+    flex: 1 1 100%;
+    padding: 14px 16px;
   }
   .board-col {
     flex: 1 1 420px;

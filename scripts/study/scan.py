@@ -10,7 +10,9 @@ Classical over-the-board games between players rated 1800+ (CaissaBase's
 ratings). Each match is written whole to <out>/<opening>.jsonl, so the next
 steps (repertoire.py) never need the database again.
 
-Run: python scripts/study/scan.py F:/dev/caissabase_2024.db3 F:/dev/gamesdb_work/study2
+Run: python scripts/study/scan.py F:/dev/caissabase_2024.db3 F:/dev/gamesdb_work/study2 [--only jobava-london] [--min-elo 1500]
+(--only rescans one opening and replaces only its file; a young opening like
+the Jobava London has few games between 1800+ players, so it can take more.)
 """
 
 import json
@@ -77,7 +79,7 @@ def which(ms):
 
 
 def work(args):
-    db_path, lo, hi = args
+    db_path, lo, hi, min_elo, only = args
     from caissa import mainline_bytes, ordered_legal_moves  # noqa: F401  (imported per process)
     from extract import NOT_CLASSICAL, ONLINE_SITE
 
@@ -89,7 +91,7 @@ def work(args):
     rows = db.execute(
         "SELECT ID, EventID, SiteID, Date, WhiteID, WhiteElo, BlackID, BlackElo, Result, Moves FROM Games "
         "WHERE ID >= ? AND ID < ? AND FEN IS NULL AND PlyCount >= 20 AND WhiteElo >= ? AND BlackElo >= ?",
-        (lo, hi, MIN_ELO, MIN_ELO),
+        (lo, hi, min_elo, min_elo),
     )
     for gid, eid, sid, date, wid, welo, bid, belo, result, raw in rows:
         if result not in ("1-0", "0-1", "1/2-1/2"):
@@ -97,11 +99,16 @@ def work(args):
         event = events.get(eid) or ""
         if NOT_CLASSICAL.search(event) or ONLINE_SITE.search(sites.get(sid) or ""):
             continue
+        # Only one opening: skip games whose first move can't start it, without decoding further.
+        if only == "jobava-london":
+            one = early(raw or b"", 1)
+            if not one or one[0] not in ("d2d4", "b1c3", "c1f4"):
+                continue
         first = early(raw or b"", 12)
         if not first:
             continue
         o = which(first)
-        if not o:
+        if not o or (only and o != only):
             continue
         full = early(raw or b"", 400)
         if not full:
@@ -115,17 +122,28 @@ def work(args):
 
 
 def main():
-    db_path, out_dir = sys.argv[1], sys.argv[2]
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("db")
+    ap.add_argument("out")
+    ap.add_argument("--only")
+    ap.add_argument("--min-elo", type=int, default=MIN_ELO)
+    a = ap.parse_args()
+    db_path, out_dir = a.db, a.out
     os.makedirs(out_dir, exist_ok=True)
     db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     top = db.execute("SELECT MAX(ID) FROM Games").fetchone()[0]
     step = 50_000
-    jobs = [(db_path, lo, lo + step) for lo in range(0, top + 1, step)]
-    files = {o: open(os.path.join(out_dir, f"{o}.jsonl"), "w", encoding="utf-8") for o in ("caro-kann", "jobava-london", "chebanenko")}
+    jobs = [(db_path, lo, lo + step, a.min_elo, a.only) for lo in range(0, top + 1, step)]
+    openings = [a.only] if a.only else ["caro-kann", "jobava-london", "chebanenko"]
+    files = {o: open(os.path.join(out_dir, f"{o}.jsonl"), "w", encoding="utf-8") for o in openings}
     counts = {o: 0 for o in files}
     with mp.Pool(4) as pool:
         for i, res in enumerate(pool.imap_unordered(work, jobs)):
             for o, games in res.items():
+                if o not in files:
+                    continue
                 for g in games:
                     files[o].write(json.dumps(g) + "\n")
                 counts[o] += len(games)

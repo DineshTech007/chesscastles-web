@@ -22,9 +22,12 @@ SEGMENT = 24
 
 def main():
     work, chapters_path = sys.argv[1], sys.argv[2]
+    only = sys.argv[3] if len(sys.argv) > 3 else None
     chapters = json.load(open(chapters_path, encoding="utf-8"))
     out = []
     for oid, side in SIDE.items():
+        if only and oid != only:
+            continue
         moves_of = {}
         for line in open(os.path.join(work, f"{oid}.jsonl"), encoding="utf-8"):
             g = json.loads(line)
@@ -55,7 +58,7 @@ def main():
                     "moves": ms[start : start + SEGMENT], "toEnd": len(ms) - start,
                 })
                 n += 1
-    with open(os.path.join(work, "middlegame.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(work, f"middlegame{'-' + only if only else ''}.json"), "w", encoding="utf-8") as f:
         json.dump(out, f)
     print(len(out), "middlegame lesson candidates")
 

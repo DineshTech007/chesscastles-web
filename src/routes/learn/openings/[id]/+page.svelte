@@ -34,7 +34,10 @@
   import { POINTS, study } from '$lib/study/progress';
   import { masterOf, masterOpening, RepertoireBook } from '$lib/masters/repertoire';
   import { studyById, studyOpening } from '$lib/study/openingStudy';
-  import { StudyBook } from '$lib/study/studyBook';
+  import { HybridBook, StudyBook } from '$lib/study/studyBook';
+  import { maia } from '$lib/engine/maia';
+  import { get } from 'svelte/store';
+  import { kfideAll } from '$lib/stores/me';
   import { loadChoices, setChoices, STUDY_ALT_GAMES, STUDY_ALT_SHARE } from '$lib/study/choices';
   import { engine, evalLabel, type EngineInfo } from '$lib/engine/stockfish';
   import DbPanel from '$lib/components/DbPanel.svelte';
@@ -59,8 +62,17 @@
 
   // Building.
   let tree = $state<OpeningTree | undefined>();
+  /** Study openings: continue lines with the engines where the opening's games run out. */
+  let extend = $state(true);
+  let hybrid: HybridBook | undefined;
+  /** The rating Maia predicts the opponent's replies for: the player's CC Rating, else 1800. */
+  const engineElo = () => {
+    const r = Object.values(get(kfideAll)).find((x) => x.games)?.rating;
+    return Math.min(2400, Math.max(1200, r ?? 1800));
+  };
   let side = $state<'white' | 'black'>(opening?.side ?? 'white');
-  let depth = $state(12);
+  // Study openings go deeper by default (10 moves), like a course.
+  let depth = $state(studyOpening(page.params.id!) ? 20 : 12);
   let floor = $state(2000);
   let allLines = $state(true);
   let building = $state(false);
@@ -98,6 +110,8 @@
 
   onMount(() => {
     if (!opening) return;
+    // The human-like engine continues study lines where the games run out.
+    if (studied) maia.autoLoad(0);
     tree = loadTree(opening.id);
     if (tree) startLine();
   });
@@ -114,8 +128,9 @@
     buildError = '';
     try {
       const t = await buildTree({
-        // A study opening learns from its own games (and every reply its opponents tried); a master's repertoire from their games.
-        book: studied ? new StudyBook(studied) : master ? new RepertoireBook(master.teacher, master.side) : new CloudBook(),
+        // A study opening learns from its own games (and every reply its opponents tried), continued by our engines where
+        // the games run out; a master's repertoire from their games.
+        book: studied ? (hybrid = extend ? new HybridBook(new StudyBook(studied), opening.side, engineElo()) : undefined) ?? new StudyBook(studied) : master ? new RepertoireBook(master.teacher, master.side) : new CloudBook(),
         openingId: opening.id,
         rootSans: opening.sans,
         userSide: old?.userSide ?? (master ? master.side : side),
@@ -293,7 +308,12 @@
     const notes = openingNotes(before, m).slice(0, 2).map((n) => noteText(n, lang));
     const node = tree.nodes[nodeKey(before)];
     const share = node ? shareOf(node, e) : 0;
-    const stat = e.games ? `Strong players chose ${e.san} in ${Math.round(share * 100)}% of ${e.games.toLocaleString('en-IN')} games${e.score !== undefined ? ` and scored ${Math.round(e.score * 100)}%` : ''}.` : '';
+    const byEngine = hybrid?.engineKeys.has(nodeKey(before));
+    const stat = byEngine
+      ? `Few games reached this position, so this move is the engine's choice (Stockfish for your moves, the human-like engine for your opponent's).`
+      : e.games
+        ? `Strong players chose ${e.san} in ${Math.round(share * 100)}% of ${e.games.toLocaleString('en-IN')} games${e.score !== undefined ? ` and scored ${Math.round(e.score * 100)}%` : ''}.`
+        : '';
     why = [...notes, stat].filter(Boolean).join(' ');
   }
   async function checkWithEngine(n: TreeNode) {
@@ -481,6 +501,12 @@
         </div>
         <p class="label hint">{allLines ? (master ? 'Every reply that came up often in these games: thorough.' : 'Every reply strong players often meet: thorough.') : 'Only the most popular reply at each turn: ready in seconds.'}</p>
       </div>
+      {#if studied}
+      <div class="group">
+        <label class="toggle"><input type="checkbox" bind:checked={extend} /><span>Continue with our engines where the games run out</span></label>
+        <p class="label hint">Stockfish chooses your moves and Maia, the human-like engine, the replies players at your level make: deeper lines, like a course author's analysis.</p>
+      </div>
+      {/if}
       {#if !master && !studied}
       <div class="group">
         <h2 class="title h">Learn from players rated</h2>

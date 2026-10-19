@@ -60,10 +60,39 @@ const CACHE_MAX = 30;
 /** A finished review, kept so opening the same game again is instant. */
 function cached(key: string): GameReview | undefined {
   try {
-    return (JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}') as Record<string, GameReview>)[key];
+    const r = (JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}') as Record<string, GameReview>)[key];
+    return r && withMisses(r);
   } catch {
     return undefined;
   }
+}
+
+/** Every review kept on this device with its game's moves (UCI) and the player's side, for the profile's all-time numbers. */
+export function keptReviews(): { moves: string; side: Color; review: GameReview }[] {
+  try {
+    return Object.entries(JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}') as Record<string, GameReview>).map(([key, review]) => {
+      const [, moves, side] = key.split('|');
+      return { moves, side: side as Color, review: withMisses(review) };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** Reviews kept before the missed-win badge: their mistakes and blunders that were missed wins get it now. */
+export function withMisses(r: GameReview): GameReview {
+  if (r.sides.white.classes.miss !== undefined) return r;
+  r.sides.white.classes.miss = 0;
+  r.sides.black.classes.miss = 0;
+  const byPly = new Map(r.all.map((m) => [m.ply, m]));
+  for (const m of r.all) {
+    if ((m.cls !== 'mistake' && m.cls !== 'blunder') || !isMiss(m.before, m.after, byPly.get(m.ply - 1)?.before, m.color)) continue;
+    r.sides[m.color].classes[m.cls]--;
+    r.sides[m.color].classes.miss++;
+    m.cls = 'miss';
+  }
+  for (const m of r.moves) m.cls = byPly.get(m.ply)?.cls ?? m.cls;
+  return r;
 }
 function keep(key: string, review: GameReview) {
   try {
@@ -121,8 +150,8 @@ export async function analyseGame(g: SavedGame, onProgress: (p: number) => void,
     const mine = (x: EngineInfo) => (color === 'white' ? whiteChances(x) : 1 - whiteChances(x));
     const grade = gradeMove(before, after, color, moves[i], positions[i]);
     const drop = Math.max(0, mine(before) - mine(after));
-    const cls = classify({ pos: positions[i], move: moves[i], prev: i > 0 ? { pos: positions[i - 1], move: moves[i - 1] } : undefined, before, after, grade, drop, color, book: !!opening && i < opening.plies });
-    if (cls === 'brilliant' || cls === 'only' || cls === 'mistake' || cls === 'blunder') recheck.add(i).add(i + 1);
+    const cls = classify({ pos: positions[i], move: moves[i], prev: i > 0 ? { pos: positions[i - 1], move: moves[i - 1] } : undefined, before, after, prevBefore: evals[i - 1], grade, drop, color, book: !!opening && i < opening.plies });
+    if (cls === 'brilliant' || cls === 'only' || cls === 'mistake' || cls === 'miss' || cls === 'blunder') recheck.add(i).add(i + 1);
   }
   const deeper = [...recheck].filter((i) => !positions[i].isEnd());
   for (let k = 0; k < deeper.length; k++) {
@@ -132,7 +161,7 @@ export async function analyseGame(g: SavedGame, onProgress: (p: number) => void,
   }
   onProgress(1);
   const counts: Record<Grade, number> = { best: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
-  const emptyClasses = (): Record<MoveClass, number> => ({ brilliant: 0, only: 0, best: 0, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 0 });
+  const emptyClasses = (): Record<MoveClass, number> => ({ brilliant: 0, only: 0, best: 0, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 0 });
   const acc: Record<Color, { sum: number; n: number; classes: Record<MoveClass, number> }> = {
     white: { sum: 0, n: 0, classes: emptyClasses() },
     black: { sum: 0, n: 0, classes: emptyClasses() },
@@ -148,7 +177,7 @@ export async function analyseGame(g: SavedGame, onProgress: (p: number) => void,
     const grade = gradeMove(before, after, color, moves[i], pos);
     const mine = (x: EngineInfo) => (color === 'white' ? whiteChances(x) : 1 - whiteChances(x));
     const drop = Math.max(0, mine(before) - mine(after));
-    const cls = classify({ pos, move: moves[i], prev: i > 0 ? { pos: positions[i - 1], move: moves[i - 1] } : undefined, before, after, grade, drop, color, book: !!opening && i < opening.plies });
+    const cls = classify({ pos, move: moves[i], prev: i > 0 ? { pos: positions[i - 1], move: moves[i - 1] } : undefined, before, after, prevBefore: evals[i - 1], grade, drop, color, book: !!opening && i < opening.plies });
     const side = acc[color];
     side.sum += Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * drop * 100) - 3.1669));
     side.n++;
@@ -177,7 +206,9 @@ const material = (p: Chess, c: Color) => (['pawn', 'knight', 'bishop', 'rook', '
  * - only move: the best move, when the second-best gives away a lot
  *   (not a plain recapture, and not when the second move also wins easily);
  * - best / excellent / good / inaccuracy / mistake / blunder by how much
- *   winning chance it gave away.
+ *   winning chance it gave away, except that a mistake or blunder that only
+ *   misses a win (isMiss) is a missed win: a blunder loses the game, a miss
+ *   lets a win slip.
  */
 export function classify(o: {
   pos: Chess;
@@ -185,12 +216,15 @@ export function classify(o: {
   prev?: { pos: Chess; move: NormalMove };
   before: EngineInfo;
   after: EngineInfo;
+  /** The evaluation before the opponent's last move. */
+  prevBefore?: EngineInfo;
   grade: Grade;
   drop: number;
   color: Color;
   book: boolean;
 }): MoveClass {
   const { pos, move, before, after, grade, drop, color } = o;
+  if ((grade === 'mistake' || grade === 'blunder') && isMiss(before, after, o.prevBefore, color)) return 'miss';
   if (o.book && grade !== 'mistake' && grade !== 'blunder') return 'book';
   if (grade === 'inaccuracy' || grade === 'mistake' || grade === 'blunder') return grade;
   const mine = (x: Pick<EngineInfo, 'cp' | 'mate'>) => (color === 'white' ? whiteChances(x) : 1 - whiteChances(x));
@@ -205,6 +239,30 @@ export function classify(o: {
     return 'best';
   }
   return drop < 0.02 ? 'excellent' : 'good';
+}
+
+/** Winning chances at a centipawn score (the engine's curve). */
+const chanceAt = (cp: number) => 1 / (1 + Math.exp(-0.00368208 * cp));
+/** Clearly winning: about three pawns up, or a mate. */
+const WON = chanceAt(300);
+/** Still winning: about two pawns up. */
+const STILL_WON = chanceAt(180);
+
+/**
+ * A missed win rather than a blunder, for a move that gave away a lot: there
+ * was a clear win, and either the player is still winning after the move (a
+ * straighter win was missed), or the opponent had just slipped and the move
+ * only gives back what that slip gave (no worse than before it, not losing).
+ */
+export function isMiss(before: EngineInfo, after: EngineInfo, prevBefore: EngineInfo | undefined, color: Color): boolean {
+  const mine = (x: Pick<EngineInfo, 'cp' | 'mate'>) => (color === 'white' ? whiteChances(x) : 1 - whiteChances(x));
+  const b = mine(before);
+  const a = mine(after);
+  if (b < WON) return false;
+  if (a >= STILL_WON) return true;
+  if (!prevBefore) return false;
+  const earlier = mine(prevBefore);
+  return a >= 0.45 && b - earlier >= 0.2 && a >= earlier - 0.03;
 }
 
 /**
@@ -254,9 +312,9 @@ const moveNo = (ply: number) => Math.floor(ply / 2) + 1;
 
 const T = {
   summary: {
-    en: '{result} Your accuracy was {acc}%. Best moves: {best}. Good moves: {good}. Inaccuracies: {inacc}, mistakes: {mist}, blunders: {blun}. Let\'s look at the most important moments together.',
-    hi: '{result} तुम्हारी accuracy {acc}% रही। Best moves: {best}। Good moves: {good}। Inaccuracies: {inacc}, mistakes: {mist}, blunders: {blun}। चलो, सबसे ज़रूरी moments साथ में देखते हैं।',
-    mr: '{result} तुझी accuracy {acc}% होती. Best moves: {best}. Good moves: {good}. Inaccuracies: {inacc}, mistakes: {mist}, blunders: {blun}. चल, सगळ्यात महत्त्वाचे moments एकत्र बघूया.',
+    en: '{result} Your accuracy was {acc}%. Best moves: {best}. Good moves: {good}. Inaccuracies: {inacc}, mistakes: {mist}, missed wins: {miss}, blunders: {blun}. Let\'s look at the most important moments together.',
+    hi: '{result} तुम्हारी accuracy {acc}% रही। Best moves: {best}। Good moves: {good}। Inaccuracies: {inacc}, mistakes: {mist}, missed wins: {miss}, blunders: {blun}। चलो, सबसे ज़रूरी moments साथ में देखते हैं।',
+    mr: '{result} तुझी accuracy {acc}% होती. Best moves: {best}. Good moves: {good}. Inaccuracies: {inacc}, mistakes: {mist}, missed wins: {miss}, blunders: {blun}. चल, सगळ्यात महत्त्वाचे moments एकत्र बघूया.',
   },
   won: { en: 'You won this game. Well played!', hi: 'तुमने यह game जीता। बहुत बढ़िया!', mr: 'तू हा game जिंकलास. मस्त खेळलास!' },
   lost: { en: 'You lost this game, but every loss is a lesson.', hi: 'तुम यह game हार गए, पर हर हार एक lesson है।', mr: 'तू हा game हरलास, पण प्रत्येक हार एक lesson असते.' },
@@ -284,6 +342,11 @@ const T = {
     mr: 'हा झाला review. चांगल्या moves लक्षात ठेव, आणि ज्या positions मध्ये चूक झाली त्या practice कर: strong players असेच सुधारतात.',
   },
 };
+const MISSED: L10n = {
+  en: 'A win slipped away here: there was a much stronger move.',
+  hi: 'यहाँ जीत हाथ से निकल गई: इससे कहीं ज़्यादा strong move थी।',
+  mr: 'इथे जिंकायची संधी हुकली: याहून खूप जोरदार move होती.',
+};
 const GRADE: Record<Grade, L10n> = {
   blunder: { en: 'That was a blunder.', hi: 'यह blunder था।', mr: 'हा blunder होता.' },
   mistake: { en: 'That was a mistake.', hi: 'यह mistake थी।', mr: 'ही mistake होती.' },
@@ -303,7 +366,9 @@ export function reviewLesson(g: SavedGame, r: GameReview): Lesson {
   const side = g.userSide;
   const slides: Slide[] = [];
   const outcomeKey = g.result === '1/2-1/2' ? 'draw' : g.result === '*' ? 'unfinished' : (g.result === '1-0') === (side === 'white') ? 'won' : 'lost';
-  const vars = { acc: r.accuracy, best: r.counts.best, good: r.counts.good, inacc: r.counts.inaccuracy, mist: r.counts.mistake, blun: r.counts.blunder };
+  // Mistakes, missed wins and blunders as the badges count them.
+  const badge = (c: MoveClass) => r.moves.filter((m) => m.cls === c).length;
+  const vars = { acc: r.accuracy, best: r.counts.best, good: r.counts.good, inacc: r.counts.inaccuracy, mist: badge('mistake'), miss: badge('miss'), blun: badge('blunder') };
   slides.push({ fen: g.startFen, orientation: side, practice: false, text: both((l) => fill(T.summary[l], { ...vars, result: T[outcomeKey][l] })) });
 
   if (r.opening) {
@@ -335,7 +400,7 @@ export function reviewLesson(g: SavedGame, r: GameReview): Lesson {
       moves: [moveToUci(w.move)],
       orientation: side,
       arrows: replyOk ? [{ from: makeSquare(reply!.from), to: makeSquare(reply!.to), brush: 'red' }] : undefined,
-      text: both((l) => [fill(T.mistake[l], { n: moveNo(w.ply), san: w.san, grade: GRADE[w.grade][l] }), replyOk ? fill(T.punish[l], { reply: explainMove(next, reply!, l) }) : ''].filter(Boolean).join(' ')),
+      text: both((l) => [fill(T.mistake[l], { n: moveNo(w.ply), san: w.san, grade: (w.cls === 'miss' ? MISSED : GRADE[w.grade])[l] }), replyOk ? fill(T.punish[l], { reply: explainMove(next, reply!, l) }) : ''].filter(Boolean).join(' ')),
       practice: { fen: w.fenBefore, side },
     });
     const best = w.before.pv[0] ? uciToMove(w.before.pv[0]) : undefined;

@@ -34,6 +34,8 @@ export interface StudyLine {
   option?: boolean;
   /** The written plans it uses (default: its id). */
   plan?: string;
+  /** Hand-picked: a rare reply with too few games to be a chapter, listed with the chapters (the trainer continues it with our engines). */
+  sideline?: boolean;
 }
 export interface StudyOpening {
   id: string;
@@ -60,7 +62,10 @@ export const STUDY_OPENINGS: StudyOpening[] = Object.entries(REPS as Record<stri
     curated: r.lines,
     games: found?.games,
     lines: found?.chapters.length
-      ? found.chapters.map((c) => ({ id: c.id, name: c.name ? `${c.title} · ${c.name.replace(/^[^:]*: /, '')}` : c.title, sans: c.sans, title: c.title, openingName: c.name, games: c.games, score: c.score, variations: c.variations, depth: c.depth, key: c.key }))
+      ? [
+          ...found.chapters.map((c) => ({ id: c.id, name: c.name ? `${c.title} · ${c.name.replace(/^[^:]*: /, '')}` : c.title, sans: c.sans, title: c.title, openingName: c.name, games: c.games, score: c.score, variations: c.variations, depth: c.depth, key: c.key })),
+          ...r.lines.filter((l) => l.sideline && !found.chapters.some((c) => c.sans === l.sans)).map((l) => ({ ...l, name: `${l.name} (sideline)` })),
+        ]
       : r.lines.filter((l) => !l.option),
   };
 });
@@ -217,6 +222,27 @@ export const PLANS: Record<string, Plans> = {
         plans: [
           T('Against ...g6 White often plays Qd2 and Bh6 to trade Black\'s fianchetto bishop, castles queenside and pushes h4-h5.', '...g6 के ख़िलाफ़ White अक्सर Qd2 और Bh6 खेलकर Black का fianchetto bishop trade करता है, queenside castling करता है और h4-h5 धकेलता है।', '...g6 विरुद्ध White बऱ्याचदा Qd2 आणि Bh6 खेळून Black चा fianchetto bishop trade करतो, queenside castling करतो आणि h4-h5 ढकलतो.'),
           T('e4 builds a big centre; Black usually strikes back with ...c5 or ...d6 and ...e5.', 'e4 से बड़ा centre बनता है; Black आमतौर पर ...c5 या ...d6 और ...e5 से जवाब देता है।', 'e4 ने मोठं centre तयार होतं; Black सहसा ...c5 किंवा ...d6 आणि ...e5 ने उत्तर देतो.'),
+        ],
+      },
+      'sl-c5': {
+        plans: [
+          T('Against 1...c5, 2.d5 is the strongest: the pawn takes space and cramps Black\'s pieces. Then Nc3, Bf4 and e4 build a big centre.', '1...c5 के ख़िलाफ़ 2.d5 सबसे strong है: pawn जगह लेता है और Black के pieces को तंग कर देता है। फिर Nc3, Bf4 और e4 से बड़ा centre बनता है।', '1...c5 विरुद्ध 2.d5 सगळ्यात strong आहे: pawn जागा घेतो आणि Black च्या pieces ना अडचणीत टाकतो. मग Nc3, Bf4 आणि e4 ने मोठा centre तयार होतो.'),
+          T('2.dxc5 also works, but Black wins the pawn back with ...e6 and ...Bxc5 and develops easily.', '2.dxc5 भी चलता है, पर Black ...e6 और ...Bxc5 से pawn वापस ले लेता है और आराम से pieces निकालता है।', '2.dxc5 पण चालतो, पण Black ...e6 आणि ...Bxc5 ने pawn परत घेतो आणि सहज pieces बाहेर काढतो.'),
+        ],
+        watch: T('...Qb6 hits b2. Nc3 is a good pawn offer: after ...Qxb2, Bd2 and e4 give White a big lead in development.', '...Qb6 से b2 पर attack होता है। Nc3 अच्छा pawn offer है: ...Qxb2 के बाद Bd2 और e4 से White development में बहुत आगे निकल जाता है।', '...Qb6 ने b2 वर attack होतो. Nc3 हा चांगला pawn offer आहे: ...Qxb2 नंतर Bd2 आणि e4 ने White development मध्ये खूप पुढे जातो.'),
+      },
+      'sl-nc6': {
+        plans: [
+          T('Against 2...Nc6, 3.Bf4 keeps to the system, then e3, Nf3 and Bd3 or Bb5. The knight on c6 blocks Black\'s c-pawn, so ...c5 is hard to play.', '2...Nc6 के ख़िलाफ़ 3.Bf4 system में रहता है, फिर e3, Nf3 और Bd3 या Bb5। c6 वाला knight Black के c-pawn को रोकता है, इसलिए ...c5 खेलना मुश्किल है।', '2...Nc6 विरुद्ध 3.Bf4 system मध्येच राहतो, मग e3, Nf3 आणि Bd3 किंवा Bb5. c6 वरचा knight Black च्या c-pawn ला अडवतो, म्हणून ...c5 खेळणं अवघड जातं.'),
+          T('Bb5 pins the knight on c6 to the king, a handy extra idea once e3 is in.', 'e3 खेलने के बाद Bb5 c6 वाले knight को king के साथ pin करता है, यह एक काम का idea है।', 'e3 खेळल्यानंतर Bb5 ने c6 वरचा knight king सोबत pin होतो, हा एक कामाचा idea आहे.'),
+        ],
+        watch: T('...e5 is Black\'s break. Take with the bishop: Bxe5 Nxe5 dxe5, and after ...d4 the knight goes back to b1. Never retreat the bishop to c1: ...exd4 and ...Bb4+ hurt.', '...e5 Black का break है। Bishop से लो: Bxe5 Nxe5 dxe5, और ...d4 के बाद knight b1 पर वापस जाता है। Bishop को कभी c1 पर वापस मत ले जाओ: ...exd4 और ...Bb4+ से नुकसान होता है।', '...e5 हा Black चा break आहे. Bishop ने घे: Bxe5 Nxe5 dxe5, आणि ...d4 नंतर knight b1 वर परत जातो. Bishop कधीच c1 वर मागे नेऊ नकोस: ...exd4 आणि ...Bb4+ ने नुकसान होतं.'),
+      },
+      'sl-3nc6': {
+        plans: [
+          T('Against 3...Nc6, 4.Nb5! is the sharpest: it hits c7, and Black has only one good answer, the pawn offer ...e5.', '3...Nc6 के ख़िलाफ़ 4.Nb5! सबसे तेज़ है: यह c7 पर attack करता है, और Black के पास एक ही अच्छा जवाब है, pawn offer ...e5।', '3...Nc6 विरुद्ध 4.Nb5! सगळ्यात धारदार आहे: हा c7 वर attack करतो, आणि Black कडे एकच चांगलं उत्तर आहे, pawn offer ...e5.'),
+          T('After 4...e5 5.Bxe5 Nxe5 6.dxe5 the f6 knight is attacked; after ...a6 7.Nc3 d4 8.exf6 dxc3 9.Qxd8+ Kxd8 10.bxc3 gxf6, Black\'s pawns are broken and White has the better endgame.', '4...e5 5.Bxe5 Nxe5 6.dxe5 के बाद f6 वाले knight पर attack है; ...a6 7.Nc3 d4 8.exf6 dxc3 9.Qxd8+ Kxd8 10.bxc3 gxf6 के बाद Black के pawns टूट जाते हैं और White का endgame बेहतर है।', '4...e5 5.Bxe5 Nxe5 6.dxe5 नंतर f6 वरच्या knight वर attack आहे; ...a6 7.Nc3 d4 8.exf6 dxc3 9.Qxd8+ Kxd8 10.bxc3 gxf6 नंतर Black चे pawns तुटतात आणि White चा endgame चांगला असतो.'),
+          T('For a calm game, 4.e3 with Nf3 and Bb5 (pinning the knight on c6) is solid.', 'शांत game के लिए 4.e3, Nf3 और Bb5 (c6 वाले knight को pin करके) मज़बूत है।', 'शांत game साठी 4.e3, Nf3 आणि Bb5 (c6 वरचा knight pin करून) भक्कम आहे.'),
         ],
       },
       other: {

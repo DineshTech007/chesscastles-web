@@ -28,6 +28,7 @@
   import { track } from '$lib/analytics';
   import { BADGE_ORDER, BADGES, boardBadge, type MoveClass } from '$lib/review/badges';
   import MoveBadge from '$lib/review/MoveBadge.svelte';
+  import ReviewSummary from '$lib/review/ReviewSummary.svelte';
   import GuruAvatar from '$lib/coach/GuruAvatar.svelte';
 
   interface Ply {
@@ -118,6 +119,11 @@
   }
   let orientation = $state<'white' | 'black'>('white');
   let title = $state('Analysis board');
+  /** The players, from the title ("White – Black"). */
+  const playerNames = $derived.by(() => {
+    const [w, b] = title.split(' – ');
+    return b ? { white: w, black: b } : { white: 'White', black: 'Black' };
+  });
   let engineOn = $state(true);
   /** The engine (1 MB) starts once the page is on screen, so a slow phone shows the board first. */
   let pageDrawn = $state(false);
@@ -677,19 +683,7 @@
           <div class="bar"><span style="width: {reviewing * 100}%"></span></div>
         </div>
       {:else if review && !reviewStale}
-        <div class="report">
-          {#each ['white', 'black'] as const as c (c)}
-            <div class="side-acc">
-              <span class="disc {c}"></span>
-              <strong class="num">{review.result.sides[c].accuracy}%</strong>
-              <span class="chips">
-                {#each BADGE_ORDER.filter((k) => k !== 'good' && k !== 'book' && review!.result.sides[c].classes[k]) as k (k)}
-                  <span class="chip-b" title={BADGES[k].label}><MoveBadge kind={k} size={18} title={false} />{review.result.sides[c].classes[k]}</span>
-                {/each}
-              </span>
-            </div>
-          {/each}
-        </div>
+        <ReviewSummary review={review.result} names={playerNames} current={cursor} onselect={(p) => go(p)} compact />
       {:else if line.length >= 2}
         <button class="btn primary review-btn" onclick={reviewMoves}><Icon name="analyse" size={16} />{reviewStale ? 'Review the new moves' : 'Review every move (brilliant … blunder)'}</button>
       {/if}
@@ -794,7 +788,6 @@
     max-height: 300px;
   }
   .reviewing,
-  .report,
   .this-move {
     padding: 10px 14px;
     border-bottom: 1px solid var(--border);
@@ -812,45 +805,6 @@
     height: 100%;
     background: var(--brand);
     transition: width 0.3s;
-  }
-  .report {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .side-acc {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .side-acc strong {
-    font-size: 18px;
-    min-width: 44px;
-  }
-  .disc {
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-  }
-  .disc.white {
-    background: #f4f4f4;
-  }
-  .disc.black {
-    background: #222;
-  }
-  .chips {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .chip-b {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    font-weight: 700;
-    font-size: 14px;
   }
   .review-btn {
     margin: 10px 14px;

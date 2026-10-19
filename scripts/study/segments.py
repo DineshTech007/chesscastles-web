@@ -19,8 +19,11 @@ START, END = 14, 60
 
 def main():
     work = sys.argv[1]
+    only = sys.argv[2] if len(sys.argv) > 2 else None
     out = []
     for oid in ("caro-kann", "jobava-london", "chebanenko"):
+        if only and oid != only:
+            continue
         games = {}
         for line in open(os.path.join(work, f"{oid}.jsonl"), encoding="utf-8"):
             g = json.loads(line)
@@ -50,7 +53,7 @@ def main():
                             "year": g["y"], "event": g["ev"], "fen": b.fen(), "moves": ms[START:END]})
                 n += 1
         print(oid, len(endgames), "endgames,", n, "middlegames")
-    with open(os.path.join(work, "segments.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(work, f"segments{'-' + only if only else ''}.json"), "w", encoding="utf-8") as f:
         json.dump(out, f)
     print(len(out), "segments")
 

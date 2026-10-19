@@ -4,7 +4,7 @@
  * symbol. Colour is never the only clue: every badge has its own symbol
  * and name. Icon paths are Material Icons (Apache 2.0).
  */
-export type MoveClass = 'brilliant' | 'only' | 'best' | 'excellent' | 'good' | 'book' | 'inaccuracy' | 'mistake' | 'blunder';
+export type MoveClass = 'brilliant' | 'only' | 'best' | 'excellent' | 'good' | 'book' | 'inaccuracy' | 'mistake' | 'miss' | 'blunder';
 
 export interface Badge {
   label: string;
@@ -28,6 +28,8 @@ const THUMB_UP = 'M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.
 const STAR = 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z';
 const BOOK = 'M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z';
 const KEY = 'M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z';
+/** A target with nothing in the middle: the win that was there, not taken. */
+const TARGET = 'M20.94 11c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z';
 const CHECK = 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z';
 
 export const BADGES: Record<MoveClass, Badge> = {
@@ -39,11 +41,12 @@ export const BADGES: Record<MoveClass, Badge> = {
   book: { label: 'Book', meaning: 'Known opening theory', color: '#b07d52', dark: '#7c5130', ink: '#fff', glyph: icon(BOOK, 0.78) },
   inaccuracy: { label: 'Inaccuracy', meaning: 'A small slip: there was something better', color: '#eab308', dark: '#b45309', ink: '#fff', glyph: text('?!', 15) },
   mistake: { label: 'Mistake', meaning: 'Gives away a real part of the advantage', color: '#f97316', dark: '#c2410c', ink: '#fff', glyph: text('?', 19) },
+  miss: { label: 'Missed win', meaning: 'There was a clear win, and this move let it slip, though you are not losing', color: '#ec4899', dark: '#be185d', ink: '#fff', glyph: icon(TARGET, 0.8) },
   blunder: { label: 'Blunder', meaning: 'Throws away the game or a lot of material', color: '#ef4444', dark: '#b91c1c', ink: '#fff', glyph: text('??', 15) },
 };
 
 /** The order badges are listed in. */
-export const BADGE_ORDER: MoveClass[] = ['brilliant', 'only', 'best', 'excellent', 'good', 'book', 'inaccuracy', 'mistake', 'blunder'];
+export const BADGE_ORDER: MoveClass[] = ['brilliant', 'only', 'best', 'excellent', 'good', 'book', 'inaccuracy', 'mistake', 'miss', 'blunder'];
 
 /** The badge as SVG content in a 40 × 40 box: gradient disc, shine, ring, symbol with a soft shadow. */
 export function badgeSvg(c: MoveClass): string {

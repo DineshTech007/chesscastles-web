@@ -6,7 +6,9 @@
   import { session, startSignIn } from '$lib/auth';
   import { formatDate } from '$lib/format';
   import { KFIDE_PROVISIONAL, KFIDE_SPEEDS, SPEED_LABEL, kfideText, type KfideSpeed } from '$lib/kfide';
-  import { kfide, kfideAll, myPhoto, photoSrc, savePhoto, shrinkPhoto } from '$lib/stores/me';
+  import { kfide, kfideAll, myPhoto, photoSrc, savePhoto, shrinkPhoto, shownGames } from '$lib/stores/me';
+  import RatingChart from '$lib/review/RatingChart.svelte';
+  import AllTimeStats from '$lib/review/AllTimeStats.svelte';
   import { myGames } from '$lib/stores/myGames';
   import { FED_NAMES } from '$lib/fideFeds';
   import { fideSearch, displayName } from '$lib/api';
@@ -234,7 +236,9 @@
         </a>
       {/each}
     </div>
+    <RatingChart all={$kfideAll} />
   </section>
+  <AllTimeStats games={$shownGames} />
   <section class="ratings">
     {#if $session.status === 'in' && $session.profile}
       <div class="rating card"><span class="label">Puzzles</span><strong class="display num">{$session.profile.ratings.puzzle}</strong></div>

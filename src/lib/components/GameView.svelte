@@ -21,7 +21,8 @@
   import { kfideAll, myCountry, myPhoto, photoSrc } from '$lib/stores/me';
   import { kfideText, SPEED_LABEL, speedOf } from '$lib/kfide';
   import { session } from '$lib/auth';
-  import { analyseGame } from '$lib/coach/review';
+  import { analyseGame, type GameReview } from '$lib/coach/review';
+  import ReviewSummary from '$lib/review/ReviewSummary.svelte';
   import { quota } from '$lib/plans';
   import { lowTimeMs, playMoveSound, sounds } from '$lib/sound';
   import { clearResume, saveResume } from '$lib/game/resume';
@@ -79,6 +80,8 @@
   let viewPly = $state<number | undefined>();
   /** After the game: every move's badge (brilliant … blunder), and the progress while they are worked out. */
   let badges = $state<(MoveClass | undefined)[]>([]);
+  /** The finished review, for the report (graph, accuracy, badges). */
+  let summary = $state<GameReview | undefined>();
   let reviewing = $state<number | undefined>();
   let gone = false;
 
@@ -89,6 +92,7 @@
     try {
       const r = await analyseGame(g, (p) => (reviewing = p), quota('review_depth'), () => gone);
       badges = g.uci.map((_, i) => r.all.find((m) => m.ply === i)?.cls);
+      summary = r;
     } catch {
       /* left the page, or the engine can't run */
     } finally {
@@ -467,6 +471,9 @@
           <a class="btn" href="/analysis?game={id}"><Icon name="analyse" size={18} />Analyse</a>
           <ShareGame game={() => myGames.get(id)} />
         </div>
+        {#if summary}
+          <ReviewSummary review={summary} names={{ white: game.human === 'white' ? ($myName || 'You') : opponent, black: game.human === 'black' ? ($myName || 'You') : opponent }} current={viewPly ?? g.sans.length} onselect={go} compact />
+        {/if}
         <a class="btn guru" href="/coach/review/{id}"><Icon name="coach" size={18} />Review this game with Guru</a>
         <a class="btn ghost" href="/play">Change settings</a>
       </div>

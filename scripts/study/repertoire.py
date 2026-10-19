@@ -45,6 +45,9 @@ SPLITS = 3
 MIN_SHARE = 0.012
 MIN_GAMES = 25
 VAR_SHARE, VAR_GAMES, VAR_PLIES = 0.05, 8, 26
+# A young opening with fewer games (the Jobava London) gets lower limits, so every line that really occurs
+# (2...Nc6, 1...c5, 3...Bb4...) is a chapter and variations go as deep as its games allow.
+LIMITS = {"jobava-london": {"min_share": 0.003, "min_games": 20, "var_games": 4}}
 MODELS = 8
 ENDGAMES = 40
 VALUE = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9}
@@ -79,9 +82,15 @@ def is_endgame(b):
 
 def main():
     work, out_dir, chapters_path = sys.argv[1], sys.argv[2], sys.argv[3]
+    only = sys.argv[4] if len(sys.argv) > 4 else None
     names = opening_names()
-    all_chapters = {}
+    # One opening rebuilt: the others keep their chapters.
+    all_chapters = json.load(open(chapters_path, encoding="utf-8")) if only and os.path.exists(chapters_path) else {}
     for oid, side in SIDE.items():
+        if only and oid != only:
+            continue
+        lim = LIMITS.get(oid, {})
+        var_games = lim.get("var_games", VAR_GAMES)
         me = chess.WHITE if side == "white" else chess.BLACK
         games = [json.loads(line) for line in open(os.path.join(work, f"{oid}.jsonl"), encoding="utf-8")]
         # The opening's book: key -> uci -> [games, wins for the mover, draws]; and the positions each game reached.
@@ -105,7 +114,7 @@ def main():
             keys.append(khex(b))
             reached.append(keys)
         total_games = len(games)
-        min_games = max(MIN_GAMES, int(total_games * MIN_SHARE))
+        min_games = max(lim.get("min_games", MIN_GAMES), int(total_games * lim.get("min_share", MIN_SHARE)))
 
         def moves_at(k):
             return sorted(book.get(k, {}).items(), key=lambda x: -x[1][0])
@@ -165,7 +174,7 @@ def main():
                 return [depth_mine]
             rows = moves_at(k)
             tot = sum(v[0] for _, v in rows)
-            if tot < VAR_GAMES:
+            if tot < var_games:
                 return [depth_mine]
             seen = seen | {k}
             if b.turn == me:
@@ -174,7 +183,7 @@ def main():
                 return variations(b2, depth_mine + 1, seen)
             out = []
             for u, v in rows:
-                if v[0] >= VAR_GAMES and v[0] / tot >= VAR_SHARE:
+                if v[0] >= var_games and v[0] / tot >= VAR_SHARE:
                     b2 = b.copy()
                     b2.push(chess.Move.from_uci(u))
                     out += variations(b2, depth_mine, seen)

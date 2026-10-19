@@ -25,10 +25,13 @@ START, END = 12, 80
 
 def main():
     work, chapters_path = sys.argv[1], sys.argv[2]
+    only = sys.argv[3] if len(sys.argv) > 3 else None
     chapters = json.load(open(chapters_path, encoding="utf-8"))
     random.seed(11)
     out = []
     for oid, d in chapters.items():
+        if only and oid != only:
+            continue
         keys = {c["key"]: c["id"] for c in d["chapters"]}
         depth = {c["key"]: len(c["sans"].split()) for c in d["chapters"]}
         pool = []
@@ -63,7 +66,7 @@ def main():
             if all(taken.get(c["id"], 0) >= PER_CHAPTER for c in d["chapters"]):
                 break
         print(oid, sum(taken.values()), "games over", len(taken), "chapters")
-    with open(os.path.join(work, "segments2.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(work, f"segments2{'-' + only if only else ''}.json"), "w", encoding="utf-8") as f:
         json.dump(out, f)
     print(len(out), "segments")
 

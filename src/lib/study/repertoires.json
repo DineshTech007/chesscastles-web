@@ -140,6 +140,24 @@
         "id": "g6",
         "name": "Against ...g6 (2...g6)",
         "sans": "d4 Nf6 Nc3 g6"
+      },
+      {
+        "id": "sl-c5",
+        "name": "1...c5",
+        "sans": "d4 c5",
+        "sideline": true
+      },
+      {
+        "id": "sl-nc6",
+        "name": "2...Nc6",
+        "sans": "d4 d5 Nc3 Nc6",
+        "sideline": true
+      },
+      {
+        "id": "sl-3nc6",
+        "name": "3...Nc6",
+        "sans": "d4 d5 Nc3 Nf6 Bf4 Nc6",
+        "sideline": true
       }
     ]
   },

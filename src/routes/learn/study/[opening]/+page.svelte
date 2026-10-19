@@ -289,6 +289,8 @@
                 <p class="label stats">
                   {l.games.toLocaleString('en-IN')} games · {opening.side === 'white' ? 'White' : 'Black'} scores {Math.round((l.score ?? 0) * 100)}%{l.variations ? ` · ${l.variations} variations, about ${l.depth} of your moves each` : ''}
                 </p>
+              {:else if l.sideline}
+                <p class="label stats">A rare reply: only a few games in the database, so the trainer continues it with our engines (Stockfish for your moves, the human-like engine for your opponent's).</p>
               {/if}
               {#each written as c (c.id)}
                 {@const p = planOf(opening, c)!}

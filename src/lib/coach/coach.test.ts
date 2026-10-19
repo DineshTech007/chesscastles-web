@@ -74,7 +74,7 @@ describe('game review', () => {
       opening: { eco: 'C44', name: "King's Knight Opening: Normal Variation", plies: 4 },
       moves: [{ ply: 4, san: 'Nxe5', move: uciToMove('f3e5')!, color: 'white', grade: 'blunder', cls: 'blunder', drop: 0.3, before: info(40, ['f1b5']), after: info(-300, ['c6e5']), fenBefore: before }],
       all: [],
-      sides: { white: { accuracy: 61, classes: { brilliant: 0, only: 0, best: 2, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 1 } }, black: { accuracy: 90, classes: { brilliant: 0, only: 0, best: 3, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 0 } } },
+      sides: { white: { accuracy: 61, classes: { brilliant: 0, only: 0, best: 2, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 1 } }, black: { accuracy: 90, classes: { brilliant: 0, only: 0, best: 3, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 0 } } },
       fens: [],
     };
     const lesson = reviewLesson(game, review);
@@ -111,6 +111,22 @@ describe('review badges', () => {
     expect(classify({ ...base, pos, move: uciToMove('f1b5')!, before, after: info(f, 30, ['a7a6']), grade: 'best', book: true })).toBe('book');
     expect(classify({ ...base, pos, move: uciToMove('f1c4')!, before, after: info(f, 25, ['f8c5']), grade: 'good', drop: 0.005 })).toBe('excellent');
     expect(classify({ ...base, pos, move: uciToMove('a2a3')!, before, after: info(f, -400, []), grade: 'blunder', drop: 0.4, book: true })).toBe('blunder');
+  });
+
+  it('a missed win is not a blunder: still winning, or a slip not punished; losing the win is', () => {
+    const pos = playSans('e4 e5 Nf3 Nc6');
+    const f = fenOf(pos);
+    const move = uciToMove('a2a3')!;
+    // Mate in 2 missed, still five pawns up.
+    expect(classify({ ...base, pos, move, before: info(f, 0, ['f3g5'], 2), after: info(f, 500, []), grade: 'blunder', drop: 0.14 })).toBe('miss');
+    // The opponent hung a piece (+0.2 to +4), the move did not take it: back to +0.2.
+    expect(classify({ ...base, pos, move, prevBefore: info(f, 20, []), before: info(f, 400, ['f3e5']), after: info(f, 20, []), grade: 'blunder', drop: 0.3 })).toBe('miss');
+    // Four pawns up, and the move hangs a piece of its own: a blunder.
+    expect(classify({ ...base, pos, move, prevBefore: info(f, 400, []), before: info(f, 400, ['f3e5']), after: info(f, 20, []), grade: 'blunder', drop: 0.3 })).toBe('blunder');
+    // Winning, and now losing: a blunder.
+    expect(classify({ ...base, pos, move, prevBefore: info(f, 20, []), before: info(f, 400, ['f3e5']), after: info(f, -300, []), grade: 'blunder', drop: 0.6 })).toBe('blunder');
+    // Black's view: Black was winning (-5) and is still winning (-2.5).
+    expect(classify({ ...base, color: 'black', pos, move, before: info(f, -500, []), after: info(f, -250, []), grade: 'mistake', drop: 0.15 })).toBe('miss');
   });
 });
 
