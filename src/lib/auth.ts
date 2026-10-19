@@ -174,18 +174,28 @@ export async function finishSignIn(params: URLSearchParams): Promise<string> {
     return back;
   }
 
+  await signInWithLichessToken(access_token);
+  return back;
+}
+
+/**
+ * Signs in with a Lichess access token: the one OAuth just gave, or a
+ * personal access token of the account pasted on /auth/token (a tester's
+ * sign-in, where Lichess's human check stops an automated browser). The
+ * token gives exactly what it already gives on Lichess.
+ */
+export async function signInWithLichessToken(token: string): Promise<void> {
   const bridge = await fetch(BRIDGE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lichessToken: access_token }),
+    body: JSON.stringify({ lichessToken: token }),
   });
   const body = await bridge.json().catch(() => ({}));
   if (!bridge.ok) throw new Error(body.error ?? 'Chess Castles sign-in is unavailable right now.');
 
-  localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: access_token, username: body.username }));
+  localStorage.setItem(TOKEN_KEY, JSON.stringify({ token, username: body.username }));
   const cred = await signInWithCustomToken(auth, body.firebaseToken);
   await ensureProfile(cred.user.uid, body.username);
-  return back;
 }
 
 async function ensureProfile(uid: string, username: string) {
