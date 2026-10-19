@@ -18,6 +18,7 @@
   import { STUDY_OPENINGS } from '$lib/study/openingStudy';
   import { loadInsights } from '$lib/insights/store';
   import { isWeak, studyStats, type StudyLineStat } from '$lib/study/fromGames';
+  import OpeningCheckup from '$lib/study/OpeningCheckup.svelte';
   import { loadWeeklyPlan, progressOf, saveWeeklyPlan, weekProgress, type WeeklyPlan } from '$lib/insights/plan';
   import {
     badges,
@@ -201,7 +202,7 @@
   // (?tab=openings&sub=trainer), so links can open it; old links used
   // #openings (the trainer) and #guru-plan.
   type Tab = 'start' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'plan';
-  type Sub = 'courses' | 'lessons' | 'trainer' | 'players';
+  type Sub = 'mine' | 'courses' | 'lessons' | 'trainer' | 'players';
   const TABS: { id: Tab; label: string; icon: IconName; color: string; what: string }[] = [
     { id: 'start', label: 'Start', icon: 'home', color: 'var(--brand)', what: 'Everything you can learn here, in one place.' },
     { id: 'openings', label: 'Openings', icon: 'tree', color: 'var(--series-1)', what: 'How to begin a game: the first moves, and the ideas behind them.' },
@@ -211,6 +212,7 @@
     { id: 'plan', label: 'My plan', icon: 'flame', color: 'var(--gold)', what: 'What to study each day, your streak, your goal for the month and your rewards.' },
   ];
   const SUBS: { id: Sub; label: string; what: string }[] = [
+    { id: 'mine', label: 'Your games', what: 'Your opening check-up: the lines where your results drop in your own games, and how to fix each one.' },
     { id: 'courses', label: 'Courses', what: 'Full courses for one opening: every line, the plans, model games, puzzles, and games against FIDE-rated opponents from the line.' },
     { id: 'lessons', label: 'Lessons', what: 'Short lessons with Guru about the ideas of each opening, from the first rules to grandmaster openings.' },
     { id: 'trainer', label: 'Trainer', what: 'Learn the moves by heart: you play your side, and lines come back until you know them.' },
@@ -225,7 +227,7 @@
   const sub = $derived.by((): Sub => {
     const q = page.url.searchParams.get('sub');
     if (SUBS.some((s) => s.id === q)) return q as Sub;
-    return page.url.hash === '#openings' ? 'trainer' : 'courses';
+    return page.url.hash === '#openings' ? 'trainer' : 'mine';
   });
   function show(t: Tab, s?: Sub) {
     const u = new URL(page.url);
@@ -444,7 +446,9 @@
       </div>
       <p class="sub-what">{SUBS.find((s) => s.id === sub)?.what}</p>
 
-      {#if sub === 'courses'}
+      {#if sub === 'mine'}
+        <OpeningCheckup />
+      {:else if sub === 'courses'}
         <div class="s-grid">
           {#each STUDY_OPENINGS as o (o.id)}
             {@const weakLine = studyWeak.find((x) => x.opening === o.id)}

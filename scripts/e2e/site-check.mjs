@@ -316,6 +316,13 @@ async function run(name, options) {
       return `${avg} ms a move over ${timed} moves`;
     });
 
+  // 5e. Learn → Openings opens on the opening check-up (your games).
+  await check(name, page, 'learn openings: the opening check-up is there', async () => {
+    await open(page, '/learn?tab=openings');
+    await page.locator('input[aria-label="chess.com username"]').waitFor({ timeout: 10000 });
+    expect((await page.locator('button:has-text("Check my openings"), button:has-text("Check again")').count()) > 0, 'no check-up button');
+  });
+
   // 5d. The "Get the Chess Castles app" popup opens (forced: automated visits never get it) and closes.
   await check(name, page, 'install the app: the popup opens and closes', async () => {
     await open(page, '/?install=show');

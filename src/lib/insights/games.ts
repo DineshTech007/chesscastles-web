@@ -122,8 +122,17 @@ async function getJson(url: string): Promise<any> {
   throw new Error('chess.com asks us to slow down. Try again in a few minutes.');
 }
 
-/** The player's newest `count` standard games from chess.com, newest first. */
-export async function chessComGames(username: string, count: number, onProgress?: (found: number) => void): Promise<ImportedGame[]> {
+/**
+ * The player's newest `count` standard games from chess.com, newest first
+ * (`keep`: only these games, daily ones too; `months`: how far back to look
+ * once some are found, a year by default).
+ */
+export async function chessComGames(
+  username: string,
+  count: number,
+  onProgress?: (found: number) => void,
+  o: { keep?: (g: ImportedGame) => boolean; months?: number } = {},
+): Promise<ImportedGame[]> {
   const user = username.trim().toLowerCase();
   if (!/^[a-z0-9_-]{3,25}$/.test(user)) throw new Error('chess.com usernames have 3 to 25 letters, digits, "_" or "-".');
   const archives: string[] = ((await getJson(`${CHESSCOM}/pub/player/${user}/games/archives`)).archives ?? []).filter((u: unknown) => typeof u === 'string' && u.startsWith(`${CHESSCOM}/pub/player/`));
@@ -132,12 +141,12 @@ export async function chessComGames(username: string, count: number, onProgress?
     const games: any[] = (await getJson(url)).games ?? [];
     for (const j of [...games].reverse()) {
       const g = parseChessCom(j, user);
-      if (g && g.timeClass !== 'daily' && g.uci.length >= 10) out.push(g);
+      if (g && (o.keep ? o.keep(g) : g.timeClass !== 'daily') && g.uci.length >= 10) out.push(g);
       if (out.length >= count) break;
     }
     onProgress?.(out.length);
     // Enough games, or a year back with some found already.
-    if (out.length >= count || (out.length > 0 && archives.indexOf(url) < archives.length - 12)) break;
+    if (out.length >= count || (out.length > 0 && archives.indexOf(url) < archives.length - (o.months ?? 12))) break;
   }
   return out.slice(0, count);
 }

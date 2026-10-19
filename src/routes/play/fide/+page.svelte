@@ -41,7 +41,12 @@
   const studyLine = studyOpening(q.get('o') ?? '');
   // From the opening study's tree: any position of the opening ("moves" in SAN).
   const custom = studyLine && q.get('moves') ? { ...studyLine, sans: q.get('moves')!.trim(), name: `${studyLine.name} (your position)` } : undefined;
-  const opening = OPENINGS.find((o) => o.id === q.get('o')) ?? custom ?? studyLine;
+  // Any line ("o=line&moves=e4 c5 c3"), e.g. a problem line from the opening check-up.
+  const anyLine =
+    q.get('o') === 'line' && q.get('moves')
+      ? { id: 'line', name: q.get('name')?.slice(0, 80) || 'Your line', sans: q.get('moves')!.trim(), blurb: 'A line from your games.', side: q.get('c') === 'black' ? ('black' as const) : ('white' as const) }
+      : undefined;
+  const opening = OPENINGS.find((o) => o.id === q.get('o')) ?? custom ?? studyLine ?? anyLine;
   const fromLine = q.get('start') === 'line';
 
   /** Opened to resume a game cut off by a lost connection or a closed browser. */
