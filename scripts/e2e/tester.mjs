@@ -545,8 +545,9 @@ async function learnMore(which) {
         await page.waitForTimeout(2500);
         const db = (await page.locator('.db, .card.db, .database').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
         const reached = /([\d,]+) rated games reached/.exec(db)?.[1];
-        const top = /Move Games[^]*?([a-hKQRBNO][^ ]*) ([\d,]+)/.exec(db);
-        steps.push(`${i + 1}: ${reached ?? '?'} games reached; top move ${top?.[1] ?? '?'} (${top?.[2] ?? '?'})`);
+        // The first row under the "Move · Games · White · Draw · Black" header: the database's top move.
+        const top = /White · Draw · Black\s+(\S+)\s+([\d,]+)/.exec(db);
+        steps.push(`${i + 1}: ${reached ?? '?'} games reached; top move ${top?.[1] ?? '?'} (${top?.[2] ?? '?'} games)`);
       }
       f.text = steps.join(' · ');
       f.used.push(`database review of game ${g.n}`);
