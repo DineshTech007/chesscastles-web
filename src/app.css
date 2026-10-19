@@ -103,6 +103,32 @@ button {
   outline-offset: 2px;
 }
 
+/* No text cursor where you click: it shows only where you type. (Browsers
+   draw it on any text when caret browsing is on, F7.) No grey flash on tap. */
+html {
+  caret-color: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+input,
+textarea,
+[contenteditable]:not([contenteditable='false']) {
+  caret-color: auto;
+}
+/* Quick clicks on controls and the board don't select their text. */
+button,
+.btn,
+.chip,
+.segmented,
+[role='tab'],
+[role='slider'],
+summary,
+label,
+nav a,
+.cg-wrap {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
