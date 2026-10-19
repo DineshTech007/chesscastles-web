@@ -151,7 +151,7 @@ const last = finalPost();
 if (last) posts.push(last);
 const curve = sessions.map((s) => ({ session: s.session, date: s.when.slice(0, 10), rating: s.ratingAfter ?? s.ratingBefore ?? 1500 }));
 const journey = {
-  updated: new Date().toISOString().slice(0, 10),
+  updated: new Date().toLocaleDateString('en-CA'),
   target: TARGET,
   reached: !!last,
   hero: { ...FRAME, start: 1500, now: sessions.at(-1)?.ratingAfter ?? 1500, sessions: sessions.length, games: games.length, record: rec(games) },
