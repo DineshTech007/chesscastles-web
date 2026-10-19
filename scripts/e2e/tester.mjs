@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { Chess } from 'chessops/chess';
 import { makeFen, parseFen } from 'chessops/fen';
 import { makeSquare, parseUci } from 'chessops/util';
+import { makeSan } from 'chessops/san';
 
 const args = process.argv.slice(2);
 const flag = (n, d) => (args.includes(n) ? args[args.indexOf(n) + 1] : d);
@@ -390,7 +391,7 @@ async function studyCourse(c) {
 
 // ---- the rest of Learn: one section a session, in turn (tactics, strategy, endgames, the plan,
 // rated puzzles, a Guru review of a game, Masters, Vision Gym, Books).
-const LEARN = ['tactics', 'puzzles', 'strategy', 'guru-review', 'endgames', 'plan', 'masters', 'vision', 'books'];
+const LEARN = ['tactics', 'puzzles', 'strategy', 'guru-review', 'endgames', 'database-review', 'masters-endgames', 'vision-drill', 'watch-game', 'openings-other', 'traps', 'books-read', 'leaderboard', 'plan', 'masters', 'vision', 'books'];
 
 /** The board's position from the pieces on it (for puzzles, where the site keeps no move record). */
 async function boardFen(side) {
@@ -531,6 +532,178 @@ async function learnMore(which) {
       f.used.push(`Guru review of game ${g.n}`);
       await shot(page, 'learn-guru');
     } else f.notes.push('no game to review');
+  } else if (which === 'database-review') {
+    // My last game against the 5.4 million games: what the database plays where I left it.
+    const g = [...games].reverse().find((x) => x.id);
+    if (g) {
+      await open(`/analysis?game=${g.id}&tab=database`, 'Analysis → Database');
+      await page.waitForTimeout(4000);
+      const steps = [];
+      for (let i = 0; i < 6; i++) {
+        await page.locator('.panel-nav [aria-label="Next move"], [aria-label="Next move"]').first().click({ timeout: 4000 }).catch(() => {});
+        await page.waitForTimeout(2500);
+        const db = (await page.locator('.db, .card.db, .database').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+        const reached = /([\d,]+) rated games reached/.exec(db)?.[1];
+        const top = /Move Games[^]*?([a-hKQRBNO][^ ]*) ([\d,]+)/.exec(db);
+        steps.push(`${i + 1}: ${reached ?? '?'} games reached; top move ${top?.[1] ?? '?'} (${top?.[2] ?? '?'})`);
+      }
+      f.text = steps.join(' · ');
+      f.used.push(`database review of game ${g.n}`);
+      await shot(page, 'learn-database');
+    } else f.notes.push('no game to review');
+  } else if (which === 'masters-endgames') {
+    await open('/learn/masters', 'Endgames with the masters');
+    const t = page.locator('.t-card').first();
+    if (await t.count()) {
+      await t.click();
+      await page.waitForTimeout(2500);
+      pagesSeen.add(new URL(page.url()).pathname);
+      const l = page.locator('.l-card').first();
+      if (await l.count()) {
+        const name = (await l.innerText()).replace(/\s+/g, ' ').slice(0, 80);
+        await l.click();
+        await page.waitForTimeout(4000);
+        pagesSeen.add(new URL(page.url()).pathname);
+        for (let i = 0; i < 5; i++) {
+          const b = page.locator('main button:visible').filter({ hasText: /Next|Continue|Show|Play|Got it|Start/i }).first();
+          if (!(await b.count())) break;
+          await b.click({ timeout: 4000 }).catch(() => {});
+          await page.waitForTimeout(2000);
+        }
+        f.used.push(`masters lesson: ${name}`);
+      } else f.notes.push('no lesson cards on the master page');
+      f.text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 500);
+    } else f.notes.push('no master cards');
+    await shot(page, 'learn-masters-endgames');
+  } else if (which === 'vision-drill') {
+    // Blindfold puzzle: the board is shown, then hidden; the move is typed. The engine finds it
+    // from a peek (practice, not rated), so this checks the drill, not Aarav's own vision.
+    await open('/vision/blind', 'Vision Gym → blindfold');
+    const easier = page.locator('button:has-text("After their move")');
+    if (await easier.count()) await easier.click().catch(() => {});
+    const results = [];
+    for (let i = 0; i < 2; i++) {
+      const peek = page.locator('button:has-text("Peek at the board")');
+      if (!(await peek.count())) break;
+      await peek.click();
+      await page.waitForTimeout(400);
+      const text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ');
+      const side = /Black to (move|play)/i.test(text) ? 'black' : 'white';
+      const fen = await boardFen(side);
+      if (!fen) break;
+      let san = '';
+      try {
+        const pos = Chess.fromSetup(parseFen(fen).unwrap()).unwrap();
+        const best = await bestMove(fen);
+        const m = parseUci(best);
+        san = makeSan(pos, m);
+      } catch {
+        break;
+      }
+      await page.waitForTimeout(2500);
+      for (const ch of san.replace(/[+#]$/, '').match(/O-O-O|O-O|./g) ?? []) await page.locator('.key', { hasText: new RegExp(`^${ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }).first().click({ timeout: 2000 }).catch(() => {});
+      await page.locator('button:has-text("Play")').first().click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(2000);
+      results.push(`${san}: ${(await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').match(/(Correct|Right|Solved|Not that|Wrong|answer was [^.]+)[^.]*/i)?.[0] ?? 'no verdict read'}`);
+      const next = page.locator('main button, main a.btn').filter({ hasText: /Next|Another|again/i }).first();
+      if (await next.count()) await next.click().catch(() => {});
+      await page.waitForTimeout(2000);
+    }
+    f.text = results.join(' · ') || (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
+    f.used.push('blindfold drill (with peek)');
+    await shot(page, 'learn-vision-blind');
+  } else if (which === 'watch-game') {
+    await open('/watch', 'Watch');
+    const all = page.locator('a:has-text("Watch all boards")').first();
+    if (await all.count()) {
+      await all.click();
+      await page.waitForTimeout(3000);
+      pagesSeen.add(new URL(page.url()).pathname);
+      const board = page.locator('a[href*="/watch/"]').filter({ hasNot: page.locator('text=Watch all boards') }).first();
+      if (await board.count()) {
+        await board.click();
+        await page.waitForTimeout(4000);
+        pagesSeen.add(new URL(page.url()).pathname);
+        const moves = await page.locator('.moves-card button').count();
+        await page.locator('.nav-card [aria-label="Previous move"]').first().click({ timeout: 4000 }).catch(() => f.notes.push('no Previous move button under the board'));
+        await page.locator('label.toggle:has-text("Engine") input').check({ timeout: 4000 }).catch(() => f.notes.push('no Engine switch'));
+        await page.waitForTimeout(4000);
+        const engine = (await page.locator('label.toggle:has-text("Engine")').innerText().catch(() => '')).replace(/\s+/g, ' ');
+        await page.locator('label.toggle:has-text("Database") input').check({ timeout: 4000 }).catch(() => f.notes.push('no Database switch'));
+        await page.waitForTimeout(3000);
+        f.text = `${moves} moves in the list; engine: ${engine}; database panel: ${(await page.locator('.card.db').count()) ? 'shown' : 'not shown'}`;
+        f.used.push('a live board with moves, engine and database');
+      } else f.notes.push('no board link on the tournament page');
+    } else f.notes.push('no "Watch all boards" link');
+    await shot(page, 'learn-watch');
+  } else if (which === 'openings-other') {
+    // Another opening from the trainer's catalogue: the Italian (a beginner's first 1.e4 opening).
+    await open('/learn/openings/italian', 'Opening trainer: Italian');
+    const build = page.locator('button:has-text("Build and start training")');
+    if (await build.count()) await build.click();
+    await page.locator('cg-board').first().waitFor({ timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(3000);
+    const before = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 200);
+    // Two of my moves, by the engine: the trainer tells me when it is not the line's move.
+    for (let i = 0; i < 2; i++) {
+      const text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ');
+      const side = /You play Black|Black to move/i.test(text) ? 'black' : 'white';
+      const fen = await boardFen(side);
+      if (!fen) break;
+      const best = await bestMove(fen);
+      const orientation = (await page.locator('.cg-wrap.orientation-black').count()) ? 'black' : 'white';
+      await clickSquare(best.slice(0, 2), orientation);
+      await page.waitForTimeout(300);
+      await clickSquare(best.slice(2, 4), orientation);
+      await page.waitForTimeout(2500);
+    }
+    f.text = `${before} … after two moves: ${(await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)}`;
+    f.used.push('Italian trainer, two moves');
+    await shot(page, 'learn-italian');
+  } else if (which === 'traps') {
+    await open('/learn?tab=openings&sub=lessons', 'Opening lessons (traps)');
+    const link = page.locator('main a').filter({ hasText: /trap|Opening basics|principles/i }).first();
+    if (await link.count()) {
+      const name = (await link.innerText()).replace(/\s+/g, ' ').slice(0, 80);
+      await link.click();
+      await page.waitForTimeout(3000);
+      pagesSeen.add(new URL(page.url()).pathname);
+      for (let i = 0; i < 6; i++) {
+        const b = page.locator('main button:visible').filter({ hasText: /Next|Continue|Show|Got it/i }).first();
+        if (!(await b.count())) break;
+        await b.click({ timeout: 4000 }).catch(() => {});
+        await page.waitForTimeout(1500);
+      }
+      f.used.push(`lesson: ${name}`);
+      f.text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 500);
+    } else f.notes.push('no lesson about traps or opening basics found');
+    await shot(page, 'learn-traps');
+  } else if (which === 'books-read') {
+    await open('/books', 'Books');
+    const first = page.locator('a[href^="/books/"]').first();
+    if (await first.count()) {
+      await first.click();
+      await page.waitForTimeout(3000);
+      pagesSeen.add(new URL(page.url()).pathname);
+      const words = (await page.locator('main').innerText().catch(() => '')).split(/\s+/).length;
+      await page.mouse.wheel(0, 2400);
+      await page.waitForTimeout(1000);
+      const next = page.locator('main a, main button').filter({ hasText: /Next|chapter/i }).first();
+      if (await next.count()) await next.click().catch(() => {});
+      await page.waitForTimeout(2000);
+      f.text = `${words} words on the first page; ${(await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)}`;
+      f.used.push('a book: first page read, next chapter');
+    } else f.notes.push('no book links');
+    await shot(page, 'learn-books-read');
+  } else if (which === 'leaderboard') {
+    await open('/leaderboard', 'Leaderboard');
+    const text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ');
+    f.text = text.slice(0, 400);
+    f.used.push(`leaderboard (${/chesscastlestester/i.test(text) ? 'I am on it' : 'I am not on it'})`);
+    const tab = page.locator('main button[aria-pressed], main .chip').nth(1);
+    if (await tab.count()) await tab.click().catch(() => {});
+    await page.waitForTimeout(1500);
+    await shot(page, 'learn-leaderboard');
   } else if (which === 'masters') {
     await open('/learn/masters', 'Masters');
     f.text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 400);
@@ -655,7 +828,8 @@ try {
   // An opponent within about 100 points (the opponents go from 1400 up, in steps of 100).
   const opp = Math.max(1400, Math.min(2800, Math.round(my / 100) * 100));
   const plain = Math.min(2, GAMES);
-  for (let n = 1; n <= plain; n++) await playGame(n, opp, n % 2 ? 'white' : 'black');
+  // Game 1 at my level, game 2 one level up (how I do against stronger FIDE-rated opponents).
+  for (let n = 1; n <= plain; n++) await playGame(n, n === 2 ? Math.min(2800, opp + 100) : opp, n % 2 ? 'white' : 'black');
   studied = await studyCourse(course);
   learned = await learnMore(LEARN[(state.session - 1) % LEARN.length]).catch((e) => ({ feature: 'Learn', used: [], notes: [String(e).slice(0, 200)] }));
   for (let n = plain + 1; n <= GAMES; n++) await playGame(n, opp, course.side, `st-${course.id}--${course.line}`);
@@ -700,8 +874,8 @@ const md = [
   `# Tester session ${when} · ${BASE}`, '',
   `Signed in as **${signedInAs || '(sign-in failed)'}** · session ${state.session} · engine skill level after this session: ${state.skill}`, '',
   '## 1. Summary', '',
-  `- Games played: ${games.length} (rapid 15+10, against the FIDE-rated ${games[0]?.opp ?? '?'} opponent)`,
-  ...games.map((g) => `- Game ${g.n}: ${g.result} · ${g.reason} · ${g.moves} plies · ${g.minutes} min · as ${g.color}${g.opening ? ` · from the studied line (${g.opening})` : ''} · ${g.ratingChange || 'no rating line'}`),
+  `- Games played: ${games.length} (rapid 15+10, against FIDE-rated opponents ${[...new Set(games.map((g) => g.opp))].join(' and ')})`,
+  ...games.map((g) => `- Game ${g.n}: vs FIDE ${g.opp} · ${g.result} · ${g.reason} · ${g.moves} plies · ${g.minutes} min · as ${g.color}${g.opening ? ` · from the studied line (${g.opening})` : ''} · ${g.ratingChange || 'no rating line'}`),
   `- Rating before: ${before.menu?.text ?? '?'}`, `- Rating after: ${after.menu?.text ?? '?'}`, '',
   '## 2. Bugs', '',
   bugs.length ? '| ID | Title | Severity | Feature | Steps to reproduce | Expected | Actual | Screenshot |\n|---|---|---|---|---|---|---|---|\n' + bugs.map((b) => `| ${idOf(b)} | ${b.title} | ${b.severity} | ${b.feature} | ${b.steps} | ${b.expected} | ${b.actual} | ${b.shot} |`).join('\n') : 'No bugs found this session.',
