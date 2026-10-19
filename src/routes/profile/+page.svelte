@@ -1,5 +1,6 @@
 <script lang="ts">
   import { myName, setMyName } from '$lib/stores/me';
+  import { page } from '$app/state';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -104,6 +105,8 @@
       .sort((a, b) => b.at - a.at)
       .slice(0, 12),
   );
+  /** The speed the rating chart shows: ?speed= from the home page's tiles, then the tile clicked. */
+  let chartSpeed = $state<KfideSpeed | undefined>(KFIDE_SPEEDS.find((s) => s === page.url.searchParams.get('speed')));
   const SPEED_TCS: Record<KfideSpeed, string> = { standard: '60+0 · 90+30', rapid: '10+0 · 15+10 · 30+0', blitz: '5+0' };
 
   async function pick(e: Event) {
@@ -228,12 +231,22 @@
   {/if}
   <CoachWork manage />
 
-  <section class="card kcard" aria-labelledby="kfide-h">
+  <section class="card kcard" id="cc-ratings" aria-labelledby="kfide-h">
     <h2 id="kfide-h" class="title">CC Ratings</h2>
     <div class="kspeeds">
       {#each KFIDE_SPEEDS as s (s)}
         {@const k = $kfideAll[s]}
-        <a class="kspeed" class:main={$kfideAll.main === s && k.games > 0} href="/play?mode=fide">
+        <a
+          class="kspeed"
+          class:main={$kfideAll.main === s && k.games > 0}
+          class:shown={k.games > 0 && (chartSpeed ?? $kfideAll.main) === s}
+          href={k.games ? `?speed=${s}#cc-ratings` : '/play?mode=fide'}
+          onclick={(e) => {
+            if (!k.games) return;
+            e.preventDefault();
+            chartSpeed = s;
+          }}
+        >
           <span class="ks-head"><span class="label">{SPEED_LABEL[s]}</span>{#if $kfideAll.main === s && k.games}<span class="main-tag">Main</span>{/if}</span>
           <strong class="display num">{k.games ? kfideText(k) : '—'}</strong>
           <span class="label">{k.games ? `${k.games} ${k.games === 1 ? 'game' : 'games'}` : `Not played yet · starts at ${k.rating}`}</span>
@@ -241,14 +254,12 @@
         </a>
       {/each}
     </div>
-    <RatingChart all={$kfideAll} />
+    <RatingChart all={$kfideAll} bind:speed={chartSpeed} />
   </section>
   <AllTimeStats games={$shownGames} />
   <section class="ratings">
     {#if $session.status === 'in' && $session.profile}
-      <div class="rating card"><span class="label">Puzzles</span><strong class="display num">{$session.profile.ratings.puzzle}</strong></div>
-      <div class="rating card"><span class="label">Blitz</span><strong class="display num">{$session.profile.ratings.blitz}</strong></div>
-      <div class="rating card"><span class="label">Rapid</span><strong class="display num">{$session.profile.ratings.rapid}</strong></div>
+      <a class="rating card" href="/puzzles"><span class="label">Puzzle rating</span><strong class="display num">{$session.profile.ratings.puzzle}</strong></a>
     {/if}
   </section>
 
@@ -456,6 +467,11 @@
   .kspeed.main strong {
     color: var(--gold);
   }
+  /* The speed the chart below shows. */
+  .kspeed.shown {
+    outline: 2px solid var(--series-1);
+    outline-offset: 1px;
+  }
   .ks-head {
     display: flex;
     align-items: center;
@@ -489,6 +505,12 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .rating:hover {
+    border-color: var(--brand);
+    text-decoration: none;
   }
   .rating strong {
     font-size: 34px;

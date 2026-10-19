@@ -16,9 +16,9 @@
   import { shownGames } from '$lib/stores/me';
   import { formatDate } from '$lib/format';
   import { session } from '$lib/auth';
-  import { kfide, myCountry } from '$lib/stores/me';
+  import { kfideAll, myCountry } from '$lib/stores/me';
   import { fedName } from '$lib/fideFeds';
-  import { SPEED_LABEL } from '$lib/kfide';
+  import { KFIDE_SPEEDS, SPEED_LABEL, kfideText } from '$lib/kfide';
   import { dayOf, streak, study } from '$lib/study/progress';
   import { loadPlan, nextStep, topicOn, TOPICS, hasPlan } from '$lib/study/plan';
 
@@ -71,21 +71,25 @@
       </h1>
       <p class="sub"><strong>Learn</strong> with Chess Guru. <strong>Play</strong> FIDE-rated opponents and friends. <strong>Conquer</strong> your next tournament.</p>
     </div>
-    {#if $session.status === 'in' && $session.profile}
-      <div class="stats" aria-label="Your Chess Castles ratings">
-        <a class="kf" href="/profile" title="Your Chess Castles rating ({SPEED_LABEL[$kfide.speed]}, the speed you play most)"><span class="label">CC Rating {SPEED_LABEL[$kfide.speed]}</span><strong class="title num">{$kfide.rating}{$kfide.provisional ? ' (new)' : ''}</strong></a>
-        <div><span class="label">Puzzles</span><strong class="title num">{$session.profile.ratings.puzzle}</strong></div>
-        <div><span class="label">Blitz</span><strong class="title num">{$session.profile.ratings.blitz}</strong></div>
-        <div><span class="label">Rapid</span><strong class="title num">{$session.profile.ratings.rapid}</strong></div>
-        <div><span class="label">Games</span><strong class="title num">{$session.profile.games.played}</strong></div>
-      </div>
-    {:else if stats.played}
-      <div class="stats" aria-label="Your results on this site">
-        <a class="kf" href="/profile" title="Your Chess Castles rating ({SPEED_LABEL[$kfide.speed]}, the speed you play most)"><span class="label">CC Rating {SPEED_LABEL[$kfide.speed]}</span><strong class="title num">{$kfide.rating}{$kfide.provisional ? ' (new)' : ''}</strong></a>
-        <div><span class="label">Played</span><strong class="title num">{stats.played}</strong></div>
-        <div><span class="label">Won</span><strong class="title num" style="color: var(--win)">{stats.won}</strong></div>
-        <div><span class="label">Drawn</span><strong class="title num">{stats.drawn}</strong></div>
-        <div><span class="label">Lost</span><strong class="title num">{stats.lost}</strong></div>
+    {#if ($session.status === 'in' && $session.profile) || stats.played}
+      <!-- Each CC Rating opens its chart on the profile (or Play, before the first game at that speed). -->
+      <div class="stats" aria-label="Your ratings and games">
+        {#each KFIDE_SPEEDS as s (s)}
+          {@const k = $kfideAll[s]}
+          <a
+            class="kf"
+            class:main={$kfideAll.main === s && k.games > 0}
+            href={k.games ? `/profile?speed=${s}#cc-ratings` : '/play?mode=fide'}
+            title={k.games ? `Your Chess Castles rating at ${SPEED_LABEL[s]} from ${k.games} ${k.games === 1 ? 'game' : 'games'} against FIDE-rated opponents. See how it changed.` : `${SPEED_LABEL[s]}: not played yet. Play a FIDE-rated opponent at this speed to get this rating.`}
+          >
+            <span class="label">CC Rating {SPEED_LABEL[s]}</span>
+            {#if k.games}<strong class="title num">{kfideText(k)}</strong>{:else}<strong class="title none">Play</strong>{/if}
+          </a>
+        {/each}
+        {#if $session.status === 'in' && $session.profile}
+          <a href="/puzzles" title="Your puzzle rating: it goes up as you solve puzzles"><span class="label">Puzzle rating</span><strong class="title num">{$session.profile.ratings.puzzle}</strong></a>
+        {/if}
+        <a href="/games" title="Finished games you played on Chess Castles: won {stats.won}, drawn {stats.drawn}, lost {stats.lost}"><span class="label">Games played</span><strong class="title num">{stats.played}</strong></a>
       </div>
     {/if}
   </header>
@@ -360,8 +364,7 @@
     display: flex;
     gap: 8px;
   }
-  .stats div,
-  .stats .kf {
+  .stats a {
     display: flex;
     flex-direction: column;
     background: var(--card);
@@ -369,17 +372,27 @@
     border-radius: var(--r-control);
     padding: 7px 14px;
     min-width: 78px;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+  .stats a:hover {
+    border-color: var(--brand);
+    text-decoration: none;
   }
   .stats strong {
     font-size: 22px;
   }
-  .stats .kf {
+  /* The main CC Rating (the speed played most) in gold. */
+  .stats .kf.main {
     border-color: var(--gold);
-    color: inherit;
-    text-decoration: none;
   }
-  .stats .kf strong {
+  .stats .kf.main strong {
     color: var(--gold);
+  }
+  .stats .none {
+    color: var(--muted);
+    font-size: 18px;
   }
   @media (max-width: 560px) {
     .stats {
@@ -587,7 +600,7 @@
     h1 {
       font-size: 36px;
     }
-    .stats div {
+    .stats a {
       min-width: 0;
       padding: 6px 10px;
     }

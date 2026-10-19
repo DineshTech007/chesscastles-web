@@ -7,12 +7,11 @@
   import { formatDate } from '$lib/format';
   import { KFIDE_SPEEDS, SPEED_LABEL, type KfideAll, type KfideSpeed } from '$lib/kfide';
 
-  let { all }: { all: KfideAll } = $props();
+  let { all, speed: chosen = $bindable() }: { all: KfideAll; speed?: KfideSpeed } = $props();
   /** "4 Oct 2026", without the time. */
   const day = (ms: number) => formatDate(ms).split(',')[0];
 
   const speeds = $derived(KFIDE_SPEEDS.filter((s) => all[s].history.length));
-  let chosen = $state<KfideSpeed | undefined>();
   const speed = $derived(chosen && speeds.includes(chosen) ? chosen : speeds.includes(all.main) ? all.main : speeds[0]);
   /** The rating before the first game, then after each game. */
   const pts = $derived.by(() => {
