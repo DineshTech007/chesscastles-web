@@ -498,7 +498,10 @@ async function learnMore(which) {
   const lesson = async (tab) => {
     await open(`/learn?tab=${tab}`, `Learn → ${tab}`);
     // A lesson of this tab (its pane), not a link from the page's header or the sidebar.
-    const first = page.locator('.pane a[href^="/coach/"], .pane a[href^="/learn/"], main a[href^="/coach/"]').first();
+    const WORDS = { tactics: /tactic|fork|pin|skewer|mate|discover|attack/i, strategy: /strateg|plan|pawn|structure|piece activity|outpost/i, endgames: /endgame|rook|king|pawn ending|opposition/i };
+    const all = page.locator('.pane a[href^="/coach/"], .pane a[href^="/learn/"], main a[href^="/coach/"]');
+    const matching = WORDS[tab] ? all.filter({ hasText: WORDS[tab] }) : all;
+    const first = ((await matching.count()) ? matching : all).first();
     if (!(await first.count())) {
       f.notes.push('no lesson links found');
       return;
