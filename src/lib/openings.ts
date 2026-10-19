@@ -24,6 +24,22 @@ export const OPENINGS: Opening[] = [
   { id: 'slav', name: 'Slav Defence', sans: 'd4 d5 c4 c6', blurb: 'Keep the bishop free, hold d5.', side: 'black' },
   { id: 'kings-indian', name: "King's Indian Defence", sans: 'd4 Nf6 c4 g6 Nc3 Bg7', blurb: 'Let White take the centre, then strike.', side: 'black' },
   { id: 'nimzo', name: 'Nimzo-Indian Defence', sans: 'd4 Nf6 c4 e6 Nc3 Bb4', blurb: 'Pin, double the pawns, control e4.', side: 'black' },
+  // The openings a player meets on the way up to 2500: the main lines of the open games, the
+  // Sicilian from both sides, and the queen's pawn defences strong players rely on.
+  { id: 'scotch', name: 'Scotch Game', sans: 'e4 e5 Nf3 Nc6 d4', blurb: 'Open the centre at once: Kasparov brought it back.', side: 'white' },
+  { id: 'vienna', name: 'Vienna Game', sans: 'e4 e5 Nc3', blurb: 'Nc3 first, then f4: an open game with a kick.', side: 'white' },
+  { id: 'kings-gambit', name: "King's Gambit", sans: 'e4 e5 f4', blurb: 'A pawn for the attack, the romantic way.', side: 'white' },
+  { id: 'open-sicilian', name: 'Open Sicilian', sans: 'e4 c5 Nf3 d6 d4', blurb: 'Take the fight to the Sicilian: d4 and open lines.', side: 'white' },
+  { id: 'catalan', name: 'Catalan Opening', sans: 'd4 Nf6 c4 e6 g3', blurb: 'The queen’s gambit with a long bishop: quiet pressure that lasts.', side: 'white' },
+  { id: 'petrov', name: 'Petrov Defence', sans: 'e4 e5 Nf3 Nf6', blurb: 'Answer Nf3 with Nf6: solid and symmetrical.', side: 'black' },
+  { id: 'berlin', name: 'Berlin Defence', sans: 'e4 e5 Nf3 Nc6 Bb5 Nf6', blurb: 'Kramnik’s wall against the Ruy Lopez.', side: 'black' },
+  { id: 'dragon', name: 'Sicilian Dragon', sans: 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6', blurb: 'The bishop on g7 breathes fire down the long diagonal.', side: 'black' },
+  { id: 'sveshnikov', name: 'Sicilian Sveshnikov', sans: 'e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 e5', blurb: 'Carlsen’s choice: a weak d5 square for a free game.', side: 'black' },
+  { id: 'pirc', name: 'Pirc Defence', sans: 'e4 d6 d4 Nf6 Nc3 g6', blurb: 'Let White build the centre, then hit it with the bishop on g7.', side: 'black' },
+  { id: 'grunfeld', name: 'Grünfeld Defence', sans: 'd4 Nf6 c4 g6 Nc3 d5', blurb: 'Strike the centre with ...d5 before White settles.', side: 'black' },
+  { id: 'queens-indian', name: "Queen's Indian Defence", sans: 'd4 Nf6 c4 e6 Nf3 b6', blurb: 'The bishop on b7 watches e4: calm and solid.', side: 'black' },
+  { id: 'semi-slav', name: 'Semi-Slav Defence', sans: 'd4 d5 c4 c6 Nf3 Nf6 Nc3 e6', blurb: 'Hold d5 with both pawns, then ...dxc4 and ...b5.', side: 'black' },
+  { id: 'benoni', name: 'Modern Benoni', sans: 'd4 Nf6 c4 c5 d5 e6', blurb: 'Give up the centre for a queenside pawn majority and play.', side: 'black' },
 ];
 
 /** Rated games per 100-point group in the book (both players counted). */

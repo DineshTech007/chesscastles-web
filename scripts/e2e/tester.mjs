@@ -53,6 +53,16 @@ const COURSES = [
   { id: 'jobava-london', name: 'Jobava London', side: 'white', line: 'e6', sans: 'd4 Nf6 Bf4 d5 Nc3 e6', lineName: '3...e6' },
   { id: 'chebanenko', name: 'Chebanenko Slav', side: 'black', line: 'e3', sans: 'd4 d5 c4 c6 Nf3 Nf6 Nc3 a6 e3', lineName: '5.e3' },
 ].map((c) => ({ ...c, chapter: chapterOf(c.id, c.sans) }));
+/** The trainer's catalogue (src/lib/openings.ts): one a session for variety, trained and then played. */
+const CATALOGUE = [
+  { id: 'italian', side: 'white' }, { id: 'sicilian', side: 'black' }, { id: 'queens-gambit', side: 'white' }, { id: 'french', side: 'black' },
+  { id: 'ruy-lopez', side: 'white' }, { id: 'nimzo', side: 'black' }, { id: 'scotch', side: 'white' }, { id: 'kings-indian', side: 'black' },
+  { id: 'london', side: 'white' }, { id: 'scandinavian', side: 'black' }, { id: 'open-sicilian', side: 'white' }, { id: 'qgd', side: 'black' },
+  { id: 'vienna', side: 'white' }, { id: 'najdorf', side: 'black' }, { id: 'catalan', side: 'white' }, { id: 'petrov', side: 'black' },
+  { id: 'english', side: 'white' }, { id: 'grunfeld', side: 'black' }, { id: 'kings-gambit', side: 'white' }, { id: 'berlin', side: 'black' },
+  { id: 'jobava', side: 'white' }, { id: 'dragon', side: 'black' }, { id: 'slav', side: 'black' }, { id: 'sveshnikov', side: 'black' },
+  { id: 'pirc', side: 'black' }, { id: 'queens-indian', side: 'black' }, { id: 'semi-slav', side: 'black' }, { id: 'benoni', side: 'black' },
+];
 /** Other features, one a session. */
 const FEATURES = ['/watch', '/vision', '/books', '/leaderboard', '/ratings', '/puzzles', '/coach', '/learn/masters', '/friends', '/insights', '/games', '/learn?tab=tactics'];
 /** Rapid 15+10 (TIME_CONTROLS index 2): never blitz or bullet in this routine. */
@@ -218,8 +228,8 @@ async function clickSquare(sq, color) {
   await page.mouse.click(box.x + s * (x + 0.5), box.y + s * (y + 0.5));
 }
 
-async function playGame(n, opp, color, opening) {
-  const q = new URLSearchParams({ r: String(opp), tc: String(TC), c: color, ...(opening ? { o: opening, start: 'line' } : {}) });
+async function playGame(n, opp, color, opening, fromLine = true) {
+  const q = new URLSearchParams({ r: String(opp), tc: String(TC), c: color, ...(opening ? { o: opening, ...(fromLine ? { start: 'line' } : {}) } : {}) });
   const path = `/play/fide?${q}`;
   const g = { n, opp, color, opening: opening ?? '', path, moves: 0, result: '?', reason: '', ratingChange: '', review: '', mistakes: [], illegal: 0, problems: [] };
   games.push(g);
@@ -639,8 +649,8 @@ async function learnMore(which) {
     } else f.notes.push('no "Watch all boards" link');
     await shot(page, 'learn-watch');
   } else if (which === 'openings-other') {
-    // Another opening from the trainer's catalogue: the Italian (a beginner's first 1.e4 opening).
-    await open('/learn/openings/italian', 'Opening trainer: Italian');
+    // The session's opening from the trainer's catalogue (a different one each session).
+    await open(`/learn/openings/${catalogue.id}`, `Opening trainer: ${catalogue.id}`);
     const build = page.locator('button:has-text("Build and start training")');
     if (await build.count()) await build.click();
     await page.locator('cg-board').first().waitFor({ timeout: 30000 }).catch(() => {});
@@ -660,7 +670,7 @@ async function learnMore(which) {
       await page.waitForTimeout(2500);
     }
     f.text = `${before} … after two moves: ${(await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)}`;
-    f.used.push('Italian trainer, two moves');
+    f.used.push(`${catalogue.id} trainer, two moves`);
     await shot(page, 'learn-italian');
   } else if (which === 'traps') {
     await open('/learn?tab=openings&sub=lessons', 'Opening lessons (traps)');
@@ -805,6 +815,8 @@ const before = {};
 const after = {};
 let studied;
 let learned;
+/** This session's catalogue opening (trained in "openings-other", played in game 5). */
+let catalogue = CATALOGUE[0];
 let feature;
 let phone = [];
 let signedInAs = '';
@@ -826,6 +838,7 @@ try {
   before.profile = await profileSnapshot();
   log('before:', before.menu.text);
   const course = COURSES[(state.session - 1) % COURSES.length];
+  catalogue = CATALOGUE[(state.session - 1) % CATALOGUE.length];
   const my = before.menu.rating ?? 1500;
   // An opponent within about 100 points (the opponents go from 1400 up, in steps of 100).
   const opp = Math.max(1400, Math.min(2800, Math.round(my / 100) * 100));
@@ -834,7 +847,12 @@ try {
   for (let n = 1; n <= plain; n++) await playGame(n, n === 2 ? Math.min(2800, opp + 100) : opp, n % 2 ? 'white' : 'black');
   studied = await studyCourse(course);
   learned = await learnMore(LEARN[(state.session - 1) % LEARN.length]).catch((e) => ({ feature: 'Learn', used: [], notes: [String(e).slice(0, 200)] }));
-  for (let n = plain + 1; n <= GAMES; n++) await playGame(n, opp, course.side, `st-${course.id}--${course.line}`);
+  // Games 3 and 4 from the course's line; game 5 with the session's catalogue opening (the
+  // opponent follows the opening's moves; Aarav plays it from move one).
+  for (let n = plain + 1; n <= GAMES; n++) {
+    if (n === GAMES) await playGame(n, opp, catalogue.side, catalogue.id, false);
+    else await playGame(n, opp, course.side, `st-${course.id}--${course.line}`);
+  }
   // The study steps were done: one level up (the persona improves by studying).
   state.skill = Math.min(20, state.skill + 1);
   feature = await tryFeature(FEATURES[(state.session - 1) % FEATURES.length]);
