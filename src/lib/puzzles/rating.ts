@@ -42,6 +42,33 @@ const local = writable<Counts>(typeof localStorage === 'undefined' ? { rating: S
 
 /** The rating to show: the account's when signed in, else this browser's. */
 export const puzzleRating = derived([session, local], ([s, l]) => (s.status === 'in' && s.profile ? s.profile.ratings.puzzle : l.rating));
+/** The counts to show (the account's when signed in). */
+export const puzzleStats = derived([session, local], ([s, l]) => (s.status === 'in' && s.profile ? { rating: s.profile.ratings.puzzle, ...s.profile.puzzles } : l));
+
+const HISTORY = 'k24.puzzleHistory';
+/** The rating after each rated puzzle in this browser (the last 500), for the chart. */
+export const puzzleHistory = writable<{ at: number; r: number; ok: boolean }[]>(
+  typeof localStorage === 'undefined'
+    ? []
+    : (() => {
+        try {
+          return JSON.parse(localStorage.getItem(HISTORY) ?? '[]');
+        } catch {
+          return [];
+        }
+      })(),
+);
+function remember(r: number, ok: boolean) {
+  puzzleHistory.update((h) => {
+    const next = [...h, { at: Date.now(), r, ok }].slice(-500);
+    try {
+      localStorage.setItem(HISTORY, JSON.stringify(next));
+    } catch {
+      /* storage blocked */
+    }
+    return next;
+  });
+}
 
 function ratedIds(): string[] {
   try {
@@ -86,6 +113,7 @@ export async function ratePuzzle(id: string, puzzleRating: number, clean: boolea
       // Not saved (offline, or two puzzles within a few seconds): the rating stays as it was.
       return undefined;
     }
+    remember(after, clean);
     session.update((cur) => (cur.status === 'in' && cur.profile ? { ...cur, profile: { ...cur.profile, ratings: { ...cur.profile.ratings, puzzle: after }, puzzles: { ...cur.profile.puzzles, ...counts, themes: clean ? { ...cur.profile.puzzles.themes, [key]: (cur.profile.puzzles.themes[key] ?? 0) + 1 } : cur.profile.puzzles.themes } } } : cur));
     return after - p.ratings.puzzle;
   }
@@ -94,6 +122,7 @@ export async function ratePuzzle(id: string, puzzleRating: number, clean: boolea
   const streak = clean ? l.streak + 1 : 0;
   const next: Counts = { rating: after, attempted: l.attempted + 1, solved: l.solved + (clean ? 1 : 0), streak, best: Math.max(l.best, streak) };
   local.set(next);
+  remember(after, clean);
   try {
     localStorage.setItem(LOCAL, JSON.stringify(next));
   } catch {

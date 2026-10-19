@@ -366,7 +366,7 @@
     </div>
     <span class="head-acts">
       <a class="btn" href="/books"><Icon name="book" size={18} />Chess books</a>
-      <a class="btn primary" href="/puzzles"><Icon name="puzzle" size={18} />Puzzle of the day</a>
+      <a class="btn primary" href="/puzzles"><Icon name="puzzle" size={18} />Rated puzzles</a>
     </span>
   </header>
 

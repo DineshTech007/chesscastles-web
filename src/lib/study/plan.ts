@@ -87,7 +87,7 @@ export function nextStep(topic: Topic): { href: string; title: string; sub: stri
     const t = CATALOG.find((l) => l.section === 'Tactics' && !done[l.id]);
     return t ? { href: `/coach/${t.id}`, title: t.title, sub: 'Then solve puzzles' } : { href: '/puzzles', title: 'Puzzles', sub: 'Solve puzzles for your session' };
   }
-  if (topic === 'rest') return { href: '/puzzles', title: 'Puzzle of the day', sub: 'Optional: one puzzle keeps your streak' };
+  if (topic === 'rest') return { href: '/puzzles?tab=daily', title: 'Puzzle of the day', sub: 'Optional: one puzzle keeps your streak' };
   const cat = topic === 'openings' ? 'opening' : topic;
   const l = lesson(cat);
   if (l) return { href: `/coach/${l.id}`, title: l.title, sub: `${l.section} · ${l.level}` };

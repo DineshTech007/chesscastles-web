@@ -30,7 +30,7 @@ const DEVICES = {
   tablet: devices['iPad Mini'],
 };
 /** Pages every player can open without signing in. */
-const PAGES = ['/', '/play', '/puzzles', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision'];
+const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision'];
 /** A tap must open its page within this long. */
 const TAP_MS = 6000;
 /** A phone should never download more than this in one file by itself. */
@@ -184,9 +184,10 @@ async function run(name, options) {
   await check(name, page, 'puzzle rating: a miss counts once', async () => {
     await open(page, '/');
     await page.evaluate(() => ['k24.puzzleRating', 'k24.ratedPuzzles'].forEach((k) => localStorage.removeItem(k)));
-    await open(page, '/puzzles');
+    await open(page, '/puzzles?tab=daily');
     await page.locator('cg-board').first().waitFor({ timeout: 20000 });
     await page.waitForTimeout(1200);
+    await page.locator('cg-board').first().scrollIntoViewIfNeeded();
     const box = await page.locator('cg-board').first().boundingBox();
     const white = (await page.locator('h1.h').innerText()).includes('White');
     const w = box.width / 8;
@@ -214,6 +215,20 @@ async function run(name, options) {
         }
     expect(ratings.length === 2, 'could not make two wrong moves');
     expect(ratings[0] === 1 && ratings[1] === 1, `rated ${ratings.join(' then ')} times`);
+  });
+
+  // 4d. Rated puzzles: one after another near the player's rating, never the same twice.
+  await check(name, page, 'rated puzzles: no repeats', async () => {
+    await open(page, '/puzzles');
+    await page.locator('cg-board').first().waitFor({ timeout: 20000 });
+    const ids = new Set();
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(300);
+      const seen = await page.evaluate(() => JSON.parse(localStorage.getItem('k24.seenPuzzles') ?? '[]'));
+      ids.add(seen[seen.length - 1]);
+      await tap(page.getByRole('button', { name: /next puzzle/i }));
+    }
+    expect(ids.size === 12, `only ${ids.size} different puzzles in 12`);
   });
 
   // 5. A game against the computer: play e4 by tapping, the computer answers.

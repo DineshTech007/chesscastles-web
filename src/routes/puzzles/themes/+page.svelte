@@ -12,6 +12,7 @@
   import LimitReached from '$lib/components/LimitReached.svelte';
   import { PLAN_INFO, RANK, currentPlan, planSettings, requireGate, useFeature } from '$lib/plans';
   import { puzzleRating, ratePuzzle } from '$lib/puzzles/rating';
+  import { markSeen, seenPuzzles } from '$lib/puzzles/bank';
 
   type P = [string, string, string, number];
   const THEMES = ['fork', 'pin', 'skewer', 'hangingPiece', 'discoveredAttack', 'mateIn1', 'mateIn2', 'backRankMate', 'sacrifice', 'defensiveMove', 'opening', 'middlegame', 'endgame', 'rookEndgame', 'pawnEndgame', 'crushing', 'short'];
@@ -46,11 +47,15 @@
   });
 
   async function next() {
-    const near = bank.filter((p) => Math.abs(p[3] - $puzzleRating) <= 150);
-    const pool = near.length ? near : bank;
+    // Never one seen before (rated or themed), near the player's rating when there is one.
+    const seen = seenPuzzles();
+    const fresh = bank.filter((p) => !seen.has(p[0]));
+    const near = fresh.filter((p) => Math.abs(p[3] - $puzzleRating) <= 150);
+    const pool = near.length ? near : fresh.length ? fresh : bank;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     // Each puzzle counts towards the plan's puzzles a day.
     if (!(await useFeature('puzzle', pick[0]))) return void (limited = true);
+    markSeen(pick[0]);
     current = pick;
     result = undefined;
     change = undefined;
