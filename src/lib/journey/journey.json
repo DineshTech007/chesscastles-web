@@ -9,10 +9,10 @@
   "family": "my mother (who set the 6 pm study timer and never let me skip the review), my father (who drives me to every tournament and asks one question after each game: \"which move?\") and my little sister Diya, who learned the moves by watching",
   "coach": "my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school",
   "start": 1500,
-  "now": 1764,
-  "sessions": 16,
-  "games": 71,
-  "record": "44 wins, 9 draws, 18 losses"
+  "now": 1818,
+  "sessions": 17,
+  "games": 76,
+  "record": "49 wins, 9 draws, 18 losses"
  },
  "curve": [
   {
@@ -94,6 +94,11 @@
    "session": 16,
    "date": "2026-10-20",
    "rating": 1764
+  },
+  {
+   "session": 17,
+   "date": "2026-10-20",
+   "rating": 1818
   }
  ],
  "posts": [
@@ -148,6 +153,27 @@
     "My profile says: accuracy 96%, opening 95, middlegame 96, endgame 96; sharp moments 93 and calm moves undefined. The sharp number is up, which is what the puzzles were for.",
     "5 wins against an opponent one level up (1700, 1700, 1700, 1700, 1800). My mother says that is the one that counts.",
     "All my games so far: 66, 40 wins, 8 draws, 18 losses; 63% as White and 59% as Black. Next stop: 1800."
+   ]
+  },
+  {
+   "slug": "aarav-1800",
+   "milestone": 1800,
+   "date": "2026-10-20",
+   "title": "1800: the lines start to work",
+   "sessions": [
+    16,
+    17
+   ],
+   "games": 10,
+   "record": "9 wins, 1 draws, 0 losses",
+   "body": [
+    "20 October 2026. Today my CC Rating on Chess Castles touched 1818. The last stop was 1700. Between then and now: 2 sessions, 10 rapid games (15+10, never faster: my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school says fast games only teach you about the clock), 9 wins, 1 draws, 0 losses.",
+    "Openings: the Caro-Kann Defence as Black (answer 1.e4 with ...c6 and ...d5, keep the pawns healthy, and be happy to reach an endgame); the Jobava London as White (d4, Nc3 and Bf4 early, with the knight jumping to b5 to hit c7). Each time the same routine from Learn → Openings: the course page, one model game played through, the trainer, and only then the line against a FIDE-rated opponent. From those lines in this stretch: 6 wins, 0 draws, 0 losses.",
+    "New in the trainer: Petrov Defence, English Opening. One opening a session, two moves at a time, and the trainer tells me at once when a move is not the line.",
+    "The rest of Learn, one thing a session: the Blindfold Gym; the library.",
+    "My profile says: accuracy 96%, opening 97, middlegame 96, endgame 96; sharp moments 100 and calm moves undefined. The sharp number is up, which is what the puzzles were for.",
+    "One win against an opponent one level up (1900). My mother says that is the one that counts.",
+    "All my games so far: 76, 49 wins, 9 draws, 18 losses; 69% as White and 61% as Black. Next stop: 1900."
    ]
   }
  ]
