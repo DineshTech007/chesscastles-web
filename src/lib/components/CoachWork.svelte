@@ -1,5 +1,6 @@
 <script lang="ts">
   /** Home page: work your coach set you (shown only when you have a coach). */
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
   import Icon from './Icon.svelte';
   import { session } from '$lib/auth';
   import { leaveCoach, markDone, myCoaches, type Assignment } from '$lib/students';
@@ -46,7 +47,7 @@
       <h3 class="title">Your coaches</h3>
       <ul>
         {#each coaches as c (c.uid)}
-          <li><span class="txt"><strong>{c.name}</strong><span class="label">@{c.username}</span></span><button class="btn small" onclick={() => leaveCoach(c.uid).then(load)}>Leave</button></li>
+          <li><span class="txt"><strong><TitleBadge title={c.title} size={11} />{c.name}</strong><span class="label">@{c.username}</span></span><button class="btn small" onclick={() => leaveCoach(c.uid).then(load)}>Leave</button></li>
         {/each}
       </ul>
     {/if}

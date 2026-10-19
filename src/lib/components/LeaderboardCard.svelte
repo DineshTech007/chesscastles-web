@@ -1,5 +1,6 @@
 <script lang="ts">
   /** The home page's leaderboard: the top 5 on the board picked (CC Rating first when signed in), and a link to the full boards. */
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { session } from '$lib/auth';
   import { BOARDS, loadBoard, type BoardKind, type Row } from '$lib/leaderboards';
@@ -54,7 +55,7 @@
       {#each rows as r, i (r.key)}
         <li class:me={r.me}>
           <span class="m">{medal[i]}</span>
-          {#if r.uid}<a class="n" href="/players/{encodeURIComponent(r.uid)}">{r.name}{#if r.plan} <PlanBadge plan={r.plan} />{/if}</a>{:else}<span class="n">{r.name}</span>{/if}
+          {#if r.uid}<a class="n" href="/players/{encodeURIComponent(r.uid)}"><TitleBadge title={r.ccTitle} size={11} />{r.name}{#if r.plan} <PlanBadge plan={r.plan} />{/if}</a>{:else}<span class="n">{r.name}</span>{/if}
           <strong class="num">{r.value}</strong>
         </li>
       {/each}

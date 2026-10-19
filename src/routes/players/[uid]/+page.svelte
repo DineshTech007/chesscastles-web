@@ -116,6 +116,7 @@
       <span class="av">{#if photo}<img src={photo} alt="" />{:else}{initialsOf(player.name)}{/if}{#if player.online}<span class="dot" title="Online now"></span>{/if}</span>
       <div class="who">
         <h1 class="display"><TitleBadge title={player.title} size={22} />{player.name}{#if player.plan} <PlanBadge plan={player.plan} size={30} />{/if}</h1>
+        {#if player.title}<div class="title-banner"><TitleBadge title={player.title} full size={14} /></div>{/if}
         {#if player.first || player.last}<p class="label">{[player.first, player.last].filter(Boolean).join(' ')}</p>{/if}
         {#if player.status}<p class="status">“{player.status}”</p>{/if}
         <p class="label">
@@ -397,5 +398,8 @@
   }
   .skel {
     height: 200px;
+  }
+  .title-banner {
+    margin: 2px 0 6px;
   }
 </style>

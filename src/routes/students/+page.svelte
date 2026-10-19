@@ -1,5 +1,6 @@
 <script lang="ts">
   /** Coach tools (Elite): your students' progress and games, and the work you set them. */
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import FriendGames from '$lib/components/FriendGames.svelte';
@@ -112,7 +113,7 @@
         <tbody>
           {#each data.students as st (st.uid)}
             <tr class:on={open?.uid === st.uid}>
-              <th scope="row"><button class="link" onclick={() => (open = open?.uid === st.uid ? undefined : st)}>{st.name}{#if st.plan} <PlanBadge plan={st.plan} />{/if}</button><span class="label">@{st.username}</span></th>
+              <th scope="row"><button class="link" onclick={() => (open = open?.uid === st.uid ? undefined : st)}><TitleBadge title={st.title} size={11} />{st.name}{#if st.plan} <PlanBadge plan={st.plan} />{/if}</button><span class="label">@{st.username}</span></th>
               {#each KFIDE_SPEEDS as s (s)}<td class="num">{st.kfideTc?.[s]?.rating ?? '—'}</td>{/each}
               <td class="num">{st.games.week}</td>
               <td class="num">{st.studyPoints ?? 0}</td>

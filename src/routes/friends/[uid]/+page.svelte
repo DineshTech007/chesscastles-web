@@ -1,5 +1,6 @@
 <script lang="ts">
   /** A conversation with a friend (friends only); new messages arrive every few seconds while it is open. */
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
   import { onDestroy, tick } from 'svelte';
   import { page } from '$app/state';
   import Icon from '$lib/components/Icon.svelte';
@@ -79,7 +80,7 @@
       <header class="top">
         <span class="av">{#if photo}<img src={photo} alt="" />{:else}{friend ? initialsOf(friend.name) : ''}{/if}</span>
         <div class="who">
-          <a class="title" href="/players/{encodeURIComponent(uid)}">{friend?.name ?? '…'}</a>
+          <a class="title" href="/players/{encodeURIComponent(uid)}"><TitleBadge title={friend?.title} size={12} />{friend?.name ?? '…'}</a>
           <span class="label">{friend?.online ? 'Online now' : friend ? `@${friend.username}` : ''}</span>
         </div>
         {#if friend}<a class="btn" href="/play?mode=online&friend={encodeURIComponent(friend.username)}"><Icon name="knight" size={16} />Challenge</a>{/if}

@@ -112,7 +112,7 @@
         {#each list as u (u.uid)}
           <li>
             <button class="row" class:on={open?.user.uid === u.uid} onclick={() => show(u.uid)}>
-              <span class="who"><strong>{u.name}</strong><span class="label">@{u.username}{u.country ? ` · ${u.country}` : ''}</span></span>
+              <span class="who"><strong><TitleBadge title={u.title} size={11} />{u.name}</strong><span class="label">@{u.username}{u.country ? ` · ${u.country}` : ''}</span></span>
               <span class="pchip {u.plan}"><PlanBadge plan={u.plan} size={16} /> {PLAN_INFO[u.plan].name}</span>
               <span class="label when">{ago(u.seen)}</span>
               {#if u.suspended}<span class="sus">Suspended</span>{/if}

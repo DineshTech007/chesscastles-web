@@ -193,6 +193,8 @@ export interface LobbySeek {
   plan?: Plan;
   lichess: string;
   name: string;
+  /** A Chess Castles title (CGM…). */
+  title?: string;
   rating: number;
   /** "5+3". */
   tc: string;

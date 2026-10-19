@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { myInitials, myName } from '$lib/stores/me';
+  import { myTitle, myInitials, myName } from '$lib/stores/me';
   import { onDestroy, onMount } from 'svelte';
   import { gameEnded } from '$lib/stores/gameEnded';
   import type { Key } from '@lichess-org/chessground/types';
@@ -321,6 +321,7 @@
     return {
       me,
       name: me ? ($session.status === 'in' ? $myName : 'You') : opponent,
+      title: me && $session.status === 'in' ? $myTitle : undefined,
       // (The opponent's rating only when its name doesn't already say it: "FIDE 1800".)
       rating: me ? `CC ${SPEED_LABEL[speed]} ${kfideText($kfideAll[speed])}` : kind === 'fide' && !opponent.includes(String(game.rating)) ? `FIDE ${game.rating}` : undefined,
       country: me ? $myCountry || undefined : opponentCountry,

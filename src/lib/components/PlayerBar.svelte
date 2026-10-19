@@ -1,6 +1,7 @@
 <script lang="ts">
   import { formatClock } from '$lib/format';
   import { fedName } from '$lib/fideFeds';
+  import TitleBadge from './TitleBadge.svelte';
 
   let {
     name,
@@ -15,6 +16,7 @@
     photo,
     rating,
     country,
+    title,
   }: {
     name: string;
     subtitle: string;
@@ -32,6 +34,8 @@
     rating?: string;
     /** FIDE federation code for the flag, e.g. "IND". */
     country?: string;
+    /** A Chess Castles title, shown before the name. */
+    title?: string;
   } = $props();
 </script>
 
@@ -42,7 +46,7 @@
   </span>
   <span class="who">
     <span class="title name">
-      {name}
+      <span><TitleBadge {title} size={12} />{name}</span>
       {#if country}
         <span class="flag-wrap" data-tip={fedName(country)}>
           <img class="flag" src="/flags/{country}.svg" alt={fedName(country)} width="20" height="14" />

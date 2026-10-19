@@ -13,6 +13,8 @@ import { SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
 export type BoardKind = 'kfide' | 'lichess' | 'puzzles' | 'vision' | 'study' | 'books';
 
 export interface Row {
+  /** A Chess Castles title (CGM…), shown as a badge before the name. */
+  ccTitle?: string;
   key: string;
   /** The account ("lichess:<id>"), when known: for the Friends filter and the profile link. */
   uid?: string;
@@ -43,11 +45,11 @@ export async function loadBoard(kind: BoardKind, variant = ''): Promise<Row[]> {
   }
   if (kind === 'kfide') {
     const l = await kfideLeaders((variant || 'main') as 'main' | KfideSpeed);
-    return l.map((p) => ({ key: p.uid, uid: p.uid, name: p.name, country: p.country, value: p.rating, sub: `${p.games} ${p.games === 1 ? 'game' : 'games'}`, me: p.me, plan: p.plan }));
+    return l.map((p) => ({ key: p.uid, uid: p.uid, name: p.name, country: p.country, ccTitle: p.title, value: p.rating, sub: `${p.games} ${p.games === 1 ? 'game' : 'games'}`, me: p.me, plan: p.plan }));
   }
   if (kind === 'study' || kind === 'books') {
     const l = await boardOf(kind, weekOf(Date.now()));
-    return l.map((p) => ({ key: p.uid, uid: p.uid, name: p.name, country: p.country, value: p.rating, me: p.me, plan: p.plan }));
+    return l.map((p) => ({ key: p.uid, uid: p.uid, name: p.name, country: p.country, ccTitle: p.title, value: p.rating, me: p.me, plan: p.plan }));
   }
   // Lichess and puzzle ratings of the Chess Castles players.
   const members = await boardOf('members');

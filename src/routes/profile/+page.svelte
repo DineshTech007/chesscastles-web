@@ -47,6 +47,7 @@
     myProfile()
       .then((p) => {
         details = p;
+        myTitle.set(p.title);
         if (p.country) setMyCountry(p.country);
         form = {
           name: p.name,
@@ -100,6 +101,8 @@
   }
 
   const name = $derived($session.status === 'in' ? $myName : 'You');
+  /** The title the owner gave, from the profile just loaded (else from sign-in). */
+  const myTitleNow = $derived(details?.title ?? $myTitle);
   const initials = $derived(name.split(' ').map((s) => s[0]).slice(0, 2).join('').toUpperCase());
   /** The latest CC Rating games at every speed. */
   const recent = $derived(
@@ -157,7 +160,8 @@
       {/if}
     </div>
     <div class="who">
-      <h1 class="display">{#if $session.status === 'in'}<TitleBadge title={$myTitle} size={22} />{/if}{name}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'free'} size={30} />{/if}</h1>
+      <h1 class="display">{#if $session.status === 'in'}<TitleBadge title={myTitleNow} size={24} />{/if}{name}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'free'} size={30} />{/if}</h1>
+      {#if $session.status === 'in' && myTitleNow}<div class="title-banner"><TitleBadge title={myTitleNow} full size={14} /></div>{/if}
       <p class="label">
         {#if $session.status === 'in'}{$session.uid.startsWith('lichess:') ? `Signed in with Lichess as ${$session.username}` : 'Signed in with Google'}{:else}Not signed in: your photo and games stay on this device.{/if}
       </p>
@@ -554,5 +558,8 @@
   }
   .delta.down {
     color: var(--loss);
+  }
+  .title-banner {
+    margin: 2px 0 6px;
   }
 </style>

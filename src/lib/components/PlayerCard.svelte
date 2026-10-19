@@ -1,5 +1,6 @@
 <script lang="ts">
   /** One Chess Castles player in a list: photo (friends only) or initials, name, country, status and ratings. */
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { fedName } from '$lib/fideFeds';
   import { initialsOf, playerPhoto, type Player } from '$lib/social';
@@ -15,7 +16,7 @@
     {#if p.playing}<span class="live" title="Playing now">LIVE</span>{/if}
   </span>
   <span class="text">
-    <span class="name">{p.name}{#if p.plan && p.member !== false}<PlanBadge plan={p.plan} />{/if}{#if p.country}<img class="flag" src="/flags/{p.country}.svg" alt={fedName(p.country)} title={fedName(p.country)} width="18" height="12" />{/if}</span>
+    <span class="name"><span><TitleBadge title={p.title} size={12} />{p.name}</span>{#if p.plan && p.member !== false}<PlanBadge plan={p.plan} />{/if}{#if p.country}<img class="flag" src="/flags/{p.country}.svg" alt={fedName(p.country)} title={fedName(p.country)} width="18" height="12" />{/if}</span>
     {#if p.status}<span class="label status">“{p.status}”</span>{/if}
     <span class="label">{[p.kfide && p.kfideGames ? `CC Rating ${p.kfide}` : 'CC Rating: not rated yet', p.fideRating ? `FIDE ${p.fideRating}` : ''].filter(Boolean).join(' · ')}</span>
     {#if lichess}<span class="label lich">Lichess {lichess}</span>{/if}

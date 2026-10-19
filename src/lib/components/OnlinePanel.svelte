@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { track } from '$lib/analytics';
   import { goto } from '$app/navigation';
@@ -394,7 +395,7 @@
           {#each lobby.seeks as s (s.uid)}
             {@const t = tcOf(s.tc)}
             <li class="seek">
-              <span class="who"><a href="/players/{encodeURIComponent(s.uid)}">{s.name}{#if s.plan} <PlanBadge plan={s.plan} />{/if}</a><span class="label num">{s.rating}</span></span>
+              <span class="who"><a href="/players/{encodeURIComponent(s.uid)}"><TitleBadge title={s.title} size={11} />{s.name}{#if s.plan} <PlanBadge plan={s.plan} />{/if}</a><span class="label num">{s.rating}</span></span>
               <span class="tc"><strong class="num">{s.tc}</strong><span class="label">{speed(t)} · {s.rated ? 'Rated' : 'Casual'}</span></span>
               <span class="label age">{ago(s.since)}</span>
               <button class="btn primary sm" disabled={s.uid === myId} onclick={() => quickPair(t, s)}>Play</button>

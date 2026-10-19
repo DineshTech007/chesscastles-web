@@ -3,7 +3,8 @@
   import { page } from '$app/state';
   import Icon, { type IconName } from './Icon.svelte';
   import { session, signOut, startSignIn } from '$lib/auth';
-  import { kfide, myInitials, myName, myPhoto, photoSrc } from '$lib/stores/me';
+  import { kfide, myInitials, myName, myPhoto, myTitle, photoSrc } from '$lib/stores/me';
+  import TitleBadge from './TitleBadge.svelte';
   import { SPEED_LABEL } from '$lib/kfide';
   import { socialBadge } from '$lib/social';
   import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
@@ -94,7 +95,7 @@
         <span class="avatar">{#if $myPhoto}<img src={photoSrc($myPhoto)} alt="" />{:else}{$myInitials}{/if}</span>
         {#if !collapsed}
           <span class="me-text">
-            <span class="me-name">{$myName} <PlanBadge plan={$currentPlan} /></span>
+            <span class="me-name"><TitleBadge title={$myTitle} size={11} />{$myName} <PlanBadge plan={$currentPlan} /></span>
             <span class="label me-sub">
               CC Rating {$kfide.rating}{$kfide.provisional ? ' (new)' : ''} · {SPEED_LABEL[$kfide.speed]}
             </span>
