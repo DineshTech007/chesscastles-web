@@ -40,6 +40,11 @@
   let ctl: AbortController | undefined;
   let stopped = false;
   let orientation = $state<'white' | 'black'>(game.me ?? 'white');
+  /** The game was still on when this page opened it (an old finished game never sends you anywhere). */
+  let wasLive = false;
+  /** An arena game that just ended: seconds until you are back in the arena for the next pairing. */
+  let backIn = $state(0);
+  let backTimer: ReturnType<typeof setInterval> | undefined;
 
   onMount(() => {
     if (!token) return;
@@ -50,7 +55,24 @@
   onDestroy(() => {
     stopped = true;
     ctl?.abort();
+    clearInterval(backTimer);
   });
+
+  // As on Lichess: after an arena game you go back to the arena by yourself, and it pairs you again.
+  function backToArena() {
+    if (!tournamentId || backTimer) return;
+    backIn = 6;
+    backTimer = setInterval(() => {
+      backIn -= 1;
+      if (backIn > 0) return;
+      clearInterval(backTimer);
+      void goto(`/play/lichess-tournaments/${tournamentId}?joined=1`, { replaceState: true });
+    }, 1000);
+  }
+  function stayHere() {
+    clearInterval(backTimer);
+    backIn = 0;
+  }
 
   /** Keeps the game stream open, reconnecting with growing pauses. */
   async function connect() {
@@ -96,6 +118,7 @@
     }
     const before = game.plies.length;
     game.apply(o);
+    if (!game.isOver) wasLive = true;
     // A new game: the start sound (not when coming back to a game already under way).
     if (!startSounded && o.type === 'gameFull') {
       startSounded = true;
@@ -120,6 +143,7 @@
 
   function onEnd() {
     queue.clear();
+    if (wasLive && game.me) backToArena();
     if (saved || !game.plies.length || game.status === 'aborted') return;
     saved = true;
     const me = game.me ?? 'white';
@@ -376,7 +400,8 @@
           <p class="label">{game.endReason}</p>
           <div class="row">
             {#if tournamentId}
-              <a class="btn primary" href="/play/lichess-tournaments/{tournamentId}?joined=1"><Icon name="trophy" size={18} />Back to the tournament</a>
+              <a class="btn primary" href="/play/lichess-tournaments/{tournamentId}?joined=1"><Icon name="trophy" size={18} />{backIn > 0 ? `Next arena game in ${backIn}…` : 'Back to the tournament'}</a>
+              {#if backIn > 0}<button class="btn" onclick={stayHere}>Stay here</button>{/if}
             {:else}
               <a class="btn primary" href="/play?mode=online"><Icon name="replay" size={18} />New game</a>
             {/if}

@@ -5,6 +5,7 @@
    * and privacy policy. `age` and `agreed` are read by the parent, which decides when to continue.
    */
   import type { AgeGroup } from '$lib/consent';
+  import { t } from '$lib/i18n';
 
   let {
     age = $bindable(),
@@ -14,30 +15,31 @@
 </script>
 
 <fieldset class="consent" class:bad={showErrors && (!age || !agreed)}>
-  <legend class="label">Before you start</legend>
+  <legend class="label">{$t('co.legend')}</legend>
   <ul class="keeps">
-    <li>We keep your <strong>name, photo, games, ratings and study progress</strong> so they follow you to every device.</li>
-    <li>Only <strong>friends you accept</strong> can message you or see your photo. No ads, and we never sell your data.</li>
-    <li>You can ask us to <strong>see or delete</strong> your data at any time.</li>
+    <li>{$t('co.k1')}</li>
+    <li>{$t('co.k2')}</li>
+    <li>{$t('co.k3')}</li>
   </ul>
 
   <div class="age" role="radiogroup" aria-label="Your age">
     <label class:on={age === 'adult'}>
       <input type="radio" name="age" value="adult" bind:group={age} />
-      <span>I am <strong>18 or older</strong></span>
+      <span>{$t('co.adult')}</span>
     </label>
     <label class:on={age === 'minor'}>
       <input type="radio" name="age" value="minor" bind:group={age} />
-      <span>I am <strong>under 18</strong>, and my parent or guardian has read this and agrees</span>
+      <span>{$t('co.minor')}</span>
     </label>
   </div>
-  {#if showErrors && !age}<p class="err" role="alert">Please choose one.</p>{/if}
+  {#if showErrors && !age}<p class="err" role="alert">{$t('co.choose')}</p>{/if}
 
   <label class="agree" class:on={agreed}>
     <input type="checkbox" bind:checked={agreed} />
-    <span>I agree to the <a href="/legal/terms" target="_blank" rel="noopener">Terms of use</a> and the <a href="/legal/privacy" target="_blank" rel="noopener">Privacy policy</a>.</span>
+    <span>{$t('co.agree1')}<a href="/legal/terms" target="_blank" rel="noopener">{$t('co.terms')}</a>{$t('co.agree2')}<a href="/legal/privacy" target="_blank" rel="noopener">{$t('co.privacy')}</a>{$t('co.agree3')}</span>
   </label>
-  {#if showErrors && !agreed}<p class="err" role="alert">Please tick the box to agree.</p>{/if}
+  {#if showErrors && !agreed}<p class="err" role="alert">{$t('co.tick')}</p>{/if}
+  {#if $t('co.note')}<p class="note">{$t('co.note')}</p>{/if}
 </fieldset>
 
 <style>
@@ -106,6 +108,12 @@
   a {
     color: var(--accent);
     text-decoration: underline;
+  }
+  .note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
   }
   .err {
     margin: 0;

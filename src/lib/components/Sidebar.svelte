@@ -9,7 +9,8 @@
   import { socialBadge } from '$lib/social';
   import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
   import { HERO_FEATURES } from '$lib/heroFeatures';
-  import { NAV_GROUPS } from '$lib/nav';
+  import { NAV_GROUPS, navKey } from '$lib/nav';
+  import { t, type Key } from '$lib/i18n';
   import { adminMe } from '$lib/admin';
   import { installOpen, installWay } from '$lib/install';
 
@@ -25,11 +26,12 @@
 
   let { collapsed = false }: { collapsed?: boolean } = $props();
 
-  type Item = { href: string; label: string; icon: IconName; match: string[]; not?: string[]; badge?: string };
+  type Item = { href: string; label: string; icon: IconName; match: string[]; not?: string[]; badge?: string; key?: Key };
   /** Home, then the five features only Chess Castles has (in gold), then the everyday pages (src/lib/nav.ts). */
-  const home: Item = { href: '/', label: 'Home', icon: 'home', match: ['/'] };
-  const only: Item[] = HERO_FEATURES.map((f) => ({ href: f.href, label: f.short, icon: f.icon, match: f.match }));
-  const groups: Item[][] = NAV_GROUPS.map((g) => g.filter((i) => i.menu !== false));
+  const home: Item = { href: '/', label: 'Home', icon: 'home', match: ['/'], key: 'shell.home' };
+  const only: Item[] = HERO_FEATURES.map((f) => ({ href: f.href, label: f.short, icon: f.icon, match: f.match, key: `hero.${f.id}.short` as Key }));
+  const groups: Item[][] = NAV_GROUPS.map((g) => g.filter((i) => i.menu !== false).map((i) => ({ ...i, key: navKey(i.href) })));
+  const name = (i: Item, tr: (k: Key) => string) => (i.key ? tr(i.key) : i.label);
 
   const isOn = (item: Item) =>
     !item.not?.some((n) => page.url.pathname.startsWith(n)) &&
@@ -51,12 +53,12 @@
   <div class="nav">
     {@render link(home)}
     <div class="only" class:collapsed aria-label="Signature features" role="group">
-      {#if !collapsed}<span class="only-h"><Icon name="sparkle" size={13} color="var(--accent)" />Signature features</span>{/if}
+      {#if !collapsed}<span class="only-h"><Icon name="sparkle" size={13} color="var(--accent)" />{$t('shell.signature')}</span>{/if}
       {#each only as item (item.href)}
         {@const on = isOn(item)}
-        <a class="item gold" class:on href={item.href} aria-current={on ? 'page' : undefined} title={collapsed ? item.label : undefined}>
+        <a class="item gold" class:on href={item.href} aria-current={on ? 'page' : undefined} title={collapsed ? name(item, $t) : undefined}>
           <span class="gchip"><Icon name={item.icon} size={16} color="#0b1426" /></span>
-          {#if !collapsed}<span>{item.label}</span>{/if}
+          {#if !collapsed}<span>{name(item, $t)}</span>{/if}
         </a>
       {/each}
     </div>
@@ -69,10 +71,10 @@
   </div>
   {#snippet link(item: Item)}
         {@const on = isOn(item)}
-        <a class="item" class:on href={item.href} aria-current={on ? 'page' : undefined} title={collapsed ? item.label : undefined}>
+        <a class="item" class:on href={item.href} aria-current={on ? 'page' : undefined} title={collapsed ? name(item, $t) : undefined}>
           <Icon name={item.icon} color={on ? 'var(--accent)' : 'var(--muted)'} />
-          {#if !collapsed}<span>{item.label}</span>{/if}
-          {#if item.badge && !collapsed}<span class="newtag">{item.badge}</span>{/if}
+          {#if !collapsed}<span>{name(item, $t)}</span>{/if}
+          {#if item.badge && !collapsed}<span class="newtag">{$t('nav.new')}</span>{/if}
           {#if item.href === '/friends' && $socialBadge}<span class="nbadge">{$socialBadge}</span>{/if}
         </a>
   {/snippet}
@@ -92,24 +94,24 @@
       {#if !collapsed}
         <div class="acct-links">
           {#if PLANS_ON}<a class="plan-chip" href="/plans" title="Your plan">{PLAN_INFO[$currentPlan].name} plan</a>{/if}
-          <a class="link" href="/settings">Settings</a>
+          <a class="link" href="/settings">{$t('shell.settings')}</a>
           {#if isAdmin}<a class="link" href="/admin">Admin</a>{/if}
-          <button class="link" onclick={() => signOut()}>Sign out</button>
+          <button class="link" onclick={() => signOut()}>{$t('shell.signout')}</button>
         </div>
       {/if}
     {:else if $session.status === 'out'}
       {#if !collapsed}
         <a class="me guest" href="/profile" title="Your profile">
           <span class="avatar">{#if $myPhoto}<img src={photoSrc($myPhoto)} alt="" />{:else}<Icon name="users" size={18} color="#fff" />{/if}</span>
-          <span class="me-text"><span class="me-name">Profile</span><span class="label me-sub">CC Rating {$kfide.rating}{$kfide.provisional ? ' (new)' : ''} · {SPEED_LABEL[$kfide.speed]}</span></span>
+          <span class="me-text"><span class="me-name">{$t('shell.profile')}</span><span class="label me-sub">CC Rating {$kfide.rating}{$kfide.provisional ? ' (new)' : ''} · {SPEED_LABEL[$kfide.speed]}</span></span>
         </a>
       {/if}
       <button class="btn signin" class:icon-only={collapsed} onclick={() => startSignIn()} title="Sign in">
-        <Icon name="users" size={18} />{#if !collapsed}Sign in{/if}
+        <Icon name="users" size={18} />{#if !collapsed}{$t('shell.signin')}{/if}
       </button>
     {/if}
     {#if !collapsed}
-      <nav class="foot" aria-label="Help and policies">{#if PLANS_ON}<a href="/plans">Plans</a>{/if}{#if $installWay !== 'none' && $installWay !== 'installed'}<button class="install" onclick={() => installOpen.set(true)}>Install app</button>{/if}<a href="/settings">Settings</a><a href="/parents">Parents</a><a href="/feedback">Feedback</a><a href="/help">Help</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/legal/fair-play">Fair play</a><a href="/legal/refunds">Refunds</a></nav>
+      <nav class="foot" aria-label="Help and policies">{#if PLANS_ON}<a href="/plans">Plans</a>{/if}{#if $installWay !== 'none' && $installWay !== 'installed'}<button class="install" onclick={() => installOpen.set(true)}>{$t('shell.install')}</button>{/if}<a href="/settings">{$t('shell.settings')}</a><a href="/parents">{$t('shell.parents')}</a><a href="/feedback">{$t('shell.feedback')}</a><a href="/help">{$t('shell.help')}</a><a href="/legal/terms">{$t('shell.terms')}</a><a href="/legal/privacy">{$t('shell.privacy')}</a><a href="/legal/fair-play">{$t('shell.fairplay')}</a><a href="/legal/refunds">{$t('shell.refunds')}</a></nav>
     {/if}
   </div>
 </nav>

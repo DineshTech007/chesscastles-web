@@ -8,6 +8,7 @@
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import * as api from '$lib/lichessBoard';
   import { lichessRatings } from '$lib/lichess';
+  import { onLichessEvent, openWhenStarted, syncLichessEvents } from '$lib/lichessEvents';
   import { friendsList, serverResting, lobbyLeave, lobbySeek, lobbyState, sendMessage, type LobbyRole, type LobbySeek, type LobbyState } from '$lib/social';
 
   /** `onfide`: switches the Play page to the FIDE-level opponents (offered when no one is free). */
@@ -103,18 +104,25 @@
   });
   onDestroy(() => {
     events?.abort();
+    unlisten?.();
     lichessSeek?.abort();
     if (pool) void lobbyLeave().catch(() => {});
     waiting?.cancel();
   });
 
-  /** Lichess tells us when a game starts (ours, or one already running), and of challenges. */
-  function listen(t: string) {
+  /** Lichess tells us when a game starts (ours, or one already running), and of challenges (the site's one shared stream). */
+  let unlisten: (() => void) | undefined;
+  function listen(_t: string) {
+    if (unlisten) return;
     events = new AbortController();
-    api
-      .streamEvents(
-        t,
-        (e) => {
+    syncLichessEvents();
+    unlisten = onLichessEvent((e) => {
+          if (e.type === 'challengeDeclined' && waiting && e.challenge?.id === sentId) {
+            const why = e.challenge?.declineReason ? ` (${e.challenge.declineReason})` : '';
+            waiting = undefined;
+            error = `${e.challenge?.destUser?.name ?? 'Your friend'} declined the challenge${why}.`;
+            return;
+          }
           if (e.type === 'challenge') return onChallenge(e.challenge);
           if (e.type !== 'gameStart') return;
           const g = e.game;
@@ -127,11 +135,10 @@
           } else if (!ongoing.some((x) => x.gameId === g.gameId)) {
             ongoing = [...ongoing, { gameId: g.gameId, color: g.color, opponent: g.opponent?.username ?? (g.opponent?.ai ? `Stockfish level ${g.opponent.ai}` : 'Opponent') }];
           }
-        },
-        events.signal,
-      )
-      .catch(() => {});
+    });
   }
+  /** The challenge sent from here and waiting for an answer. */
+  let sentId = '';
 
   /** Challenges that arrive while waiting; only the paired player's is accepted (see tryAccept). */
   function onChallenge(c: { id: string; challenger?: { id: string }; timeControl?: { limit?: number; increment?: number }; rated?: boolean; status?: string }) {
@@ -303,8 +310,10 @@
         }
         try {
           const id = await api.challengeUser(t, name, { minutes: tc.m, increment: tc.i, rated, color });
+          sentId = id;
+          openWhenStarted(id);
           waiting = {
-            text: `Waiting for ${name} to accept your ${tc.m}+${tc.i} challenge…`,
+            text: `Waiting for ${name} to accept your ${tc.m}+${tc.i} challenge… They get a pop-up on Chess Castles and a notification on Lichess.`,
             cancel: () => void api.cancelChallenge(t, id).catch(() => {}),
           };
         } catch (e) {

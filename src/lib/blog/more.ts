@@ -1,7 +1,7 @@
 import type { Post } from './posts';
 
 /**
- * More Castle Chronicles posts: chess for kids (habits that make children improve), parents' guides, and two
+ * More Blogs & Forum posts: chess for kids (habits that make children improve), parents' guides, and two
  * stories. In a body, "[board:FEN|caption]" is a position diagram, "[rice]" the rice-and-chessboard picture
  * and "[week]" a sample week of practice. Only checkable facts go in the stories.
  */

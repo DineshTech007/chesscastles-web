@@ -109,6 +109,30 @@ html {
   caret-color: transparent;
   -webkit-tap-highlight-color: transparent;
 }
+/* Hindi and Marathi: Devanagari needs more height than the Latin headings' tight line spacing, and no letter-spacing. */
+html[lang='hi'] body,
+html[lang='mr'] body {
+  line-height: 1.6;
+}
+html[lang='hi'] .display,
+html[lang='mr'] .display,
+html[lang='hi'] .title,
+html[lang='mr'] .title,
+html[lang='hi'] h1,
+html[lang='mr'] h1,
+html[lang='hi'] h2,
+html[lang='mr'] h2,
+html[lang='hi'] h3,
+html[lang='mr'] h3 {
+  line-height: 1.35;
+  letter-spacing: 0;
+  font-family: var(--font-body), 'Noto Sans Devanagari', 'Nirmala UI', 'Mukta', sans-serif;
+  font-weight: 700;
+}
+html[lang='hi'] .brand-text,
+html[lang='mr'] .brand-text {
+  line-height: 1.2;
+}
 /* The page never slides sideways under a finger (a phone), whatever a wide element does inside it. */
 body {
   overflow-x: clip;

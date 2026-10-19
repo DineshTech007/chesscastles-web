@@ -10,7 +10,8 @@
   import FeatureArt from './FeatureArt.svelte';
   import { session, startSignIn } from '$lib/auth';
   import { track } from '$lib/analytics';
-  import { FIDE_DISCLAIMER, HERO_FEATURES } from '$lib/heroFeatures';
+  import { HERO_FEATURES } from '$lib/heroFeatures';
+  import { t, type Key } from '$lib/i18n';
   import { PLAN_INFO, PLANS_ON, launchOn, planSettings } from '$lib/plans';
 
   /** `closing`: end with the "Every pawn can become a Queen" call (the /features page). */
@@ -20,15 +21,16 @@
   const shapes = [{ orig: 'h5' as const, dest: 'f7' as const, brush: 'green' }];
   const launch = $derived($planSettings.launch);
 
-  const EVERYTHING: { icon: IconName; title: string; text: string; href: string }[] = [
-    { icon: 'globe', title: 'Play Lichess players', text: 'Online, free, with friends too', href: '/play?mode=online' },
-    { icon: 'puzzle', title: 'Puzzles', text: 'Daily puzzle and 17 themes', href: '/puzzles' },
-    { icon: 'analyse', title: 'Analysis board', text: 'Engine, import, board editor', href: '/analysis' },
-    { icon: 'watch', title: 'Watch live', text: 'Top events and friends’ games', href: '/watch' },
-    { icon: 'trophy', title: 'Tournaments', text: 'FIDE tournaments and arenas', href: '/play/tournament' },
-    { icon: 'eye', title: 'Blindfold Gym', text: 'Blindfold training', href: '/vision' },
-    { icon: 'book', title: 'Audio Books', text: 'Listen to the chess classics', href: '/books' },
-    { icon: 'star', title: 'Leaderboards', text: 'CC Rating, puzzles, study', href: '/leaderboard' },
+  /** The everyday pages, with their words in src/lib/i18n ('land.t.<id>' and '.b'). */
+  const EVERYTHING: { icon: IconName; id: string; href: string }[] = [
+    { icon: 'globe', id: 'online', href: '/play?mode=online' },
+    { icon: 'puzzle', id: 'puzzles', href: '/puzzles' },
+    { icon: 'analyse', id: 'analysis', href: '/analysis' },
+    { icon: 'watch', id: 'watch', href: '/watch' },
+    { icon: 'trophy', id: 'tournaments', href: '/play/tournament' },
+    { icon: 'eye', id: 'vision', href: '/vision' },
+    { icon: 'book', id: 'books', href: '/books' },
+    { icon: 'star', id: 'boards', href: '/leaderboard' },
   ];
   const go = (id: string) => track('feature', `landing_${id}`);
 </script>
@@ -37,38 +39,38 @@
   <section class="hero">
     <div class="copy">
       <p class="eyebrow">Learn · Play · Conquer</p>
-      <h1 class="display">Everything chess. <span class="gold">Plus five things you won’t find together anywhere else.</span></h1>
-      <p class="sub">Play online, solve puzzles, analyse and watch the world’s best live, all free. Then go further with five features built only for Chess Castles.</p>
+      <h1 class="display">{$t('land.h1a')} <span class="gold">{$t('land.h1b')}</span></h1>
+      <p class="sub">{$t('land.sub')}</p>
       <div class="ctas">
-        <a class="btn primary big" href="/play?mode=fide" onclick={() => go('hero_play')}><Icon name="play" size={18} fill color="currentColor" />Play at FIDE level</a>
+        <a class="btn primary big" href="/play?mode=fide" onclick={() => go('hero_play')}><Icon name="play" size={18} fill color="currentColor" />{$t('land.cta.play')}</a>
         {#if $session.status !== 'in'}
-          <button class="btn big" onclick={() => (go('hero_signin'), startSignIn())}>Sign in free</button>
+          <button class="btn big" onclick={() => (go('hero_signin'), startSignIn())}>{$t('land.cta.signin')}</button>
         {/if}
       </div>
       {#if PLANS_ON && launchOn(launch) && $session.status !== 'in'}
         <p class="offer"><PlanBadge plan={launch.plan} size={22} /><span><strong>Launch offer:</strong> {PLAN_INFO[launch.plan].name} free for {launch.days} days. No card needed.</span></p>
       {/if}
-      <p class="parents"><a href="/parents"><Icon name="shield" size={16} color="var(--accent)" />For parents: is it safe for my child?</a></p>
+      <p class="parents"><a href="/parents"><Icon name="shield" size={16} color="var(--accent)" />{$t('land.parents')}</a></p>
       <ul class="trust" aria-label="Chess Castles in numbers">
-        <li><strong class="num">5.4M</strong><span>tournament games</span></li>
-        <li><strong class="num">3,865</strong><span>named opening lines</span></li>
-        <li><strong class="num">1400–2800</strong><span>FIDE-level opponents</span></li>
+        <li><strong class="num">5.4M</strong><span>{$t('land.trust.games')}</span></li>
+        <li><strong class="num">3,865</strong><span>{$t('land.trust.lines')}</span></li>
+        <li><strong class="num">1400–2800</strong><span>{$t('land.trust.opp')}</span></li>
       </ul>
     </div>
     <div class="visual" aria-hidden="true">
       <div class="board-wrap">
         <Board fen={FEN} {shapes} viewOnly coordinates={false} label="A chess position" />
       </div>
-      <div class="float f1"><span class="dot"></span>Puzzle · White to play</div>
-      <div class="float f2"><span class="bang">#</span>Mate in one</div>
-      <div class="float f3"><Icon name="coach" size={16} color="var(--accent)" />Guru: the f7 square is weak!</div>
+      <div class="float f1"><span class="dot"></span>{$t('land.f1')}</div>
+      <div class="float f2"><span class="bang">#</span>{$t('land.f2')}</div>
+      <div class="float f3"><Icon name="coach" size={16} color="var(--accent)" />{$t('land.f3')}</div>
     </div>
   </section>
 
   <section class="only" aria-labelledby="only-h">
     <header class="sec-head">
-      <p class="eyebrow"><Icon name="sparkle" size={14} color="var(--accent)" /> Signature features</p>
-      <h2 id="only-h" class="display">Five signature features, all in one place</h2>
+      <p class="eyebrow"><Icon name="sparkle" size={14} color="var(--accent)" /> {$t('land.sec.eyebrow')}</p>
+      <h2 id="only-h" class="display">{$t('land.sec.h')}</h2>
     </header>
     <div class="bento">
       {#each HERO_FEATURES as f, i (f.id)}
@@ -76,28 +78,28 @@
           <div class="art-box"><FeatureArt id={f.id} /></div>
           <div class="feat-text">
             <span class="num-tag num">0{i + 1}</span>
-            <h3 class="title">{f.title}</h3>
-            <p>{f.promise}</p>
-            <ul class="facts">{#each f.facts as x (x)}<li>{x}</li>{/each}</ul>
-            <span class="go">{f.cta} <Icon name="chevron" size={16} /></span>
+            <h3 class="title">{$t(`hero.${f.id}.title` as Key)}</h3>
+            <p>{$t(`hero.${f.id}.promise` as Key)}</p>
+            <ul class="facts">{#each ['f1', 'f2', 'f3'] as x (x)}<li>{$t(`hero.${f.id}.${x}` as Key)}</li>{/each}</ul>
+            <span class="go">{$t(`hero.${f.id}.cta` as Key)} <Icon name="chevron" size={16} /></span>
           </div>
         </a>
       {/each}
     </div>
   </section>
 
-  <p class="disclaimer label">{FIDE_DISCLAIMER}</p>
+  <p class="disclaimer label">{$t('hero.disclaimer')}</p>
 
   <section class="all" aria-labelledby="all-h">
     <header class="sec-head">
-      <p class="eyebrow">And everything you expect</p>
-      <h2 id="all-h" class="display">One place for all your chess</h2>
+      <p class="eyebrow">{$t('land.all.eyebrow')}</p>
+      <h2 id="all-h" class="display">{$t('land.all.h')}</h2>
     </header>
     <div class="tiles">
       {#each EVERYTHING as e (e.href)}
         <a class="tile card" href={e.href}>
           <span class="ic"><Icon name={e.icon} size={22} color="var(--accent)" /></span>
-          <span class="tt"><strong>{e.title}</strong><span class="label">{e.text}</span></span>
+          <span class="tt"><strong>{$t(`land.t.${e.id}` as Key)}</strong><span class="label">{$t(`land.t.${e.id}.b` as Key)}</span></span>
         </a>
       {/each}
     </div>
@@ -108,10 +110,10 @@
     <div class="pieces" aria-hidden="true">
       <PlanBadge plan="free" size={44} /><PlanBadge plan="premium" size={50} /><PlanBadge plan="elite" size={56} />
     </div>
-    <h2 class="display">Every pawn can become a Queen.</h2>
-    <p>Start free today. Your castle is waiting.</p>
+    <h2 class="display">{$t('land.close.h')}</h2>
+    <p>{$t('land.close.p')}</p>
     <div class="ctas center">
-      {#if $session.status !== 'in'}<button class="btn primary big" onclick={() => (go('close_signin'), startSignIn())}>Start free</button>{/if}
+      {#if $session.status !== 'in'}<button class="btn primary big" onclick={() => (go('close_signin'), startSignIn())}>{$t('land.close.cta')}</button>{/if}
       {#if PLANS_ON}<a class="btn big" href="/plans">See plans</a>{/if}
     </div>
   </section>

@@ -1,19 +1,20 @@
 <script lang="ts">
   /** Home page: everything outside the five signature features, in its own block (the same list as the menu, src/lib/nav.ts). */
-  import { NAV_ITEMS } from '$lib/nav';
+  import { NAV_ITEMS, navBlurbKey, navKey } from '$lib/nav';
+  import { t } from '$lib/i18n';
   import { socialBadge } from '$lib/social';
   import Icon from './Icon.svelte';
 </script>
 
 <section class="explore" aria-labelledby="explore-h">
-  <h2 id="explore-h" class="label eh"><Icon name="globe" size={14} color="var(--accent)" /> More to explore, all free</h2>
+  <h2 id="explore-h" class="label eh"><Icon name="globe" size={14} color="var(--accent)" /> {$t('home.explore')}</h2>
   <div class="grid">
     {#each NAV_ITEMS as n (n.href)}
       <a class="tile card" href={n.href}>
         <span class="ic"><Icon name={n.icon} size={20} color="var(--accent)" /></span>
         <span class="tt">
-          <strong>{n.label}{#if n.badge}<span class="newtag">{n.badge}</span>{/if}{#if n.href === '/friends' && $socialBadge}<span class="nbadge">{$socialBadge}</span>{/if}</strong>
-          <span class="label">{n.blurb}</span>
+          <strong>{$t(navKey(n.href))}{#if n.badge}<span class="newtag">{$t('nav.new')}</span>{/if}{#if n.href === '/friends' && $socialBadge}<span class="nbadge">{$socialBadge}</span>{/if}</strong>
+          <span class="label">{$t(navBlurbKey(n.href))}</span>
         </span>
       </a>
     {/each}

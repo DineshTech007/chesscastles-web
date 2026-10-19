@@ -6,6 +6,7 @@
    */
   import { session } from '$lib/auth';
   import { friendAction, incomingRequests, initialsOf, playerPhoto, refreshBadge, type Player } from '$lib/social';
+  import { t } from '$lib/i18n';
   import Icon from './Icon.svelte';
 
   let { inline = false }: { inline?: boolean } = $props();
@@ -49,24 +50,24 @@
   <section class="req" class:inline class:pop={!inline} role={inline ? undefined : 'alertdialog'} aria-labelledby="req-h" aria-live="polite">
     <div class="head">
       <Icon name="user_plus" size={20} color="var(--gold)" />
-      <h2 id="req-h" class="title">{shown.length === 1 ? 'New friend request' : `${shown.length} friend requests`}</h2>
-      {#if !inline}<button class="x" onclick={postpone} aria-label="Hide for now"><Icon name="close" size={16} /></button>{/if}
+      <h2 id="req-h" class="title">{shown.length === 1 ? $t('fr.one') : $t('fr.many', { n: shown.length })}</h2>
+      {#if !inline}<button class="x" onclick={postpone} aria-label={$t('fr.hide')}><Icon name="close" size={16} /></button>{/if}
     </div>
     {#each shown.slice(0, inline ? 5 : 1) as p (p.uid)}
       {@const photo = playerPhoto(p)}
       <div class="one">
         <a class="who" href="/players/{encodeURIComponent(p.uid)}">
           <span class="av">{#if photo}<img src={photo} alt="" />{:else}{initialsOf(p.name)}{/if}</span>
-          <span class="txt"><strong>{p.name}</strong><span class="label">wants to be your friend{p.kfide && p.kfideGames ? ` · CC Rating ${p.kfide}` : ''}</span></span>
+          <span class="txt"><strong>{p.name}</strong><span class="label">{$t('fr.wants')}{p.kfide && p.kfideGames ? ` · CC Rating ${p.kfide}` : ''}</span></span>
         </a>
         <div class="btns">
-          <button class="btn primary" disabled={busy === p.uid} onclick={() => act(p, 'accept')}>Accept</button>
-          <button class="btn ghost" disabled={busy === p.uid} onclick={() => act(p, 'remove')}>Decline</button>
+          <button class="btn primary" disabled={busy === p.uid} onclick={() => act(p, 'accept')}>{$t('fr.accept')}</button>
+          <button class="btn ghost" disabled={busy === p.uid} onclick={() => act(p, 'remove')}>{$t('fr.decline')}</button>
         </div>
       </div>
     {/each}
-    {#if !inline && shown.length > 1}<a class="more label" href="/friends">+ {shown.length - 1} more: see all</a>{/if}
-    {#if inline && shown.length > 5}<a class="more label" href="/friends">+ {shown.length - 5} more: see all</a>{/if}
+    {#if !inline && shown.length > 1}<a class="more label" href="/friends">{$t('fr.more', { n: shown.length - 1 })}</a>{/if}
+    {#if inline && shown.length > 5}<a class="more label" href="/friends">{$t('fr.more', { n: shown.length - 5 })}</a>{/if}
     {#if error}<p class="err" role="alert">{error}</p>{/if}
   </section>
 {/if}

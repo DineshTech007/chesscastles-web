@@ -206,6 +206,9 @@ export interface LiveGame {
   at: number;
   result?: string;
   reason?: string;
+  /** The player's CC Rating when the game began, and after it (once it is over): shown by the player's name to those watching. */
+  myRating?: number;
+  myAfter?: number;
 }
 export const shareLive = (g: LiveGame) => call<{ ok: true }>('PUT', 'live', { data: JSON.stringify(g) });
 export const endLive = () => call<{ ok: true }>('DELETE', 'live');

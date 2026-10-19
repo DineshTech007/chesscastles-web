@@ -103,11 +103,23 @@
       name: isFriend ? friendName : opponent,
       subtitle: s === 'white' ? 'White' : 'Black',
       initials: initialsOf(isFriend ? friendName : opponent),
-      rating: isFriend ? (friend?.kfide ? `CC ${friend.kfide}` : undefined) : oppRating,
+      rating: isFriend ? friendRating() : oppRating,
       country: isFriend ? friend?.country || undefined : undefined,
       toMove: latest && !game?.result && after?.turn === s,
       clockMs,
     };
+  }
+  /** The friend's CC Rating by their name: before the game, and after it with the change once it is over. */
+  function friendRating(): string | undefined {
+    const g = game;
+    if (g?.myRating !== undefined) {
+      if (g.result && g.myAfter !== undefined) {
+        const d = g.myAfter - g.myRating;
+        return `CC ${g.myAfter} (${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)})`;
+      }
+      return `CC ${g.myRating}`;
+    }
+    return friend?.kfide ? `CC ${friend.kfide}` : undefined;
   }
   const resultText = $derived(
     !game?.result ? '' : game.result === 'aborted' ? 'Game aborted' : game.result === '½-½' ? 'Draw' : (game.result === '1-0') === (game.human === 'white') ? `${friendName} won` : `${friendName} lost`,

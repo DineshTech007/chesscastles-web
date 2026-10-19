@@ -6,21 +6,34 @@
   import Icon from '$lib/components/Icon.svelte';
   import { contentLang } from '$lib/contentLang';
   import { POSTS, TAG_NAME, type Tag } from '$lib/blog/posts';
-  import { formatDate } from '$lib/format';
+  import { blogStats, loadBlogStats, ZERO } from '$lib/blog/stats';
   import { track } from '$lib/analytics';
 
   const UI = {
-    en: { title: 'Castle Chronicles', sub: 'Stories, kids’ improvement tips and chess history, for players and parents.', surprise: 'Surprise me', all: 'All', read: 'min read', new: 'More stories are added regularly.' },
-    hi: { title: 'Castle Chronicles', sub: 'Players और parents के लिए कहानियाँ, बच्चों के सुधार के tips और chess का इतिहास।', surprise: 'कुछ नया पढ़ाओ', all: 'सब', read: 'minute पढ़ना', new: 'नई कहानियाँ नियमित रूप से जुड़ती रहती हैं।' },
-    mr: { title: 'Castle Chronicles', sub: 'Players आणि पालकांसाठी गोष्टी, मुलांच्या प्रगतीचे tips आणि chess चा इतिहास.', surprise: 'काहीतरी नवं वाचवा', all: 'सगळे', read: 'minute वाचन', new: 'नव्या गोष्टी नियमितपणे जोडल्या जातात.' },
+    en: { title: 'Blogs & Forum', sub: 'Stories, kids’ improvement tips and chess history, for players and parents.', surprise: 'Surprise me', all: 'All', read: 'min read', sortBy: 'Sort by', latest: 'Latest', views: 'Most viewed', popular: 'Most popular', loved: 'Most loved', views1: 'views', likes: 'likes', dislikes: 'dislikes', hearts: 'loves', new: 'More stories are added regularly.' },
+    hi: { title: 'Blogs और Forum', sub: 'Players और parents के लिए कहानियाँ, बच्चों के सुधार के tips और chess का इतिहास।', surprise: 'कुछ नया पढ़ाओ', all: 'सब', read: 'minute पढ़ना', sortBy: 'क्रम', latest: 'सबसे नए', views: 'सबसे ज़्यादा पढ़े गए', popular: 'सबसे लोकप्रिय', loved: 'सबसे ज़्यादा पसंद', views1: 'बार पढ़ी गई', likes: 'पसंद', dislikes: 'नापसंद', hearts: 'दिल', new: 'नई कहानियाँ नियमित रूप से जुड़ती रहती हैं।' },
+    mr: { title: 'Blogs आणि Forum', sub: 'Players आणि पालकांसाठी गोष्टी, मुलांच्या प्रगतीचे tips आणि chess चा इतिहास.', surprise: 'काहीतरी नवं वाचवा', all: 'सगळे', read: 'minute वाचन', sortBy: 'क्रम', latest: 'सर्वात नवीन', views: 'सर्वाधिक वाचलेल्या', popular: 'सर्वाधिक लोकप्रिय', loved: 'सर्वाधिक आवडत्या', views1: 'वेळा वाचली', likes: 'आवडली', dislikes: 'आवडली नाही', hearts: 'हृदय', new: 'नव्या गोष्टी नियमितपणे जोडल्या जातात.' },
   } as const;
   const t = $derived(UI[$contentLang]);
   let tag = $state<Tag | 'all'>('all');
   const tags = [...new Set(POSTS.map((p) => p.tag))];
-  const posts = $derived(POSTS.filter((p) => tag === 'all' || p.tag === tag).sort((a, b) => b.date.localeCompare(a.date)));
+  /** How the list is ordered: newest first, or by what readers did (counted for everyone, src/lib/blog/stats.ts). */
+  type Sort = 'latest' | 'views' | 'popular' | 'loved';
+  let sort = $state<Sort>('latest');
+  const score: Record<Sort, (slug: string) => number> = {
+    latest: () => 0,
+    views: (s) => c(s).views,
+    popular: (s) => c(s).likes + c(s).hearts - c(s).dislikes,
+    loved: (s) => c(s).hearts,
+  };
+  const posts = $derived(
+    POSTS.filter((p) => tag === 'all' || p.tag === tag).sort((a, b) => score[sort](b.slug) - score[sort](a.slug) || b.date.localeCompare(a.date)),
+  );
   const first = $derived(posts[0]);
   const rest = $derived(posts.slice(1));
-  const dateOf = (iso: string) => formatDate(new Date(`${iso}T12:00:00`).getTime());
+  const dateOf = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  $effect(() => void loadBlogStats());
+  const c = (slug: string) => $blogStats[slug] ?? ZERO;
   function surprise() {
     track('feature', 'blog_surprise');
     const p = POSTS[Math.floor(Math.random() * POSTS.length)];
@@ -28,7 +41,16 @@
   }
 </script>
 
-<svelte:head><title>Castle Chronicles · Chess Castles</title></svelte:head>
+<svelte:head><title>Blogs & Forum · Chess Castles</title></svelte:head>
+
+{#snippet counts(slug: string)}
+  <span class="counts" aria-label="{c(slug).views} {t.views1}, {c(slug).likes} {t.likes}, {c(slug).dislikes} {t.dislikes}, {c(slug).hearts} {t.hearts}">
+    <span title={t.views1}><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0" /></svg>{c(slug).views}</span>
+    <span title={t.likes}><svg viewBox="0 0 24 24"><path d="M7 11v9H4v-9zM7 11l4-8c1.6 0 2.6 1.1 2.3 2.7L12.8 9H19a2 2 0 0 1 2 2.3l-1.2 7a2 2 0 0 1-2 1.7H7" /></svg>{c(slug).likes}</span>
+    <span title={t.dislikes}><svg viewBox="0 0 24 24" style="transform: rotate(180deg)"><path d="M7 11v9H4v-9zM7 11l4-8c1.6 0 2.6 1.1 2.3 2.7L12.8 9H19a2 2 0 0 1 2 2.3l-1.2 7a2 2 0 0 1-2 1.7H7" /></svg>{c(slug).dislikes}</span>
+    <span class="hrt" title={t.hearts}><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>{c(slug).hearts}</span>
+  </span>
+{/snippet}
 
 <div class="page" lang={$contentLang}>
   <header class="head">
@@ -47,6 +69,13 @@
     {#each tags as k (k)}<button class="chip" aria-pressed={tag === k} onclick={() => (tag = k)}>{TAG_NAME[k][$contentLang]}</button>{/each}
   </div>
 
+  <div class="sortbar" role="group" aria-label={t.sortBy}>
+    <span class="label">{t.sortBy}:</span>
+    {#each ['latest', 'views', 'popular', 'loved'] as k (k)}
+      <button class="chip" aria-pressed={sort === k} onclick={() => (sort = k as Sort)}>{t[k as 'latest' | 'views' | 'popular' | 'loved']}</button>
+    {/each}
+  </div>
+
   {#if first}
     <a class="card hero" href="/blog/{first.slug}">
       <PostCover piece={first.piece} hue={first.hue} size="hero" />
@@ -55,6 +84,7 @@
         <h2 class="display">{first.title[$contentLang]}</h2>
         <p>{first.summary[$contentLang]}</p>
         <span class="label">{dateOf(first.date)} · {first.read} {t.read}</span>
+        {@render counts(first.slug)}
       </div>
     </a>
   {/if}
@@ -68,6 +98,7 @@
           <h3 class="title">{p.title[$contentLang]}</h3>
           <p class="label">{p.summary[$contentLang]}</p>
           <span class="label meta">{dateOf(p.date)} · {p.read} {t.read}</span>
+          {@render counts(p.slug)}
         </div>
       </a>
     {/each}
@@ -188,6 +219,41 @@
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
+  }
+  .sortbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .sortbar .label {
+    margin: 0;
+  }
+  .counts {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+  .counts span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .counts svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .counts .hrt {
+    color: #ef4d6a;
   }
   .foot {
     margin: 0;

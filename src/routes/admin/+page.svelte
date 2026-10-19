@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PLANS_ON } from '$lib/plans';
   /**
    * The admin page (hidden from players): dashboard and analytics, players and
    * plans, plan settings, reports, and the team. The server checks the role on
@@ -46,7 +47,7 @@
       [
         ['dashboard', 'Dashboard', 'view'],
         ['players', 'Players', 'view'],
-        ['plans', 'Plans & offers', 'view'],
+        ['plans', PLANS_ON ? 'Plans & offers' : 'Site banner', 'view'],
         ['reports', 'Reports', 'reports'],
         ['feedback', 'Feedback', 'reports'],
         ['team', 'Team & log', 'owner'],

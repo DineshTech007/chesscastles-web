@@ -9,6 +9,7 @@
   import type { WeeklyPlan } from '$lib/insights/plan';
   import type { Report } from '$lib/insights/report';
   import { studyHref } from '$lib/study/fromGames';
+  import { t } from '$lib/i18n';
   import Icon from './Icon.svelte';
   import ScoreRing from './ScoreRing.svelte';
 
@@ -60,51 +61,51 @@
 
 <section class="cards" aria-label="Your report card">
   <div class="card c">
-    <ScoreRing value={report.accuracy} label="Accuracy" sub="{Math.round(report.acpl)} centipawns lost a move" color={accColor} />
+    <ScoreRing value={report.accuracy} label={$t('ih.acc')} sub={$t('ih.accsub', { n: Math.round(report.acpl) })} color={accColor} />
   </div>
   <div class="card c">
-    <ScoreRing value={report.score * 100} label="Score" sub="{report.games} games{report.averageRating ? ` · rated about ${report.averageRating}` : ''}" color="var(--accent)" />
+    <ScoreRing value={report.score * 100} label={$t('ih.score')} sub={$t('ih.games', { n: report.games }) + (report.averageRating ? $t('ih.rated', { n: report.averageRating }) : '')} color="var(--accent)" />
     <div class="wdl" role="img" aria-label="{wdl.w} won, {wdl.d} drawn, {wdl.l} lost">
       <span class="w" style="flex: {wdl.w}"></span><span class="d" style="flex: {wdl.d}"></span><span class="l" style="flex: {wdl.l}"></span>
     </div>
-    <span class="label wdl-t">{wdl.w} won · {wdl.d} drawn · {wdl.l} lost</span>
+    <span class="label wdl-t">{$t('ih.wdl', { w: wdl.w, d: wdl.d, l: wdl.l })}</span>
   </div>
   <div class="card c meter">
     <strong class="big num" class:bad={report.blundersPerGame > goalBlunders * 1.5}>{report.blundersPerGame.toFixed(1)}</strong>
-    <strong>Blunders a game</strong>
+    <strong>{$t('ih.blunders')}</strong>
     <div class="gauge" role="img" aria-label="{report.blundersPerGame.toFixed(1)} blunders a game, goal {goalBlunders.toFixed(1)}">
       <span class="fill" style="width: {Math.min(100, (report.blundersPerGame / 4) * 100)}%"></span>
       <span class="goal" style="left: {Math.min(100, (goalBlunders / 4) * 100)}%" title="Goal"></span>
     </div>
-    <span class="label">mistakes {report.mistakesPerGame.toFixed(1)} a game · goal under {goalBlunders.toFixed(1)}</span>
+    <span class="label">{$t('ih.mist', { n: report.mistakesPerGame.toFixed(1), g: goalBlunders.toFixed(1) })}</span>
   </div>
 </section>
 
 <section class="road" aria-labelledby="road-h">
-  <h2 id="road-h" class="title">Your road to improvement</h2>
-  <p class="label">Three simple steps. Do them in order.</p>
+  <h2 id="road-h" class="title">{$t('ih.road')}</h2>
+  <p class="label">{$t('ih.three')}</p>
   <ol>
     <li class="card step">
       <span class="no">1</span>
       <div class="body">
-        <span class="kick">Fix this first</span>
+        <span class="kick">{$t('ih.fix')}</span>
         {#if top}
           <strong>{top.title}</strong>
           <span class="label">{top.evidence}</span>
         {:else}
-          <strong>No big weakness found</strong>
-          <span class="label">Well played! Analyse more games for a sharper picture.</span>
+          <strong>{$t('ih.noweak')}</strong>
+          <span class="label">{$t('ih.noweakd')}</span>
         {/if}
       </div>
       <div class="acts">
-        {#if top}<a class="btn primary" href={fixHref}><Icon name="puzzle" size={16} />Train it</a><button class="btn ghost" onclick={onweak}>See why</button>{:else if ownMistakes}<a class="btn primary" href="/insights/mistakes">Solve my mistakes</a>{/if}
+        {#if top}<a class="btn primary" href={fixHref}><Icon name="puzzle" size={16} />{$t('ih.train')}</a><button class="btn ghost" onclick={onweak}>{$t('ih.why')}</button>{:else if ownMistakes}<a class="btn primary" href="/insights/mistakes">{$t('ih.solve')}</a>{/if}
       </div>
     </li>
     <li class="card step">
       <span class="no">2</span>
       <div class="body">
-        <span class="kick">Follow this week's plan</span>
-        <strong>{tasks.length} tasks · about {minutes} minutes</strong>
+        <span class="kick">{$t('ih.plan')}</span>
+        <strong>{$t('ih.tasks', { n: tasks.length, m: minutes })}</strong>
         {#if plan}
           <div class="week" aria-label="The next seven days">
             {#each plan.days as d (d.day)}
@@ -114,21 +115,21 @@
         {/if}
       </div>
       <div class="acts">
-        <button class="btn primary" onclick={onadd}><Icon name="learn" size={16} />Add to my study plan</button>
-        <button class="btn ghost" onclick={onplan}>See the plan</button>
+        <button class="btn primary" onclick={onadd}><Icon name="learn" size={16} />{$t('ih.add')}</button>
+        <button class="btn ghost" onclick={onplan}>{$t('ih.seeplan')}</button>
       </div>
     </li>
     <li class="card step">
       <span class="no">3</span>
       <div class="body">
-        <span class="kick">Check your progress</span>
-        <strong>Play about 10 more games, then analyse again</strong>
+        <span class="kick">{$t('ih.check')}</span>
+        <strong>{$t('ih.play10')}</strong>
         <ul class="goals">
-          <li><Icon name="check" size={14} color="var(--win)" />Accuracy: from {Math.round(report.accuracy)}% to {goalAcc}%</li>
-          <li><Icon name="check" size={14} color="var(--win)" />Blunders: from {report.blundersPerGame.toFixed(1)} to under {goalBlunders.toFixed(1)} a game</li>
+          <li><Icon name="check" size={14} color="var(--win)" />{$t('ih.goalacc', { a: Math.round(report.accuracy), b: goalAcc })}</li>
+          <li><Icon name="check" size={14} color="var(--win)" />{$t('ih.goalbl', { a: report.blundersPerGame.toFixed(1), b: goalBlunders.toFixed(1) })}</li>
         </ul>
       </div>
-      <div class="acts"><a class="btn ghost" href="#ins-user" onclick={() => setTimeout(() => document.getElementById('ins-user')?.focus(), 50)}>Analyse again</a></div>
+      <div class="acts"><a class="btn ghost" href="#ins-user" onclick={() => setTimeout(() => document.getElementById('ins-user')?.focus(), 50)}>{$t('ih.again')}</a></div>
     </li>
   </ol>
 </section>

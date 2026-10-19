@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import { session, signOut } from '$lib/auth';
   import { consentNeeded, saveConsent, type AgeGroup } from '$lib/consent';
+  import { t } from '$lib/i18n';
   import ConsentForm from './ConsentForm.svelte';
 
   let age = $state<AgeGroup | undefined>();
@@ -24,11 +25,11 @@
   <div class="scrim" role="presentation"></div>
   <div class="dialog card" role="dialog" aria-modal="true" aria-labelledby="consent-h">
     <img class="crest" src="/brand/chesscastles-crest-dark.svg" alt="" width="46" height="52" />
-    <h2 id="consent-h" class="title">One quick thing</h2>
-    <p class="label">Please read and agree to continue using Chess Castles. This takes ten seconds.</p>
+    <h2 id="consent-h" class="title">{$t('cn.title')}</h2>
+    <p class="label">{$t('cn.sub')}</p>
     <ConsentForm bind:age bind:agreed {showErrors} />
-    <button class="btn primary big" onclick={go}>Agree and continue</button>
-    <button class="link" onclick={() => signOut()}>I do not agree: sign me out</button>
+    <button class="btn primary big" onclick={go}>{$t('cn.go')}</button>
+    <button class="link" onclick={() => signOut()}>{$t('cn.no')}</button>
   </div>
 {/if}
 

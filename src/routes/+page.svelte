@@ -4,6 +4,7 @@
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import HeroLanding from '$lib/components/landing/HeroLanding.svelte';
   import { HERO_FEATURES } from '$lib/heroFeatures';
+  import { t, type Key } from '$lib/i18n';
   import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
   import { myName } from '$lib/stores/me';
   import { onMount } from 'svelte';
@@ -53,7 +54,7 @@
   const wasIn = typeof localStorage !== 'undefined' && localStorage.getItem('cc.wasIn') === '1';
   const showLanding = $derived($session.status === 'out' || ($session.status === 'loading' && !wasIn));
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greetingKey = hour < 12 ? 'home.morning' : hour < 17 ? 'home.afternoon' : 'home.evening';
 </script>
 
 <svelte:head><title>Chess Castles · Learn, Play, Conquer</title></svelte:head>
@@ -65,11 +66,11 @@
   <header class="hello">
     <div>
       <h1 class="display">
-        {greeting}{#if $session.status === 'in'},&nbsp;<TitleBadge title={$myTitle} size={26} />{$myName}{/if}
+        {$t(greetingKey)}{#if $session.status === 'in'},&nbsp;<TitleBadge title={$myTitle} size={26} />{$myName}{/if}
         {#if PLANS_ON && $session.status === 'in'}<a class="h-plan" href="/plans" title="{PLAN_INFO[$currentPlan].name} member"><PlanBadge plan={$currentPlan} size={34} /></a>{/if}
         {#if $myCountry}<img class="h-flag" src="/flags/{$myCountry}.svg" alt={fedName($myCountry)} title={fedName($myCountry)} width="30" height="20" />{/if}
       </h1>
-      <p class="sub"><strong>Learn</strong> with Chess Guru. <strong>Play</strong> FIDE-level opponents and friends. <strong>Conquer</strong> your next tournament.</p>
+      <p class="sub"><strong>{$t('home.learn')}</strong>{$t('home.learn2')}<strong>{$t('home.play')}</strong>{$t('home.play2')}<strong>{$t('home.conquer')}</strong>{$t('home.conquer2')}</p>
     </div>
     {#if ($session.status === 'in' && $session.profile) || $shownGames.length}<RatingStrip />{/if}
   </header>
@@ -81,22 +82,22 @@
     <a class="nudge card" href={todayPlan?.href ?? '/puzzles'}>
       <Icon name="flame" size={22} color="var(--gold)" />
       <span>
-        {#if myStreak > 0}<strong>Keep your {myStreak}-day streak!</strong> You haven't studied today yet.{:else}<strong>Today's plan:</strong>{/if}
-        {#if todayPlan} Today is <span style="color: {todayPlan.color}">{todayPlan.label}</span>: {todayPlan.title}.{:else} One puzzle is enough.{/if}
+        {#if myStreak > 0}<strong>{$t('home.streak', { n: myStreak })}</strong> {$t('home.notyet')}{:else}<strong>{$t('home.todayplan')}</strong>{/if}
+        {#if todayPlan} {$t('home.todayis', { label: todayPlan.label, title: todayPlan.title })}{:else} {$t('home.onepuzzle')}{/if}
       </span>
-      <span class="btn primary">Start</span>
+      <span class="btn primary">{$t('home.start')}</span>
     </a>
   {/if}
 
   {#if !showLanding}
     <section class="only-strip" aria-labelledby="only-h">
-      <h2 id="only-h" class="label only-h"><Icon name="sparkle" size={14} color="var(--accent)" /> Signature features</h2>
+      <h2 id="only-h" class="label only-h"><Icon name="sparkle" size={14} color="var(--accent)" /> {$t('shell.signature')}</h2>
       <div class="only-row">
         {#each HERO_FEATURES as f (f.id)}
           <a class="only-tile card" href={f.href}>
             <span class="only-ic"><Icon name={f.icon} size={22} color="var(--on-action)" /></span>
-            <strong>{f.short}</strong>
-            <span class="label">{f.cta}</span>
+            <strong>{$t(`hero.${f.id}.short` as Key)}</strong>
+            <span class="label">{$t(`hero.${f.id}.cta` as Key)}</span>
           </a>
         {/each}
       </div>
@@ -110,8 +111,8 @@
   <div class="row">
     <section class="card recent" aria-labelledby="recent-h">
       <div class="card-head">
-        <h2 id="recent-h" class="title">Your games</h2>
-        <a href="/games">See all</a>
+        <h2 id="recent-h" class="title">{$t('home.yourgames')}</h2>
+        <a href="/games">{$t('home.seeall')}</a>
       </div>
       {#if recent.length}
         {#each recent as g (g.id)}
@@ -125,8 +126,8 @@
           </a>
         {/each}
       {:else}
-        <p class="label">Games you play here are kept in this browser, ready to analyse.</p>
-        <a class="btn primary" href="/play">Play your first game</a>
+        <p class="label">{$t('home.nogames')}</p>
+        <a class="btn primary" href="/play">{$t('home.firstgame')}</a>
       {/if}
     </section>
   </div>
@@ -134,8 +135,8 @@
   <div class="row">
     <section class="card puzzle" aria-labelledby="puzzle-h">
       <div class="card-head">
-        <h2 id="puzzle-h" class="title">Puzzle of the day</h2>
-        {#if puzzle}<span class="label">Rating {puzzle.rating}</span>{/if}
+        <h2 id="puzzle-h" class="title">{$t('home.puzzle')}</h2>
+        {#if puzzle}<span class="label">{$t('home.rating', { n: puzzle.rating })}</span>{/if}
       </div>
       {#if puzzle}
         <div class="mini">
@@ -149,11 +150,11 @@
           />
         </div>
         <div class="card-foot">
-          <span class="label">{puzzle.start.turn === 'white' ? 'White' : 'Black'} to play</span>
-          <a class="btn primary" href="/puzzles">Solve</a>
+          <span class="label">{puzzle.start.turn === 'white' ? $t('home.white') : $t('home.black')}</span>
+          <a class="btn primary" href="/puzzles">{$t('home.solve')}</a>
         </div>
       {:else if puzzleError}
-        <p class="label">The puzzle couldn't load. Check your connection.</p>
+        <p class="label">{$t('home.puzzleerr')}</p>
       {:else}
         <div class="mini skeleton"></div>
       {/if}
@@ -161,8 +162,8 @@
 
     <section class="card live-card" aria-labelledby="live-h">
       <div class="card-head">
-        <h2 id="live-h" class="title">Live now</h2>
-        <span class="pill live"><span class="live-dot"></span>Live broadcasts</span>
+        <h2 id="live-h" class="title">{$t('home.live')}</h2>
+        <span class="pill live"><span class="live-dot"></span>{$t('home.livebc')}</span>
       </div>
       {#if live}
         {#each live as b (b.id)}
@@ -175,9 +176,9 @@
             <Icon name="chevron" size={16} color="var(--muted)" />
           </a>
         {/each}
-        <a href="/watch">All live events</a>
+        <a href="/watch">{$t('home.allevents')}</a>
       {:else if liveError}
-        <p class="label">Live events couldn't load. Check your connection.</p>
+        <p class="label">{$t('home.liveerr')}</p>
       {:else}
         {#each [0, 1, 2] as i (i)}<div class="event skeleton-line"></div>{/each}
       {/if}
@@ -189,7 +190,7 @@
   {#if !showLanding && $friendsCache.length}<FriendProgress friends={$friendsCache} limit={5} title="Friends this week" />{/if}
 
   {#if $shownGames.length}
-    <GameHistory limit={8} title="Recent games" />
+    <GameHistory limit={8} title={$t('home.recent')} />
   {/if}
 </div>
 

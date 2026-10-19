@@ -27,8 +27,12 @@
   import { afterNavigate, beforeNavigate } from '$app/navigation';
   import LimitModal from '$lib/components/LimitModal.svelte';
   import SignInModal from '$lib/components/SignInModal.svelte';
+  import LangMenu from '$lib/components/LangMenu.svelte';
+  import { t } from '$lib/i18n';
   import ConsentNotice from '$lib/components/ConsentNotice.svelte';
   import FriendRequests from '$lib/components/FriendRequests.svelte';
+  import ChallengePopup from '$lib/components/ChallengePopup.svelte';
+  import { stopLichessEvents, syncLichessEvents, wakeLichessEvents } from '$lib/lichessEvents';
   import { consentNeeded, consentSynced, hasConsent, markConsentSynced, readConsent } from '$lib/consent';
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
@@ -73,7 +77,7 @@
   /** The game page's Back: the previous page of the site, or Play when the game was opened directly. */
   function leaveGame() {
     if (cameInside) history.back();
-    else void goto('/play');
+    else void goto(page.url.pathname.startsWith('/watch') ? '/friends' : '/play');
   }
 
   /** Two accounts were mixed in this browser: signed out, to sign in again. */
@@ -106,7 +110,16 @@
       /* blocked */
     }
     // Back to the site (a tab or the installed app): is there a newer version?
-    const onHide = () => (document.visibilityState === 'hidden' ? flush(true) : void updated.check().catch(() => {}));
+    // Back after a while (a phone that slept): the live Lichess stream may have died, so it reconnects.
+    let hiddenAt = 0;
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        return flush(true);
+      }
+      void updated.check().catch(() => {});
+      if (hiddenAt && Date.now() - hiddenAt > 60_000) wakeLichessEvents();
+    };
     document.addEventListener('visibilitychange', onHide);
     const onLeave = () => flush(true);
     addEventListener('pagehide', onLeave);
@@ -169,8 +182,11 @@
       ratingsUid = '';
       if (s.status !== 'in') {
         consentNeeded.set(false);
+        if (s.status === 'out') stopLichessEvents();
         return;
       }
+      // Challenges from other players reach every page (a popup), from Lichess's live stream.
+      syncLichessEvents();
       // Agreed to the terms: sent to the account once. Signed in from before the consent form: asked once, over the page.
       const agreed = hasConsent() ? readConsent() : undefined;
       consentNeeded.set(!agreed);
@@ -261,17 +277,17 @@
   const phone = $derived(width < 768);
   /** During a game on a phone: no site header or tab bar, so the board and the controls fit on one screen. */
   // Phones: a game in progress gets the whole screen (no bottom bar) until it ends.
-  const focusGame = $derived(phone && !$gameEnded && /^\/play\/(fide|computer|online\/|tournament\/game)/.test(page.url.pathname));
+  const focusGame = $derived(phone && !$gameEnded && /^\/(play\/(fide|computer|online\/|tournament\/game)|watch\/(live|friend)\/)/.test(page.url.pathname));
   const collapsed = $derived(width < 960);
   /** No friend-request popup over a game, or on the Friends page (which lists the requests itself). */
   const noPopups = $derived(/^\/(friends|play\/(fide|computer|online\/|tournament\/game))/.test(page.url.pathname));
 
   const tabs = [
-    { href: '/', label: 'Home', icon: 'home' },
-    { href: '/play', label: 'Play', icon: 'knight' },
-    { href: '/puzzles', label: 'Puzzles', icon: 'puzzle' },
-    { href: '/analysis', label: 'Analyse', icon: 'analyse' },
-    { href: '/more', label: 'More', icon: 'menu' },
+    { href: '/', label: 'tab.home', icon: 'home' },
+    { href: '/play', label: 'tab.play', icon: 'knight' },
+    { href: '/puzzles', label: 'tab.puzzles', icon: 'puzzle' },
+    { href: '/analysis', label: 'tab.analyse', icon: 'analyse' },
+    { href: '/more', label: 'tab.more', icon: 'menu' },
   ] as const;
   const tabOn = (href: string) => (href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href));
 </script>
@@ -312,9 +328,10 @@
       <button class="icon-btn" onclick={toggleTheme} aria-label={theme === 'dark' ? 'Light theme' : 'Dark theme'}>
         <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
       </button>
-      <button class="icon-btn" onclick={() => ($boardThemeOpen = true)} aria-label="Board colour" title="Board colour">
+      <button class="icon-btn pal" onclick={() => ($boardThemeOpen = true)} aria-label="Board colour" title="Board colour">
         <Icon name="palette" size={20} />
       </button>
+      <LangMenu />
       <a class="top-me" href="/profile" title="Your profile" aria-label="Your profile">
         <span class="top-av">
           {#if $myPhoto}<img src={photoSrc($myPhoto)} alt="" />{:else if $session.status === 'in'}{$myInitials}{:else}<Icon name="users" size={18} />{/if}
@@ -362,17 +379,18 @@
 <SignInModal />
 <ConsentNotice />
 {#if !noPopups}<FriendRequests />{/if}
+<ChallengePopup />
 <InstallPrompt />
 <BoardThemeModal bind:open={$boardThemeOpen} />
 
 {#if phone && !focusGame}
   <nav class="tabs" aria-label="Main">
-    {#each tabs as t (t.href)}
-      {@const on = tabOn(t.href)}
-      <a href={t.href} aria-current={on ? 'page' : undefined} class:on title={t.href === '/more' ? 'More: all pages, profile and settings' : undefined}>
-        {#if t.href === '/more'}<span class="sr-only">All pages, profile and settings: </span>{/if}
-        <span class="tab-icon"><Icon name={t.icon} color={on ? 'var(--accent)' : 'var(--muted)'} /></span>
-        {t.label}
+    {#each tabs as tab (tab.href)}
+      {@const on = tabOn(tab.href)}
+      <a href={tab.href} aria-current={on ? 'page' : undefined} class:on title={tab.href === '/more' ? 'More: all pages, profile and settings' : undefined}>
+        {#if tab.href === '/more'}<span class="sr-only">All pages, profile and settings: </span>{/if}
+        <span class="tab-icon"><Icon name={tab.icon} color={on ? 'var(--accent)' : 'var(--muted)'} /></span>
+        {$t(tab.label)}
       </a>
     {/each}
   </nav>
@@ -564,7 +582,7 @@
     padding: 8px 24px 48px;
   }
   /* Small phones (360 px and under): the header fits: no slogan, tighter gaps, smaller buttons. */
-  @media (max-width: 400px) {
+  @media (max-width: 480px) {
     .top {
       padding: 8px 8px 0;
       gap: 4px;
@@ -581,7 +599,14 @@
       height: 40px;
     }
   }
-  @media (max-width: 340px) {
+  /* The board colour button lives in Settings too: on small phones the language menu takes its place. */
+  @media (max-width: 480px) {
+    .top :global(.icon-btn.pal) {
+      display: none;
+    }
+  }
+  /* The sound button is also in each game's own bar: on phones the logo keeps its room. */
+  @media (max-width: 480px) {
     .top :global(.icon-btn:first-of-type) {
       display: none;
     }

@@ -11,6 +11,7 @@
   import { KFIDE_SPEEDS, SPEED_LABEL, kfideText } from '$lib/kfide';
   import { LICHESS_LABEL, lichessRatings, type LichessRating } from '$lib/lichessRatings';
   import { puzzleRating } from '$lib/puzzles/rating';
+  import { t } from '$lib/i18n';
   import Icon from './Icon.svelte';
 
   let open = $state(false);
@@ -37,29 +38,29 @@
 <div class="rs" aria-label="Your ratings and games">
   <div class="row">
     <a class="big" href={main.games ? `/profile?speed=${$kfideAll.main}#cc-ratings` : '/play?mode=fide'} title="Your Chess Castles rating from games against FIDE-level opponents. See how it changed.">
-      <span class="label">CC Rating {SPEED_LABEL[$kfideAll.main]}</span>
-      {#if main.games}<strong class="num">{kfideText(main)}</strong>{:else}<strong class="none">Play to get one</strong>{/if}
+      <span class="label">{$t('rs.cc', { speed: SPEED_LABEL[$kfideAll.main] })}</span>
+      {#if main.games}<strong class="num">{kfideText(main)}</strong>{:else}<strong class="none">{$t('rs.playget')}</strong>{/if}
     </a>
-    <a class="small" href="/puzzles" title="Your puzzle rating: a solved puzzle raises it, a missed one (or a hint) lowers it"><span class="label">Puzzles</span><strong class="num">{$puzzleRating}</strong></a>
-    <a class="small" href="/games" title="Finished games you played on Chess Castles: won {stats.won}, drawn {stats.drawn}, lost {stats.lost}"><span class="label">Games</span><strong class="num">{stats.played}</strong></a>
+    <a class="small" href="/puzzles" title="Your puzzle rating: a solved puzzle raises it, a missed one (or a hint) lowers it"><span class="label">{$t('rs.puzzles')}</span><strong class="num">{$puzzleRating}</strong></a>
+    <a class="small" href="/games" title="Finished games you played on Chess Castles: won {stats.won}, drawn {stats.drawn}, lost {stats.lost}"><span class="label">{$t('rs.games')}</span><strong class="num">{stats.played}</strong></a>
     <button class="all" aria-expanded={open} aria-controls="all-ratings" onclick={() => (open = !open)}>
-      All ratings <span class="chev" class:open><Icon name="chevron" size={14} /></span>
+      {$t('rs.all')} <span class="chev" class:open><Icon name="chevron" size={14} /></span>
     </button>
   </div>
   {#if open}
     <div id="all-ratings" class="panel card">
-      <p class="label">Chess Castles ratings (from FIDE-level opponents)</p>
+      <p class="label">{$t('rs.panel')}</p>
       <div class="grid">
         {#each KFIDE_SPEEDS as s (s)}
           {@const k = $kfideAll[s]}
           <a class="cell" class:main={$kfideAll.main === s && k.games > 0} href={k.games ? `/profile?speed=${s}#cc-ratings` : '/play?mode=fide'}>
             <span class="label">{SPEED_LABEL[s]}</span>
-            {#if k.games}<strong class="num">{kfideText(k)}</strong>{:else}<strong class="none">Play</strong>{/if}
+            {#if k.games}<strong class="num">{kfideText(k)}</strong>{:else}<strong class="none">{$t('rs.play')}</strong>{/if}
           </a>
         {/each}
       </div>
       {#if lichess.length}
-        <p class="label">Your Lichess ratings</p>
+        <p class="label">{$t('rs.lichess')}</p>
         <div class="grid">
           {#each lichess as l (l.speed)}
             <a class="cell" href="/insights" title="{l.games} games"><span class="label">{LICHESS_LABEL[l.speed]}</span><strong class="num">{l.rating}{l.provisional ? '?' : ''}</strong></a>

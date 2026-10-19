@@ -1,6 +1,7 @@
 import { Chess } from 'chessops/chess';
 import { parseSan } from 'chessops/san';
 import { parseUci } from 'chessops/util';
+import { API as CC_API } from './api';
 
 /** Lichess's public API (CORS is open for these endpoints; no login). */
 const API = 'https://lichess.org/api';
@@ -209,6 +210,57 @@ export function runningClock(clockMs: number | undefined, g: Pick<BroadcastGame,
   return Math.max(0, clockMs - g.thinkTime * 1000 - (now - g.fetchedAt));
 }
 
+export interface BroadcastStanding {
+  rank: number;
+  name: string;
+  title?: string;
+  rating?: number;
+  fed?: string;
+  played: number;
+  score: number;
+  /** The rating change over the event, and the rating performance (when Lichess has them). */
+  diff?: number;
+  perf?: number;
+}
+
+/**
+ * A broadcast's standings: Lichess's own table (with its tie-breaks), through Chess Castles' server since Lichess
+ * serves it without CORS; when that is missing, worked out here from the rounds' results.
+ */
+export async function broadcastStandings(tour: BroadcastTour): Promise<BroadcastStanding[]> {
+  try {
+    const res = await fetch(`${CC_API}/broadcast/${encodeURIComponent(tour.id)}/players`);
+    const list = res.ok ? ((await res.json()) as any[]) : [];
+    const scored = Array.isArray(list) ? list.filter((p) => typeof p.score === 'number' && p.name) : [];
+    if (scored.length)
+      return scored
+        .map((p, i) => ({ rank: typeof p.rank === 'number' ? p.rank : i + 1, name: p.name, title: p.title, rating: p.rating, fed: p.fed, played: p.played ?? 0, score: p.score, diff: p.diff, perf: p.perf }))
+        .sort((a, b) => a.rank - b.rank || b.score - a.score);
+  } catch {
+    /* worked out below */
+  }
+  const rounds = tour.rounds.filter((r) => r.finished || r.ongoing);
+  const all = await Promise.all(rounds.map((r) => roundGames(r.id).catch(() => [] as BroadcastGame[])));
+  const table = new Map<string, BroadcastStanding>();
+  const add = (p: BroadcastPlayer, points: number) => {
+    const row = table.get(p.name) ?? { rank: 0, name: p.name, title: p.title, rating: p.rating, fed: p.fed, played: 0, score: 0 };
+    row.played += 1;
+    row.score += points;
+    table.set(p.name, row);
+  };
+  for (const games of all)
+    for (const g of games) {
+      if (g.status === '*') continue;
+      const w = g.status === '1-0' ? 1 : g.status === '0-1' ? 0 : 0.5;
+      add(g.white, w);
+      add(g.black, 1 - w);
+    }
+  const rows = [...table.values()].sort((a, b) => b.score - a.score || (b.rating ?? 0) - (a.rating ?? 0));
+  // Equal scores share a place.
+  rows.forEach((r, i) => (r.rank = i && rows[i - 1].score === r.score ? rows[i - 1].rank : i + 1));
+  return rows;
+}
+
 /** One broadcast game as PGN (a round is a Lichess study; a game is a chapter). */
 export async function broadcastGamePgn(roundId: string, gameId: string): Promise<string> {
   return (await get(`/study/${roundId}/${gameId}.pgn`)).text();
@@ -380,15 +432,27 @@ export async function arenas(): Promise<Arena[]> {
   return [...(j.started ?? []).filter(std).map((t: any) => arenaOf(t, 'started')), ...(j.created ?? []).filter(std).map((t: any) => arenaOf(t, 'created'))];
 }
 
+export interface ArenaStanding {
+  rank: number;
+  name: string;
+  title?: string;
+  rating: number;
+  score: number;
+  fire?: boolean;
+}
+
 export interface ArenaInfo extends Arena {
-  standings: { rank: number; name: string; title?: string; rating: number; score: number; fire?: boolean }[];
+  standings: ArenaStanding[];
+  /** The signed-in player's place (only when asked with their Lichess token): their rank, whether they paused, their game now. */
+  me?: { rank: number; withdraw: boolean; gameId?: string };
   featured?: { id: string; white: string; black: string };
   secondsToStart?: number;
   secondsToFinish?: number;
 }
 
-export async function arena(id: string): Promise<ArenaInfo> {
-  const res = await fetch(`${API}/tournament/${encodeURIComponent(id)}`);
+/** One arena; with the player's Lichess token it also says where they stand. `page`: which 10 of the standings. */
+export async function arena(id: string, token?: string, page = 1): Promise<ArenaInfo> {
+  const res = await fetch(`${API}/tournament/${encodeURIComponent(id)}${page > 1 ? `?page=${page}` : ''}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
   if (!res.ok) throw new Error('This tournament could not be loaded.');
   const t = await res.json();
   const status: Arena['status'] = t.isFinished ? 'finished' : t.isStarted ? 'started' : 'created';
@@ -396,6 +460,7 @@ export async function arena(id: string): Promise<ArenaInfo> {
   return {
     ...base,
     standings: (t.standing?.players ?? []).map((p: any) => ({ rank: p.rank, name: p.name, title: p.title, rating: p.rating, score: p.score, fire: !!p.sheet?.fire })),
+    me: t.me && typeof t.me.rank === 'number' ? { rank: t.me.rank, withdraw: !!t.me.withdraw, gameId: t.me.gameId ?? undefined } : undefined,
     featured: t.featured ? { id: t.featured.id, white: t.featured.white?.name ?? '', black: t.featured.black?.name ?? '' } : undefined,
     secondsToStart: t.secondsToStart,
     secondsToFinish: t.secondsToFinish,

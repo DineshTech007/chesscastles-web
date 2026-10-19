@@ -2,7 +2,7 @@
   /** Admin: every plan limit, the prices, the launch offer and the site banner (saved without a deploy). */
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { getSettings, saveSettings, type Can, type Settings } from '$lib/admin';
-  import { FEATURES, FEATURE_INFO, GATE_INFO, PLANS, PLAN_INFO, QUOTA_INFO, loadPlanSettings, type Gate, type Per, type Quota } from '$lib/plans';
+  import { PLANS_ON, FEATURES, FEATURE_INFO, GATE_INFO, PLANS, PLAN_INFO, QUOTA_INFO, loadPlanSettings, type Gate, type Per, type Quota } from '$lib/plans';
 
   let { can }: { can: Can[] } = $props();
   const owner = $derived(can.includes('owner'));
@@ -43,6 +43,7 @@
   <div class="card skel"></div>
 {:else}
   {#if !owner}<p class="label">Only the owner can change these; you can see them.</p>{/if}
+  {#if PLANS_ON}
   <fieldset class="card" disabled={!owner || busy}>
     <legend class="title">Limits per plan</legend>
     <p class="label">How many uses each plan gets. Leave a box empty for unlimited. Limits reset at midnight, India time.</p>
@@ -103,6 +104,7 @@
     </div>
     <button class="btn primary" onclick={() => save('launch')}>Save the offer</button>
   </fieldset>
+  {/if}
 
   <fieldset class="card" disabled={!owner || busy}>
     <legend class="title">Site banner</legend>

@@ -149,11 +149,11 @@
 
   /** Signed in: friends can watch the game live (sent after each move, and once at the end). */
   let sharedMoves = -1;
-  function shareWithFriends() {
+  function shareWithFriends(force = false) {
     // Only players with friends (who can watch) send each move to the server: it is a database write per move.
     if ($session.status !== 'in' || !game.moves.length || !get(friendsCache).length) return;
     const n = game.moves.length + (game.isOver ? 1000 : 0);
-    if (n === sharedMoves) return;
+    if (n === sharedMoves && !force) return;
     sharedMoves = n;
     void shareLive({
       opponent,
@@ -168,6 +168,7 @@
       at: Date.now(),
       result: game.isOver ? game.result || 'aborted' : undefined,
       reason: game.isOver ? game.endReason : undefined,
+      ...(kind === 'fide' ? { myRating: $kfideAll[speed].history.find((h) => h.id === id)?.before ?? $kfideAll[speed].rating, myAfter: kfideChange?.after } : {}),
     }).catch(() => {});
   }
 
@@ -397,6 +398,15 @@
   const speed = $derived(speedOf(game.timed ? tcLabel(game.timeControl) : ''));
   /** This game's effect on the player's CC Rating (FIDE-bot games). */
   const kfideChange = $derived(kind === 'fide' && g.isOver ? $kfideAll[speed].history.find((h) => h.id === id) : undefined);
+  // The new CC Rating is known a moment after the game ends: friends watching see it by your name.
+  let sentAfter = -1;
+  $effect(() => {
+    const a = kfideChange?.after;
+    if (a !== undefined && a !== sentAfter) {
+      sentAfter = a;
+      shareWithFriends(true);
+    }
+  });
 </script>
 
 <svelte:window onblur={onBlur} onkeydown={onkey} />

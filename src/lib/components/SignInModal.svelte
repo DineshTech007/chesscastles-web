@@ -9,6 +9,7 @@
   import { track } from '$lib/analytics';
   import { hasConsent, readConsent, saveConsent, type AgeGroup } from '$lib/consent';
   import { formatDate } from '$lib/format';
+  import { t } from '$lib/i18n';
   import ConsentForm from './ConsentForm.svelte';
   import Icon from './Icon.svelte';
 
@@ -73,14 +74,14 @@
 {#if $signInOpen}
   <div class="scrim" role="presentation" onclick={close}></div>
   <div class="dialog card" role="dialog" aria-modal="true" aria-labelledby="signin-h">
-    <button class="x" onclick={close} aria-label="Close"><Icon name="close" size={18} /></button>
+    <button class="x" onclick={close} aria-label={$t('si.close')}><Icon name="close" size={18} /></button>
     <img class="crest logo-dark" src="/brand/chesscastles-crest-dark.svg" alt="" width="52" height="58" />
     <img class="crest logo-light" src="/brand/chesscastles-crest-light.svg" alt="" width="52" height="58" />
-    <h2 id="signin-h" class="title">Sign in to Chess Castles</h2>
-    <p class="label">Free. Keep your games, ratings and progress on every device.</p>
+    <h2 id="signin-h" class="title">{$t('si.title')}</h2>
+    <p class="label">{$t('si.sub')}</p>
 
     {#if known}
-      <p class="agreed">✓ You agreed to the <a href="/legal/terms" onclick={close}>terms</a> and <a href="/legal/privacy" onclick={close}>privacy policy</a>{agreedOn ? ` on ${formatDate(agreedOn)}` : ''}.</p>
+      <p class="agreed">{$t('si.agreed1')}<a href="/legal/terms" onclick={close}>{$t('si.terms')}</a>{$t('si.and')}<a href="/legal/privacy" onclick={close}>{$t('si.privacy')}</a>{agreedOn ? $t('si.end.on', { date: formatDate(agreedOn) }) : $t('si.end')}</p>
     {:else}
       <ConsentForm bind:age bind:agreed {showErrors} />
     {/if}
@@ -93,21 +94,21 @@
         <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
       </svg>
       <span class="opt-text">
-        <span class="opt-main">{busy === 'google' ? 'Opening Google…' : 'Continue with Google'}</span>
-        <span class="opt-sub">Quickest. No other account needed.</span>
-        <span class="rec">Recommended for parents</span>
+        <span class="opt-main">{busy === 'google' ? $t('si.opening.g') : $t('si.google')}</span>
+        <span class="opt-sub">{$t('si.google.s')}</span>
+        <span class="rec">{$t('si.rec.parents')}</span>
       </span>
     </button>
     <button class="opt lichess" onclick={lichess} disabled={!!busy}>
       <Icon name="knight" size={22} />
       <span class="opt-text">
-        <span class="opt-main">{busy === 'lichess' ? 'Opening Lichess…' : 'Continue with Lichess'}</span>
-        <span class="opt-sub">Play real opponents online. Your Lichess rating comes along.</span>
-        <span class="rec">Recommended for players</span>
+        <span class="opt-main">{busy === 'lichess' ? $t('si.opening.l') : $t('si.lichess')}</span>
+        <span class="opt-sub">{$t('si.lichess.s')}</span>
+        <span class="rec">{$t('si.rec.players')}</span>
       </span>
     </button>
     {#if error}<p class="error" role="alert">{error}</p>{/if}
-    <p class="label fine">Not sure? Parents choose Google. Players who want to play real opponents online choose Lichess. You can connect the other one later.</p>
+    <p class="label fine">{$t('si.notsure')}</p>
   </div>
 {/if}
 

@@ -6,7 +6,7 @@
   import TitleBadge from '$lib/components/TitleBadge.svelte';
   import { TITLES, TITLE_NAME } from '$lib/titles';
   import { KFIDE_SPEEDS, SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
-  import { PLANS, PLAN_INFO, untilText, type Plan } from '$lib/plans';
+  import { PLANS, PLANS_ON, PLAN_INFO, untilText, type Plan } from '$lib/plans';
 
   let { can, openUid }: { can: Can[]; openUid?: string } = $props();
   // Opened from a report: show that player.
@@ -98,7 +98,7 @@
       <input bind:value={q} placeholder="Name or Lichess username" aria-label="Find a player" />
     </div>
     <div class="chips" role="group" aria-label="Show">
-      {#each [['active', 'Recently active'], ['new', 'Newest'], ...PLANS.map((p) => [p, PLAN_INFO[p].name]), ['suspended', 'Suspended']] as [k, label] (k)}
+      {#each [['active', 'Recently active'], ['new', 'Newest'], ...(PLANS_ON ? PLANS.map((p) => [p, PLAN_INFO[p].name]) : []), ['suspended', 'Suspended']] as [k, label] (k)}
         <button class="chip" aria-pressed={filter === k} onclick={() => (filter = k)}>{label}</button>
       {/each}
     </div>
@@ -113,7 +113,7 @@
           <li>
             <button class="row" class:on={open?.user.uid === u.uid} onclick={() => show(u.uid)}>
               <span class="who"><strong><TitleBadge title={u.title} size={11} />{u.name}</strong><span class="label">@{u.username}{u.country ? ` · ${u.country}` : ''}</span></span>
-              <span class="pchip {u.plan}"><PlanBadge plan={u.plan} size={16} /> {PLAN_INFO[u.plan].name}</span>
+              {#if PLANS_ON}<span class="pchip {u.plan}"><PlanBadge plan={u.plan} size={16} /> {PLAN_INFO[u.plan].name}</span>{/if}
               <span class="label when">{ago(u.seen)}</span>
               {#if u.suspended}<span class="sus">Suspended</span>{/if}
             </button>
@@ -135,7 +135,7 @@
       {#if u.suspended}<p class="sus big">This account is suspended.</p>{/if}
 
       <dl class="facts">
-        <div><dt>Plan</dt><dd><PlanBadge plan={u.plan} /> {PLAN_INFO[u.plan].name}{u.planUntil ? ` until ${untilText(u.planUntil)}` : ''}</dd></div>
+        {#if PLANS_ON}<div><dt>Plan</dt><dd><PlanBadge plan={u.plan} /> {PLAN_INFO[u.plan].name}{u.planUntil ? ` until ${untilText(u.planUntil)}` : ''}</dd></div>{/if}
         <div><dt>CC Rating</dt><dd class="num">{u.kfide ?? '—'}{u.kfideGames ? ` (${u.kfideGames} games)` : ''}</dd></div>
         <div><dt>FIDE</dt><dd>{u.fideId ? `${u.fideId}${u.fideRating ? ` · ${u.fideRating}` : ''}` : '—'}</dd></div>
         <div><dt>Games saved</dt><dd class="num">{open.games}{open.lastGame ? `, last ${date(open.lastGame)}` : ''}</dd></div>
@@ -170,6 +170,21 @@
         <p class="label">From now on the player's {SPEED_LABEL[rSpeed]} games count from this rating (their earlier games stay in their history). It shows on leaderboards at once and on their own screens the next time they open Chess Castles. The reason box below goes into the admin log.</p>
       {/if}
 
+      {#if !PLANS_ON}
+        <!-- Everything is free: the only thing an admin still gives is access to the coach tools (students). -->
+        <h3 class="title">Coach tools</h3>
+        {@const active = open.grants.filter((g) => g.start <= Date.now() && g.until > Date.now())}
+        {#if active.length}
+          {#each active as g (g.id)}
+            <p class="label">Coach tools until {date(g.until)}{g.note ? ` · ${g.note}` : ''} {#if can.includes('grant')}<button class="btn small" disabled={busy} onclick={() => act(() => revoke(g.id), 'Coach tools ended.')}>End now</button>{/if}</p>
+          {/each}
+        {:else}
+          <p class="label">No coach tools. They let a coach add students and set them work.</p>
+        {/if}
+        {#if can.includes('grant')}
+          <button class="btn primary" disabled={busy} onclick={() => act(() => grant(u.uid, 'elite', 365, 'Coach tools'), 'Coach tools given for a year.')}>Give coach tools (1 year)</button>
+        {/if}
+      {:else}
       <h3 class="title">Plans</h3>
       {#if !open.grants.length}
         <p class="label">Never had a plan: Free.</p>
@@ -193,6 +208,7 @@
           <input class="note" bind:value={gNote} placeholder="Why (e.g. coach, prize, paid by UPI)" aria-label="Note" />
           <button class="btn primary" disabled={busy}>Give plan</button>
         </form>
+      {/if}
       {/if}
 
       <h3 class="title">Used in the last 30 days</h3>

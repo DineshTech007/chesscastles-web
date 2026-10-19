@@ -71,10 +71,13 @@
   let following = $state(true);
   // svelte-ignore state_referenced_locally
   let orientation = $state<'white' | 'black'>(side);
-  /** The engine is on from the start (it can be switched off, and the database on, under the move buttons). */
-  let engineOn = $state(true);
-  let dbOn = $state(false);
-  let info = $state<EngineInfo | undefined>();
+  /** What the analysis panel shows: the engine's three best moves (from the start), the database's, or nothing. */
+  let mode = $state<'engine' | 'db' | 'off'>('engine');
+  const engineOn = $derived(mode === 'engine');
+  const dbOn = $derived(mode === 'db');
+  /** The engine's best lines (up to three) for the position shown. */
+  let lines = $state<EngineInfo[]>([]);
+  const info = $derived<EngineInfo | undefined>(lines[0]);
   const book = new CloudBook();
   onDestroy(() => engine.stopAnalysis());
 
@@ -135,19 +138,39 @@
 
   $effect(() => {
     const f = fen;
-    info = undefined;
+    lines = [];
     if (!engineOn || shown.isEnd()) {
       engine.stopAnalysis();
       return;
     }
     void engine.analyse(
       f,
-      (i) => {
-        if (i.fen === f) info = i;
-      },
+      () => {},
       20,
+      undefined,
+      3,
+      (l) => {
+        if (l[0]?.fen === f) lines = [...l];
+      },
     );
   });
+
+  /** A line's first moves in words ("12. Nf3 e5 13. d4"), from the position shown. */
+  function pvText(l: EngineInfo, max = 7): string {
+    const p = shown.clone();
+    const out: string[] = [];
+    for (const u of l.pv.slice(0, max)) {
+      const m = uciToMove(u);
+      if (!m || !p.isLegal(m)) break;
+      out.push(`${p.turn === 'white' ? `${p.fullmoves}.` : !out.length ? `${p.fullmoves}…` : ''}${sanOf(p, m)}`);
+      p.play(m);
+    }
+    return out.join(' ');
+  }
+  const playLine = (l: EngineInfo) => {
+    const m = l.pv[0] ? uciToMove(l.pv[0]) : undefined;
+    if (m) play(m);
+  };
 
   function onkey(e: KeyboardEvent) {
     if ((e.target as HTMLElement)?.closest?.('input, textarea, select')) return;
@@ -168,52 +191,80 @@
 
 <svelte:window onkeydown={onkey} bind:innerWidth={width} />
 
+{#snippet movesCard()}
+  <div class="card moves-card">
+    <MoveList sans={game.plies.map((p) => p.san)} current={cursor} onselect={go} />
+  </div>
+{/snippet}
+
+{#snippet analysisCard()}
+  <div class="card analysis">
+    <div class="radios" role="radiogroup" aria-label="Analysis">
+      <label class:on={mode === 'engine'}><input type="radio" name="wv-mode" value="engine" bind:group={mode} /><span>Engine</span></label>
+      <label class:on={mode === 'db'}><input type="radio" name="wv-mode" value="db" bind:group={mode} /><span>Database</span></label>
+      <label class:on={mode === 'off'}><input type="radio" name="wv-mode" value="off" bind:group={mode} /><span>Off</span></label>
+    </div>
+    {#if mode === 'engine'}
+      {#if shown.isEnd()}
+        <p class="label">{shown.isCheckmate() ? 'Checkmate' : 'Game over'}</p>
+      {:else if !lines.length}
+        <p class="label">The engine is thinking…</p>
+      {:else}
+        <ol class="elines" aria-label="The engine's best moves">
+          {#each lines as l, i (i)}
+            <li>
+              <button class="eline" onclick={() => playLine(l)} title="Play this move">
+                <span class="ev num">{evalLabel(l)}</span>
+                <span class="pv num">{pvText(l)}</span>
+              </button>
+            </li>
+          {/each}
+        </ol>
+        <span class="label depth">Stockfish 19 · depth {lines[0].depth}</span>
+      {/if}
+    {:else if mode === 'db'}
+      <DbPanel pos={shown} {book} onplay={play} played={!trial ? game.plies[cursor]?.move : undefined} />
+    {/if}
+  </div>
+{/snippet}
+
 <div class="viewer">
   <section class="board-col" aria-label="Board">
     <a class="back-top" href={backHref}><Icon name="back" size={16} />{backLabel}</a>
-    <PlayerBar {...top} />
-    <div class="board-row">
-      {#if engineOn}
-        <div class="evalbar" class:flipped={orientation === 'black'} aria-label="Evaluation {info ? evalLabel(info) : 'pending'}">
-          <div class="white-share" style="height: {(info ? whiteChances(info) : 0.5) * 100}%"></div>
+    <div class="stage">
+      <PlayerBar {...top} />
+      <div class="board-row">
+        {#if engineOn}
+          <div class="evalbar" class:flipped={orientation === 'black'} aria-label="Evaluation {info ? evalLabel(info) : 'pending'}">
+            <div class="white-share" style="height: {(info ? whiteChances(info) : 0.5) * 100}%"></div>
+          </div>
+        {/if}
+        <div class="board-box">
+          <Board
+            {fen}
+            {orientation}
+            turnColor={shown.turn}
+            movable={shown.isEnd() ? undefined : 'both'}
+            dests={shown.isEnd() ? new Map() : destsOf(shown)}
+            {lastMove}
+            {shapes}
+            {onmove}
+            check={shown.isCheck()}
+            label={heading}
+            onswipe={(d) => go(cursor + (d === 'forward' ? 1 : -1))}
+          />
         </div>
+      </div>
+      <PlayerBar {...bottom} />
+      <div class="card nav-card">
+        <MoveNav ply={cursor} max={game.plies.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
+      </div>
+      <!-- Phones: the moves, then the engine or database, right under the board's buttons. -->
+      {#if narrow}
+        {@render movesCard()}
+        {@render analysisCard()}
       {/if}
-      <div class="board-box">
-        <Board
-          {fen}
-          {orientation}
-          turnColor={shown.turn}
-          movable={shown.isEnd() ? undefined : 'both'}
-          dests={shown.isEnd() ? new Map() : destsOf(shown)}
-          {lastMove}
-          {shapes}
-          {onmove}
-          check={shown.isCheck()}
-          label={heading}
-          onswipe={(d) => go(cursor + (d === 'forward' ? 1 : -1))}
-        />
-      </div>
     </div>
-    <PlayerBar {...bottom} />
-    <div class="card nav-card">
-      <MoveNav ply={cursor} max={game.plies.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
-      <!-- Right under the move buttons, so a phone needs no scrolling to switch them on. -->
-      <div class="toggles">
-        <label class="toggle">
-          <input type="checkbox" bind:checked={engineOn} />
-          <span>Engine {engineOn && info ? `· ${evalLabel(info)} (depth ${info.depth})` : ''}</span>
-        </label>
-        <label class="toggle">
-          <input type="checkbox" bind:checked={dbOn} />
-          <span>Database</span>
-        </label>
-      </div>
-    </div>
-    {#if dbOn && narrow}
-      <div class="card db">
-        <DbPanel pos={shown} {book} onplay={play} played={!trial ? game.plies[cursor]?.move : undefined} />
-      </div>
-    {/if}
   </section>
 
   <aside class="side">
@@ -240,17 +291,13 @@
           </span>
         </div>
       {:else}
-        <p class="label hint">Move the pieces to try your own ideas (only you see them); turn on the engine or the database to check them.</p>
+        <p class="label hint">Move the pieces to try your own ideas (only you see them).</p>
       {/if}
     </div>
-    {#if dbOn && !narrow}
-      <div class="card db">
-        <DbPanel pos={shown} {book} onplay={play} played={!trial ? game.plies[cursor]?.move : undefined} />
-      </div>
+    {#if !narrow}
+      {@render movesCard()}
+      {@render analysisCard()}
     {/if}
-    <div class="card moves-card">
-      <MoveList sans={game.plies.map((p) => p.san)} current={cursor} onselect={go} />
-    </div>
     {#if extra}{@render extra()}{/if}
   </aside>
 </div>
@@ -281,9 +328,90 @@
     width: fit-content;
     padding: 2px 0;
   }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
   .board-row {
     display: flex;
     gap: 8px;
+  }
+  .analysis {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .analysis p {
+    margin: 0;
+  }
+  .radios {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .radios label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px 7px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--raised);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .radios label.on {
+    border-color: var(--gold);
+    background: color-mix(in srgb, var(--gold) 16%, var(--raised));
+  }
+  .radios input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--gold);
+  }
+  .elines {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .eline {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--raised);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .eline:hover {
+    background: color-mix(in srgb, var(--accent) 14%, var(--raised));
+  }
+  .eline .ev {
+    flex: none;
+    min-width: 52px;
+    font-weight: 800;
+    color: var(--gold);
+  }
+  .eline .pv {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  .depth {
+    font-size: 12px;
   }
   .board-box {
     flex: 1;
@@ -308,13 +436,6 @@
   .nav-card {
     padding: 0;
     overflow: hidden;
-  }
-  .nav-card .toggles {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 22px;
-    padding: 8px 14px 10px;
-    border-top: 1px solid var(--border-soft);
   }
   .nav-card :global(.nav) {
     border-top: 0;
@@ -389,38 +510,52 @@
     padding: 0 12px;
     font-size: 14px;
   }
-  .toggles {
-    display: flex;
-    gap: 18px;
-    flex-wrap: wrap;
-  }
-  .toggle {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-  }
-  .toggle input {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--action);
-  }
-  .db {
-    padding: 10px 12px;
-  }
   .moves-card {
     padding: 0;
     overflow: hidden;
   }
   .moves-card :global(.moves) {
-    height: 260px;
+    height: 220px;
   }
-  @media (max-width: 767px) {
-    .side {
-      max-width: none;
+  @media (max-width: 899px) {
+    .board-col {
+      flex: 1 1 100%;
+    }
+    /* A phone: the board gets what the screen leaves after the bars, buttons, moves and analysis, so all of them are in view. */
+    .stage {
+      gap: 5px;
+    }
+    .board-row,
+    .stage > :global(.bar),
+    .stage > .nav-card {
+      width: min(100%, max(240px, calc(100dvh - 500px)));
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .nav-card :global(.nb) {
+      height: 40px;
+    }
+    .analysis {
+      gap: 5px;
+      padding: 7px 10px;
+    }
+    .radios label {
+      padding: 4px 12px 4px 8px;
+    }
+    .eline {
+      padding: 4px 8px;
+    }
+    .depth {
+      display: none;
+    }
+    .back-top {
+      display: none;
     }
     .moves-card :global(.moves) {
-      height: 160px;
+      height: 72px;
+    }
+    .side {
+      max-width: none;
     }
   }
 </style>

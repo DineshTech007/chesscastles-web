@@ -5,6 +5,7 @@
    * is separate.
    */
   import { track } from '$lib/analytics';
+  import { blogStats, loadBlogStats, sendReaction, ZERO } from '$lib/blog/stats';
   import type { Lang } from '$lib/coach/i18n';
 
   let { slug, lang = 'en' }: { slug: string; lang?: Lang } = $props();
@@ -20,6 +21,8 @@
     heart?: boolean;
   }
   let mine = $state<Mine>({});
+  const counts = $derived($blogStats[slug] ?? ZERO);
+  $effect(() => void loadBlogStats());
   $effect(() => {
     const s = slug;
     try {
@@ -36,12 +39,21 @@
     }
   };
   function vote(v: 'like' | 'dislike') {
-    mine = { ...mine, vote: mine.vote === v ? undefined : v };
+    const before = mine.vote;
+    mine = { ...mine, vote: before === v ? undefined : v };
+    // The difference between the old choice and the new one goes to the server.
+    const d = { likes: 0, dislikes: 0, hearts: 0 };
+    if (before === 'like') d.likes--;
+    if (before === 'dislike') d.dislikes--;
+    if (mine.vote === 'like') d.likes++;
+    if (mine.vote === 'dislike') d.dislikes++;
+    sendReaction(slug, d);
     if (mine.vote) track('feature', `blog_${v}_${slug.slice(0, 40)}`);
     save();
   }
   function heart() {
     mine = { ...mine, heart: !mine.heart };
+    sendReaction(slug, { likes: 0, dislikes: 0, hearts: mine.heart ? 1 : -1 });
     if (mine.heart) track('feature', `blog_heart_${slug.slice(0, 40)}`);
     save();
   }
@@ -51,13 +63,13 @@
   <strong>{t.ask}</strong>
   <div class="btns">
     <button class="r" aria-pressed={mine.vote === 'like'} onclick={() => vote('like')}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11v9H4v-9zM7 11l4-8c1.6 0 2.6 1.1 2.3 2.7L12.8 9H19a2 2 0 0 1 2 2.3l-1.2 7a2 2 0 0 1-2 1.7H7" /></svg>{t.like}
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11v9H4v-9zM7 11l4-8c1.6 0 2.6 1.1 2.3 2.7L12.8 9H19a2 2 0 0 1 2 2.3l-1.2 7a2 2 0 0 1-2 1.7H7" /></svg>{t.like}<b class="n">{counts.likes}</b>
     </button>
     <button class="r" aria-pressed={mine.vote === 'dislike'} onclick={() => vote('dislike')}>
-      <svg viewBox="0 0 24 24" aria-hidden="true" style="transform: rotate(180deg)"><path d="M7 11v9H4v-9zM7 11l4-8c1.6 0 2.6 1.1 2.3 2.7L12.8 9H19a2 2 0 0 1 2 2.3l-1.2 7a2 2 0 0 1-2 1.7H7" /></svg>{t.dislike}
+      <svg viewBox="0 0 24 24" aria-hidden="true" style="transform: rotate(180deg)"><path d="M7 11v9H4v-9zM7 11l4-8c1.6 0 2.6 1.1 2.3 2.7L12.8 9H19a2 2 0 0 1 2 2.3l-1.2 7a2 2 0 0 1-2 1.7H7" /></svg>{t.dislike}<b class="n">{counts.dislikes}</b>
     </button>
     <button class="r heart" aria-pressed={!!mine.heart} onclick={heart}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>{t.heart}
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>{t.heart}<b class="n">{counts.hearts}</b>
     </button>
   </div>
   {#if mine.vote || mine.heart}<span class="label">{t.thanks}</span>{/if}
@@ -88,6 +100,16 @@
     font-weight: 700;
     cursor: pointer;
     min-height: 44px;
+  }
+  .n {
+    min-width: 18px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 20px;
+    text-align: center;
   }
   .r svg {
     width: 20px;

@@ -8,20 +8,26 @@
   import Icon from '$lib/components/Icon.svelte';
   import { contentLang } from '$lib/contentLang';
   import { POSTS, postBySlug, TAG_NAME, type Post } from '$lib/blog/posts';
-  import { formatDate } from '$lib/format';
   import { track } from '$lib/analytics';
+  import { blogStats, countView, loadBlogStats, ZERO } from '$lib/blog/stats';
 
   const UI = {
-    en: { back: 'All chronicles', read: 'min read', share: 'Share this story', wa: 'Share on WhatsApp', copy: 'Copy link', copied: 'Copied ✓', next: 'Read next', missing: 'This story was not found.', cta: 'Try Chess Castles free' },
-    hi: { back: 'सारी कहानियाँ', read: 'minute पढ़ना', share: 'यह कहानी share कीजिए', wa: 'WhatsApp पर share करें', copy: 'Link copy करें', copied: 'Copy हो गया ✓', next: 'अगली कहानी', missing: 'यह कहानी नहीं मिली।', cta: 'Chess Castles free में आज़माइए' },
-    mr: { back: 'सगळ्या गोष्टी', read: 'minute वाचन', share: 'ही गोष्ट share करा', wa: 'WhatsApp वर share करा', copy: 'Link copy करा', copied: 'Copy झालं ✓', next: 'पुढची गोष्ट', missing: 'ही गोष्ट सापडली नाही.', cta: 'Chess Castles free मध्ये वापरून बघा' },
+    en: { back: 'All blogs', read: 'min read', views: 'views', share: 'Share this story', wa: 'Share on WhatsApp', copy: 'Copy link', copied: 'Copied ✓', next: 'Read next', missing: 'This story was not found.', cta: 'Try Chess Castles free' },
+    hi: { back: 'सारी कहानियाँ', read: 'minute पढ़ना', views: 'बार पढ़ी गई', share: 'यह कहानी share कीजिए', wa: 'WhatsApp पर share करें', copy: 'Link copy करें', copied: 'Copy हो गया ✓', next: 'अगली कहानी', missing: 'यह कहानी नहीं मिली।', cta: 'Chess Castles free में आज़माइए' },
+    mr: { back: 'सगळ्या गोष्टी', read: 'minute वाचन', views: 'वेळा वाचली', share: 'ही गोष्ट share करा', wa: 'WhatsApp वर share करा', copy: 'Link copy करा', copied: 'Copy झालं ✓', next: 'पुढची गोष्ट', missing: 'ही गोष्ट सापडली नाही.', cta: 'Chess Castles free मध्ये वापरून बघा' },
   } as const;
   const t = $derived(UI[$contentLang]);
   const post = $derived<Post | undefined>(postBySlug(page.params.slug ?? ''));
   const next = $derived(post ? POSTS[(POSTS.indexOf(post) + 1) % POSTS.length] : undefined);
   const url = $derived(post ? `https://www.chesscastles.com/blog/${post.slug}` : '');
   const shareText = $derived(post ? `${post.title[$contentLang]} ${url}` : '');
-  const dateOf = (iso: string) => formatDate(new Date(`${iso}T12:00:00`).getTime());
+  $effect(() => {
+    if (!post) return;
+    void loadBlogStats();
+    countView(post.slug);
+  });
+  const views = $derived(post ? ($blogStats[post.slug] ?? ZERO).views : 0);
+  const dateOf = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   let copied = $state(false);
   async function copy() {
     await navigator.clipboard?.writeText(url).catch(() => {});
@@ -51,7 +57,7 @@
 </script>
 
 <svelte:head>
-  <title>{post ? `${post.title[$contentLang]} · Castle Chronicles` : 'Castle Chronicles'} · Chess Castles</title>
+  <title>{post ? `${post.title[$contentLang]} · Blogs & Forum` : 'Blogs & Forum'} · Chess Castles</title>
   {#if post}<meta name="description" content={post.summary[$contentLang]} />{/if}
 </svelte:head>
 
@@ -68,7 +74,7 @@
       <PostCover piece={post.piece} hue={post.hue} size="hero" />
       <span class="tag">{TAG_NAME[post.tag][$contentLang]}</span>
       <h1 class="display">{post.title[$contentLang]}</h1>
-      <p class="label meta">{dateOf(post.date)} · {post.read} {t.read}</p>
+      <p class="label meta">{dateOf(post.date)} · {post.read} {t.read} · {views} {t.views}</p>
       {#each blocks as b, i (i)}
         {#if b.k === 'h'}<h2 class="title">{b.text}</h2>
         {:else if b.k === 'fig'}<PostFigure kind={b.fig} fen={b.fen} caption={b.caption} lang={$contentLang} />

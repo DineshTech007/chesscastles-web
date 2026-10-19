@@ -100,6 +100,13 @@ export const refusedByLichess = (e: unknown) => e instanceof LichessError && /ca
 
 export const cancelChallenge = (token: string, id: string) => call(token, `/api/challenge/${id}/cancel`, { method: 'POST' });
 export const acceptChallenge = (token: string, id: string) => call(token, `/api/challenge/${id}/accept`, { method: 'POST' });
+export const declineChallenge = (token: string, id: string) => call(token, `/api/challenge/${id}/decline`, form({ reason: 'later' }));
+/** The challenges waiting now: received (`in`) and sent (`out`). */
+export async function listChallenges(token: string): Promise<{ in: any[]; out: any[] }> {
+  const res = await call(token, '/api/challenge');
+  const j = await res.json().catch(() => ({}));
+  return { in: Array.isArray(j.in) ? j.in : [], out: Array.isArray(j.out) ? j.out : [] };
+}
 
 /** The game's stream: gameFull first, then gameState, chatLine, opponentGone… */
 export async function streamGame(token: string, gameId: string, onLine: (o: any) => void, signal: AbortSignal): Promise<void> {
@@ -113,8 +120,13 @@ export const abort = (token: string, gameId: string) => call(token, `/api/board/
 export const draw = (token: string, gameId: string, accept: boolean) => call(token, `/api/board/game/${gameId}/draw/${accept ? 'yes' : 'no'}`, { method: 'POST' });
 export const claimVictory = (token: string, gameId: string) => call(token, `/api/board/game/${gameId}/claim-victory`, { method: 'POST' });
 
-/** Joins a Lichess arena tournament (needs the tournament:write permission). */
-export const joinTournament = (token: string, id: string) => call(token, `/api/tournament/${encodeURIComponent(id)}/join`, { method: 'POST' });
+/**
+ * Joins a Lichess arena tournament (needs the tournament:write permission), or says "still here" when already in.
+ * Lichess pairs only players it knows are present: people on its own tournament page, and app players who asked
+ * with `pairMeAsap`. That request lasts 70 seconds, so the arena page sends it again every 50 seconds while the
+ * player waits (Lichess allows 30 joins in 10 minutes).
+ */
+export const joinTournament = (token: string, id: string) => call(token, `/api/tournament/${encodeURIComponent(id)}/join`, form({ pairMeAsap: true }));
 /** Leaves (pauses in) an arena tournament. */
 export const withdrawTournament = (token: string, id: string) => call(token, `/api/tournament/${encodeURIComponent(id)}/withdraw`, { method: 'POST' });
 

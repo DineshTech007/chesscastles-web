@@ -2,7 +2,7 @@
   /** The admin dashboard: visitors, pages, features, members, plans and the free-plan meters. */
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { featureName, overview, pageName, type Overview } from '$lib/admin';
-  import { PLANS, PLAN_INFO } from '$lib/plans';
+  import { PLANS, PLANS_ON, PLAN_INFO } from '$lib/plans';
   import { fedName } from '$lib/fideFeds';
   import DayChart from './DayChart.svelte';
   import RankBars from './RankBars.svelte';
@@ -66,9 +66,9 @@
   </div>
 
   <div class="grid3">
-    <RankBars title="Limits reached" rows={data.top.limits} name={featureName} note="Where people want more: the best signal for paid plans." empty="No limits reached yet." />
-    <RankBars title="Plan interest" rows={data.top.interest} name={(k) => PLAN_INFO[k as keyof typeof PLAN_INFO]?.name ?? k} note="“I want …” taps on the Plans page." empty="No taps yet." />
-    <section class="card plans">
+    <RankBars title="Limits reached" rows={data.top.limits} name={featureName} note="Where people hit a limit." empty="No limits reached yet." />
+    {#if PLANS_ON}<RankBars title="Plan interest" rows={data.top.interest} name={(k) => PLAN_INFO[k as keyof typeof PLAN_INFO]?.name ?? k} note="“I want …” taps on the Plans page." empty="No taps yet." />{/if}
+    {#if PLANS_ON}<section class="card plans">
       <h3 class="title">Members by plan</h3>
       <p class="label note">{payingNote}</p>
       <ul>
@@ -76,7 +76,7 @@
           <li><span><PlanBadge plan={p} /> {PLAN_INFO[p].name}</span><strong class="num">{data.plans[p].toLocaleString()}</strong></li>
         {/each}
       </ul>
-    </section>
+    </section>{/if}
   </div>
 
   <div class="grid4">

@@ -261,9 +261,10 @@ async function run(name, options) {
     const board = await page.locator('cg-board').first().boundingBox();
     const prev = await page.locator('.nav-card [aria-label="Previous move"]').boundingBox();
     expect(prev && prev.y > board.y + board.height - 2, 'the move buttons are not under the board');
-    await page.locator('label.toggle:has-text("Engine") input').check();
-    await page.waitForFunction(() => /depth \d+/.test(document.querySelector('.toggles')?.textContent ?? ''), null, { timeout: 15000 });
-    return `${await page.locator('.moves-card button').count()} moves`;
+    // The engine is on from the start: its best lines (up to three) appear under the moves.
+    await page.locator('.radios label:has-text("Engine") input').check();
+    await page.waitForFunction(() => document.querySelectorAll('.elines li').length > 0 || /Checkmate|Game over/.test(document.querySelector('.analysis')?.textContent ?? ''), null, { timeout: 20000 });
+    return `${await page.locator('.moves-card button').count()} moves, ${await page.locator('.elines li').count()} engine lines`;
   });
 
   // 5c. Bullet (1+0) against the 2000 computer: it must move at a bullet pace, or it loses on time.

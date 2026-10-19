@@ -5,7 +5,8 @@
   import { session, signOut, startSignIn } from '$lib/auth';
   import { adminMe } from '$lib/admin';
   import { HERO_FEATURES } from '$lib/heroFeatures';
-  import { NAV_ITEMS } from '$lib/nav';
+  import { NAV_ITEMS, navBlurbKey, navKey } from '$lib/nav';
+  import { t, type Key } from '$lib/i18n';
   import { installOpen, installWay } from '$lib/install';
 
   let isAdmin = $state(false);
@@ -18,44 +19,44 @@
   });
 
   /** Account and policy pages; everything else comes from the shared menu list (src/lib/nav.ts). */
-  const links: { href: string; label: string; icon: IconName }[] = [
-    { href: '/profile', label: 'Profile, photo and CC Rating', icon: 'users' },
-    { href: '/settings', label: 'Settings: premoves, auto-queen, sound, board colour', icon: 'settings' },
+  const links = $derived<{ href: string; label: string; icon: IconName }[]>([
+    { href: '/profile', label: $t('more.profile'), icon: 'users' },
+    { href: '/settings', label: $t('more.settings'), icon: 'settings' },
     ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
-    { href: '/students', label: 'My students (coach tools)', icon: 'coach' },
-    ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.badge ? `NEW · ` : ''}${n.label}: ${n.blurb}`, icon: n.icon })),
-    { href: '/parents', label: 'For parents: safety, prices, getting started', icon: 'shield' },
-    { href: '/feedback', label: 'Send feedback', icon: 'send' },
-    { href: '/help', label: 'Help & support', icon: 'bulb' },
-    { href: '/legal/terms', label: 'Terms of use', icon: 'book' },
-    { href: '/legal/privacy', label: 'Privacy policy', icon: 'book' },
-    { href: '/legal/fair-play', label: 'Fair play policy', icon: 'flag' },
-    { href: '/legal/refunds', label: 'Cancellation and refund policy', icon: 'book' },
-    { href: '/about', label: 'About and licences', icon: 'book' },
-  ];
+    { href: '/students', label: $t('more.students'), icon: 'coach' },
+    ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.badge ? `${$t('nav.new')} · ` : ''}${$t(navKey(n.href))}: ${$t(navBlurbKey(n.href))}`, icon: n.icon })),
+    { href: '/parents', label: $t('more.parents'), icon: 'shield' },
+    { href: '/feedback', label: $t('more.feedback'), icon: 'send' },
+    { href: '/help', label: $t('more.help'), icon: 'bulb' },
+    { href: '/legal/terms', label: $t('more.terms'), icon: 'book' },
+    { href: '/legal/privacy', label: $t('more.privacy'), icon: 'book' },
+    { href: '/legal/fair-play', label: $t('more.fair'), icon: 'flag' },
+    { href: '/legal/refunds', label: $t('more.refunds'), icon: 'book' },
+    { href: '/about', label: $t('more.about'), icon: 'book' },
+  ]);
 </script>
 
 <svelte:head><title>More · Chess Castles</title></svelte:head>
 
-<h1 class="display h">More</h1>
+<h1 class="display h">{$t('more.h')}</h1>
 <div class="acct card">
   {#if $session.status === 'in'}
-    <span><strong>{$myName}</strong><span class="label"> · signed in</span></span>
-    <button class="btn" onclick={() => signOut()}>Sign out</button>
+    <span><strong>{$myName}</strong><span class="label"> · {$t('more.signedin')}</span></span>
+    <button class="btn" onclick={() => signOut()}>{$t('shell.signout')}</button>
   {:else if $session.status === 'out'}
-    <span class="label">Sign in to keep your progress with your Chess Castles account.</span>
-    <button class="btn primary" onclick={() => startSignIn()}>Sign in</button>
+    <span class="label">{$t('more.signprompt')}</span>
+    <button class="btn primary" onclick={() => startSignIn()}>{$t('shell.signin')}</button>
   {/if}
 </div>
 <nav class="list only" aria-label="Signature features">
-  <span class="only-h"><Icon name="sparkle" size={14} color="var(--accent)" />Signature features</span>
+  <span class="only-h"><Icon name="sparkle" size={14} color="var(--accent)" />{$t('shell.signature')}</span>
   {#each HERO_FEATURES as f (f.id)}
-    <a href={f.href}><span class="gchip"><Icon name={f.icon} size={16} color="#0b1426" /></span><span><strong>{f.short}</strong></span><Icon name="chevron" color="var(--muted)" /></a>
+    <a href={f.href}><span class="gchip"><Icon name={f.icon} size={16} color="#0b1426" /></span><span><strong>{$t(`hero.${f.id}.short` as Key)}</strong></span><Icon name="chevron" color="var(--muted)" /></a>
   {/each}
 </nav>
 <nav class="list" aria-label="More">
   {#if $installWay !== 'none' && $installWay !== 'installed'}
-    <button class="row-btn" onclick={() => installOpen.set(true)}><Icon name="phone" color="var(--accent)" /><span>Install the Chess Castles app (free, always up to date)</span><Icon name="chevron" color="var(--muted)" /></button>
+    <button class="row-btn" onclick={() => installOpen.set(true)}><Icon name="phone" color="var(--accent)" /><span>{$t('more.install')}</span><Icon name="chevron" color="var(--muted)" /></button>
   {/if}
   {#each links as l (l.href)}
     <a href={l.href}><Icon name={l.icon} color="var(--accent)" /><span>{l.label}</span><Icon name="chevron" color="var(--muted)" /></a>

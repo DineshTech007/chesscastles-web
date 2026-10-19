@@ -30,7 +30,7 @@ export const NAV_GROUPS: NavItem[][] = [
     { href: '/community', label: 'FIDE & Local Events', icon: 'calendar', match: ['/community'], blurb: 'Tournaments near you, registration and coaches' },
   ],
   [
-    { href: '/play', label: 'Play', icon: 'knight', match: ['/play'], not: ['/play/fide', '/play/tournament'], blurb: 'Lichess players, the computer and friends' },
+    { href: '/play', label: 'Play', icon: 'knight', match: ['/play'], menu: false, blurb: 'Lichess players, the computer and friends' },
     { href: '/puzzles', label: 'Puzzles', icon: 'puzzle', match: ['/puzzles'], blurb: 'Unlimited puzzles, 17 themes' },
     { href: '/analysis', label: 'Analysis board', icon: 'analyse', match: ['/analysis'], menu: false, blurb: 'Engine, game import and board editor' },
     { href: '/books', label: 'Audio Books', icon: 'book', match: ['/books'], blurb: 'Listen to or read the chess classics' },
@@ -39,8 +39,12 @@ export const NAV_GROUPS: NavItem[][] = [
   ],
   [
     { href: '/guide', label: 'Chess Guide', icon: 'help', match: ['/guide'], blurb: 'Answers for parents and beginners, in 3 languages' },
-    { href: '/blog', label: 'Castle Chronicles', icon: 'pen', match: ['/blog'], badge: 'NEW', blurb: 'Stories, tips for kids and chess history' },
+    { href: '/blog', label: 'Blogs & Forum', icon: 'pen', match: ['/blog'], badge: 'NEW', blurb: 'Stories, tips for kids and chess history' },
   ],
 ];
 
 export const NAV_ITEMS = NAV_GROUPS.flat();
+
+/** The dictionary key of a page's name (src/lib/i18n): 'nav.learn' for /learn; its one-line description adds '.b'. */
+export const navBlurbKey = (href: string) => `nav.${href.slice(1)}.b` as import('$lib/i18n').Key;
+export const navKey = (href: string) => `nav.${href.slice(1)}` as import('$lib/i18n').Key;

@@ -36,7 +36,7 @@ export const HERO_FEATURES: HeroFeature[] = [
     href: '/play?mode=fide',
     cta: 'Play now',
     icon: 'knight',
-    match: ['/play/fide', '/play/tournament'],
+    match: ['/play'],
   },
   {
     id: 'database',

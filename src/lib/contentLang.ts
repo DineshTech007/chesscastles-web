@@ -17,6 +17,8 @@ function read(): Lang {
 }
 
 export const contentLang = writable<Lang>(typeof localStorage === 'undefined' ? 'en' : read());
+/** The page's language attribute follows the choice (screen readers, hyphenation, fonts). */
+if (typeof document !== 'undefined') contentLang.subscribe((l) => (document.documentElement.lang = l));
 
 export function setContentLang(l: Lang) {
   contentLang.set(l);

@@ -20,6 +20,7 @@
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import { PLANS, PLAN_INFO, planSettings, currentPlan, useFeature } from '$lib/plans';
   import InsightsHeader from '$lib/components/InsightsHeader.svelte';
+  import { t } from '$lib/i18n';
 
   let site = $state<Site>('chesscom');
   let username = $state('');
@@ -89,7 +90,7 @@
   const summary = $derived.by(() => {
     if (!report) return '';
     const top = report.weaknesses[0];
-    return `I looked at ${report.games} of your games: you scored ${Math.round(report.score * 100)}% with ${report.accuracy}% accuracy. ${top ? `The thing costing you most is “${top.title.toLowerCase()}”. ` : 'No big weakness stands out: well played! '}Here is what I found, and a plan for the week.`;
+    return $t('ins.summary', { games: report.games, score: Math.round(report.score * 100), acc: report.accuracy }) + (top ? $t('ins.summary.top', { top: top.title.toLowerCase() }) : $t('ins.summary.none')) + $t('ins.summary.end');
   });
 
   function makePlan() {
@@ -133,9 +134,9 @@
   <section class="card hero">
     <GuruAvatar size={84} talking={phase !== 'idle'} />
     <div class="intro">
-      <span class="kicker">Game Insights</span>
-      <h1 class="display">What is costing you games?</h1>
-      <p>Enter your chess.com username. Guru checks every move of your recent games with the engine, shows what loses you points, and builds a study plan for your week, with puzzles from your own mistakes.</p>
+      <span class="kicker">{$t('ins.kicker')}</span>
+      <h1 class="display">{$t('ins.h1')}</h1>
+      <p>{$t('ins.intro')}</p>
     </div>
   </section>
 
@@ -144,22 +145,22 @@
       <button type="button" aria-pressed={site === 'chesscom'} onclick={() => (site = 'chesscom')}>chess.com</button>
       <button type="button" aria-pressed={site === 'lichess'} onclick={() => (site = 'lichess')}>Lichess</button>
     </div>
-    <input id="ins-user" bind:value={username} placeholder={site === 'chesscom' ? 'chess.com username' : 'Lichess username'} required autocomplete="off" />
+    <input id="ins-user" bind:value={username} placeholder={site === 'chesscom' ? $t('ins.ph.chesscom') : $t('ins.ph.lichess')} required autocomplete="off" />
     <select id="ins-count" bind:value={count} aria-label="How many games">
       {#each [10, 20, 30, 40, 50, 100, 200] as n (n)}
-        <option value={n} disabled={n > maxGames}>Last {n} games{n > maxGames ? ` · ${PLAN_INFO[planFor(n)].name}` : ''}</option>
+        <option value={n} disabled={n > maxGames}>{$t('ins.last', { n })}{n > maxGames ? ` · ${PLAN_INFO[planFor(n)].name}` : ''}</option>
       {/each}
     </select>
     {#if phase === 'idle'}
-      <button class="btn primary" type="submit"><Icon name="analyse" size={18} />{data ? 'Analyse again' : 'Analyse my games'}</button>
+      <button class="btn primary" type="submit"><Icon name="analyse" size={18} />{data ? $t('ins.again') : $t('ins.analyse')}</button>
     {:else}
-      <button class="btn" type="button" onclick={() => (stop = true)}>Stop</button>
+      <button class="btn" type="button" onclick={() => (stop = true)}>{$t('ins.stop')}</button>
     {/if}
   </form>
-  {#if phase === 'fetching'}<p class="label">Fetching your games…</p>{/if}
+  {#if phase === 'fetching'}<p class="label">{$t('ins.fetching')}</p>{/if}
   {#if phase === 'analysing'}
     <div class="prog"><span style="width: {(100 * progress.done) / Math.max(1, progress.total)}%"></span></div>
-    <p class="label">Checking every move: game {Math.min(progress.done + 1, progress.total)} of {progress.total}. Keep this page open (about 10–20 seconds a game). The report fills in as it goes.</p>
+    <p class="label">{$t('ins.checking', { a: Math.min(progress.done + 1, progress.total), b: progress.total })}</p>
   {/if}
   {#if error}<p class="err">{error}</p>{/if}
   {#if needsLichess && site === 'lichess'}
@@ -171,8 +172,8 @@
 
   {#if !report && phase === 'idle' && !error}
     <section class="how">
-      {#each [['1', 'Your games', 'Your last 10–40 rated games come straight from chess.com (no password needed).'], ['2', 'Every move checked', 'Stockfish looks at every move you played: best, inaccuracy, mistake or blunder, and why.'], ['3', 'Your plan', 'What to fix first, a 7-day plan in your study calendar, and puzzles made from your own mistakes.']] as [n, t, d] (n)}
-        <div class="card step"><span class="step-no">{n}</span><strong>{t}</strong><span class="label">{d}</span></div>
+      {#each ['1', '2', '3'] as n (n)}
+        <div class="card step"><span class="step-no">{n}</span><strong>{$t(`ins.s${n}t` as 'ins.s1t')}</strong><span class="label">{$t(`ins.s${n}d` as 'ins.s1d')}</span></div>
       {/each}
     </section>
   {/if}
