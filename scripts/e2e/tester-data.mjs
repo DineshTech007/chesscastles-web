@@ -67,7 +67,8 @@ for (const f of files) {
       ratingAfter: num(g.ratingChange, /Rapid (\d+)/),
       accuracyMine: num(g.reportText, /Accuracy (\d+) (\d+)/) && (g.color === 'white' ? num(g.reportText, /Accuracy (\d+)/) : Number(/Accuracy \d+ (\d+)/.exec(g.reportText ?? '')?.[1]) || undefined),
       turningPoint: (/Turning point: (.+?), (\d+)%/.exec(g.review ?? '') ?? []).slice(1, 3).join(' · '),
-      worstMoves: g.mistakes,
+      // Early sessions recorded the badge's own text after the move ("Rae1 Blunder????"): keep the move only.
+      worstMoves: (g.mistakes ?? []).map((m) => m.replace(/\s+(Blunder|Mistake|Inaccuracy|Missed win)[?!]*\s*\(/, ' (')),
     });
   }
 }

@@ -14,6 +14,8 @@ for i in $(seq 1 "$MAX"); do
   bugs=$(grep -c "BUG \[" "$log")
   if grep -q "BUG \[Critical\] The session stopped" "$log"; then crashes=$((crashes+1)); else crashes=0; fi
   echo "$(date +%H:%M) session $i done: CC Rating $rating, $bugs bug lines, log $log"
+  # The dataset, the roadmap's evidence and Aarav's journey posts, from all sessions so far.
+  node scripts/e2e/tester-data.mjs > /dev/null 2>&1 && node scripts/e2e/tester-journey.mjs "$TARGET" > /dev/null 2>&1
   if [ "$rating" -ge "$TARGET" ] 2>/dev/null; then echo "TARGET REACHED: $rating"; break; fi
   if [ "$crashes" -ge 3 ]; then echo "STOPPED: three sessions in a row ended with an error"; break; fi
   sleep 60

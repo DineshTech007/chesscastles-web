@@ -1,0 +1,154 @@
+{
+ "updated": "2026-10-19",
+ "target": 2500,
+ "reached": false,
+ "hero": {
+  "name": "Aarav",
+  "age": 11,
+  "city": "Pune",
+  "family": "my mother (who set the 6 pm study timer and never let me skip the review), my father (who drives me to every tournament and asks one question after each game: \"which move?\") and my little sister Diya, who learned the moves by watching",
+  "coach": "my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school",
+  "start": 1500,
+  "now": 1764,
+  "sessions": 16,
+  "games": 71,
+  "record": "44 wins, 9 draws, 18 losses"
+ },
+ "curve": [
+  {
+   "session": 1,
+   "date": "2026-10-19",
+   "rating": 1454
+  },
+  {
+   "session": 2,
+   "date": "2026-10-19",
+   "rating": 1414
+  },
+  {
+   "session": 3,
+   "date": "2026-10-19",
+   "rating": 1353
+  },
+  {
+   "session": 4,
+   "date": "2026-10-20",
+   "rating": 1454
+  },
+  {
+   "session": 5,
+   "date": "2026-10-20",
+   "rating": 1502
+  },
+  {
+   "session": 6,
+   "date": "2026-10-20",
+   "rating": 1524
+  },
+  {
+   "session": 7,
+   "date": "2026-10-20",
+   "rating": 1542
+  },
+  {
+   "session": 8,
+   "date": "2026-10-20",
+   "rating": 1559
+  },
+  {
+   "session": 9,
+   "date": "2026-10-20",
+   "rating": 1575
+  },
+  {
+   "session": 10,
+   "date": "2026-10-20",
+   "rating": 1619
+  },
+  {
+   "session": 11,
+   "date": "2026-10-20",
+   "rating": 1619
+  },
+  {
+   "session": 12,
+   "date": "2026-10-20",
+   "rating": 1640
+  },
+  {
+   "session": 13,
+   "date": "2026-10-20",
+   "rating": 1640
+  },
+  {
+   "session": 14,
+   "date": "2026-10-20",
+   "rating": 1674
+  },
+  {
+   "session": 15,
+   "date": "2026-10-20",
+   "rating": 1727
+  },
+  {
+   "session": 16,
+   "date": "2026-10-20",
+   "rating": 1764
+  }
+ ],
+ "posts": [
+  {
+   "slug": "aarav-1600",
+   "milestone": 1600,
+   "date": "2026-10-20",
+   "title": "1600: the first step",
+   "sessions": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "games": 50,
+   "record": "27 wins, 7 draws, 16 losses",
+   "body": [
+    "20 October 2026. Today my CC Rating on Chess Castles touched 1619. When I started, in October, it said 1500 \"(new)\" and I lost my first three games in a row. Between then and now: 10 sessions, 50 rapid games (15+10, never faster: my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school says fast games only teach you about the clock), 27 wins, 7 draws, 16 losses.",
+    "The game I remember most is the one I lost as white against the 1500 in session 2: 17. Rae1 (Blunder) and 19. Qf3 (Blunder). The review marked the turning point as 19.Qf3 by me, 25% of the winning chances gone in one move. My father asked his question in the car: \"which move?\" I knew the answer this time, and that is the whole point of the review.",
+    "Openings: the Caro-Kann Defence as Black (answer 1.e4 with ...c6 and ...d5, keep the pawns healthy, and be happy to reach an endgame); the Jobava London as White (d4, Nc3 and Bf4 early, with the knight jumping to b5 to hit c7); the Chebanenko Slav as Black (the Slav with ...a6: hold d5 and get ...b5 in). Each time the same routine from Learn → Openings: the course page, one model game played through, the trainer, and only then the line against a FIDE-rated opponent. From those lines in this stretch: 13 wins, 6 draws, 11 losses.",
+    "The rest of Learn, one thing a session: rated puzzles; Guru's strategy lesson; a Guru review of one of my games; an endgame lesson; my last game checked against the 5.4 million games; an endgame from a master's own game; a blindfold puzzle in the Blindfold Gym; a live grandmaster game with the engine on; a new opening in the trainer.",
+    "My profile says: accuracy 95%, opening 93, middlegame 94, endgame 98; sharp moments 98 and calm moves 95. The sharp number is up, which is what the puzzles were for.",
+    "5 wins against an opponent one level up (1500, 1400, 1600, 1700, 1700). My mother says that is the one that counts.",
+    "All my games so far: 50, 27 wins, 7 draws, 16 losses; 63% as White and 48% as Black. Next stop: 1700."
+   ]
+  },
+  {
+   "slug": "aarav-1700",
+   "milestone": 1700,
+   "date": "2026-10-20",
+   "title": "1700: another hundred",
+   "sessions": [
+    11,
+    12,
+    13,
+    14,
+    15
+   ],
+   "games": 16,
+   "record": "13 wins, 1 draws, 2 losses",
+   "body": [
+    "20 October 2026. Today my CC Rating on Chess Castles touched 1727. The last stop was 1600. Between then and now: 5 sessions, 16 rapid games (15+10, never faster: my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school says fast games only teach you about the clock), 13 wins, 1 draws, 2 losses.",
+    "Openings: the Jobava London as White (d4, Nc3 and Bf4 early, with the knight jumping to b5 to hit c7); the Chebanenko Slav as Black (the Slav with ...a6: hold d5 and get ...b5 in). Each time the same routine from Learn → Openings: the course page, one model game played through, the trainer, and only then the line against a FIDE-rated opponent. From those lines in this stretch: 5 wins, 1 draws, 0 losses.",
+    "New in the trainer: Sicilian Najdorf, Catalan. One opening a session, two moves at a time, and the trainer tells me at once when a move is not the line.",
+    "The rest of Learn, one thing a session: my weekly plan; the masters page.",
+    "My profile says: accuracy 96%, opening 95, middlegame 96, endgame 96; sharp moments 93 and calm moves undefined. The sharp number is up, which is what the puzzles were for.",
+    "5 wins against an opponent one level up (1700, 1700, 1700, 1700, 1800). My mother says that is the one that counts.",
+    "All my games so far: 66, 40 wins, 8 draws, 18 losses; 63% as White and 59% as Black. Next stop: 1800."
+   ]
+  }
+ ]
+}
