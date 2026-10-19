@@ -101,7 +101,7 @@
         {@const v = st.areas[a.id]}
         {#if v}
           <div class="area" title={a.hint}>
-            <span class="name">{a.label}</span>
+            <span class="name">{a.label}{#if a.id === 'tactics'}<a class="learn" href="/puzzles/themes">Train tactics</a>{:else if a.id === 'strategy'}<a class="learn" href="/learn?tab=strategy">Learn plans</a>{/if}</span>
             <span class="track" aria-hidden="true"><span class="fill" style="width: {v.accuracy}%"></span></span>
             <span class="score"><MoveBadge kind={markOf(v.accuracy)} size={18} /><strong class="num">{v.accuracy}</strong></span>
             <span class="trend">{@render change(v.change, a.label)}</span>
@@ -274,6 +274,12 @@
   }
   .name {
     font-weight: 600;
+  }
+  .learn {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
   }
   .track {
     height: 10px;

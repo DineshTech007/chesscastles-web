@@ -1,5 +1,6 @@
 /** The admin page's calls (server/api-worker/src/admin.ts checks the role on every one). */
 import type { KfideSpeed } from '$lib/kfide';
+import { auth } from '$lib/auth';
 import { call } from '$lib/social';
 import type { Banner, Launch, Plan, PlanConfig } from '$lib/plans';
 
@@ -87,7 +88,40 @@ export interface UserDetail {
   coaches: string[];
 }
 
-export const adminMe = () => call<{ role: Role; can: Can[] }>('GET', 'admin/me');
+type Me = { role: Role; can: Can[] };
+/** Who asked and what came back, so the pages ask once per sign-in (a 404 for players who are not admins is not repeated). */
+let meCache: { uid: string; p: Promise<Me> } | undefined;
+const ME_KEY = 'cc.adminMe';
+export const adminMe = (): Promise<Me> => {
+  const uid = auth.currentUser?.uid ?? '';
+  if (meCache && meCache.uid === uid) return meCache.p;
+  let p: Promise<Me> | undefined;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(ME_KEY) ?? 'null');
+    if (saved?.uid === uid && uid) p = saved.me ? Promise.resolve(saved.me as Me) : Promise.reject(new Error('Not an admin.'));
+  } catch {
+    /* private mode */
+  }
+  if (!p) {
+    p = call<Me>('GET', 'admin/me');
+    p.then(
+      (me) => remember(uid, me),
+      (e) => {
+        if (uid && !String(e?.message).startsWith('Sign in')) remember(uid, null);
+        else if (meCache?.p === p) meCache = undefined;
+      },
+    );
+  }
+  meCache = { uid, p };
+  return p;
+};
+function remember(uid: string, me: Me | null) {
+  try {
+    sessionStorage.setItem(ME_KEY, JSON.stringify({ uid, me }));
+  } catch {
+    /* private mode */
+  }
+}
 export const overview = (days: number) => call<Overview>('GET', `admin/overview?days=${days}`);
 export const users = (q: string, filter: string) => call<{ users: AdminUser[] }>('GET', `admin/users?q=${encodeURIComponent(q)}&filter=${filter}`).then((r) => r.users);
 export const userDetail = (uid: string) => call<UserDetail>('GET', `admin/user/${encodeURIComponent(uid)}`);
@@ -135,17 +169,17 @@ export const PAGE_NAMES: Record<string, string> = {
   '/coach/[id]': 'Guru lesson',
   '/coach/practice': 'Coach practice',
   '/coach/review/[id]': 'Guru game review',
-  '/vision': 'Vision Gym',
+  '/vision': 'Blindfold Gym',
   '/vision/blind': 'Vision: blindfold',
   '/vision/memory': 'Vision: move memory',
   '/vision/sight': 'Vision: piece sight',
   '/vision/sprint': 'Vision: sprint',
-  '/books': 'Books',
+  '/books': 'Audio Books',
   '/books/[slug]': 'Book reader',
   '/watch': 'Watch',
   '/leaderboard': 'Leaderboard',
   '/ratings': 'Ratings',
-  '/community': 'Community',
+  '/community': 'FIDE & Local Events',
   '/friends': 'Friends',
   '/players/[uid]': 'Player profile',
   '/profile': 'My profile',
@@ -166,7 +200,7 @@ export const FEATURE_NAMES: Record<string, string> = {
   insights: 'Insights report',
   guru: 'Guru lesson',
   puzzle: 'Themed puzzle',
-  vision: 'Vision Gym session',
+  vision: 'Blindfold Gym session',
   opening: 'Opening course',
   bot_opening: 'Choose bot’s opening',
   themed_puzzles: 'All puzzle themes',

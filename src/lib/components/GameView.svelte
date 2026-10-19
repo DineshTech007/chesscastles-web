@@ -20,7 +20,7 @@
   import { POINTS, study } from '$lib/study/progress';
   import { thousands } from '$lib/format';
   import { kfideAll, myCountry, myPhoto, photoSrc } from '$lib/stores/me';
-  import { kfideText, SPEED_LABEL, speedOf } from '$lib/kfide';
+  import { KFIDE_PROVISIONAL, kfideText, SPEED_LABEL, speedOf } from '$lib/kfide';
   import { session } from '$lib/auth';
   import { analyseGame, type GameReview } from '$lib/coach/review';
   import ReviewSummary from '$lib/review/ReviewSummary.svelte';
@@ -177,6 +177,8 @@
       reason: finished ? game.endReason : 'Not finished',
       timeControl: game.timed ? tcLabel(game.timeControl) : '',
       opponentRating: game.rating,
+      // The rating you had when the game began (this game's change is added after it ends).
+      myRating: kind === 'fide' ? ($kfideAll[speed].history.find((h) => h.id === id)?.before ?? $kfideAll[speed].rating) : undefined,
       blurs,
       startFen: fenOf(game.start),
       uci: game.moves.map((m) => moveToUci(m.move)),
@@ -473,6 +475,7 @@
         {#if kfideChange}
           <a class="kfide" href="/profile">CC Rating · {SPEED_LABEL[speed]} <strong class="num">{kfideChange.after}</strong>
             <span class="num" class:up={kfideChange.after > kfideChange.before} class:down={kfideChange.after < kfideChange.before}>({kfideChange.after >= kfideChange.before ? '+' : ''}{kfideChange.after - kfideChange.before})</span></a>
+          <span class="label fine">Your Chess Castles rating from games against FIDE-rated opponents{$kfideAll[speed].provisional ? `; (new) until ${KFIDE_PROVISIONAL} games` : ''}.</span>
         {/if}
         <div class="row">
           <button class="btn primary" onclick={onagain}><Icon name="replay" size={18} />{againLabel}</button>
@@ -594,6 +597,9 @@
     font-size: 15px;
     color: var(--text);
     text-decoration: none;
+  }
+  .fine {
+    font-size: 12px;
   }
   .kfide strong {
     color: var(--gold);

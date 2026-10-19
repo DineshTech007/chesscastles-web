@@ -1,3 +1,4 @@
+import { hasConsent } from '$lib/consent';
 import { initializeApp } from 'firebase/app';
 import {
   browserLocalPersistence,
@@ -126,6 +127,8 @@ export const isLichessAccount = (uid: string) => uid.startsWith('lichess:');
  * Lichess login for online play (it stays the same Chess Castles account).
  */
 export async function startLichessSignIn(connect = false): Promise<void> {
+  // Nobody is sent to Lichess to sign in before agreeing to the terms (the sign-in box asks).
+  if (!connect && !hasConsent()) return startSignIn();
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
   const state = b64url(crypto.getRandomValues(new Uint8Array(16)));
   const challenge = b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
@@ -219,6 +222,7 @@ export function lichessToken(): { token: string; username: string } | undefined 
 export async function signOut(): Promise<void> {
   try {
     localStorage.removeItem('k24.accountPhoto');
+    sessionStorage.removeItem('cc.adminMe');
   } catch {
     /* private mode */
   }

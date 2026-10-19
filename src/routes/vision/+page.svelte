@@ -57,19 +57,19 @@
   ];
 </script>
 
-<svelte:head><title>Vision Gym · Chess Castles</title></svelte:head>
+<svelte:head><title>Blindfold Gym · Chess Castles</title></svelte:head>
 
 <div class="page">
   <section class="hero card">
     <div class="intro">
       <span class="label eyebrow">Train the skill strong players have</span>
-      <h1 class="display">Vision Gym</h1>
+      <h1 class="display">Blindfold Gym</h1>
       <p>Grandmasters see the board in their heads: they calculate long lines, play blindfold, and spot tactics before they happen. Train that skill here, without a board.</p>
     </div>
     <div class="me">
       <span class="label">Your Vision rating</span>
       <strong class="display num big">{rec.rating}</strong>
-      <span class="label">{rec.solved} of {rec.games} blindfold puzzles solved</span>
+      <span class="label">{rec.games ? `${rec.solved} of ${rec.games} blindfold puzzles solved` : 'No blindfold puzzles yet: start one below'}</span>
     </div>
   </section>
 

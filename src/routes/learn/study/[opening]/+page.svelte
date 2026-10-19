@@ -158,6 +158,8 @@
     document.querySelector('.tabs')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
 
+  /** What a line's name says beyond its move, e.g. "Advance Variation". */
+  const lineRest = (l: StudyLine) => (l.title && l.name !== l.title ? l.name.replace(l.title, '').replace(/^[\s·:–-]+/, '') : '');
   const lineName = (id: string) => opening?.lines.find((l) => l.id === id)?.name ?? 'Other lines';
   const lineSans = (l: StudyLine) => l.sans.split(' ').slice(opening!.root.split(' ').length).join(' ');
   /** The position at the end of a line (or the opening), and its key (where model games open). */
@@ -323,7 +325,7 @@
       <div class="lines" role="group" aria-label="Main lines">
         <button class="chip" aria-pressed={line === 'all'} onclick={() => (line = 'all')}>All lines</button>
         {#each opening.lines.slice(0, 6) as l (l.id)}
-          <button class="chip" aria-pressed={line === l.id} onclick={() => (line = l.id)}>{l.title ?? l.name}</button>
+          <button class="chip" aria-pressed={line === l.id} onclick={() => (line = l.id)}>{#if l.title}<strong>{l.title}</strong>{#if lineRest(l)} <span class="rest">{lineRest(l)}</span>{/if}{:else}{l.name}{/if}</button>
         {/each}
       </div>
     </div>
@@ -690,6 +692,10 @@
   .sub-h {
     margin: 6px 0 0;
     font-size: 15px;
+  }
+  .lines .rest {
+    font-size: 12px;
+    color: var(--muted);
   }
   .lines {
     display: flex;
