@@ -581,7 +581,8 @@ async function learnMore(which) {
         const db = (await page.locator('.db, .card.db, .database').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
         const reached = /([\d,]+) rated games reached/.exec(db)?.[1];
         // The first row under the "Move · Games · White · Draw · Black" header: the database's top move.
-        const top = /White · Draw · Black\s+(\S+)\s+([\d,]+)/.exec(db);
+        // The row reads "e4 Main 2.1M47%" once the spaces are collapsed (the tag and the share follow the move).
+        const top = /White · Draw · Black\s+(\S+)(?: Main| Best score)?\s+([\d.,]+[kM]?)/.exec(db);
         steps.push(`${i + 1}: ${reached ?? '?'} games reached; top move ${top?.[1] ?? '?'} (${top?.[2] ?? '?'} games)`);
       }
       f.text = steps.join(' · ');
