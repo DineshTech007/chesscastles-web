@@ -1,4 +1,4 @@
-# Site check: every few hours, uses chesscastles.com on a computer, a phone and
+# Site check: every few hours and after every push, uses chesscastles.com on a computer, a phone and
 # a tablet (scripts/e2e/site-check.mjs). When something breaks it opens an
 # issue with the report (screenshots in the run's artifact), adds to it while
 # it stays broken, and closes it when everything works again.
@@ -7,6 +7,9 @@ name: Site check
 on:
   schedule:
     - cron: '17 */4 * * *'
+  # Every deploy is pushed here right after it: check the live site then too.
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
