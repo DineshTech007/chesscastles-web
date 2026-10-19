@@ -3,6 +3,8 @@
   import { page } from '$app/state';
   import LangSwitch from '$lib/components/LangSwitch.svelte';
   import PostCover from '$lib/components/PostCover.svelte';
+  import PostFigure from '$lib/components/PostFigure.svelte';
+  import Reactions from '$lib/components/Reactions.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import { contentLang } from '$lib/contentLang';
   import { POSTS, postBySlug, TAG_NAME, type Post } from '$lib/blog/posts';
@@ -10,7 +12,7 @@
   import { track } from '$lib/analytics';
 
   const UI = {
-    en: { back: 'All stories', read: 'min read', share: 'Share this story', wa: 'Share on WhatsApp', copy: 'Copy link', copied: 'Copied ✓', next: 'Read next', missing: 'This story was not found.', cta: 'Try Chess Castles free' },
+    en: { back: 'All chronicles', read: 'min read', share: 'Share this story', wa: 'Share on WhatsApp', copy: 'Copy link', copied: 'Copied ✓', next: 'Read next', missing: 'This story was not found.', cta: 'Try Chess Castles free' },
     hi: { back: 'सारी कहानियाँ', read: 'minute पढ़ना', share: 'यह कहानी share कीजिए', wa: 'WhatsApp पर share करें', copy: 'Link copy करें', copied: 'Copy हो गया ✓', next: 'अगली कहानी', missing: 'यह कहानी नहीं मिली।', cta: 'Chess Castles free में आज़माइए' },
     mr: { back: 'सगळ्या गोष्टी', read: 'minute वाचन', share: 'ही गोष्ट share करा', wa: 'WhatsApp वर share करा', copy: 'Link copy करा', copied: 'Copy झालं ✓', next: 'पुढची गोष्ट', missing: 'ही गोष्ट सापडली नाही.', cta: 'Chess Castles free मध्ये वापरून बघा' },
   } as const;
@@ -29,11 +31,15 @@
   }
 
   /** Paragraphs, "## " headings and "- " lists (consecutive list lines become one list). */
-  type Block = { k: 'p' | 'h'; text: string } | { k: 'ul'; items: string[] };
+  type Block = { k: 'p' | 'h'; text: string } | { k: 'ul'; items: string[] } | { k: 'fig'; fig: 'board' | 'rice' | 'week'; fen?: string; caption?: string };
   const blocks = $derived.by<Block[]>(() => {
     const out: Block[] = [];
     for (const line of post?.body[$contentLang] ?? []) {
-      if (line.startsWith('## ')) out.push({ k: 'h', text: line.slice(3) });
+      const board = /^\[board:([^|\]]+)\|?([^\]]*)\]$/.exec(line);
+      if (board) out.push({ k: 'fig', fig: 'board', fen: board[1].trim(), caption: board[2].trim() });
+      else if (line === '[rice]') out.push({ k: 'fig', fig: 'rice' });
+      else if (line === '[week]') out.push({ k: 'fig', fig: 'week' });
+      else if (line.startsWith('## ')) out.push({ k: 'h', text: line.slice(3) });
       else if (line.startsWith('- ')) {
         const last = out[out.length - 1];
         if (last?.k === 'ul') last.items.push(line.slice(2));
@@ -45,7 +51,7 @@
 </script>
 
 <svelte:head>
-  <title>{post ? `${post.title[$contentLang]} · Blog` : 'Blog'} · Chess Castles</title>
+  <title>{post ? `${post.title[$contentLang]} · Castle Chronicles` : 'Castle Chronicles'} · Chess Castles</title>
   {#if post}<meta name="description" content={post.summary[$contentLang]} />{/if}
 </svelte:head>
 
@@ -65,10 +71,13 @@
       <p class="label meta">{dateOf(post.date)} · {post.read} {t.read}</p>
       {#each blocks as b, i (i)}
         {#if b.k === 'h'}<h2 class="title">{b.text}</h2>
+        {:else if b.k === 'fig'}<PostFigure kind={b.fig} fen={b.fen} caption={b.caption} lang={$contentLang} />
         {:else if b.k === 'ul'}<ul>{#each b.items as it, j (j)}<li>{it}</li>{/each}</ul>
         {:else}<p>{b.text}</p>{/if}
       {/each}
     </article>
+
+    <Reactions slug={post.slug} lang={$contentLang} />
 
     <section class="card share" aria-label={t.share}>
       <strong>{t.share}</strong>

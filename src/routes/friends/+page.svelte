@@ -124,7 +124,7 @@
   }
   /** The invite link: the site's address, with the player's name so a friend who joins is linked to them. */
   const inviteUrl = $derived(`https://www.chesscastles.com/${$session.status === 'in' && /^[A-Za-z0-9_-]{2,30}$/.test($session.username) ? `?ref=${encodeURIComponent($session.username)}` : ''}`);
-  const inviteText = $derived(`Join me on Chess Castles: learn, play and conquer. Free chess for everyone, with FIDE-rated opponents, puzzles, an AI coach in English, Hindi and Marathi, and live games. ${inviteUrl}`);
+  const inviteText = $derived(`Join me on Chess Castles: learn, play and conquer. Free chess for everyone, with FIDE-level opponents, puzzles, an AI coach in English, Hindi and Marathi, and live games. ${inviteUrl}`);
   let inviteCopied = $state(false);
   async function copyInviteText() {
     await navigator.clipboard?.writeText(inviteText).catch(() => {});
@@ -196,8 +196,6 @@
         </section>
       {/if}
 
-      {#if friends.friends.length}<FriendProgress friends={friends.friends} />{/if}
-
       <section class="card block">
         <h2 class="title">My friends ({friends.friends.length})</h2>
         {#if !friends.friends.length}
@@ -223,6 +221,9 @@
           </div>
         {/if}
       </section>
+
+      <!-- Below My friends; it scrolls on its own when there are many friends. -->
+      {#if friends.friends.length}<FriendProgress friends={friends.friends} scroll />{/if}
 
       {#if friends.outgoing.length}
         <section class="card block">

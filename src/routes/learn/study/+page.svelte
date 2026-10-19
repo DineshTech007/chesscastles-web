@@ -8,7 +8,7 @@
 
 <svelte:head>
   <title>Opening study · Chess Castles</title>
-  <meta name="description" content="Study an opening completely: its main lines and middlegame plans, a trainer, model games of strong players, puzzles from real games, and games against a FIDE-rated opponent." />
+  <meta name="description" content="Study an opening completely: its main lines and middlegame plans, a trainer, model games of strong players, puzzles from real games, and games against a FIDE-level opponent." />
 </svelte:head>
 
 <div class="page">
@@ -17,7 +17,7 @@
     <h1 class="display">Opening study</h1>
     <p class="intro">
       Everything for one opening in one place: the main lines and the plans behind them, a trainer to learn the moves, model games of strong
-      players, puzzles from real games in that opening (middlegame and endgame, three levels), and games against a FIDE-rated opponent in the line
+      players, puzzles from real games in that opening (middlegame and endgame, three levels), and games against a FIDE-level opponent in the line
       you choose.
     </p>
   </header>

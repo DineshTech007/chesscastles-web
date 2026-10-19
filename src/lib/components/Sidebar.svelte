@@ -25,7 +25,7 @@
 
   let { collapsed = false }: { collapsed?: boolean } = $props();
 
-  type Item = { href: string; label: string; icon: IconName; match: string[]; not?: string[] };
+  type Item = { href: string; label: string; icon: IconName; match: string[]; not?: string[]; badge?: string };
   /** Home, then the five features only Chess Castles has (in gold), then the everyday pages (src/lib/nav.ts). */
   const home: Item = { href: '/', label: 'Home', icon: 'home', match: ['/'] };
   const only: Item[] = HERO_FEATURES.map((f) => ({ href: f.href, label: f.short, icon: f.icon, match: f.match }));
@@ -72,6 +72,7 @@
         <a class="item" class:on href={item.href} aria-current={on ? 'page' : undefined} title={collapsed ? item.label : undefined}>
           <Icon name={item.icon} color={on ? 'var(--accent)' : 'var(--muted)'} />
           {#if !collapsed}<span>{item.label}</span>{/if}
+          {#if item.badge && !collapsed}<span class="newtag">{item.badge}</span>{/if}
           {#if item.href === '/friends' && $socialBadge}<span class="nbadge">{$socialBadge}</span>{/if}
         </a>
   {/snippet}
@@ -346,6 +347,16 @@
   .foot a:hover {
     color: var(--text);
     text-decoration: underline;
+  }
+  .newtag {
+    margin-left: auto;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f7d27a, #edb040 55%, #c98a1b);
+    color: #0b1426;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
   }
   .nbadge {
     margin-left: auto;

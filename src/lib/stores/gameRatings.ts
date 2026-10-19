@@ -3,7 +3,7 @@ import type { SavedGame } from './myGames';
 
 /**
  * The player's own rating in a saved game: what it was when the game began, and what it became.
- * Games against FIDE-rated opponents read it from the CC Rating history (so old games show it too);
+ * Games against FIDE-level opponents read it from the CC Rating history (so old games show it too);
  * Lichess games use the Lichess rating saved with the game; games against the computer have none.
  */
 export interface GameRating {

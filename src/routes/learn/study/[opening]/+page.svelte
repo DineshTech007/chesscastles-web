@@ -2,7 +2,7 @@
   /**
    * One opening to study: its lines and the middlegame plans of each, the
    * trainer, model games, puzzles from real games (middlegame and endgame,
-   * three levels) and play against a FIDE-rated opponent, all filtered by line.
+   * three levels) and play against a FIDE-level opponent, all filtered by line.
    */
   import { onMount, untrack } from 'svelte';
   import { goto } from '$app/navigation';
@@ -65,7 +65,7 @@
   /**
    * The player's own games for "Lines from your games", rapid and slower only
    * (fast games say more about the clock than about the opening): Chess
-   * Castles games against FIDE-rated opponents, and chess.com and Lichess
+   * Castles games against FIDE-level opponents, and chess.com and Lichess
    * games (the opening check-up's and Game Insights').
    */
   type Source = 'cc' | OnlineSite;
@@ -95,7 +95,7 @@
     return studyStats(SOURCES.flatMap(gamesOf)).filter((x) => x.opening === opening.id);
   });
   const sourceName = (src: Source) => (src === 'cc' ? 'Chess Castles' : SITE_NAME[src]);
-  const sourceWho = (src: Source) => (src === 'cc' ? 'Chess Castles games against FIDE-rated opponents' : `${SITE_NAME[src]}${online[src].username ? ` (${online[src].username})` : ''} games`);
+  const sourceWho = (src: Source) => (src === 'cc' ? 'Chess Castles games against FIDE-level opponents' : `${SITE_NAME[src]}${online[src].username ? ` (${online[src].username})` : ''} games`);
 
   // Model games.
   let viewing = $state<ModelGame | undefined>();
@@ -505,7 +505,7 @@
       {/if}
     {:else if tab === 'play'}
       <section class="card play">
-        <h2 class="title">Play {fromMoves && line === 'all' ? 'from your position' : playLine ? lineName(playLine) : `the ${opening.name}`} against a FIDE-rated opponent</h2>
+        <h2 class="title">Play {fromMoves && line === 'all' ? 'from your position' : playLine ? lineName(playLine) : `the ${opening.name}`} against a FIDE-level opponent</h2>
         {#if fromMoves && line === 'all'}<p class="label sans">Position from the tree: {fromMoves}</p>{/if}
         <p class="label">
           You play {opening.side}. From the line, the opponent plays like a real FIDE-rated player at the rating you choose.

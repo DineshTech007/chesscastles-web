@@ -347,15 +347,15 @@ export const GUIDE: GuideItem[] = [
     q: { en: 'Is the CC Rating a FIDE rating?', hi: 'क्या CC Rating एक FIDE rating है?', mr: 'CC Rating म्हणजे FIDE rating आहे का?' },
     a: {
       en: [
-        'No. The CC Rating is Chess Castles’ own rating. It is worked out the way FIDE rates players, from your games against our FIDE-rated computer opponents, with a separate rating for Classical, Rapid and Blitz. It helps you practise and see your progress.',
+        'No. The CC Rating is Chess Castles’ own rating. It is worked out the way FIDE rates players, from your games against our FIDE-level computer opponents, with a separate rating for Classical, Rapid and Blitz. It helps you practise and see your progress.',
         'Only FIDE-rated tournaments change your official FIDE rating. Our opponents are computer opponents that play in the style of players at each FIDE rating, and Chess Castles is not affiliated with FIDE.',
       ],
       hi: [
-        'नहीं। CC Rating Chess Castles की अपनी rating है। यह FIDE के तरीके से, हमारे FIDE-rated computer opponents के ख़िलाफ़ आपके games से निकाली जाती है, और Classical, Rapid, Blitz की अलग-अलग होती है। इससे आप practice करते हैं और अपनी प्रगति देखते हैं।',
+        'नहीं। CC Rating Chess Castles की अपनी rating है। यह FIDE के तरीके से, हमारे FIDE-level computer opponents के ख़िलाफ़ आपके games से निकाली जाती है, और Classical, Rapid, Blitz की अलग-अलग होती है। इससे आप practice करते हैं और अपनी प्रगति देखते हैं।',
         'आपकी official FIDE rating सिर्फ़ FIDE-rated tournaments से बदलती है। हमारे opponents computer opponents हैं जो हर FIDE rating के players की शैली में खेलते हैं, और Chess Castles का FIDE से कोई संबंध नहीं है।',
       ],
       mr: [
-        'नाही. CC Rating ही Chess Castles ची स्वतःची rating आहे. ती FIDE च्या पद्धतीने, आमच्या FIDE-rated computer opponents विरुद्धच्या तुमच्या games वरून काढली जाते, आणि Classical, Rapid, Blitz ची वेगवेगळी असते. यामुळे तुम्ही सराव करता आणि तुमची प्रगती बघता.',
+        'नाही. CC Rating ही Chess Castles ची स्वतःची rating आहे. ती FIDE च्या पद्धतीने, आमच्या FIDE-level computer opponents विरुद्धच्या तुमच्या games वरून काढली जाते, आणि Classical, Rapid, Blitz ची वेगवेगळी असते. यामुळे तुम्ही सराव करता आणि तुमची प्रगती बघता.',
         'तुमची official FIDE rating फक्त FIDE-rated tournaments मुळे बदलते. आमचे opponents computer opponents आहेत जे प्रत्येक FIDE rating च्या players च्या शैलीत खेळतात, आणि Chess Castles चा FIDE शी कोणताही संबंध नाही.',
       ],
     },

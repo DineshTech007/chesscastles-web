@@ -15,7 +15,7 @@
       goal: 'Know the rules and the piece values; finish every game without leaving a piece to be taken for nothing.',
       steps: [
         { what: 'Chess Guru: the basics', how: 'Learn → Start → "Opening principles", "Piece values and good trades", then the checkmate lessons.', href: '/learn' },
-        { what: 'Play rapid games against the 1400 FIDE-rated opponent', how: 'Play → FIDE-rated play, 15+10. Never bullet or blitz yet: slow games teach, fast games only show the clock.', href: '/play/fide?r=1400&tc=2' },
+        { what: 'Play rapid games against the 1400 FIDE-level opponent', how: 'Play → FIDE-rated play, 15+10. Never bullet or blitz yet: slow games teach, fast games only show the clock.', href: '/play/fide?r=1400&tc=2' },
         { what: 'Review every game', how: 'After the game press Analyse → Report. Find the one move that lost the game (the "turning point") and say in words why it was bad.', href: '/games' },
         { what: 'Puzzles, 10 a day', how: 'Puzzles → rated puzzles. The rating road map there goes Pawn → Knight → Bishop: stay until Knight.', href: '/puzzles' },
       ],
@@ -28,7 +28,7 @@
       steps: [
         { what: 'Tactics by theme', how: 'Puzzles → By theme: fork, pin, skewer, back rank, one theme a week. The profile’s "Sharp moments" number tells you when it is working.', href: '/puzzles/themes' },
         { what: 'One opening as White, one as Black', how: 'Learn → Openings → Courses: Jobava London for White; Caro-Kann or Chebanenko Slav for Black. Use the trainer until a line is marked learned, watch one model game of that line, and only then play it.', href: '/learn?tab=openings' },
-        { what: 'Play the line against the FIDE-rated opponents', how: 'The course’s "Play it" starts a game from the line’s position. Play your own level and one level up.', href: '/learn/study/caro-kann' },
+        { what: 'Play the line against the FIDE-level opponents', how: 'The course’s "Play it" starts a game from the line’s position. Play your own level and one level up.', href: '/learn/study/caro-kann' },
         { what: 'Check your profile every week', how: 'Profile → "How you play": opening, middlegame, endgame, sharp and calm numbers show where the next hour should go.', href: '/profile' },
       ],
     },
@@ -53,7 +53,7 @@
       steps: [
         { what: 'Main-line openings', how: 'Ruy Lopez and Open Sicilian as White; Sicilian Najdorf or Sveshnikov, Nimzo-Indian or Grünfeld as Black (all in the trainer). Learn them from the database’s strongest players, not from memory alone.', href: '/learn?tab=openings&sub=trainer' },
         { what: 'Model games every day', how: 'Learn → Masters and the courses’ model games: one annotated grandmaster game a day, with the engine off first.', href: '/learn/masters' },
-        { what: 'Play up', how: 'FIDE-rated opponents 100–200 above you, classical (60+0 or 90+30), and review each game for the turning point.', href: '/play/fide?r=2200&tc=4' },
+        { what: 'Play up', how: 'FIDE-level opponents 100–200 above you, classical (60+0 or 90+30), and review each game for the turning point.', href: '/play/fide?r=2200&tc=4' },
         { what: 'Real tournaments', how: 'Community → tournaments near you. A FIDE rating needs rated games against rated players: Chess Castles ratings are not FIDE ratings.', href: '/community' },
       ],
     },
@@ -90,7 +90,7 @@
     <p class="eyebrow label">Roadmap</p>
     <h1 class="display">From a first game to grandmaster</h1>
     <p class="lead">What to do at each level, in order, and where on Chess Castles to do it. One rule holds at every level: play slow games, review every one, and fix the single move that lost it.</p>
-    <p class="label fine">FIDE is the world chess federation. Its ratings and titles come only from rated tournaments; Chess Castles ratings (CC Rating) measure your games here against FIDE-rated opponents and are not FIDE ratings.</p>
+    <p class="label fine">FIDE is the world chess federation. Its ratings and titles come only from rated tournaments; Chess Castles ratings (CC Rating) measure your games here against FIDE-level opponents and are not FIDE ratings.</p>
   </header>
 
   <ol class="stages">

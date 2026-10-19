@@ -16,6 +16,8 @@ export interface NavItem {
   blurb: string;
   /** False: not in the side menu (the signature features' own item already lights up there). */
   menu?: false;
+  /** A small tag beside the name, for something new. */
+  badge?: string;
 }
 
 export const NAV_GROUPS: NavItem[][] = [
@@ -37,7 +39,7 @@ export const NAV_GROUPS: NavItem[][] = [
   ],
   [
     { href: '/guide', label: 'Chess Guide', icon: 'help', match: ['/guide'], blurb: 'Answers for parents and beginners, in 3 languages' },
-    { href: '/blog', label: 'Blog', icon: 'pen', match: ['/blog'], blurb: 'Stories and tips about chess' },
+    { href: '/blog', label: 'Castle Chronicles', icon: 'pen', match: ['/blog'], badge: 'NEW', blurb: 'Stories, tips for kids and chess history' },
   ],
 ];
 

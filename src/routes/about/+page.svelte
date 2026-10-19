@@ -15,9 +15,9 @@
   </section>
 
   <section class="card">
-    <h2 class="title">FIDE-rated opponents</h2>
+    <h2 class="title">FIDE-level opponents</h2>
     <p>
-      Our FIDE-rated opponents are computer opponents made to play in the style of players at the FIDE rating you pick: their
+      Our FIDE-level opponents are computer opponents made to play in the style of players at the FIDE rating you pick: their
       openings, their plans, their use of the clock and their mistakes. They are not real people and not FIDE-rated players.
       Your results against them make your CC Rating, Chess Castles' own rating, which is not an official FIDE rating.
     </p>
@@ -28,7 +28,7 @@
     <h2 class="title">Games, data and AI</h2>
     <ul>
       <li>
-        <strong>Over-the-board games</strong>: the opening book, the FIDE-rated opponents and the 5.4 million game database use games from
+        <strong>Over-the-board games</strong>: the opening book, the FIDE-level opponents and the 5.4 million game database use games from
         <a href="https://caissabase.co.uk" target="_blank" rel="noopener">CaissaBase</a>, a free collection of tournament games (moves only, no annotations). Thank you to its maintainer.
       </li>
       <li><strong>Chess Guru</strong> is an AI coach, built with Llama (Meta's Llama 3.3 and Llama 4, under their community licences), run on Cloudflare Workers AI. Guru is a character, not a titled player.</li>

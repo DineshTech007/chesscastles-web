@@ -109,6 +109,11 @@ html {
   caret-color: transparent;
   -webkit-tap-highlight-color: transparent;
 }
+/* The page never slides sideways under a finger (a phone), whatever a wide element does inside it. */
+body {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
 input,
 textarea,
 [contenteditable]:not([contenteditable='false']) {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { myTitle, myInitials, myName } from '$lib/stores/me';
   import { onDestroy, onMount } from 'svelte';
+  import { replaceState } from '$app/navigation';
   import { gameEnded } from '$lib/stores/gameEnded';
   import type { Key } from '@lichess-org/chessground/types';
   import type { Role } from 'chessops/types';
@@ -102,6 +103,7 @@
     }
   }
 
+  let urlSpent = false;
   function onChange() {
     v++;
     const n = game.moves.length;
@@ -122,6 +124,16 @@
     if (resumeRoute) {
       if (game.isOver) clearResume(id);
       else if (game.moves.length) saveResume({ route: resumeRoute, id, opponent, snapshot: game.snapshot(), minutes: game.timeControl.minutes });
+    }
+    // The game is over (finished, resigned or aborted): its address no longer starts a game. Going back to it
+    // in the browser must not begin a new one, so the address becomes the page it belongs to (Play / the tournament).
+    if (game.isOver && resumeRoute && !urlSpent) {
+      urlSpent = true;
+      try {
+        replaceState(resumeRoute.startsWith('/play/tournament') ? '/play/tournament' : '/play', {});
+      } catch {
+        /* the router is not ready: the address stays */
+      }
     }
     if (game.isOver) {
       queue.clear();
@@ -477,7 +489,7 @@
         {#if kfideChange}
           <a class="kfide" href="/profile">CC Rating · {SPEED_LABEL[speed]} <strong class="num">{kfideChange.after}</strong>
             <span class="num" class:up={kfideChange.after > kfideChange.before} class:down={kfideChange.after < kfideChange.before}>({kfideChange.after >= kfideChange.before ? '+' : ''}{kfideChange.after - kfideChange.before})</span></a>
-          <span class="label fine">Your Chess Castles rating from games against FIDE-rated opponents{$kfideAll[speed].provisional ? `; (new) until ${KFIDE_PROVISIONAL} games` : ''}.</span>
+          <span class="label fine">Your Chess Castles rating from games against FIDE-level opponents{$kfideAll[speed].provisional ? `; (new) until ${KFIDE_PROVISIONAL} games` : ''}.</span>
         {/if}
         <div class="row">
           <button class="btn primary" onclick={onagain}><Icon name="replay" size={18} />{againLabel}</button>

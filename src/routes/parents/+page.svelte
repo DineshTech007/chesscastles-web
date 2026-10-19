@@ -70,7 +70,7 @@
     <ol>
       <li><strong>Sign in with Google</strong> (your account or your child’s). It takes a few seconds and no new password.</li>
       <li>Open <a href="/coach">Coach</a> for lessons with Chess Guru. Pick English, हिन्दी or मराठी.</li>
-      <li>Play a <a href="/play?mode=fide">FIDE-rated opponent</a> at your child’s level (start at 1000–1200 for a beginner). These are computer opponents that play like players of that rating.</li>
+      <li>Play a <a href="/play?mode=fide">FIDE-level opponent</a> at your child’s level (start at 1000–1200 for a beginner). These are computer opponents that play like players of that rating.</li>
       <li>Do the <a href="/puzzles">daily puzzle</a> and follow the weekly plan in <a href="/learn">Learn</a>.</li>
       <li>Playing real people online needs a free <a href="https://lichess.org" target="_blank" rel="noopener">Lichess</a> account, a non-profit chess site. You can add it later.</li>
     </ol>

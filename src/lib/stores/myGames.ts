@@ -6,7 +6,7 @@ export type GameKind = 'computer' | 'fide' | 'lichess';
 
 export const KIND_LABEL: Record<GameKind, string> = {
   computer: 'Computer',
-  fide: 'FIDE-rated opponent',
+  fide: 'FIDE-level opponent',
   lichess: 'Lichess',
 };
 
@@ -23,7 +23,7 @@ export interface SavedGame {
   reason: string;
   timeControl: string;
   opponentRating?: number;
-  /** The player's own rating when the game began: the CC Rating at that speed (games against FIDE-rated opponents) or the Lichess rating. */
+  /** The player's own rating when the game began: the CC Rating at that speed (games against FIDE-level opponents) or the Lichess rating. */
   myRating?: number;
   startFen: string;
   uci: string[];

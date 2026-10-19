@@ -10,7 +10,7 @@
   import { lichessRatings } from '$lib/lichess';
   import { friendsList, serverResting, lobbyLeave, lobbySeek, lobbyState, sendMessage, type LobbyRole, type LobbySeek, type LobbyState } from '$lib/social';
 
-  /** `onfide`: switches the Play page to the FIDE-rated opponents (offered when no one is free). */
+  /** `onfide`: switches the Play page to the FIDE-level opponents (offered when no one is free). */
   let { onfide }: { onfide?: () => void } = $props();
 
   type Kind = 'pair' | 'lobby' | 'friend' | 'ai';
@@ -372,7 +372,7 @@
             {#if !lichessWide(pool.tc)}
               <button class="btn" onclick={() => switchTo(TCS[4])}>Play 10+0 instead</button>
             {/if}
-            {#if onfide}<button class="btn" onclick={() => (cancel(), onfide())}>A FIDE-rated opponent now</button>{/if}
+            {#if onfide}<button class="btn" onclick={() => (cancel(), onfide())}>A FIDE-level opponent now</button>{/if}
           </div>
         </div>
       {/if}

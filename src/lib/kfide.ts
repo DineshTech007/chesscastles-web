@@ -2,7 +2,7 @@ import { outcome, type SavedGame } from '$lib/stores/myGames';
 
 /**
  * CC Rating: the player's Chess Castles ratings, from their finished games
- * against the FIDE-rated bots, worked out the way FIDE rates players:
+ * against the FIDE-level bots, worked out the way FIDE rates players:
  * the expected score from the rating difference (at most 400 counts), and
  * a change of K × (score − expected) with K = 40 for the first 30 games,
  * then 20, and 10 from 2400. Like FIDE, there are three ratings, one for

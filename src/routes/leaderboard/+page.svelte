@@ -65,7 +65,7 @@
   const mine = $derived(shown.find((r) => r.me));
   const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '');
   const EMPTY: Record<BoardKind, [string, string, string]> = {
-    kfide: ['No CC Ratings at this speed yet.', 'Play a FIDE-rated opponent', '/play?mode=fide'],
+    kfide: ['No CC Ratings at this speed yet.', 'Play a FIDE-level opponent', '/play?mode=fide'],
     lichess: ['No Chess Castles player has a Lichess rating at this speed yet.', 'Play online', '/play?mode=online'],
     puzzles: ['No puzzle ratings yet.', 'Solve puzzles', '/puzzles'],
     vision: ['No one on this board yet.', 'Train in the Blindfold Gym', '/vision'],

@@ -40,7 +40,7 @@
       <h1 class="display">Everything chess. <span class="gold">Plus five things you won’t find together anywhere else.</span></h1>
       <p class="sub">Play online, solve puzzles, analyse and watch the world’s best live, all free. Then go further with five features built only for Chess Castles.</p>
       <div class="ctas">
-        <a class="btn primary big" href="/play?mode=fide" onclick={() => go('hero_play')}><Icon name="play" size={18} fill color="currentColor" />Play a FIDE-rated opponent<sup>*</sup></a>
+        <a class="btn primary big" href="/play?mode=fide" onclick={() => go('hero_play')}><Icon name="play" size={18} fill color="currentColor" />Play at FIDE level</a>
         {#if $session.status !== 'in'}
           <button class="btn big" onclick={() => (go('hero_signin'), startSignIn())}>Sign in free</button>
         {/if}
@@ -52,7 +52,7 @@
       <ul class="trust" aria-label="Chess Castles in numbers">
         <li><strong class="num">5.4M</strong><span>tournament games</span></li>
         <li><strong class="num">3,865</strong><span>named opening lines</span></li>
-        <li><strong class="num">1400–2800</strong><span>FIDE-rated opponents*</span></li>
+        <li><strong class="num">1400–2800</strong><span>FIDE-level opponents</span></li>
       </ul>
     </div>
     <div class="visual" aria-hidden="true">
@@ -76,7 +76,7 @@
           <div class="art-box"><FeatureArt id={f.id} /></div>
           <div class="feat-text">
             <span class="num-tag num">0{i + 1}</span>
-            <h3 class="title">{f.title}{f.id === 'fide' ? '*' : ''}</h3>
+            <h3 class="title">{f.title}</h3>
             <p>{f.promise}</p>
             <ul class="facts">{#each f.facts as x (x)}<li>{x}</li>{/each}</ul>
             <span class="go">{f.cta} <Icon name="chevron" size={16} /></span>
@@ -86,7 +86,7 @@
     </div>
   </section>
 
-  <p class="disclaimer label">* {FIDE_DISCLAIMER}</p>
+  <p class="disclaimer label">{FIDE_DISCLAIMER}</p>
 
   <section class="all" aria-labelledby="all-h">
     <header class="sec-head">

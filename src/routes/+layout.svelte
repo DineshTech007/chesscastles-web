@@ -563,6 +563,29 @@
     flex: 1;
     padding: 8px 24px 48px;
   }
+  /* Small phones (360 px and under): the header fits: no slogan, tighter gaps, smaller buttons. */
+  @media (max-width: 400px) {
+    .top {
+      padding: 8px 8px 0;
+      gap: 4px;
+    }
+    .pb-slogan {
+      display: none;
+    }
+    .phone-brand {
+      gap: 7px;
+      min-width: 0;
+    }
+    .top :global(.icon-btn) {
+      width: 40px;
+      height: 40px;
+    }
+  }
+  @media (max-width: 340px) {
+    .top :global(.icon-btn:first-of-type) {
+      display: none;
+    }
+  }
   @media (max-width: 767px) {
     .top {
       padding: 10px 16px 0;

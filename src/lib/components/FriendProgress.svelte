@@ -12,7 +12,7 @@
   import { myName } from '$lib/stores/me';
   import Icon from './Icon.svelte';
 
-  let { friends, limit = 50, title = 'Study this week' }: { friends: Player[]; limit?: number; title?: string } = $props();
+  let { friends, limit = 50, title = 'Study this week', scroll = false }: { friends: Player[]; limit?: number; title?: string; /** A list that scrolls on its own (many friends). */ scroll?: boolean } = $props();
 
   interface Row {
     uid: string;
@@ -59,7 +59,7 @@
     <h2 id="fp-h" class="title">{title}</h2>
     <a class="label" href="/leaderboard">Leaderboard →</a>
   </div>
-  <ul>
+  <ul class:scroll>
     {#each rows as r (r.uid)}
       <li class:me={r.me}>
         <span class="av">{#if r.photo}<img src={r.photo} alt="" />{:else}{initialsOf(r.name)}{/if}</span>
@@ -108,6 +108,13 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+  }
+  ul.scroll {
+    max-height: 430px;
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
   }
   li {
     display: flex;

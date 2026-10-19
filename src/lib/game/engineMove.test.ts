@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { maxDrop, pickWeighted, slipChance } from './engineMove';
 
-describe('how the FIDE-rated opponent picks a move', () => {
+describe('how the FIDE-level opponent picks a move', () => {
   const cands = [
     { item: 'best', base: 0.4, wc: 0.55 },
     { item: 'fine', base: 0.3, wc: 0.5 },

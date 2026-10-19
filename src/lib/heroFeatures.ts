@@ -7,7 +7,7 @@ import type { IconName } from '$lib/components/Icon.svelte';
 
 /** Shown wherever "FIDE-rated" opponents are offered (FIDE's name is theirs; our opponents are computer opponents). */
 export const FIDE_DISCLAIMER =
-  'FIDE-rated opponents are computer opponents that play in the style of players at each FIDE rating. Chess Castles is not affiliated with or endorsed by FIDE (Fédération Internationale des Échecs), and games here do not count for official FIDE ratings.';
+  'FIDE-level opponents are computer opponents that play in the style of players at each FIDE rating. Chess Castles is not affiliated with or endorsed by FIDE (Fédération Internationale des Échecs), and games here do not count for official FIDE ratings.';
 
 export type HeroId = 'fide' | 'database' | 'openings' | 'insights' | 'guru';
 export interface HeroFeature {
@@ -29,9 +29,9 @@ export interface HeroFeature {
 export const HERO_FEATURES: HeroFeature[] = [
   {
     id: 'fide',
-    short: 'FIDE-rated play',
-    title: 'Play FIDE-rated opponents',
-    promise: 'Pick a rating from 1400 to 2800 and face an opponent who opens, plans and even slips like a real tournament player at that level. Every game moves your CC Rating.',
+    short: 'Play at FIDE level',
+    title: 'Play at FIDE level, from 1400 to 2800',
+    promise: 'Pick any rating from 1400 to 2800 and sit down against an opponent that plays like a real tournament player at that level: the same openings, the same plans, even the same slips. Every game moves your CC Rating.',
     facts: ['1400 to 2800', 'Blitz · Rapid · Classical', 'FIDE tournaments'],
     href: '/play?mode=fide',
     cta: 'Play now',

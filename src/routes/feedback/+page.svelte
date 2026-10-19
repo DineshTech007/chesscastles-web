@@ -13,7 +13,7 @@
   ] as const;
   const AREAS = [
     ['', 'The whole site'],
-    ['play', 'Playing FIDE-rated opponents'],
+    ['play', 'Playing FIDE-level opponents'],
     ['online', 'Online play'],
     ['puzzles', 'Puzzles'],
     ['learn', 'Learn and the opening trainer'],
@@ -162,11 +162,13 @@
   }
   .faces {
     display: flex;
-    gap: 10px;
+    gap: 8px;
   }
   .faces button {
-    width: 58px;
-    height: 58px;
+    flex: 0 1 58px;
+    min-width: 0;
+    aspect-ratio: 1;
+    height: auto;
     border-radius: 16px;
     border: 2px solid var(--border);
     background: var(--raised);

@@ -1,4 +1,5 @@
 import type { Lang } from '$lib/coach/i18n';
+import { MORE_POSTS } from './more';
 
 /**
  * The Chess Castles blog: stories and tips about chess, each in English, Hindi and Marathi (chess words stay
@@ -8,7 +9,7 @@ import type { Lang } from '$lib/coach/i18n';
  */
 export type L3<T = string> = Record<Lang, T>;
 
-export type Tag = 'Improve' | 'Story' | 'History' | 'India' | 'Parents';
+export type Tag = 'Improve' | 'Kids' | 'Story' | 'History' | 'India' | 'Parents';
 
 export interface Post {
   slug: string;
@@ -27,13 +28,14 @@ export interface Post {
 
 export const TAG_NAME: Record<Tag, L3> = {
   Improve: { en: 'Improve', hi: 'Improve', mr: 'Improve' },
+  Kids: { en: 'Kids’ improvement', hi: 'बच्चों का सुधार', mr: 'मुलांची प्रगती' },
   Story: { en: 'Story', hi: 'कहानी', mr: 'गोष्ट' },
   History: { en: 'History', hi: 'इतिहास', mr: 'इतिहास' },
   India: { en: 'India', hi: 'भारत', mr: 'भारत' },
   Parents: { en: 'Parents', hi: 'Parents', mr: 'पालक' },
 };
 
-export const POSTS: Post[] = [
+const BASE_POSTS: Post[] = [
   {
     slug: 'stuck-at-the-same-rating',
     date: '2026-10-20',
@@ -103,6 +105,7 @@ export const POSTS: Post[] = [
       en: [
         'In London in 1851, during the world’s first international chess tournament, two players sat down for a friendly game: Adolf Anderssen of Germany, with White, and Lionel Kieseritzky of France.',
         'Anderssen attacked at once, sacrificing a pawn, then a bishop. Then he did something that looks crazy: he gave up both rooks, and then even his queen. By the end he had lost a bishop, two rooks and the queen.',
+        '[board:r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1 b - - 1 23|The final position: White has given up a queen and two rooks, and Black is checkmated]',
         'But Kieseritzky’s king had nowhere to hide. Anderssen finished with a checkmate in which just a bishop and two knights did the work. The game is still called the Immortal Game.',
         '## What can we learn?',
         '- Pieces are tools, not treasures. If giving material wins the king, it is a good trade.',
@@ -113,6 +116,7 @@ export const POSTS: Post[] = [
       hi: [
         '1851 में London में, दुनिया के पहले international chess tournament के दौरान, दो players एक friendly game खेलने बैठे: Germany के Adolf Anderssen (White) और France के Lionel Kieseritzky।',
         'Anderssen ने तुरंत हमला किया, पहले एक pawn और फिर एक bishop कुर्बान किया। फिर उन्होंने ऐसा किया जो पागलपन लगता है: दोनों rooks दे दिए, और फिर रानी भी। आख़िर तक उन्होंने एक bishop, दो rooks और रानी गँवा दी थी।',
+        '[board:r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1 b - - 1 23|आख़िरी position: White ने रानी और दो rooks दे दिए, और Black का checkmate हो गया]',
         'लेकिन Kieseritzky के king के पास छिपने की जगह नहीं थी। Anderssen ने सिर्फ़ एक bishop और दो knights के दम पर checkmate कर दिया। इस game को आज भी Immortal Game कहते हैं।',
         '## हम क्या सीख सकते हैं?',
         '- मोहरे औज़ार हैं, ख़ज़ाना नहीं। अगर मोहरे देकर king मिलता है, तो सौदा अच्छा है।',
@@ -123,6 +127,7 @@ export const POSTS: Post[] = [
       mr: [
         '1851 मध्ये London मध्ये, जगातल्या पहिल्या international chess tournament दरम्यान, दोन players एक friendly game खेळायला बसले: Germany चे Adolf Anderssen (White) आणि France चे Lionel Kieseritzky.',
         'Anderssen ने लगेच हल्ला केला, आधी एक pawn आणि मग एक bishop बळी दिला. मग त्यांनी वेडेपणा वाटेल असं केलं: दोन्ही rooks दिले, आणि नंतर राणीसुद्धा. शेवटी त्यांनी एक bishop, दोन rooks आणि राणी गमावली होती.',
+        '[board:r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1 b - - 1 23|शेवटची position: White ने राणी आणि दोन rooks दिले, आणि Black चा checkmate झाला]',
         'पण Kieseritzky च्या king ला लपायला जागा नव्हती. Anderssen ने फक्त एक bishop आणि दोन knights यांच्या जोरावर checkmate केला. या game ला आजही Immortal Game म्हणतात.',
         '## आपण काय शिकतो?',
         '- मोहरे हत्यारं आहेत, खजिना नाही. मोहरे देऊन king मिळत असेल तर सौदा चांगला आहे.',
@@ -150,6 +155,7 @@ export const POSTS: Post[] = [
         'This is a legend, told for hundreds of years. A king loved the new game of chess so much that he asked its inventor what reward he wanted.',
         'The inventor smiled: "Place one grain of rice on the first square of the board, two on the second, four on the third, and keep doubling for all 64 squares."',
         'The king laughed. What a small prize! But his advisers started to count. By the 11th square it was 1,024 grains. By the 21st square, over a million. On the last square alone, there would be 9,223,372,036,854,775,808 grains.',
+        '[rice]',
         'In all, the board needs 18,446,744,073,709,551,615 grains of rice, far more than all the rice ever grown on Earth. The legend says the king had to admit that the inventor was cleverer than him.',
         'It is a story about doubling, the same idea that makes a small habit, like ten minutes of puzzles a day, grow into something huge over a year.',
       ],
@@ -157,6 +163,7 @@ export const POSTS: Post[] = [
         'यह एक कहानी (legend) है जो सैकड़ों साल से सुनाई जाती है। एक राजा को chess का नया खेल इतना पसंद आया कि उसने उसके आविष्कारक से पूछा कि इनाम में क्या चाहिए।',
         'आविष्कारक मुस्कुराया: "board के पहले खाने पर चावल का एक दाना रखिए, दूसरे पर दो, तीसरे पर चार, और सभी 64 खानों तक दोगुना करते जाइए।"',
         'राजा हँस पड़ा। कितना छोटा इनाम! लेकिन उसके मंत्री गिनने लगे। 11वें खाने तक 1,024 दाने हो गए। 21वें तक दस लाख से ज़्यादा। आख़िरी खाने पर अकेले 9,223,372,036,854,775,808 दाने होते।',
+        '[rice]',
         'कुल मिलाकर board को 18,446,744,073,709,551,615 दाने चाहिए, जो धरती पर आज तक उगे सारे चावल से कहीं ज़्यादा हैं। कहानी कहती है कि राजा को मानना पड़ा कि आविष्कारक उससे ज़्यादा चतुर था।',
         'यह दोगुना होने की कहानी है, वही बात जिससे रोज़ के दस minutes के puzzles जैसी छोटी आदत साल भर में बहुत बड़ी बन जाती है।',
       ],
@@ -164,6 +171,7 @@ export const POSTS: Post[] = [
         'ही एक गोष्ट (legend) आहे, जी शेकडो वर्षं सांगितली जाते. एका राजाला chess चा नवा खेळ इतका आवडला की त्याने त्याच्या संशोधकाला विचारलं, बक्षीस म्हणून काय हवं.',
         'संशोधक हसला: "board च्या पहिल्या घरावर तांदळाचा एक दाणा ठेवा, दुसऱ्यावर दोन, तिसऱ्यावर चार, आणि सगळ्या 64 घरांपर्यंत दुप्पट करत जा."',
         'राजा हसला. किती छोटं बक्षीस! पण त्याचे मंत्री मोजू लागले. 11 व्या घरापर्यंत 1,024 दाणे झाले. 21 व्या घरापर्यंत दहा लाखांहून जास्त. फक्त शेवटच्या घरावर 9,223,372,036,854,775,808 दाणे झाले असते.',
+        '[rice]',
         'एकूण board ला 18,446,744,073,709,551,615 दाणे लागतात, जे पृथ्वीवर आजवर पिकलेल्या सगळ्या तांदळापेक्षा कितीतरी जास्त आहेत. गोष्ट सांगते की राजाला कबूल करावं लागलं की संशोधक त्याच्यापेक्षा हुशार होता.',
         'ही दुप्पट होण्याची गोष्ट आहे, तीच कल्पना जिच्यामुळे रोज दहा minutes च्या puzzles सारखी छोटी सवय वर्षभरात खूप मोठी होते.',
       ],
@@ -364,5 +372,7 @@ export const POSTS: Post[] = [
     },
   },
 ];
+
+export const POSTS: Post[] = [...BASE_POSTS, ...MORE_POSTS];
 
 export const postBySlug = (slug: string) => POSTS.find((p) => p.slug === slug);

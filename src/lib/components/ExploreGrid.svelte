@@ -12,7 +12,7 @@
       <a class="tile card" href={n.href}>
         <span class="ic"><Icon name={n.icon} size={20} color="var(--accent)" /></span>
         <span class="tt">
-          <strong>{n.label}{#if n.href === '/friends' && $socialBadge}<span class="nbadge">{$socialBadge}</span>{/if}</strong>
+          <strong>{n.label}{#if n.badge}<span class="newtag">{n.badge}</span>{/if}{#if n.href === '/friends' && $socialBadge}<span class="nbadge">{$socialBadge}</span>{/if}</strong>
           <span class="label">{n.blurb}</span>
         </span>
       </a>
@@ -76,6 +76,17 @@
   .tt .label {
     font-size: 12.5px;
     line-height: 1.3;
+  }
+  .newtag {
+    margin-left: 8px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f7d27a, #edb040 55%, #c98a1b);
+    color: #0b1426;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    vertical-align: middle;
   }
   .nbadge {
     margin-left: 6px;

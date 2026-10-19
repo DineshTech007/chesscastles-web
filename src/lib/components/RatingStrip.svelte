@@ -36,7 +36,7 @@
 
 <div class="rs" aria-label="Your ratings and games">
   <div class="row">
-    <a class="big" href={main.games ? `/profile?speed=${$kfideAll.main}#cc-ratings` : '/play?mode=fide'} title="Your Chess Castles rating from games against FIDE-rated opponents. See how it changed.">
+    <a class="big" href={main.games ? `/profile?speed=${$kfideAll.main}#cc-ratings` : '/play?mode=fide'} title="Your Chess Castles rating from games against FIDE-level opponents. See how it changed.">
       <span class="label">CC Rating {SPEED_LABEL[$kfideAll.main]}</span>
       {#if main.games}<strong class="num">{kfideText(main)}</strong>{:else}<strong class="none">Play to get one</strong>{/if}
     </a>
@@ -48,7 +48,7 @@
   </div>
   {#if open}
     <div id="all-ratings" class="panel card">
-      <p class="label">Chess Castles ratings (from FIDE-rated opponents)</p>
+      <p class="label">Chess Castles ratings (from FIDE-level opponents)</p>
       <div class="grid">
         {#each KFIDE_SPEEDS as s (s)}
           {@const k = $kfideAll[s]}

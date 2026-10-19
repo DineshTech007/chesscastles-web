@@ -84,7 +84,7 @@
   {:else if !rows}
     <div class="skel"></div>
   {:else if !rows.length}
-    <p class="label">Nobody here yet. {board === 'puzzle' ? 'Solve rated puzzles' : 'Play FIDE-rated opponents'} and be the first!</p>
+    <p class="label">Nobody here yet. {board === 'puzzle' ? 'Solve rated puzzles' : 'Play FIDE-level opponents'} and be the first!</p>
   {:else}
     <ol class="podium" aria-label="Top three">
       {#each podium as p (p.r.uid)}

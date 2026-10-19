@@ -271,10 +271,10 @@
 
   <section class="card about">
     <h2 class="title">What is the CC Rating?</h2>
-    <p>Your CC Rating (CC = Chess Castles) goes up and down with your results against the FIDE-rated opponents (computer opponents) on the Play page, worked out the same way FIDE rates real games. Beat a stronger player and it climbs a lot; lose to a weaker one and it drops.</p>
+    <p>Your CC Rating (CC = Chess Castles) goes up and down with your results against the FIDE-level opponents (computer opponents) on the Play page, worked out the same way FIDE rates real games. Beat a stronger player and it climbs a lot; lose to a weaker one and it drops.</p>
     <p>You have four. Like FIDE: <strong>Classical</strong> (games of 60 minutes or more), <strong>Rapid</strong> (10 to 59 minutes) and <strong>Blitz</strong> (under 10 minutes), counting the minutes plus the increment. And <strong>Bullet</strong> (1+0 and 1+1), which FIDE doesn't rate. Each game changes only the rating for its speed, because most players are stronger at one speed than another. Your main CC Rating, shown next to your name, is the speed you play most.</p>
     <p>Each rating becomes steady after {KFIDE_PROVISIONAL} games at that speed (until then it shows a ?). If you give your own FIDE rating on the Play page, they all start from it; otherwise from 1500.</p>
-    <a class="btn primary" href="/play?mode=fide"><Icon name="play" size={18} fill color="currentColor" />Play a FIDE-rated opponent</a>
+    <a class="btn primary" href="/play?mode=fide"><Icon name="play" size={18} fill color="currentColor" />Play a FIDE-level opponent</a>
   </section>
 
   {#if recent.length}

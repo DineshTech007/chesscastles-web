@@ -10,7 +10,7 @@
 
   <h2>1. What is not allowed</h2>
   <ul>
-    <li><strong>Getting help during a game</strong>: chess engines, analysis boards or apps, another person's advice, or move databases, while the game is going on. This includes games against Chess Castles' FIDE-rated opponents, tournaments and online games.</li>
+    <li><strong>Getting help during a game</strong>: chess engines, analysis boards or apps, another person's advice, or move databases, while the game is going on. This includes games against Chess Castles' FIDE-level opponents, tournaments and online games.</li>
     <li><strong>Losing on purpose</strong> (sandbagging) to lower a rating, or <strong>boosting</strong>: winning or losing games arranged with another player or account.</li>
     <li><strong>More than one account</strong>, or letting someone else play on your account.</li>
     <li><strong>Abuse</strong>: insulting, threatening or harassing players, or offensive names, photos or profile text.</li>

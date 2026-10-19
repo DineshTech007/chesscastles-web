@@ -115,7 +115,7 @@ export interface FideGameOptions {
 }
 
 /**
- * A game against the FIDE-rated bot: moves, both clocks, the result (a
+ * A game against the FIDE-level bot: moves, both clocks, the result (a
  * port of the app's lib/fide_play/fide_game.dart). Listeners are called
  * after every change; clocks are read with remaining().
  */

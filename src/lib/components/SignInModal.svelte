@@ -95,16 +95,16 @@
       <span class="opt-text">
         <span class="opt-main">{busy === 'google' ? 'Opening Google…' : 'Continue with Google'}</span>
         <span class="opt-sub">Quickest. No other account needed.</span>
+        <span class="rec">Recommended for parents</span>
       </span>
-      <span class="rec">Recommended for parents</span>
     </button>
     <button class="opt lichess" onclick={lichess} disabled={!!busy}>
       <Icon name="knight" size={22} />
       <span class="opt-text">
         <span class="opt-main">{busy === 'lichess' ? 'Opening Lichess…' : 'Continue with Lichess'}</span>
         <span class="opt-sub">Play real opponents online. Your Lichess rating comes along.</span>
+        <span class="rec">Recommended for players</span>
       </span>
-      <span class="rec">Recommended for players</span>
     </button>
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     <p class="label fine">Not sure? Parents choose Google. Players who want to play real opponents online choose Lichess. You can connect the other one later.</p>
@@ -174,6 +174,10 @@
     color: var(--accent);
     text-decoration: underline;
   }
+  /* Nothing in the box may shrink or overlap: the box scrolls instead. */
+  .dialog > :global(*) {
+    flex-shrink: 0;
+  }
   .opt {
     width: 100%;
     min-height: 64px;
@@ -209,9 +213,9 @@
     line-height: 1.3;
   }
   .rec {
-    flex: none;
-    max-width: 92px;
-    padding: 3px 8px;
+    align-self: flex-start;
+    margin-top: 5px;
+    padding: 3px 9px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--gold) 22%, transparent);
     border: 1px solid var(--gold);
@@ -219,7 +223,6 @@
     font-size: 10.5px;
     font-weight: 800;
     line-height: 1.2;
-    text-align: center;
   }
   .google {
     background: #fff;

@@ -64,11 +64,15 @@
     side?: 'white' | 'black';
   } = $props();
 
+  /** Phones and narrow windows: the database opens under the board's buttons, not far below. */
+  let width = $state(1280);
+  const narrow = $derived(width < 900);
   let cursor = $state(0);
   let following = $state(true);
   // svelte-ignore state_referenced_locally
   let orientation = $state<'white' | 'black'>(side);
-  let engineOn = $state(false);
+  /** The engine is on from the start (it can be switched off, and the database on, under the move buttons). */
+  let engineOn = $state(true);
   let dbOn = $state(false);
   let info = $state<EngineInfo | undefined>();
   const book = new CloudBook();
@@ -162,7 +166,7 @@
   const bottom = $derived(barFor(orientation, cursor, latest));
 </script>
 
-<svelte:window onkeydown={onkey} />
+<svelte:window onkeydown={onkey} bind:innerWidth={width} />
 
 <div class="viewer">
   <section class="board-col" aria-label="Board">
@@ -193,7 +197,23 @@
     <PlayerBar {...bottom} />
     <div class="card nav-card">
       <MoveNav ply={cursor} max={game.plies.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
+      <!-- Right under the move buttons, so a phone needs no scrolling to switch them on. -->
+      <div class="toggles">
+        <label class="toggle">
+          <input type="checkbox" bind:checked={engineOn} />
+          <span>Engine {engineOn && info ? `· ${evalLabel(info)} (depth ${info.depth})` : ''}</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" bind:checked={dbOn} />
+          <span>Database</span>
+        </label>
+      </div>
     </div>
+    {#if dbOn && narrow}
+      <div class="card db">
+        <DbPanel pos={shown} {book} onplay={play} played={!trial ? game.plies[cursor]?.move : undefined} />
+      </div>
+    {/if}
   </section>
 
   <aside class="side">
@@ -222,18 +242,8 @@
       {:else}
         <p class="label hint">Move the pieces to try your own ideas (only you see them); turn on the engine or the database to check them.</p>
       {/if}
-      <div class="toggles">
-        <label class="toggle">
-          <input type="checkbox" bind:checked={engineOn} />
-          <span>Engine {engineOn && info ? `· ${evalLabel(info)} (depth ${info.depth})` : ''}</span>
-        </label>
-        <label class="toggle">
-          <input type="checkbox" bind:checked={dbOn} />
-          <span>Database</span>
-        </label>
-      </div>
     </div>
-    {#if dbOn}
+    {#if dbOn && !narrow}
       <div class="card db">
         <DbPanel pos={shown} {book} onplay={play} played={!trial ? game.plies[cursor]?.move : undefined} />
       </div>
@@ -298,6 +308,13 @@
   .nav-card {
     padding: 0;
     overflow: hidden;
+  }
+  .nav-card .toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    padding: 8px 14px 10px;
+    border-top: 1px solid var(--border-soft);
   }
   .nav-card :global(.nav) {
     border-top: 0;

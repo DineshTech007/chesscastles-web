@@ -10,9 +10,9 @@
   import { track } from '$lib/analytics';
 
   const UI = {
-    en: { title: 'Chess Castles Blog', sub: 'Stories, tips and chess history, for players and parents.', surprise: 'Surprise me', all: 'All', read: 'min read', new: 'More stories are added regularly.' },
-    hi: { title: 'Chess Castles Blog', sub: 'Players और parents के लिए कहानियाँ, tips और chess का इतिहास।', surprise: 'कुछ नया पढ़ाओ', all: 'सब', read: 'minute पढ़ना', new: 'नई कहानियाँ नियमित रूप से जुड़ती रहती हैं।' },
-    mr: { title: 'Chess Castles Blog', sub: 'Players आणि पालकांसाठी गोष्टी, tips आणि chess चा इतिहास.', surprise: 'काहीतरी नवं वाचवा', all: 'सगळे', read: 'minute वाचन', new: 'नव्या गोष्टी नियमितपणे जोडल्या जातात.' },
+    en: { title: 'Castle Chronicles', sub: 'Stories, kids’ improvement tips and chess history, for players and parents.', surprise: 'Surprise me', all: 'All', read: 'min read', new: 'More stories are added regularly.' },
+    hi: { title: 'Castle Chronicles', sub: 'Players और parents के लिए कहानियाँ, बच्चों के सुधार के tips और chess का इतिहास।', surprise: 'कुछ नया पढ़ाओ', all: 'सब', read: 'minute पढ़ना', new: 'नई कहानियाँ नियमित रूप से जुड़ती रहती हैं।' },
+    mr: { title: 'Castle Chronicles', sub: 'Players आणि पालकांसाठी गोष्टी, मुलांच्या प्रगतीचे tips आणि chess चा इतिहास.', surprise: 'काहीतरी नवं वाचवा', all: 'सगळे', read: 'minute वाचन', new: 'नव्या गोष्टी नियमितपणे जोडल्या जातात.' },
   } as const;
   const t = $derived(UI[$contentLang]);
   let tag = $state<Tag | 'all'>('all');
@@ -28,12 +28,12 @@
   }
 </script>
 
-<svelte:head><title>Blog · Chess Castles</title></svelte:head>
+<svelte:head><title>Castle Chronicles · Chess Castles</title></svelte:head>
 
 <div class="page" lang={$contentLang}>
   <header class="head">
     <div>
-      <h1 class="display">{t.title}</h1>
+      <h1 class="display">{t.title} <span class="new">NEW</span></h1>
       <p class="label">{t.sub}</p>
     </div>
     <div class="tools">
@@ -96,6 +96,17 @@
   }
   .head p {
     margin: 4px 0 0;
+  }
+  .new {
+    vertical-align: middle;
+    margin-left: 8px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f7d27a, #edb040 55%, #c98a1b);
+    color: #0b1426;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    font-family: var(--font-body, inherit);
   }
   .tools,
   .chips {

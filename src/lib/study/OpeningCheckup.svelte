@@ -2,9 +2,9 @@
   /**
    * Opening check-up (Learn → Openings → Your games): the player's last 100
    * rapid (and slower) games on chess.com and on Lichess, and their rapid and
-   * classical games against FIDE-rated opponents here; the lines where their results drop, what
+   * classical games against FIDE-level opponents here; the lines where their results drop, what
    * strong players play there, and how to fix each line: learn it in the
-   * trainer, explore it, play it against a FIDE-rated opponent. The next
+   * trainer, explore it, play it against a FIDE-level opponent. The next
    * check-up shows what improved.
    */
   import { onMount } from 'svelte';
@@ -63,7 +63,7 @@
     if (!lichessName && !games) lichessName = online.lichess?.username || lichessLogin?.username || '';
   });
 
-  /** Chess Castles games against FIDE-rated opponents, rapid and classical only. */
+  /** Chess Castles games against FIDE-level opponents, rapid and classical only. */
   const ccGames = $derived(
     $shownGames
       .filter((g) => g.kind === 'fide' && (speedOf(g.timeControl) === 'rapid' || speedOf(g.timeControl) === 'standard'))
@@ -139,7 +139,7 @@
       .map((src) => ({ src, n: games?.filter((g) => g.source === src).length ?? 0 }))
       .filter((x) => x.n),
   );
-  const SOURCE_NAME = { chesscom: 'chess.com', lichess: 'Lichess', chesscastles: 'Chess Castles (FIDE-rated opponents)' };
+  const SOURCE_NAME = { chesscom: 'chess.com', lichess: 'Lichess', chesscastles: 'Chess Castles (FIDE-level opponents)' };
   /** Lines that were a problem last time and no longer are. */
   const fixed = $derived(last && games ? last.lines.filter((l) => !problems.some((p) => p.key === l.key)) : []);
   const before = (l: ProblemLine) => last?.lines.find((x) => x.key === l.key);
@@ -233,7 +233,7 @@
     }
     goto('/analysis?import=1&review');
   }
-  /** A FIDE-rated opponent near the player's rapid rating, from the line's position, 15+10. */
+  /** A FIDE-level opponent near the player's rapid rating, from the line's position, 15+10. */
   const playHref = (l: ProblemLine) => {
     const r = Math.min(2800, Math.max(1400, Math.round(($kfideAll.rapid.games ? $kfideAll.rapid.rating : 1500) / 100) * 100));
     const q = new URLSearchParams({ r: String(r), tc: '2', c: l.color, o: 'line', moves: l.sans.join(' '), start: 'line', name: lineName(l) });
@@ -258,7 +258,7 @@
     <div class="h-text">
       <h2 class="title"><Icon name="search" size={20} color="var(--accent)" />Your opening check-up</h2>
       <p class="label">
-        Your last {ONLINE_COUNT} rapid games on chess.com and on Lichess{withCc ? ', and your rapid and classical games against FIDE-rated opponents here' : ''}: the lines where your results drop, what strong players play there, and how to fix them. Bullet and blitz don't count: fast games say more about the clock than about the opening.
+        Your last {ONLINE_COUNT} rapid games on chess.com and on Lichess{withCc ? ', and your rapid and classical games against FIDE-level opponents here' : ''}: the lines where your results drop, what strong players play there, and how to fix them. Bullet and blitz don't count: fast games say more about the clock than about the opening.
       </p>
     </div>
     <div class="h-row">
@@ -268,7 +268,7 @@
         {busy ? `Reading your games… ${found}` : games ? 'Check again' : 'Check my openings'}
       </button>
     </div>
-    <label class="cc"><input type="checkbox" bind:checked={withCc} disabled={busy} />Also my games against FIDE-rated opponents here ({ccGames.length} rapid or classical)</label>
+    <label class="cc"><input type="checkbox" bind:checked={withCc} disabled={busy} />Also my games against FIDE-level opponents here ({ccGames.length} rapid or classical)</label>
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   </form>
 

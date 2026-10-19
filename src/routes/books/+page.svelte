@@ -168,13 +168,23 @@
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
     gap: 14px;
   }
   .book {
     display: flex;
     gap: 14px;
     padding: 14px;
+    min-width: 0;
+  }
+  .book > :first-child {
+    flex-shrink: 0;
+  }
+  @media (max-width: 360px) {
+    .book {
+      gap: 10px;
+      padding: 10px;
+    }
   }
   .info {
     flex: 1;

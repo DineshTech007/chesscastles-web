@@ -9,7 +9,7 @@ import CHAPTERS from './chapters.json';
  * The opening study section: an opening (from repertoires.json, shared with
  * scripts/study) with its main lines, the middlegame plans of each line, the
  * trainer, model games, puzzles from real games, and play against a
- * FIDE-rated opponent. The plans are written by hand and stay general and
+ * FIDE-level opponent. The plans are written by hand and stay general and
  * true; the games and puzzles come from CaissaBase (scripts/study).
  */
 export interface StudyLine {

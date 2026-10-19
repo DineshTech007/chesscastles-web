@@ -17,7 +17,8 @@
   } as const;
   const t = $derived(UI[$contentLang]);
 
-  type Msg = { from: 'me' | 'bot'; text: string[]; item?: GuideItem; more?: GuideItem[]; none?: boolean };
+  /** A bot message keeps the answer itself, not its words, so it is shown in the language chosen now. */
+  type Msg = { from: 'me'; text: string } | { from: 'bot'; item?: GuideItem; more?: GuideItem[]; none?: boolean };
   let msgs = $state<Msg[]>([]);
   let q = $state('');
   let box: HTMLDivElement | undefined = $state();
@@ -35,8 +36,8 @@
     const found = findGuide(s);
     msgs = [
       ...msgs,
-      { from: 'me', text: [s] },
-      found.length ? { from: 'bot', text: found[0].a[$contentLang], item: found[0], more: found.slice(1) } : { from: 'bot', text: [t.none], none: true },
+      { from: 'me', text: s },
+      found.length ? { from: 'bot', item: found[0], more: found.slice(1) } : { from: 'bot', none: true },
     ];
     await tick();
     box?.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
@@ -68,13 +69,19 @@
         <div class="msg {m.from}">
           {#if m.from === 'bot'}<span class="av"><GuruAvatar size={34} /></span>{/if}
           <div class="bubble">
-            {#if m.item}<strong class="qh">{m.item.q[$contentLang]}</strong>{/if}
-            {#each m.text as para, k (k)}<p>{para}</p>{/each}
-            {#if m.item?.link}<a class="btn small" href={m.item.link.href}>{m.item.link.label[$contentLang]} →</a>{/if}
-            {#if m.more?.length}
+            {#if m.from === 'me'}
+              <p>{m.text}</p>
+            {:else if m.item}
+              <strong class="qh">{m.item.q[$contentLang]}</strong>
+              {#each m.item.a[$contentLang] as para, k (k)}<p>{para}</p>{/each}
+            {:else}
+              <p>{t.none}</p>
+            {/if}
+            {#if m.from === 'bot' && m.item?.link}<a class="btn small" href={m.item.link.href}>{m.item.link.label[$contentLang]} →</a>{/if}
+            {#if m.from === 'bot' && m.more?.length}
               <div class="more"><span class="label">{t.related}</span>{#each m.more as k (k.id)}<button class="chip" onclick={() => ask(k.q[$contentLang])}>{k.q[$contentLang]}</button>{/each}</div>
             {/if}
-            {#if m.none}<a class="btn small" href="/help">{t.help} →</a>{/if}
+            {#if m.from === 'bot' && m.none}<a class="btn small" href="/help">{t.help} →</a>{/if}
           </div>
         </div>
       {/each}

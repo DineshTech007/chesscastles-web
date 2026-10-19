@@ -80,13 +80,13 @@ export const DEFAULT_LAUNCH: Launch = { on: true, plan: 'premium', days: 30, unt
 /** How each plan presents itself. */
 export const PLAN_INFO: Record<Plan, { name: string; tag: string; blurb: string }> = {
   free: { name: 'Free', tag: 'Free forever', blurb: 'Everything to start: play, analyse, puzzles, books and friends.' },
-  premium: { name: 'Premium', tag: 'For regular players', blurb: 'Unlimited FIDE-rated opponents, Game Reviews, Guru lessons, Insights and tournaments, plus all 17 puzzle themes.' },
+  premium: { name: 'Premium', tag: 'For regular players', blurb: 'Unlimited FIDE-level opponents, Game Reviews, Guru lessons, Insights and tournaments, plus all 17 puzzle themes.' },
   elite: { name: 'Elite', tag: 'For coaches and academies', blurb: 'Everything in Premium, plus coach tools for up to 200 students, deeper Game Review and more games kept in Insights and history.' },
 };
 
 /** Each limited feature, for tables and messages. */
 export const FEATURE_INFO: Record<Feature, { label: string; one: string; many: string }> = {
-  fide_game: { label: 'Play FIDE-rated opponents', one: 'game against a FIDE-rated opponent', many: 'games against FIDE-rated opponents' },
+  fide_game: { label: 'Play FIDE-level opponents', one: 'game against a FIDE-level opponent', many: 'games against FIDE-level opponents' },
   tournament: { label: 'FIDE tournaments with trophies', one: 'FIDE tournament', many: 'FIDE tournaments' },
   review: { label: 'Game Review (accuracy, badges, mistakes)', one: 'Game Review', many: 'Game Reviews' },
   insights: { label: 'Chess.com & Lichess Insights reports', one: 'Insights report', many: 'Insights reports' },
@@ -96,7 +96,7 @@ export const FEATURE_INFO: Record<Feature, { label: string; one: string; many: s
   opening: { label: 'Opening trainer courses', one: 'opening course', many: 'opening courses' },
 };
 export const GATE_INFO: Record<Gate, string> = {
-  bot_opening: 'Choose the opening a FIDE-rated opponent plays',
+  bot_opening: 'Choose the opening a FIDE-level opponent plays',
   themed_puzzles: 'All 17 puzzle themes (Free has 4)',
   own_lines: 'Your own opening lines in the trainer',
   coach_tools: 'Coach tools: students, progress, homework',

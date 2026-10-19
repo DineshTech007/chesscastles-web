@@ -69,7 +69,7 @@
         {#if PLANS_ON && $session.status === 'in'}<a class="h-plan" href="/plans" title="{PLAN_INFO[$currentPlan].name} member"><PlanBadge plan={$currentPlan} size={34} /></a>{/if}
         {#if $myCountry}<img class="h-flag" src="/flags/{$myCountry}.svg" alt={fedName($myCountry)} title={fedName($myCountry)} width="30" height="20" />{/if}
       </h1>
-      <p class="sub"><strong>Learn</strong> with Chess Guru. <strong>Play</strong> FIDE-rated opponents and friends. <strong>Conquer</strong> your next tournament.</p>
+      <p class="sub"><strong>Learn</strong> with Chess Guru. <strong>Play</strong> FIDE-level opponents and friends. <strong>Conquer</strong> your next tournament.</p>
     </div>
     {#if ($session.status === 'in' && $session.profile) || $shownGames.length}<RatingStrip />{/if}
   </header>

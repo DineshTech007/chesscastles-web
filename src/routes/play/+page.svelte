@@ -27,7 +27,7 @@
   let opening = $state('');
   let level = $state(1);
   let computerClock = $state(false);
-  /** Who the FIDE-rated opponent plays like (when the newer books are live). */
+  /** Who the FIDE-level opponent plays like (when the newer books are live). */
   let who = $state<Who>('any');
   let ageGroup = $state<AgeGroup>('any');
   let openingMenu = $state(false);

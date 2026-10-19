@@ -213,7 +213,7 @@
   ];
   const SUBS: { id: Sub; label: string; what: string }[] = [
     { id: 'mine', label: 'Your games', what: 'Your opening check-up: the lines where your results drop in your own games, and how to fix each one.' },
-    { id: 'courses', label: 'Courses', what: 'Full courses for one opening: every line, the plans, model games, puzzles, and games against FIDE-rated opponents from the line.' },
+    { id: 'courses', label: 'Courses', what: 'Full courses for one opening: every line, the plans, model games, puzzles, and games against FIDE-level opponents from the line.' },
     { id: 'lessons', label: 'Lessons', what: 'Short lessons with Guru about the ideas of each opening, from the first rules to grandmaster openings.' },
     { id: 'trainer', label: 'Trainer', what: 'Learn the moves by heart: you play your side, and lines come back until you know them.' },
     { id: 'players', label: 'Great players', what: 'Train the openings great players chose in their own tournament games.' },
@@ -762,7 +762,7 @@
           </a>
           <a class="task" href="/play">
             <i style="background: var(--gold)"></i>
-            <span class="t-text"><strong>Play a FIDE-rated opponent</strong><span class="label">+10 points for a finished game</span></span>
+            <span class="t-text"><strong>Play a FIDE-level opponent</strong><span class="label">+10 points for a finished game</span></span>
             <Icon name="chevron" size={18} color="var(--muted)" />
           </a>
         </section>

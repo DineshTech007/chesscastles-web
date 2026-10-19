@@ -23,7 +23,7 @@
     { href: '/settings', label: 'Settings: premoves, auto-queen, sound, board colour', icon: 'settings' },
     ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
     { href: '/students', label: 'My students (coach tools)', icon: 'coach' },
-    ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.label}: ${n.blurb}`, icon: n.icon })),
+    ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.badge ? `NEW · ` : ''}${n.label}: ${n.blurb}`, icon: n.icon })),
     { href: '/parents', label: 'For parents: safety, prices, getting started', icon: 'shield' },
     { href: '/feedback', label: 'Send feedback', icon: 'send' },
     { href: '/help', label: 'Help & support', icon: 'bulb' },

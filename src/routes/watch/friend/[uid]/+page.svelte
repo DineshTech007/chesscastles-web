@@ -81,7 +81,7 @@
   });
 
   const friendName = $derived(friend?.name ?? uid.replace(/^lichess:/, ''));
-  /** Initials as the players see them: a FIDE-rated opponent shows its rating ("12" for 1200). */
+  /** Initials as the players see them: a FIDE-level opponent shows its rating ("12" for 1200). */
   const initialsOf = (name: string) => {
     const r = /\b(\d{3,4})\b/.exec(name);
     if (r) return String(Math.floor(Number(r[1]) / 100));

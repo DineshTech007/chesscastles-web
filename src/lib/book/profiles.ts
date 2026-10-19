@@ -1,7 +1,7 @@
 import { CloudBook, LayeredBook, type BookSource } from './book';
 
 /**
- * The FIDE-rated opponent's books. With NEW_BOOKS_LIVE off (today) every game
+ * The FIDE-level opponent's books. With NEW_BOOKS_LIVE off (today) every game
  * uses the current book. Switched on, games use the newer, deeper book, and a
  * player can choose who the opponent plays like: girls or boys, and an age
  * group, so a child can prepare for a girls' or an age-group tournament. A

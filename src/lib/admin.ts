@@ -149,7 +149,7 @@ export const adminLog = () => call<{ log: { id: number; admin: string; action: s
 export const PAGE_NAMES: Record<string, string> = {
   '/': 'Home',
   '/play': 'Play',
-  '/play/fide': 'Game vs FIDE-rated opponent',
+  '/play/fide': 'Game vs FIDE-level opponent',
   '/play/computer': 'Game vs computer',
   '/play/online/[id]': 'Lichess game',
   '/play/tournament': 'FIDE tournament',
@@ -159,8 +159,8 @@ export const PAGE_NAMES: Record<string, string> = {
   '/analysis': 'Analyse',
   '/games': 'My games',
   '/guide': 'Chess Guide',
-  '/blog': 'Blog',
-  '/blog/[slug]': 'Blog post',
+  '/blog': 'Castle Chronicles',
+  '/blog/[slug]': 'Castle Chronicles story',
   '/insights': 'Insights',
   '/insights/mistakes': 'Insights: mistakes',
   '/insights/repair': 'Insights: repair',
@@ -197,7 +197,7 @@ export const PAGE_NAMES: Record<string, string> = {
 };
 export const FEATURE_NAMES: Record<string, string> = {
   feedback: 'Sent feedback',
-  fide_game: 'Game vs FIDE-rated opponent',
+  fide_game: 'Game vs FIDE-level opponent',
   tournament: 'FIDE tournament',
   review: 'Game Review',
   insights: 'Insights report',

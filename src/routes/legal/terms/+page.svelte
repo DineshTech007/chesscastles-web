@@ -49,7 +49,7 @@
 
   <h2>6. Ratings, data and other services</h2>
   <ul>
-    <li><strong>FIDE-rated opponents</strong> on Chess Castles are computer opponents that play in the style of players at each FIDE rating. They are not real people and not FIDE-rated players, and games against them do not count for any official rating.</li>
+    <li><strong>FIDE-level opponents</strong> on Chess Castles are computer opponents that play in the style of players at each FIDE rating. They are not real people and not FIDE-rated players, and games against them do not count for any official rating.</li>
     <li><strong>The CC Rating</strong> is Chess Castles' own rating from games against those opponents. It is not an official FIDE rating and cannot be used as one.</li>
     <li>Chess Castles is independent. It is not run by, endorsed by or connected with FIDE, the All India Chess Federation, Lichess or chess.com. Their names and marks belong to them.</li>
     <li>Chess Castles shows public information from other services, such as the FIDE rating list, Lichess games and broadcasts, and chess.com games you choose to analyse. It may be incomplete or out of date.</li>

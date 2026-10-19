@@ -1,6 +1,6 @@
 /**
  * Opening check-up: the lines where a player's results drop, from their own
- * games (chess.com and Chess Castles games against FIDE-rated opponents,
+ * games (chess.com and Chess Castles games against FIDE-level opponents,
  * rapid and slower only: fast games say more about the clock than about
  * the opening).
  *
