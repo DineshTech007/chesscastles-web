@@ -9,10 +9,10 @@
   "family": "my mother (who set the 6 pm study timer and never let me skip the review), my father (who drives me to every tournament and asks one question after each game: \"which move?\") and my little sister Diya, who learned the moves by watching",
   "coach": "my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school",
   "start": 1500,
-  "now": 2017,
-  "sessions": 22,
-  "games": 101,
-  "record": "71 wins, 10 draws, 20 losses"
+  "now": 2119,
+  "sessions": 24,
+  "games": 111,
+  "record": "81 wins, 10 draws, 20 losses"
  },
  "curve": [
   {
@@ -124,6 +124,16 @@
    "session": 22,
    "date": "2026-10-20",
    "rating": 2017
+  },
+  {
+   "session": 23,
+   "date": "2026-10-20",
+   "rating": 2065
+  },
+  {
+   "session": 24,
+   "date": "2026-10-20",
+   "rating": 2119
   }
  ],
  "posts": [
@@ -243,6 +253,27 @@
     "My profile says: accuracy 96%, opening 95, middlegame 95, endgame 97; sharp moments 98 and calm moves undefined. The sharp number is up, which is what the puzzles were for.",
     "2 wins against an opponent one level up (2000, 2100). My mother says that is the one that counts.",
     "All my games so far: 101, 71 wins, 10 draws, 20 losses; 73% as White and 68% as Black. Next stop: 2100."
+   ]
+  },
+  {
+   "slug": "aarav-2100",
+   "milestone": 2100,
+   "date": "2026-10-20",
+   "title": "2100: another hundred",
+   "sessions": [
+    23,
+    24
+   ],
+   "games": 10,
+   "record": "10 wins, 0 draws, 0 losses",
+   "body": [
+    "20 October 2026. Today my CC Rating on Chess Castles touched 2119. The last stop was 2000. Between then and now: 2 sessions, 10 rapid games (15+10, never faster: my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school says fast games only teach you about the clock), 10 wins, 0 draws, 0 losses.",
+    "Openings: the Jobava London as White (d4, Nc3 and Bf4 early, with the knight jumping to b5 to hit c7); the Chebanenko Slav as Black (the Slav with ...a6: hold d5 and get ...b5 in). Each time the same routine from Learn → Openings: the course page, one model game played through, the trainer, and only then the line against a FIDE-rated opponent. From those lines in this stretch: 6 wins, 0 draws, 0 losses.",
+    "New in the trainer: Slav Defence, Sicilian Sveshnikov. One opening a session, two moves at a time, and the trainer tells me at once when a move is not the line.",
+    "The rest of Learn, one thing a session: my last game checked against the 5.4 million games; an endgame from a master's own game.",
+    "My profile says: accuracy 97%, opening 96, middlegame 96, endgame 99; sharp moments 98 and calm moves undefined. The sharp number is up, which is what the puzzles were for.",
+    "2 wins against an opponent one level up (2100, 2200). My mother says that is the one that counts.",
+    "All my games so far: 111, 81 wins, 10 draws, 20 losses; 76% as White and 71% as Black. Next stop: 2200."
    ]
   }
  ]
