@@ -9,7 +9,7 @@
   import OnlinePanel from '$lib/components/OnlinePanel.svelte';
   import MaiaCard from '$lib/components/MaiaCard.svelte';
   import { START_FEN } from '$lib/chess/position';
-  import { TIME_CONTROLS, tcLabel } from '$lib/game/fideGame';
+  import { TIME_CONTROLS, TIME_CONTROL_ORDER, tcLabel } from '$lib/game/fideGame';
   import { LEVELS, OPENINGS } from '$lib/openings';
   import { kfideAll } from '$lib/stores/me';
   import { SPEED_LABEL, kfideText, speedOf } from '$lib/kfide';
@@ -143,7 +143,8 @@
       <div class="group">
         <h2 class="title h">Time control</h2>
         <div class="tcs">
-          {#each TIME_CONTROLS as t, i (i)}
+          {#each TIME_CONTROL_ORDER as i (i)}
+            {@const t = TIME_CONTROLS[i]}
             <button class="tile" aria-pressed={tc === i} onclick={() => (tc = i)}>
               <span class="title num">{tcLabel(t)}</span>
               <span class="label">{t.kind}</span>

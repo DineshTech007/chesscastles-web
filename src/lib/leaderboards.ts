@@ -28,7 +28,7 @@ export interface Row {
 }
 
 export const BOARDS: { id: BoardKind; label: string; signIn: boolean; variants: { id: string; label: string }[]; unit: string }[] = [
-  { id: 'kfide', label: 'CC Rating', signIn: true, unit: 'CC Rating', variants: [{ id: 'main', label: 'Overall' }, ...(['standard', 'rapid', 'blitz'] as KfideSpeed[]).map((s) => ({ id: s, label: SPEED_LABEL[s] }))] },
+  { id: 'kfide', label: 'CC Rating', signIn: true, unit: 'CC Rating', variants: [{ id: 'main', label: 'Overall' }, ...(['standard', 'rapid', 'blitz', 'bullet'] as KfideSpeed[]).map((s) => ({ id: s, label: SPEED_LABEL[s] }))] },
   { id: 'lichess', label: 'Lichess', signIn: true, unit: 'rating', variants: ['blitz', 'rapid', 'classical', 'bullet'].map((s) => ({ id: s, label: s[0].toUpperCase() + s.slice(1) })) },
   { id: 'puzzles', label: 'Puzzles', signIn: true, unit: 'puzzle rating', variants: [] },
   { id: 'vision', label: 'Vision Gym', signIn: false, unit: '', variants: [{ id: 'rating', label: 'Vision rating' }, { id: 'sprint', label: 'Best sprint' }, { id: 'today', label: 'Today' }] },

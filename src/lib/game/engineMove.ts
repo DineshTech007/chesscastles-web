@@ -42,7 +42,7 @@ export const STRENGTH: [fide: number, maiaElo: number, tau: number][] = [
 ];
 
 /** Faster games are played less accurately than the classical games ratings come from. */
-const TIME_PRESSURE = (tc?: TimeControl) => (!tc || tc.minutes === 0 ? 0 : tc.minutes + tc.increment * 0.67 <= 6 ? 150 : tc.minutes < 30 ? 50 : 0);
+const TIME_PRESSURE = (tc?: TimeControl) => (!tc || tc.minutes === 0 ? 0 : tc.minutes + tc.increment * 0.67 <= 2 ? 250 : tc.minutes + tc.increment * 0.67 <= 6 ? 150 : tc.minutes < 30 ? 50 : 0);
 
 export function strengthFor(rating: number, tc?: TimeControl): { elo: number; tau: number } {
   const r = Math.min(3000, Math.max(STRENGTH[0][0], rating - TIME_PRESSURE(tc)));

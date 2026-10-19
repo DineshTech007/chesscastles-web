@@ -9,7 +9,7 @@ import { FideBot, VARIETY_PLIES, type BotChoice, type MoveSource } from '$lib/bo
 export interface TimeControl {
   minutes: number;
   increment: number;
-  kind: 'Blitz' | 'Rapid' | 'Classical';
+  kind: 'Bullet' | 'Blitz' | 'Rapid' | 'Classical';
 }
 
 export const TIME_CONTROLS: TimeControl[] = [
@@ -19,7 +19,15 @@ export const TIME_CONTROLS: TimeControl[] = [
   { minutes: 30, increment: 0, kind: 'Rapid' },
   { minutes: 60, increment: 0, kind: 'Classical' },
   { minutes: 90, increment: 30, kind: 'Classical' },
+  // Added later: at the end, so saved choices and game links (?tc=2) keep their meaning.
+  { minutes: 1, increment: 0, kind: 'Bullet' },
+  { minutes: 1, increment: 1, kind: 'Bullet' },
 ];
+
+/** TIME_CONTROLS' positions from the fastest to the slowest, for showing them in order. */
+export const TIME_CONTROL_ORDER = TIME_CONTROLS.map((t, i) => ({ i, s: t.minutes * 60 + t.increment * 40 }))
+  .sort((a, b) => a.s - b.s)
+  .map((x) => x.i);
 
 export const tcLabel = (tc: TimeControl) => `${tc.minutes}+${tc.increment}`;
 
@@ -446,7 +454,7 @@ export function moveTime(o: { left: number; increment: number; moveNo: number; r
   const pace = Math.min(1.1, Math.max(0.7, 0.75 + (o.rating - 1200) / 2400));
   const budget = ((left * 0.9) / movesLeft) * pace + increment * 0.85;
   let ms: number;
-  if (o.kind === 'forced') ms = 600 + random() * 1200;
+  if (o.kind === 'forced') ms = Math.min(600 + random() * 1200, budget * 0.8);
   else if (o.kind === 'theory') ms = budget * 0.05 + (500 + random() * 2500) * Math.min(1, budget / 8000);
   else if (o.kind === 'recapture') ms = budget * (0.15 + random() * 0.3);
   else {
@@ -457,8 +465,8 @@ export function moveTime(o: { left: number; increment: number; moveNo: number; r
     const gaussian = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
     ms = budget * difficulty * leavingBook * Math.exp(gaussian * 0.45);
   }
-  // Never more than a fifth of what is left, and never instant.
-  return Math.max(450, Math.round(Math.min(ms, left / 5)));
+  // Never more than a fifth of what is left, and never instant (in bullet, a little quicker).
+  return Math.max(Math.min(450, budget * 0.4), Math.round(Math.min(ms, left / 5)));
 }
 
 function countLegal(pos: Chess): number {

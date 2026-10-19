@@ -47,6 +47,7 @@ describe('CC Rating', () => {
 
 describe('CC Rating at each speed', () => {
   it('sorts time controls by speed like FIDE (minutes + increment)', () => {
+    expect(['1+0', '1+1', '2+1', '3+0'].map(speedOf)).toEqual(['bullet', 'bullet', 'bullet', 'blitz']);
     expect(['5+0', '3+2', '10+0', '15+10', '30+0', '45+15', '60+0', '90+30', ''].map(speedOf)).toEqual([
       'blitz', 'blitz', 'blitz', 'rapid', 'rapid', 'standard', 'standard', 'standard', 'rapid',
     ]);

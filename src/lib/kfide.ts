@@ -35,18 +35,20 @@ export const expected = (r: number, opp: number) => 1 / (1 + 10 ** (Math.max(-40
 
 const kFactor = (r: number, played: number) => (played < 30 ? 40 : r >= 2400 ? 10 : 20);
 
-export type KfideSpeed = 'standard' | 'rapid' | 'blitz';
-export const KFIDE_SPEEDS: KfideSpeed[] = ['standard', 'rapid', 'blitz'];
-export const SPEED_LABEL: Record<KfideSpeed, string> = { standard: 'Classical', rapid: 'Rapid', blitz: 'Blitz' };
+export type KfideSpeed = 'standard' | 'rapid' | 'blitz' | 'bullet';
+export const KFIDE_SPEEDS: KfideSpeed[] = ['standard', 'rapid', 'blitz', 'bullet'];
+export const SPEED_LABEL: Record<KfideSpeed, string> = { standard: 'Classical', rapid: 'Rapid', blitz: 'Blitz', bullet: 'Bullet' };
 
 /**
  * The speed of a time control like "15+10" (minutes + seconds a move), from
  * the time for a 60-move game, as FIDE does: 10 minutes or less is Blitz,
- * under 60 Rapid, 60 or more Standard. No clock counts as Rapid.
+ * under 60 Rapid, 60 or more Standard. FIDE has no Bullet; ours is Lichess's:
+ * under 3 minutes for a 40-move game (1+0, 1+1, 2+1). No clock counts as Rapid.
  */
 export function speedOf(timeControl: string): KfideSpeed {
   const m = /^(\d+(?:\.\d+)?)\+(\d+)$/.exec(timeControl.trim());
   if (!m) return 'rapid';
+  if (Number(m[1]) * 60 + Number(m[2]) * 40 < 180) return 'bullet';
   const total = Number(m[1]) + Number(m[2]);
   return total <= 10 ? 'blitz' : total < 60 ? 'rapid' : 'standard';
 }
@@ -71,14 +73,15 @@ export interface KfideAll {
   standard: Kfide;
   rapid: Kfide;
   blitz: Kfide;
+  bullet: Kfide;
   /** The speed played most (the latest one on a tie): the headline CC Rating. */
   main: KfideSpeed;
 }
 
-/** All three CC Ratings. */
+/** All four CC Ratings. */
 export function computeKfideAll(games: SavedGame[], start = KFIDE_START): KfideAll {
-  const [standard, rapid, blitz] = KFIDE_SPEEDS.map((s) => computeKfide(games, start, s));
-  const all = { standard, rapid, blitz };
+  const [standard, rapid, blitz, bullet] = KFIDE_SPEEDS.map((s) => computeKfide(games, start, s));
+  const all = { standard, rapid, blitz, bullet };
   const last = (k: Kfide) => k.history.at(-1)?.at ?? -1;
   const main = KFIDE_SPEEDS.reduce((a, b) => (all[b].games > all[a].games || (all[b].games === all[a].games && last(all[b]) > last(all[a])) ? b : a), 'rapid' as KfideSpeed);
   return { ...all, main };

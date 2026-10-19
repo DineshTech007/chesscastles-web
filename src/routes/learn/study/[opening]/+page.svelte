@@ -26,7 +26,7 @@
   import { loadStars } from '$lib/masters/data';
   import { playerName } from '$lib/masters/content';
   import { POINTS, study } from '$lib/study/progress';
-  import { TIME_CONTROLS, tcLabel } from '$lib/game/fideGame';
+  import { TIME_CONTROLS, TIME_CONTROL_ORDER, tcLabel } from '$lib/game/fideGame';
   import { kfideAll } from '$lib/stores/me';
   import { speedOf } from '$lib/kfide';
   import { hasGate, requireGate, useFeature } from '$lib/plans';
@@ -474,7 +474,7 @@
         <div class="group">
           <span class="title h">Time control</span>
           <div class="lines">
-            {#each TIME_CONTROLS as t, i (i)}<button class="chip" aria-pressed={tc === i} onclick={() => (tc = i)}>{tcLabel(t)} {t.kind}</button>{/each}
+            {#each TIME_CONTROL_ORDER as i (i)}{@const t = TIME_CONTROLS[i]}<button class="chip" aria-pressed={tc === i} onclick={() => (tc = i)}>{tcLabel(t)} {t.kind}</button>{/each}
           </div>
         </div>
         <button class="btn primary big" onclick={play}><Icon name="play" size={18} />Play {rating} · {tcLabel(TIME_CONTROLS[tc])}</button>

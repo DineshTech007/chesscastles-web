@@ -10,7 +10,7 @@
   import { goto } from '$app/navigation';
   import Icon from '$lib/components/Icon.svelte';
   import { fedName } from '$lib/fideFeds';
-  import { TIME_CONTROLS, tcLabel } from '$lib/game/fideGame';
+  import { TIME_CONTROLS, TIME_CONTROL_ORDER, tcLabel } from '$lib/game/fideGame';
   import { speedOf } from '$lib/kfide';
   import { kfideAll, myCountry } from '$lib/stores/me';
   import { session } from '$lib/auth';
@@ -52,7 +52,8 @@
       if (!res.ok) res = await fetch('/data/fide/fed/IND.json');
       const rows: FideRow[] = await res.json();
       const random = rng(Date.now());
-      const opponents = pickOpponents(rows, myRating, size, speed, res.url.includes(`/${fed}.json`) ? fed : 'IND', random);
+      // FIDE rates no bullet: bullet tournaments draw on the players' blitz ratings.
+      const opponents = pickOpponents(rows, myRating, size, speed === 'bullet' ? 'blitz' : speed, res.url.includes(`/${fed}.json`) ? fed : 'IND', random);
       if (opponents.length < 5) throw new Error('Not enough opponents near your rating. Try again.');
       t = createTournament({ name: name.trim() || 'Chess Castles Open', tc, format, rounds, me: { id: ME, name: myName, rating: myRating, fed }, opponents });
       saveTournament(t);
@@ -146,7 +147,7 @@
       <div class="field">
         <span class="label">Time control</span>
         <div class="chips">
-          {#each TIME_CONTROLS as c, i (i)}<button class="chip" aria-pressed={tc === i} onclick={() => (tc = i)}>{tcLabel(c)} <span class="label">{c.kind}</span></button>{/each}
+          {#each TIME_CONTROL_ORDER as i (i)}{@const c = TIME_CONTROLS[i]}<button class="chip" aria-pressed={tc === i} onclick={() => (tc = i)}>{tcLabel(c)} <span class="label">{c.kind}</span></button>{/each}
         </div>
       </div>
 
