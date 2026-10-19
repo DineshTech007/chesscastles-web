@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
    * Opening check-up (Learn → Openings → Your games): the player's last 100
-   * rapid chess.com games and their rapid and classical games against
-   * FIDE-rated opponents here, the lines where their results drop, what
+   * rapid (and slower) games on chess.com and on Lichess, and their rapid and
+   * classical games against FIDE-rated opponents here; the lines where their results drop, what
    * strong players play there, and how to fix each line: learn it in the
    * trainer, explore it, play it against a FIDE-rated opponent. The next
    * check-up shows what improved.
@@ -10,7 +10,8 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import Icon from '$lib/components/Icon.svelte';
-  import { chessComGames } from '$lib/insights/games';
+  import { lichessToken } from '$lib/auth';
+  import { fetchOnline, loadOnline, ONLINE_COUNT, SITE_NAME, type OnlineSite } from './myOnlineGames';
   import { loadInsights } from '$lib/insights/store';
   import { shownGames, kfideAll } from '$lib/stores/me';
   import { outcome, type SavedGame } from '$lib/stores/myGames';
@@ -20,17 +21,19 @@
   import { CloudBook, movesInRange } from '$lib/book/book';
   import { addCustomOpening } from '$lib/customOpenings';
   import { savedAsImported, studyHref, studyLineOf } from './fromGames';
-  import { bestLines, fromChessCom, loadCheckups, movesText, problemLines, saveCheckup, slowEnough, type CheckupGame, type ProblemLine, type SavedCheckup } from './checkup';
+  import { bestLines, fromOnline, loadCheckups, movesText, problemLines, saveCheckup, type CheckupGame, type ProblemLine, type SavedCheckup } from './checkup';
   import { track } from '$lib/analytics';
   import { loadLibrary } from '$lib/coach/content/openings';
 
-  const COUNT = 100;
   const GAMES_KEY = 'cc.openingCheckup.games';
 
   let username = $state('');
+  let lichessName = $state('');
   let withCc = $state(true);
   let busy = $state(false);
   let found = $state(0);
+  /** The Lichess login, which Lichess needs to share a player's games. */
+  const lichessLogin = typeof window !== 'undefined' ? lichessToken() : undefined;
   let error = $state('');
   let games = $state<CheckupGame[] | undefined>();
   let checkedAt = $state(0);
@@ -46,15 +49,18 @@
         games = g.games;
         checkedAt = g.at;
         username = g.username ?? '';
+        lichessName = g.lichess ?? '';
         last = saved.find((c) => c.at < g.at);
       }
     } catch {
       /* none saved */
     }
+    const online = loadOnline();
     if (!username) {
       const ins = loadInsights();
-      username = saved[0]?.username || (ins?.site === 'chesscom' ? ins.username : '');
+      username = online.chesscom?.username || saved[0]?.username || (ins?.site === 'chesscom' ? ins.username : '');
     }
+    if (!lichessName && !games) lichessName = online.lichess?.username || lichessLogin?.username || '';
   });
 
   /** Chess Castles games against FIDE-rated opponents, rapid and classical only. */
@@ -76,21 +82,38 @@
     e?.preventDefault();
     error = '';
     const user = username.trim();
-    if (!user && !(withCc && ccGames.length)) {
-      error = 'Type your chess.com username.';
+    const lich = lichessName.trim();
+    if (!user && !lich && !(withCc && ccGames.length)) {
+      error = 'Type your chess.com or Lichess username.';
       return;
     }
     busy = true;
     found = 0;
     try {
-      const online = user ? (await chessComGames(user, COUNT, (n) => (found = n), { keep: slowEnough, months: 24 })).map(fromChessCom) : [];
-      const all = [...online, ...(withCc ? ccGames : [])].sort((a, b) => b.at - a.at);
-      if (!all.length) throw new Error(user ? 'No rapid or daily games found on chess.com in the last two years.' : 'No games to check yet.');
+      // Both sites at once; a site that fails doesn't stop the other.
+      const notes: string[] = [];
+      const read = async (site: OnlineSite, name: string) => {
+        if (!name) return [];
+        if (site === 'lichess' && !lichessLogin) {
+          notes.push('Connect your Lichess account (Play → Online) to include your Lichess games.');
+          return [];
+        }
+        try {
+          return (await fetchOnline(site, name, lichessLogin?.token, (n) => (found = n))).map(fromOnline);
+        } catch (err) {
+          notes.push(`${SITE_NAME[site]}: ${err instanceof Error ? err.message : 'the games could not be read.'}`);
+          return [];
+        }
+      };
+      const [cc, li] = await Promise.all([read('chesscom', user), read('lichess', lich)]);
+      const all = [...cc, ...li, ...(withCc ? ccGames : [])].sort((a, b) => b.at - a.at);
+      error = notes.join(' ');
+      if (!all.length) throw new Error(error || 'No rapid or slower games found to check.');
       last = loadCheckups()[0];
       games = all;
       checkedAt = Date.now();
       try {
-        localStorage.setItem(GAMES_KEY, JSON.stringify({ at: checkedAt, username: user, games: all }));
+        localStorage.setItem(GAMES_KEY, JSON.stringify({ at: checkedAt, username: user, lichess: lich, games: all }));
       } catch {
         /* storage full: this visit only */
       }
@@ -110,6 +133,13 @@
   const scoreOf = (list: CheckupGame[]) => (list.length ? list.reduce((a, g) => a + g.score, 0) / list.length : 0);
   const asWhite = $derived(games?.filter((g) => g.color === 'white') ?? []);
   const asBlack = $derived(games?.filter((g) => g.color === 'black') ?? []);
+  /** How many of the games came from each place. */
+  const bySource = $derived(
+    (['chesscom', 'lichess', 'chesscastles'] as const)
+      .map((src) => ({ src, n: games?.filter((g) => g.source === src).length ?? 0 }))
+      .filter((x) => x.n),
+  );
+  const SOURCE_NAME = { chesscom: 'chess.com', lichess: 'Lichess', chesscastles: 'Chess Castles (FIDE-rated opponents)' };
   /** Lines that were a problem last time and no longer are. */
   const fixed = $derived(last && games ? last.lines.filter((l) => !problems.some((p) => p.key === l.key)) : []);
   const before = (l: ProblemLine) => last?.lines.find((x) => x.key === l.key);
@@ -196,7 +226,8 @@
   function review(g: CheckupGame) {
     if (g.source === 'chesscastles') return goto(`/analysis?game=${encodeURIComponent(g.ref)}&review`);
     try {
-      sessionStorage.setItem('k24.importPgn', `[Site "${g.ref}"]\n[White "${g.color === 'white' ? username : g.opponent}"]\n[Black "${g.color === 'black' ? username : g.opponent}"]\n\n${movesText(g.san)} *\n`);
+      const me = g.source === 'lichess' ? lichessName : username;
+      sessionStorage.setItem('k24.importPgn', `[Site "${g.ref}"]\n[White "${g.color === 'white' ? me : g.opponent}"]\n[Black "${g.color === 'black' ? me : g.opponent}"]\n\n${movesText(g.san)} *\n`);
     } catch {
       return;
     }
@@ -227,11 +258,12 @@
     <div class="h-text">
       <h2 class="title"><Icon name="search" size={20} color="var(--accent)" />Your opening check-up</h2>
       <p class="label">
-        Your last {COUNT} rapid games on chess.com{withCc ? ', and your rapid and classical games against FIDE-rated opponents here' : ''}: the lines where your results drop, what strong players play there, and how to fix them. Bullet and blitz don't count: fast games say more about the clock than about the opening.
+        Your last {ONLINE_COUNT} rapid games on chess.com and on Lichess{withCc ? ', and your rapid and classical games against FIDE-rated opponents here' : ''}: the lines where your results drop, what strong players play there, and how to fix them. Bullet and blitz don't count: fast games say more about the clock than about the opening.
       </p>
     </div>
     <div class="h-row">
       <input bind:value={username} placeholder="chess.com username" aria-label="chess.com username" autocomplete="off" disabled={busy} />
+      <input bind:value={lichessName} placeholder="Lichess username (optional)" aria-label="Lichess username" autocomplete="off" disabled={busy} />
       <button class="btn primary" type="submit" disabled={busy}>
         {busy ? `Reading your games… ${found}` : games ? 'Check again' : 'Check my openings'}
       </button>
@@ -243,6 +275,9 @@
   {#if games}
     <div class="card summary">
       <span><strong class="num">{games.length}</strong> <span class="label">games checked · {dateText(checkedAt)}</span></span>
+      <span class="sources">
+        {#each bySource as b (b.src)}<span class="src-chip"><strong class="num">{b.n}</strong> {SOURCE_NAME[b.src]}</span>{/each}
+      </span>
       <span><span class="dot white"></span>As White <strong class="num">{pct(scoreOf(asWhite))}</strong> <span class="label">in {asWhite.length}</span></span>
       <span><span class="dot black"></span>As Black <strong class="num">{pct(scoreOf(asBlack))}</strong> <span class="label">in {asBlack.length}</span></span>
       {#if last}<span class="label">Last check-up: {dateText(last.at)}, {last.lines.length} problem {last.lines.length === 1 ? 'line' : 'lines'}</span>{/if}
@@ -316,9 +351,8 @@
                 {#each l.list as g (g.ref)}
                   <li>
                     <span class="res {g.score === 1 ? 'w' : g.score === 0 ? 'l' : 'd'}">{g.score === 1 ? 'W' : g.score === 0 ? 'L' : '½'}</span>
-                    <span class="g-who">vs {g.opponent} <span class="label">· {g.source === 'chesscom' ? 'chess.com' : 'Chess Castles'} · {dateText(g.at)}</span></span>
+                    <span class="g-who">vs {g.opponent} <span class="label">· {g.source === 'chesscastles' ? 'Chess Castles' : SITE_NAME[g.source]} · {dateText(g.at)}</span></span>
                     <button class="btn small" onclick={() => review(g)}>Review</button>
-                    {#if g.source === 'chesscom'}<a class="ext label" href={g.ref} target="_blank" rel="noopener">chess.com <Icon name="external" size={12} /></a>{/if}
                   </li>
                 {/each}
               </ul>
@@ -372,6 +406,22 @@
   .h-row input {
     flex: 1 1 200px;
     min-height: 44px;
+  }
+  .sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-basis: 100%;
+  }
+  .src-chip {
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    font-size: 13.5px;
+    color: var(--text-2);
+  }
+  .src-chip strong {
+    color: var(--text);
   }
   .cc {
     display: flex;
@@ -564,10 +614,5 @@
   .g-who {
     flex: 1;
     min-width: 0;
-  }
-  .ext {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
   }
 </style>

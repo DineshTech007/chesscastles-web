@@ -35,6 +35,7 @@
   import { shownGames } from '$lib/stores/me';
   import type { ImportedGame } from '$lib/insights/games';
   import type { AnalyzedGame } from '$lib/insights/analysis';
+  import { loadOnline, SITE_NAME, slowEnough, type OnlineSite } from '$lib/study/myOnlineGames';
 
   type Tab = 'plans' | 'tree' | 'trainer' | 'games' | 'middlegame' | 'puzzles' | 'play';
   const TABS: { id: Tab; label: string; icon: 'learn' | 'tree' | 'book' | 'puzzle' | 'play' | 'crown' }[] = [
@@ -61,21 +62,40 @@
   let trees = $state<Record<string, OpeningTree | undefined>>({});
   let mg = $state<MiddlegameLesson[]>([]);
   let mgStars = $state<Record<string, number>>({});
-  /** The player's own results in this opening's lines (from the games imported for Insights). */
-  /** The player's games from chess.com or Lichess (Game Insights), and where they came from. */
-  let onlineGames = $state<(ImportedGame | AnalyzedGame)[]>([]);
-  /** The player's own games for the "lines from your games" section: Chess Castles, chess.com/Lichess, or both. */
-  let mineSource = $state<'all' | 'cc' | 'online'>('all');
-  const ccGames = $derived($shownGames.map(savedAsImported).filter((g): g is ImportedGame => !!g));
+  /**
+   * The player's own games for "Lines from your games", rapid and slower only
+   * (fast games say more about the clock than about the opening): Chess
+   * Castles games against FIDE-rated opponents, and chess.com and Lichess
+   * games (the opening check-up's and Game Insights').
+   */
+  type Source = 'cc' | OnlineSite;
+  const SOURCES: Source[] = ['cc', 'chesscom', 'lichess'];
+  let online = $state<Record<OnlineSite, { username: string; games: (ImportedGame | AnalyzedGame)[] }>>({ chesscom: { username: '', games: [] }, lichess: { username: '', games: [] } });
+  let mineSource = $state<'all' | Source>('all');
+  const ccGames = $derived(
+    $shownGames
+      .filter((g) => g.kind === 'fide' && (speedOf(g.timeControl) === 'rapid' || speedOf(g.timeControl) === 'standard'))
+      .map(savedAsImported)
+      .filter((g): g is ImportedGame => !!g),
+  );
+  const gamesOf = (src: Source) => (src === 'cc' ? ccGames : online[src].games);
+  /** This opening's lines in each source's games, and how many games reached it. */
+  const bySource = $derived(
+    Object.fromEntries(
+      SOURCES.map((src) => {
+        const stats = opening ? studyStats(gamesOf(src)).filter((x) => x.opening === opening.id) : [];
+        return [src, { stats, games: stats.reduce((a, x) => a + x.games, 0), read: gamesOf(src).length }];
+      }),
+    ) as Record<Source, { stats: StudyLineStat[]; games: number; read: number }>,
+  );
+  const withGames = $derived(SOURCES.filter((src) => bySource[src].games));
   const mine = $derived.by((): StudyLineStat[] => {
     if (!opening) return [];
-    const games = mineSource === 'cc' ? ccGames : mineSource === 'online' ? onlineGames : [...ccGames, ...onlineGames];
-    return studyStats(games).filter((x) => x.opening === opening.id);
+    if (mineSource !== 'all') return bySource[mineSource].stats;
+    return studyStats(SOURCES.flatMap(gamesOf)).filter((x) => x.opening === opening.id);
   });
-  /** Whether each source has games in this opening at all (the switch shows only when both do). */
-  const ccHas = $derived(!!opening && studyStats(ccGames).some((x) => x.opening === opening.id));
-  const onlineHas = $derived(!!opening && studyStats(onlineGames).some((x) => x.opening === opening.id));
-  let mineFrom = $state('');
+  const sourceName = (src: Source) => (src === 'cc' ? 'Chess Castles' : SITE_NAME[src]);
+  const sourceWho = (src: Source) => (src === 'cc' ? 'Chess Castles games against FIDE-rated opponents' : `${SITE_NAME[src]}${online[src].username ? ` (${online[src].username})` : ''} games`);
 
   // Model games.
   let viewing = $state<ModelGame | undefined>();
@@ -96,11 +116,17 @@
   onMount(async () => {
     lang = loadCoach().lang;
     solved = loadSolved();
+    // Games from the opening check-up, and Game Insights' analysed ones (they show where the first mistake came).
     const ins = loadInsights();
-    if (ins && opening) {
-      onlineGames = ins.games;
-      mineFrom = `${ins.site === 'chesscom' ? 'chess.com' : 'Lichess'} (${ins.username})`;
+    const stored = loadOnline();
+    const next = { ...online };
+    for (const site of ['chesscom', 'lichess'] as const) {
+      const analysed = ins?.site === site ? ins.games.filter((x) => slowEnough(x.game)) : [];
+      const urls = new Set(analysed.map((x) => x.game.url));
+      const games = [...analysed, ...(stored[site]?.games ?? []).filter((g) => !urls.has(g.url))];
+      next[site] = { username: stored[site]?.username || (ins?.site === site ? ins.username : ''), games };
     }
+    online = next;
     try {
       const s = JSON.parse(localStorage.getItem('k24.playSetup') ?? '{}');
       if (typeof s.rating === 'number') rating = Math.min(2800, Math.max(1400, s.rating));
@@ -242,15 +268,23 @@
       <section class="card mine" aria-labelledby="mine-h">
         <div class="mine-head">
           <h2 id="mine-h" class="title">Lines from your games</h2>
-          {#if ccHas && onlineHas}
+          {#if withGames.length > 1}
             <div class="segmented src" role="group" aria-label="Which games">
-              <button aria-pressed={mineSource === 'all'} onclick={() => (mineSource = 'all')}>All my games</button>
-              <button aria-pressed={mineSource === 'cc'} onclick={() => (mineSource = 'cc')}>Chess Castles</button>
-              <button aria-pressed={mineSource === 'online'} onclick={() => (mineSource = 'online')}>{mineFrom.split(' (')[0]}</button>
+              <button aria-pressed={mineSource === 'all'} onclick={() => (mineSource = 'all')}>All my games · {withGames.reduce((a, src) => a + bySource[src].games, 0)}</button>
+              {#each withGames as src (src)}
+                <button aria-pressed={mineSource === src} onclick={() => (mineSource = src)}>{sourceName(src)} · {bySource[src].games}</button>
+              {/each}
             </div>
           {/if}
         </div>
-        <p class="label from">From {mineSource === 'cc' || !onlineHas ? 'your games on Chess Castles' : mineSource === 'online' || !ccHas ? `your ${mineFrom} games` : `your games on Chess Castles and ${mineFrom}`}.</p>
+        <p class="label from">
+          From {(mineSource === 'all' ? withGames : [mineSource])
+            .map((src) => `${bySource[src].games} of your ${bySource[src].read} ${sourceWho(src)}`)
+            .join(', ')}: rapid and slower games only.
+          {#if !online.chesscom.games.length || !online.lichess.games.length}
+            <a href="/learn?tab=openings&sub=mine">Add your {!online.chesscom.games.length && !online.lichess.games.length ? 'chess.com and Lichess' : !online.chesscom.games.length ? 'chess.com' : 'Lichess'} games</a>
+          {/if}
+        </p>
         <p class="label">
           For reference: the lines of the {opening.name} that came up in your own games. Everything you learn here (trainer, model games and
           puzzles) comes from the database of strong players' games.
@@ -574,6 +608,7 @@
   }
   .mine-head .src {
     min-width: min(100%, 420px);
+    grid-auto-columns: auto;
   }
   .mine {
     padding: 14px 16px;

@@ -15,8 +15,8 @@ import type { ImportedGame } from '$lib/insights/games';
 export type Color = 'white' | 'black';
 
 export interface CheckupGame {
-  source: 'chesscom' | 'chesscastles';
-  /** chess.com's address, or the game's id in My games. */
+  source: 'chesscom' | 'lichess' | 'chesscastles';
+  /** The game's address on chess.com or Lichess, or its id in My games. */
   ref: string;
   at: number;
   color: Color;
@@ -159,10 +159,10 @@ export function movesText(sans: string[]): string {
   return sans.map((s, i) => (i % 2 === 0 ? `${i / 2 + 1}.${s}` : s)).join(' ');
 }
 
-/** A chess.com game, for the check-up. */
-export function fromChessCom(g: ImportedGame): CheckupGame {
+/** A chess.com or Lichess game, for the check-up. */
+export function fromOnline(g: ImportedGame): CheckupGame {
   return {
-    source: 'chesscom',
+    source: g.site,
     ref: g.url,
     at: g.endTime,
     color: g.userColor,
@@ -172,9 +172,6 @@ export function fromChessCom(g: ImportedGame): CheckupGame {
     opponent: g.userColor === 'white' ? g.black : g.white,
   };
 }
-
-/** Rapid and slower: chess.com's rapid and daily games (no bullet or blitz). */
-export const slowEnough = (g: ImportedGame) => g.timeClass === 'rapid' || g.timeClass === 'daily' || g.timeClass === 'classical';
 
 /** The check-up as saved, to show next time what changed. */
 export interface SavedCheckup {

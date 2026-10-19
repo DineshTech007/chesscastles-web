@@ -157,13 +157,14 @@ export class NeedsLichessLogin extends Error {}
 /**
  * The player's newest `count` standard games from Lichess (with clocks),
  * newest first. `token`: the visitor's Lichess login (Lichess's game export
- * no longer answers apps without one).
+ * no longer answers apps without one). `speeds`: Lichess's speeds to read,
+ * bullet to classical by default.
  */
-export async function lichessGames(username: string, count: number, token?: string): Promise<ImportedGame[]> {
+export async function lichessGames(username: string, count: number, token?: string, speeds = 'bullet,blitz,rapid,classical'): Promise<ImportedGame[]> {
   const user = username.trim();
   if (!/^[A-Za-z0-9_-]{2,30}$/.test(user)) throw new Error('That is not a Lichess username.');
   if (!token) throw new NeedsLichessLogin('Connect your Lichess account to analyse Lichess games.');
-  const res = await fetch(`https://lichess.org/api/games/user/${encodeURIComponent(user)}?max=${count + 10}&clocks=true&opening=true&perfType=bullet,blitz,rapid,classical`, {
+  const res = await fetch(`https://lichess.org/api/games/user/${encodeURIComponent(user)}?max=${count + 10}&clocks=true&opening=true&perfType=${speeds}`, {
     headers: { Accept: 'application/x-ndjson', Authorization: `Bearer ${token}` },
   });
   if (res.status === 404) {
