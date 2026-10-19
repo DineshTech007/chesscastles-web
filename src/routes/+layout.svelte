@@ -1,7 +1,7 @@
 <script lang="ts">
   import '../fonts.css';
   import '../app.css';
-  import { page } from '$app/state';
+  import { navigating, page } from '$app/state';
   import { onMount } from 'svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -16,6 +16,7 @@
   import { kfide, kfideAll, myCountry, movePhotoOutOfFirebase, myFideId, myInitials, myPhoto, photoSrc, setAccountPhoto, setMyCountry, setMyName } from '$lib/stores/me';
   import { fedName } from '$lib/fideFeds';
   import { goto } from '$app/navigation';
+  import { gameEnded } from '$lib/stores/gameEnded';
   import { loadResume, resumeHref, type ResumeState } from '$lib/game/resume';
   import { lichessToken, signOut, startSignIn } from '$lib/auth';
   import { KFIDE_SPEEDS } from '$lib/kfide';
@@ -34,16 +35,18 @@
   let width = $state(1280);
 
   /**
-   * A game in progress when Chess Castles opens (after a lost connection or a
-   * closed browser): straight back to it. Lichess games are asked from
-   * Lichess; games against Chess Castles' bots were saved after every move.
+   * A live Lichess game when Chess Castles opens at its home page (after a lost
+   * connection or a closed browser): straight back to it, since a real opponent
+   * is waiting. A game against Chess Castles' opponents is never forced on the
+   * player: the bar above the page offers it (pages opened from a link, such
+   * as Learn, open as asked).
    */
   let resumeChecked = false;
   async function backToGame(signedIn: boolean) {
     if (resumeChecked) return;
     resumeChecked = true;
     const here = page.url.pathname;
-    if (here.startsWith('/play/online/') || page.url.searchParams.has('resume')) return;
+    if (here !== '/' || page.url.searchParams.has('resume')) return;
     const token = signedIn ? lichessToken()?.token : undefined;
     if (token) {
       try {
@@ -54,8 +57,17 @@
         /* offline: nothing to resume from Lichess */
       }
     }
-    const local = loadResume();
-    if (local && !here.startsWith(local.route.split('?')[0])) void goto(resumeHref(local));
+  }
+
+  /** Whether the player came to this page from another page of the site (so Back can return there). */
+  let cameInside = $state(false);
+  afterNavigate(({ from }) => {
+    if (from) cameInside = true;
+  });
+  /** The game page's Back: the previous page of the site, or Play when the game was opened directly. */
+  function leaveGame() {
+    if (cameInside) history.back();
+    else void goto('/play');
   }
 
   /** Two accounts were mixed in this browser: signed out, to sign in again. */
@@ -191,7 +203,8 @@
   // to icons only when the screen is too narrow for both.
   const phone = $derived(width < 768);
   /** During a game on a phone: no site header or tab bar, so the board and the controls fit on one screen. */
-  const focusGame = $derived(phone && /^\/play\/(fide|computer|online\/|tournament\/game)/.test(page.url.pathname));
+  // Phones: a game in progress gets the whole screen (no bottom bar) until it ends.
+  const focusGame = $derived(phone && !$gameEnded && /^\/play\/(fide|computer|online\/|tournament\/game)/.test(page.url.pathname));
   const collapsed = $derived(width < 960);
 
   const tabs = [
@@ -206,6 +219,7 @@
 
 <svelte:window bind:innerWidth={width} />
 
+{#if navigating.to}<div class="nav-progress" role="progressbar" aria-label="Opening the page"></div>{/if}
 <div class="shell">
   {#if !phone}
     <Sidebar {collapsed} />
@@ -213,7 +227,7 @@
   <div class="main">
     {#if focusGame}
       <div class="focus-top">
-        <button class="focus-back" onclick={() => history.back()} aria-label="Leave the game page"><Icon name="back" size={18} />Back</button>
+        <button class="focus-back" onclick={leaveGame} aria-label="Leave the game page"><Icon name="back" size={18} />Back</button>
         <span class="focus-name">CHESS <span class="gold">CASTLES</span></span>
         <span class="focus-actions">
           <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'}><Icon name={$soundOn ? 'speaker' : 'mute'} size={18} /></button>
@@ -303,6 +317,40 @@
 {/if}
 
 <style>
+  /* Shows only if opening the page takes more than a moment. */
+  .nav-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 1000;
+    overflow: hidden;
+    opacity: 0;
+    animation: nav-show 0s 0.15s forwards;
+  }
+  .nav-progress::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    background: var(--accent);
+    animation: nav-slide 1s ease-in-out infinite;
+  }
+  @keyframes nav-show {
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes nav-slide {
+    from {
+      left: -40%;
+    }
+    to {
+      left: 100%;
+    }
+  }
   .site-banner {
     justify-content: space-between;
     font-weight: 600;

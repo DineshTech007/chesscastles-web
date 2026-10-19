@@ -114,6 +114,14 @@ textarea,
 [contenteditable]:not([contenteditable='false']) {
   caret-color: auto;
 }
+/* Touch screens have no hover: a pressed link or button dims, so a tap never looks ignored. */
+@media (hover: none) {
+  a:active,
+  button:active,
+  summary:active {
+    opacity: 0.6;
+  }
+}
 /* Quick clicks on controls and the board don't select their text. */
 button,
 .btn,

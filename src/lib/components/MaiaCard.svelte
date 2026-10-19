@@ -22,8 +22,8 @@
     <div class="maia"><div class="dl"><span style="width: {$maiaProgress}%"></span></div><p class="label">Preparing your opponent… {$maiaProgress}%</p></div>
   {:else if $maiaStatus === 'no-cache'}
     <div class="maia">
-      <p class="label">Download your opponent’s full playing style (58 MB).</p>
-      <button class="btn primary" onclick={() => maia.download()}>Download (58 MB)</button>
+      <p class="label">Your opponent’s full playing style is a one-time download of about 46 MB (best on Wi-Fi).</p>
+      <button class="btn primary" onclick={() => maia.download()}>Download (46 MB, once)</button>
     </div>
   {/if}
 {:else}
@@ -36,8 +36,8 @@
   {:else if $maiaStatus === 'error'}
     <p class="label">Maia-3 could not start in this browser, so {fallback} plays instead.</p>
   {:else if $maiaStatus === 'no-cache'}
-    <p class="label">Your connection is in data-saver mode, so Maia-3 (about 58 MB) was not downloaded. Until it is, {fallback} plays.</p>
-    <button class="btn primary" onclick={() => maia.download()}>Download Maia-3 (58 MB)</button>
+    <p class="label">To save your mobile data, the human-like engine (about 46 MB, once) is not downloaded by itself. Until it is, {fallback} plays.</p>
+    <button class="btn primary" onclick={() => maia.download()}>Download Maia-3 (46 MB, once)</button>
   {:else}
     <p class="label">Loading Maia-3…</p>
   {/if}

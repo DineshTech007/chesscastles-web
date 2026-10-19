@@ -11,6 +11,17 @@ import { get, writable } from 'svelte/store';
  */
 
 export type MaiaStatus = 'idle' | 'loading' | 'no-cache' | 'downloading' | 'ready' | 'error';
+/**
+ * Whether a download of about 45 MB may start by itself: not on a phone or
+ * tablet (mobile data, small storage; iPhones don't say which connection they
+ * use), nor on a slow, metered or data-saver connection.
+ */
+export function bigDownloadOk(): boolean {
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean; type?: string; effectiveType?: string } }).connection;
+  if (c?.saveData || c?.type === 'cellular' || (c?.effectiveType && c.effectiveType !== '4g')) return false;
+  return !matchMedia('(pointer: coarse)').matches;
+}
+
 export const maiaStatus = writable<MaiaStatus>('idle');
 export const maiaProgress = writable(0);
 
@@ -115,28 +126,29 @@ class Maia {
   }
 
   /**
-   * Loads Maia in the background a few seconds after the site opens, and
-   * downloads it the first time (not on a connection in data-saver mode,
-   * where the player is offered the button instead).
+   * Loads Maia in the background a few seconds after the page opens, from
+   * the browser's storage when it was downloaded before. The first download
+   * (about 45 MB) starts by itself only where that is harmless (bigDownloadOk:
+   * a computer on a fast connection), at low priority so the pages the
+   * player opens meanwhile come first; phones and tablets get the button.
    */
   autoLoad(delay = 4000) {
     if (typeof Worker === 'undefined') return;
     setTimeout(() => {
       this.init();
-      const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
       const unsubscribe = maiaStatus.subscribe((s) => {
-        if (s === 'no-cache' && !saveData) this.download();
+        if (s === 'no-cache' && bigDownloadOk()) this.download(true);
         if (s !== 'loading' && s !== 'idle') queueMicrotask(() => unsubscribe());
       });
     }, delay);
   }
 
-  /** Downloads the model (once). */
-  download() {
+  /** Downloads the model (once); `background`: at low priority. */
+  download(background = false) {
     this.init();
     if (get(maiaStatus) === 'downloading' || get(maiaStatus) === 'ready') return;
     maiaProgress.set(0);
-    this.worker?.postMessage({ type: 'download' });
+    this.worker?.postMessage({ type: 'download', background });
   }
 
   /** How likely a human of `elo` (against `oppo`) is to play each legal move. */

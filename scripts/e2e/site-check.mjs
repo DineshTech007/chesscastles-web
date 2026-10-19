@@ -1,0 +1,271 @@
+// Site check: uses Chess Castles the way players do, on a computer, a phone and
+// a tablet, and reports what is broken: pages that fail or scroll sideways,
+// menus that don't open, slow taps on a phone connection, big downloads a
+// phone never asked for, move buttons missing under the board, and a real
+// game against the computer and a step through an analysis.
+//
+//   node scripts/e2e/site-check.mjs [base-url] [--out dir] [--only phone,desktop]
+//
+// base-url: https://chesscastles.com by default (or http://localhost:4199 for a
+// build). CHANNEL=msedge uses the installed Edge; else Playwright's Chromium.
+// Writes <out>/report.md and results.json, with a screenshot of every failure;
+// exits with 1 when anything failed.
+import { chromium, devices } from 'playwright';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const args = process.argv.slice(2);
+const flag = (name) => {
+  const i = args.indexOf(name);
+  return i >= 0 ? args[i + 1] : undefined;
+};
+const BASE = (args[0] && !args[0].startsWith('--') ? args[0] : 'https://chesscastles.com').replace(/\/$/, '');
+const OUT = flag('--out') ?? 'site-check-report';
+const ONLY = flag('--only')?.split(',');
+mkdirSync(OUT, { recursive: true });
+
+const DEVICES = {
+  desktop: { viewport: { width: 1440, height: 900 } },
+  phone: devices['Pixel 7'],
+  tablet: devices['iPad Mini'],
+};
+/** Pages every player can open without signing in. */
+const PAGES = ['/', '/play', '/puzzles', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision'];
+/** A tap must open its page within this long. */
+const TAP_MS = 6000;
+/** A phone should never download more than this in one file by itself. */
+const BIG_BYTES = 5 * 1024 * 1024;
+const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const GAME = 'e2e4 e7e5 g1f3 b8c6 f1c4 f8c5 c2c3 g8f6 d2d4 e5d4 c3d4 c5b4 b1c3 f6e4 e1g1 e4c3'.split(' ');
+
+const results = [];
+let shots = 0;
+
+async function check(device, page, name, fn) {
+  const t0 = Date.now();
+  try {
+    const detail = await fn();
+    results.push({ device, name, ok: true, ms: Date.now() - t0, detail: detail ?? '' });
+    console.log(`  ok   ${device.padEnd(8)} ${name}${detail ? ` (${detail})` : ''}`);
+  } catch (e) {
+    const shot = `fail-${++shots}-${device}.png`;
+    await page.screenshot({ path: join(OUT, shot) }).catch(() => {});
+    results.push({ device, name, ok: false, ms: Date.now() - t0, detail: String(e?.message ?? e).split('\n')[0].slice(0, 300), shot });
+    console.log(`  FAIL ${device.padEnd(8)} ${name}: ${String(e?.message ?? e).split('\n')[0].slice(0, 200)}`);
+  }
+}
+
+const expect = (cond, msg) => {
+  if (!cond) throw new Error(msg);
+};
+
+/** Opens a page and waits for it to settle a little (some pages keep a connection open). */
+async function open(page, path) {
+  const res = await page.goto(BASE + path, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => {});
+  return res;
+}
+
+/** The centre of a square on the board (White at the bottom). */
+async function square(page, sq) {
+  const box = await page.locator('cg-board').first().boundingBox();
+  const file = sq.charCodeAt(0) - 97;
+  const rank = Number(sq[1]) - 1;
+  const s = box.width / 8;
+  return { x: box.x + s * (file + 0.5), y: box.y + s * (7 - rank + 0.5) };
+}
+
+async function run(name, options) {
+  console.log(`\n== ${name}`);
+  const browser = await chromium.launch(process.env.CHANNEL ? { channel: process.env.CHANNEL } : {});
+  const ctx = await browser.newContext(options);
+  const page = await ctx.newPage();
+  const touch = !!options.hasTouch;
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
+  const big = [];
+  page.on('response', async (r) => {
+    const len = Number((await r.headerValue('content-length').catch(() => null)) ?? 0);
+    if (len > BIG_BYTES && r.request().method() === 'GET') big.push(`${Math.round(len / 1048576)} MB ${r.url().replace(BASE, '')}`);
+  });
+  const tap = (loc) => (touch ? loc.tap() : loc.click());
+
+  // 1. Every page opens, without errors, and nothing scrolls sideways.
+  for (const path of PAGES) {
+    await check(name, page, `page ${path}`, async () => {
+      errors.length = 0;
+      const res = await open(page, path);
+      expect(!res || res.status() < 400, `HTTP ${res?.status()}`);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+      expect(overflow <= 1, `scrolls sideways by ${overflow}px`);
+      const text = await page.locator('main').innerText().catch(() => '');
+      expect(text.trim().length > 40, 'the page looks empty');
+      expect(!errors.length, `page error: ${errors[0]}`);
+    });
+  }
+
+  // 2. The menus: every item opens its page.
+  await open(page, '/');
+  if (name === 'phone') {
+    for (const label of ['Play', 'Puzzles', 'Analyse', 'More', 'Home']) {
+      await check(name, page, `bottom bar: ${label}`, async () => {
+        const before = page.url();
+        const t0 = Date.now();
+        await tap(page.locator('nav.tabs a', { hasText: label }));
+        await page.waitForURL((u) => u.href !== before, { timeout: TAP_MS });
+        return `${Date.now() - t0} ms`;
+      });
+    }
+    await check(name, page, 'More > Learn', async () => {
+      await open(page, '/more');
+      const t0 = Date.now();
+      await tap(page.locator('main a[href="/learn"]').first());
+      await page.waitForURL(/\/learn/, { timeout: TAP_MS });
+      return `${Date.now() - t0} ms`;
+    });
+  } else {
+    const items = await page.locator('aside a.item').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
+    for (const href of items) {
+      await check(name, page, `sidebar: ${href}`, async () => {
+        await open(page, href === '/' ? '/more' : '/');
+        const t0 = Date.now();
+        await tap(page.locator(`aside a.item[href="${href}"]`).first());
+        await page.waitForURL((u) => new URL(u).pathname === href.split('?')[0], { timeout: TAP_MS });
+        return `${Date.now() - t0} ms`;
+      });
+    }
+  }
+
+  // 3. Learn: each tab opens.
+  await check(name, page, 'Learn tabs', async () => {
+    await open(page, '/learn');
+    for (const t of ['Openings', 'Tactics', 'Strategy', 'Endgames', 'My plan', 'Start']) {
+      await tap(page.locator('.tabs .tab', { hasText: t }));
+      await page.waitForTimeout(300);
+      expect((await page.locator('.tabs .tab[aria-pressed="true"]').innerText()).includes(t), `the ${t} tab did not open`);
+    }
+  });
+
+  // 4. Analysis: a game steps forward, and on a phone the move buttons sit right under the board.
+  await check(name, page, 'analysis: step through a game', async () => {
+    await open(page, '/');
+    await page.evaluate(([uci, start]) => {
+      localStorage.setItem('k24.myGames', JSON.stringify([{ id: 'site-check', playedAt: Date.now(), kind: 'computer', white: 'You', black: 'Computer', userSide: 'white', result: '0-1', reason: '', timeControl: '10+0', startFen: start, uci }]));
+    }, [GAME, START]);
+    await open(page, '/analysis?game=site-check');
+    const board = await page.locator('cg-board').first().boundingBox();
+    expect(board, 'no board');
+    const next = page.getByRole('button', { name: 'Next move' }).locator('visible=true').first();
+    const nb = await next.boundingBox();
+    expect(nb, 'no visible Next move button');
+    if (name === 'phone') expect(nb.y - (board.y + board.height) < 120, `the move buttons are ${Math.round(nb.y - board.y - board.height)}px below the board`);
+    const fen0 = await page.locator('cg-board piece').count();
+    for (let i = 0; i < 6; i++) await tap(next);
+    await page.waitForTimeout(400);
+    const moved = await page.locator('cg-board .last-move').count();
+    expect(moved > 0, 'the board did not move');
+    return `${fen0} pieces, stepped 6 moves`;
+  });
+
+  // 5. A game against the computer: play e4 by tapping, the computer answers.
+  await check(name, page, 'play the computer: e4 and an answer', async () => {
+    await open(page, '/play/computer?l=1350&c=white');
+    await page.locator('cg-board').first().waitFor({ timeout: 15000 });
+    await page.waitForTimeout(1500);
+    for (const sq of ['e2', 'e4']) {
+      const { x, y } = await square(page, sq);
+      if (touch) await page.touchscreen.tap(x, y);
+      else await page.mouse.click(x, y);
+      await page.waitForTimeout(250);
+    }
+    await page.waitForFunction(() => document.querySelectorAll('.moves .mv').length >= 2 && [...document.querySelectorAll('.moves .mv')].filter((b) => b.textContent.trim()).length >= 2, null, { timeout: 25000 });
+    const moves = await page.locator('.moves .mv').allInnerTexts();
+    // On a phone the game page has a Back button at the top: it must leave the game
+    // even when the game was opened directly (no page of the site before it).
+    if (name === 'phone') {
+      await tap(page.locator('.focus-back'));
+      await page.waitForURL((u) => !new URL(u).pathname.startsWith('/play/computer'), { timeout: TAP_MS });
+    }
+    return moves.filter((m) => m.trim()).slice(0, 2).join(' ');
+  });
+
+  // The game above is unfinished: opening the home page must not jump back into it.
+  await check(name, page, 'home page opens as asked with a game unfinished', async () => {
+    await open(page, '/');
+    await page.waitForTimeout(2500);
+    expect(new URL(page.url()).pathname === '/', `the home page jumped to ${page.url().replace(BASE, '')}`);
+  });
+
+  // 6. Nothing big downloaded by itself on a phone or tablet.
+  if (touch) {
+    await check(name, page, `no big downloads by themselves (over ${BIG_BYTES / 1048576} MB)`, async () => {
+      big.length = 0;
+      for (const path of ['/play', '/play/fide?r=1500&tc=0&c=white', '/learn/openings/italian', '/analysis']) {
+        await open(page, path);
+        await page.waitForTimeout(6000);
+      }
+      expect(!big.length, `downloaded ${big.join(', ')}`);
+    });
+  }
+
+  // 7. On a slow phone connection, a tap still opens its page quickly.
+  if (name === 'phone') {
+    await check(name, page, 'slow connection: taps still open pages', async () => {
+      const cdp = await ctx.newCDPSession(page);
+      await cdp.send('Network.enable');
+      await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: (1.6 * 1048576) / 8, uploadThroughput: (750 * 1024) / 8 });
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+      // From the home page (a game in progress hides the bottom bar on phones).
+      await open(page, '/');
+      await page.waitForTimeout(3000);
+      const times = [];
+      // Each step: the thing to tap must show, and its page must open, within 12 s.
+      const step = async (label, locator, url) => {
+        const t0 = Date.now();
+        await locator.waitFor({ timeout: 12000 }).catch(() => {
+          throw new Error(`${label}: not on screen after 12 s (at ${page.url().replace(BASE, '')})`);
+        });
+        const before = page.url();
+        await tap(locator);
+        await page.waitForURL(url ?? ((u) => u.href !== before), { timeout: 12000 }).catch(() => {
+          throw new Error(`${label}: tapped, but the page did not change in 12 s`);
+        });
+        times.push(`${label} ${Date.now() - t0} ms`);
+      };
+      await step('Puzzles tab', page.locator('nav.tabs a', { hasText: 'Puzzles' }));
+      await step('More tab', page.locator('nav.tabs a', { hasText: 'More' }));
+      await step('Learn on More', page.locator('main a[href="/learn"]').first(), /\/learn/);
+      await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+      return times.join(', ');
+    });
+  }
+
+  await browser.close();
+}
+
+const t0 = Date.now();
+for (const [name, options] of Object.entries(DEVICES)) {
+  if (ONLY && !ONLY.includes(name)) continue;
+  await run(name, options);
+}
+
+const failed = results.filter((r) => !r.ok);
+const when = new Date().toISOString().replace('T', ' ').slice(0, 16);
+const md = [
+  `# Site check: ${failed.length ? `${failed.length} problem${failed.length === 1 ? '' : 's'}` : 'all good'}`,
+  '',
+  `${BASE} · ${when} UTC · ${results.length} checks in ${Math.round((Date.now() - t0) / 1000)} s`,
+  '',
+  ...(failed.length ? ['## Problems', '', ...failed.map((r) => `- **${r.device}** · ${r.name}: ${r.detail}${r.shot ? ` (screenshot: ${r.shot})` : ''}`), ''] : []),
+  '## Every check',
+  '',
+  '| Device | Check | Result |',
+  '| --- | --- | --- |',
+  ...results.map((r) => `| ${r.device} | ${r.name} | ${r.ok ? `ok${r.detail ? ` · ${r.detail}` : ''}` : `**failed** · ${r.detail}`} |`),
+  '',
+].join('\n');
+writeFileSync(join(OUT, 'report.md'), md);
+writeFileSync(join(OUT, 'results.json'), JSON.stringify({ base: BASE, when, results }, null, 2));
+console.log(`\n${failed.length ? `${failed.length} FAILED` : 'All good'}: ${results.length} checks. Report: ${join(OUT, 'report.md')}`);
+process.exit(failed.length ? 1 : 0);

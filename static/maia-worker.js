@@ -61,7 +61,8 @@ async function start(buffer) {
   postMessage({ type: 'status', status: 'ready' });
 }
 
-async function download() {
+/** `background`: fetched at low priority, so pages the player opens meanwhile come first. */
+async function download(background) {
   postMessage({ type: 'status', status: 'downloading' });
   const chunks = [];
   let received = 0;
@@ -69,7 +70,7 @@ async function download() {
   const sizes = await Promise.all(PARTS.map((p) => fetch(p, { method: 'HEAD' }).then((r) => +(r.headers.get('Content-Length') || 0)).catch(() => 0)));
   total = sizes.reduce((a, b) => a + b, 0);
   for (const part of PARTS) {
-    const res = await fetch(part);
+    const res = await fetch(part, background ? { priority: 'low' } : undefined);
     if (!res.ok) throw new Error('The model could not be downloaded.');
     const reader = res.body.getReader();
     for (;;) {
@@ -99,7 +100,7 @@ self.onmessage = async (e) => {
       if (buffer) await start(buffer);
       else postMessage({ type: 'status', status: 'no-cache' });
     } else if (msg.type === 'download') {
-      await download();
+      await download(!!msg.background);
     } else if (msg.type === 'inference') {
       if (!session) throw new Error('The model is not loaded.');
       const feeds = {

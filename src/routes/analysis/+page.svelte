@@ -628,6 +628,9 @@
         />
       </div>
     </div>
+    <div class="card under-board">
+      <MoveNav ply={cursor} max={line.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
+    </div>
   </section>
 
   <aside class="side">
@@ -720,7 +723,7 @@
       {/if}
       {#if importNote}<p class="err note" role="status">{importNote}</p>{/if}
       <MoveTree {root} {current} version={tv} badges={badgeMap} onselect={select} />
-      <MoveNav ply={cursor} max={line.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
+      <div class="panel-nav"><MoveNav ply={cursor} max={line.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} /></div>
       {#if importing}
         <div class="import">
           <label for="import-text" class="label">Paste a game (PGN), a position (FEN), or a Lichess game link. For chess.com, use Share → PGN and paste it here.</label>
@@ -876,6 +879,19 @@
   .board-row {
     display: flex;
     gap: 8px;
+  }
+  /* Phones and narrow windows: the move buttons under the board instead of in the panel below. */
+  .under-board {
+    display: none;
+    padding: 0;
+  }
+  @media (max-width: 899px) {
+    .under-board {
+      display: block;
+    }
+    .panel-nav {
+      display: none;
+    }
   }
   .board-box {
     flex: 1;

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { myInitials, myName } from '$lib/stores/me';
   import { onDestroy, onMount } from 'svelte';
+  import { gameEnded } from '$lib/stores/gameEnded';
   import type { Key } from '@lichess-org/chessground/types';
   import type { Role } from 'chessops/types';
   import Board from './Board.svelte';
@@ -199,6 +200,7 @@
     gone = true;
     if (!game.isOver) save(false);
     game.dispose();
+    gameEnded.set(false);
   });
 
   /** Shows the position after `ply` moves; the latest one returns to the live game. */
@@ -351,6 +353,11 @@
     return game.winner === game.human
       ? { text: 'You won!', tone: 'var(--win)' }
       : { text: 'You lost', tone: 'var(--loss)' };
+  });
+
+  // On phones the bottom bar comes back when the game is over.
+  $effect(() => {
+    gameEnded.set(g.isOver);
   });
 
   // Everything the template reads from the game, refreshed on every change.
