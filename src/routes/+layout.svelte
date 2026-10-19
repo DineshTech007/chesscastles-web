@@ -1,7 +1,7 @@
 <script lang="ts">
   import '../fonts.css';
   import '../app.css';
-  import { navigating, page } from '$app/state';
+  import { navigating, page, updated } from '$app/state';
   import { onMount } from 'svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -22,9 +22,10 @@
   import { KFIDE_SPEEDS } from '$lib/kfide';
   import { syncGames } from '$lib/stores/gameSync';
   import { get } from 'svelte/store';
-  import { afterNavigate } from '$app/navigation';
+  import { afterNavigate, beforeNavigate } from '$app/navigation';
   import LimitModal from '$lib/components/LimitModal.svelte';
   import SignInModal from '$lib/components/SignInModal.svelte';
+  import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
   import { boardThemeOpen } from '$lib/boardTheme';
   import { flush, pageView, setSignedIn } from '$lib/analytics';
@@ -99,7 +100,8 @@
     } catch {
       /* blocked */
     }
-    const onHide = () => document.visibilityState === 'hidden' && flush(true);
+    // Back to the site (a tab or the installed app): is there a newer version?
+    const onHide = () => (document.visibilityState === 'hidden' ? flush(true) : void updated.check().catch(() => {}));
     document.addEventListener('visibilitychange', onHide);
     const onLeave = () => flush(true);
     addEventListener('pagehide', onLeave);
@@ -154,6 +156,7 @@
         /* blocked */
       }
       if (s.status !== 'loading') void refreshMyPlan();
+      ratingsUid = '';
       if (s.status !== 'in') return;
       // An invite link opened before signing in: the friend who invited gets their reward.
       void sendReferral(s.username).then(refreshMyPlan);
@@ -172,17 +175,24 @@
           void movePhotoOutOfFirebase(s.uid, !!p.photo).catch(() => {});
           myFideId.set(p.fideId ?? '');
           syncBoards();
-          const k = get(kfide);
-          const all = get(kfideAll);
-          const kfideTc = Object.fromEntries(KFIDE_SPEEDS.filter((s) => all[s].games).map((s) => [s, { rating: all[s].rating, games: all[s].games }]));
-          if (k.games && (p.kfide !== k.rating || p.kfideGames !== k.games || JSON.stringify(p.kfideTc ?? {}) !== JSON.stringify(kfideTc)))
-            return saveProfile({ kfide: k.rating, kfideGames: k.games, kfideTc });
+          // The CC Ratings the profile shows everyone: sent now if they changed, and after every game from now on.
+          ratingsSent = JSON.stringify({ kfide: p.kfide ?? 0, kfideGames: p.kfideGames ?? 0, kfideTc: p.kfideTc ?? {} });
+          ratingsUid = s.uid;
+          return sendRatings();
         })
         .catch(() => {});
     });
     theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    // A finished game changes the ratings: everyone sees them at once (not only after this player's next visit).
+    let ratingsTimer: ReturnType<typeof setTimeout> | undefined;
+    const unRatings = kfideAll.subscribe(() => {
+      clearTimeout(ratingsTimer);
+      ratingsTimer = setTimeout(() => void sendRatings().catch(() => {}), 1500);
+    });
     return () => {
       stop();
+      unRatings();
+      clearTimeout(ratingsTimer);
       unStudy();
       unSession();
       unResume();
@@ -190,6 +200,31 @@
       document.removeEventListener('visibilitychange', onHide);
       removeEventListener('pagehide', onLeave);
     };
+  });
+
+  /** The ratings last sent to the profile (JSON), for the signed-in account `ratingsUid`. */
+  let ratingsSent = '';
+  let ratingsUid = '';
+  async function sendRatings() {
+    const uid = ratingsUid;
+    if (!uid || get(session).status !== 'in') return;
+    const k = get(kfide);
+    const all = get(kfideAll);
+    if (!k.games) return;
+    const ratings = { kfide: k.rating, kfideGames: k.games, kfideTc: Object.fromEntries(KFIDE_SPEEDS.filter((s) => all[s].games).map((s) => [s, { rating: all[s].rating, games: all[s].games }])) };
+    const json = JSON.stringify(ratings);
+    if (json === ratingsSent) return;
+    await saveProfile(ratings);
+    if (ratingsUid === uid) ratingsSent = json;
+  }
+
+  // A new version of the site (it checks every few minutes): the next tap on a link
+  // loads it, so open tabs and the installed app always run the latest (never in a game).
+  beforeNavigate((nav) => {
+    if (!updated.current || !nav.to || nav.willUnload || nav.type === 'popstate' || focusGame) return;
+    if (nav.to.url.origin !== location.origin) return;
+    nav.cancel();
+    location.href = nav.to.url.href;
   });
 
   function toggleTheme() {
@@ -304,6 +339,7 @@
 
 <LimitModal />
 <SignInModal />
+<InstallPrompt />
 <BoardThemeModal bind:open={$boardThemeOpen} />
 
 {#if phone && !focusGame}

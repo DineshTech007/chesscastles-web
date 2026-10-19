@@ -80,6 +80,24 @@ export async function challengeUser(
   return (await res.json()).id;
 }
 
+/**
+ * A game only `white` and `black` may join (a Lichess open challenge locked to
+ * the two of them): nobody is challenged, so no player's Lichess challenge
+ * settings can refuse it. Each player joins with acceptChallenge; the game
+ * starts when both have.
+ */
+export async function openChallenge(token: string, o: { white: string; black: string; minutes: number; increment: number; rated: boolean }): Promise<string> {
+  const res = await call(
+    token,
+    '/api/challenge/open',
+    form({ rated: o.rated, 'clock.limit': o.minutes * 60, 'clock.increment': o.increment, users: `${o.white},${o.black}`, name: 'Chess Castles friends', expiresAt: Date.now() + 3600_000 }),
+  );
+  return (await res.json()).id;
+}
+
+/** Lichess refused a challenge because of the other player's settings (or a block): "You cannot challenge X", "X only accepts challenges from friends"… */
+export const refusedByLichess = (e: unknown) => e instanceof LichessError && /cannot challenge|does not accept|only accepts challenges|too far from|provisional/i.test(e.message);
+
 export const cancelChallenge = (token: string, id: string) => call(token, `/api/challenge/${id}/cancel`, { method: 'POST' });
 export const acceptChallenge = (token: string, id: string) => call(token, `/api/challenge/${id}/accept`, { method: 'POST' });
 

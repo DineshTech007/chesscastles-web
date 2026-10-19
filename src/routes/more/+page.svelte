@@ -5,6 +5,7 @@
   import { session, signOut, startSignIn } from '$lib/auth';
   import { adminMe } from '$lib/admin';
   import { HERO_FEATURES } from '$lib/heroFeatures';
+  import { installOpen, installWay } from '$lib/install';
 
   let isAdmin = $state(false);
   $effect(() => {
@@ -59,6 +60,9 @@
   {/each}
 </nav>
 <nav class="list" aria-label="More">
+  {#if $installWay !== 'none' && $installWay !== 'installed'}
+    <button class="row-btn" onclick={() => installOpen.set(true)}><Icon name="phone" color="var(--accent)" /><span>Install the Chess Castles app (free, always up to date)</span><Icon name="chevron" color="var(--muted)" /></button>
+  {/if}
   {#each links as l (l.href)}
     <a href={l.href}><Icon name={l.icon} color="var(--accent)" /><span>{l.label}</span><Icon name="chevron" color="var(--muted)" /></a>
   {/each}
@@ -111,7 +115,8 @@
     border-radius: var(--r-card);
     overflow: hidden;
   }
-  a {
+  a,
+  .row-btn {
     display: flex;
     align-items: center;
     gap: 14px;
@@ -122,10 +127,22 @@
     text-decoration: none;
     border-bottom: 1px solid var(--border-soft);
   }
+  .row-btn {
+    width: 100%;
+    border-top: 0;
+    border-left: 0;
+    border-right: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
   a:last-child {
     border-bottom: 0;
   }
-  a span {
+  a span,
+  .row-btn span {
     flex: 1;
   }
 </style>

@@ -269,42 +269,63 @@ async function run(name, options) {
   // 5c. Bullet (1+0) against the 2000 computer: it must move at a bullet pace, or it loses on time.
   if (name === 'desktop')
     await check(name, page, 'bullet: the computer keeps up with its clock', async () => {
-      await page.evaluate(() => localStorage.removeItem('k24.resume'));
-      await open(page, '/play/fide?r=2000&tc=6&c=black');
-      await page.locator('cg-board').first().waitFor({ timeout: 15000 });
-      const snap = () => page.evaluate(() => JSON.parse(localStorage.getItem('k24.resume') ?? 'null')?.snapshot);
-      let last;
-      const until = Date.now() + 70000;
-      while (Date.now() < until) {
-        const s = await snap();
-        if (s) last = s;
-        else if (last) break; // the game ended
-        const n = s?.moves.length ?? 0;
-        if (n >= 20) break;
-        if (n % 2 === 1) {
-          // Our move (Black): a piece, then one of the squares the board offers for it.
-          const before = n;
-          const centre = (sel) =>
-            page.evaluate((sel) => [...document.querySelectorAll(sel)].map((e) => e.getBoundingClientRect()).map((r) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 })), sel);
-          for (const p of await centre('cg-board piece.black')) {
-            await page.mouse.click(p.x, p.y);
-            const [d] = await centre('cg-board square.move-dest');
-            if (!d) continue;
-            await page.mouse.click(d.x, d.y);
-            await page.waitForTimeout(150);
-            if (((await snap())?.moves.length ?? 0) > before) break;
+      // Our moves are random, so a game can end quickly: up to three games, until the computer has made 8 timed moves.
+      let timed = 0;
+      let used = 0;
+      for (let game = 0; game < 3 && timed < 8; game++) {
+        await page.evaluate(() => localStorage.removeItem('k24.resume'));
+        await open(page, '/play/fide?r=2000&tc=6&c=black');
+        await page.locator('cg-board').first().waitFor({ timeout: 15000 });
+        const snap = () => page.evaluate(() => JSON.parse(localStorage.getItem('k24.resume') ?? 'null')?.snapshot);
+        let last;
+        const until = Date.now() + 60000;
+        while (Date.now() < until) {
+          const s = await snap();
+          if (s) last = s;
+          else if (last) break; // the game ended
+          const n = s?.moves.length ?? 0;
+          if (n >= 24) break;
+          if (n % 2 === 1) {
+            // Our move (Black): a piece, then one of the squares the board offers for it.
+            const before = n;
+            const centre = (sel) =>
+              page.evaluate((sel) => [...document.querySelectorAll(sel)].map((e) => e.getBoundingClientRect()).map((r) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 })), sel);
+            const pieces = (await centre('cg-board piece.black')).sort(() => Math.random() - 0.5);
+            for (const p of pieces) {
+              await page.mouse.click(p.x, p.y);
+              const [d] = await centre('cg-board square.move-dest');
+              if (!d) continue;
+              await page.mouse.click(d.x, d.y);
+              await page.waitForTimeout(150);
+              if (((await snap())?.moves.length ?? 0) > before) break;
+            }
           }
+          await page.waitForTimeout(50);
         }
-        await page.waitForTimeout(50);
+        // The computer's clock starts after its first move.
+        const moves = Math.ceil((last?.moves.length ?? 0) / 2) - 1;
+        if (moves > 0) {
+          timed += moves;
+          used += 60000 - last.white;
+        }
       }
       await page.evaluate(() => localStorage.removeItem('k24.resume'));
-      const botMoves = Math.ceil((last?.moves.length ?? 0) / 2);
-      expect(botMoves >= 5, `only ${botMoves} computer moves were played`);
-      // Its clock starts after its first move.
-      const avg = Math.round((60000 - last.white) / (botMoves - 1));
+      expect(timed >= 5, `only ${timed} timed computer moves were played`);
+      const avg = Math.round(used / timed);
       expect(avg < 1500, `the computer took ${avg} ms a move: it would lose a 1-minute game on time`);
-      return `${avg} ms a move over ${botMoves - 1} moves`;
+      return `${avg} ms a move over ${timed} moves`;
     });
+
+  // 5d. The "Get the Chess Castles app" popup opens (forced: automated visits never get it) and closes.
+  await check(name, page, 'install the app: the popup opens and closes', async () => {
+    await open(page, '/?install=show');
+    await page.locator('#install-h').waitFor({ timeout: 8000 });
+    const way = (await page.locator('.dialog .btn').allInnerTexts()).join(', ');
+    await tap(page.locator('.dialog .btn').last());
+    await page.waitForTimeout(300);
+    expect((await page.locator('#install-h').count()) === 0, 'the popup did not close');
+    return way;
+  });
 
   // The game above is unfinished: opening the home page must not jump back into it.
   await check(name, page, 'home page opens as asked with a game unfinished', async () => {

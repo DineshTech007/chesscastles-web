@@ -8,6 +8,8 @@ const config = {
     // A single-page app: every route is drawn in the browser, so the site is
     // plain static files (Cloudflare serves index.html for unknown paths).
     adapter: adapter({ fallback: 'index.html', precompress: false }),
+    // Checks for a new deploy every 5 minutes (see beforeNavigate in +layout.svelte).
+    version: { pollInterval: 300_000 },
     // Content Security Policy (as a <meta> tag; SvelteKit adds the hash of its own
     // start-up script). Scripts only from this site; data only to the services
     // Chess Castles uses. The engines' workers have their own files.
@@ -17,7 +19,7 @@ const config = {
         'default-src': ['self'],
         // Cloudflare Web Analytics (cookieless) adds its beacon on the live site.
         // Google sign-in loads Google's helper script (apis.google.com) only when used.
-        'script-src': ['self', 'wasm-unsafe-eval', 'https://static.cloudflareinsights.com', 'https://apis.google.com', 'sha256-j5nPqXMCNoeedITcSNEBD2Y2h3DlzcSvdUqQLJBUQlg='],
+        'script-src': ['self', 'wasm-unsafe-eval', 'https://static.cloudflareinsights.com', 'https://apis.google.com', 'sha256-ABaZFUTyOGrY1O7hdxFnMhcwdczAqDSmOZZzBBtUSck='],
         'style-src': ['self', 'unsafe-inline'],
         'font-src': ['self', 'data:'],
         'img-src': ['self', 'data:', 'blob:', 'https:'],

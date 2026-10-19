@@ -10,6 +10,7 @@
   import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
   import { HERO_FEATURES } from '$lib/heroFeatures';
   import { adminMe } from '$lib/admin';
+  import { installOpen, installWay } from '$lib/install';
 
   /** Admins see a link to the admin page (asked once per sign-in). */
   let isAdmin = $state(false);
@@ -122,7 +123,7 @@
       </button>
     {/if}
     {#if !collapsed}
-      <nav class="foot" aria-label="Help and policies">{#if PLANS_ON}<a href="/plans">Plans</a>{/if}<a href="/settings">Settings</a><a href="/parents">Parents</a><a href="/feedback">Feedback</a><a href="/help">Help</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/legal/fair-play">Fair play</a><a href="/legal/refunds">Refunds</a></nav>
+      <nav class="foot" aria-label="Help and policies">{#if PLANS_ON}<a href="/plans">Plans</a>{/if}{#if $installWay !== 'none' && $installWay !== 'installed'}<button class="install" onclick={() => installOpen.set(true)}>Install app</button>{/if}<a href="/settings">Settings</a><a href="/parents">Parents</a><a href="/feedback">Feedback</a><a href="/help">Help</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/legal/fair-play">Fair play</a><a href="/legal/refunds">Refunds</a></nav>
     {/if}
   </div>
 </nav>
@@ -346,6 +347,16 @@
     color: var(--muted);
     font-size: 12px;
     text-decoration: none;
+  }
+  .foot .install {
+    border: 0;
+    padding: 0;
+    background: none;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
   }
   .foot a:hover {
     color: var(--text);

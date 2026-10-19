@@ -52,6 +52,10 @@
     database: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
     tree: 'M12 3v5M12 8 6 13M12 8l6 5M6 13v3M18 13v3M10 3h4M4 16h4v4H4zM16 16h4v4h-4z',
     sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 3v4M17 5h4',
+    download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
+    share: 'M12 15V3M8 7l4-4 4 4M7 10H5v11h14V10h-2',
+    dots: 'M12 5h.01M12 12h.01M12 19h.01',
+    phone: 'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2',
   } as const;
   export type IconName = keyof typeof ICONS;
 </script>

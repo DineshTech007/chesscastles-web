@@ -150,8 +150,8 @@
   {:else if tab === 'friends'}
     {#if challengePref !== undefined && challengePref <= 3}
       <div class="card warn-card" role="note">
-        <strong>Your friends can't challenge you yet.</strong>
-        <span>Your Lichess settings let {WHO[challengePref]} challenge you, so a challenge from a Chess Castles friend shows “You cannot challenge {$session.status === 'in' ? $session.username : 'you'}”. On Lichess, open <em>Preferences → Privacy → Let other players challenge you</em> and choose <em>Always</em>.</span>
+        <strong>Your friends' challenges come as a message.</strong>
+        <span>Your Lichess settings let {WHO[challengePref]} challenge you, so a Chess Castles friend's challenge arrives in Messages with a <em>Join the game</em> button. To get challenges straight away, open <em>Preferences → Privacy → Let other players challenge you</em> on Lichess and choose <em>Always</em>.</span>
       </div>
     {/if}
     {#if !friends}

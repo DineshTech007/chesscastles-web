@@ -92,8 +92,14 @@
           <p class="label center">No messages yet. Say hello, or challenge {friend?.name ?? 'your friend'} to a game!</p>
         {/if}
         {#each msgs as m (m.id)}
+          {@const join = /https:\/\/chesscastles\.com(\/play\/join\/\w+\?c=(?:white|black))/.exec(m.body)}
           <div class="msg" class:mine={m.mine}>
-            <p>{m.body}</p>
+            {#if join}
+              <p>{m.body.replace(/\s*Join: \S+$/, '')}</p>
+              {#if !m.mine}<a class="btn primary join" href={join[1]}><Icon name="knight" size={16} />Join the game</a>{/if}
+            {:else}
+              <p>{m.body}</p>
+            {/if}
             <span class="label">{time(m.at)}</span>
           </div>
         {/each}
@@ -186,6 +192,9 @@
     align-self: flex-end;
     border-radius: 14px 14px 4px 14px;
     background: color-mix(in srgb, var(--brand) 40%, var(--raised));
+  }
+  .msg .join {
+    margin-top: 8px;
   }
   .msg p {
     margin: 0;

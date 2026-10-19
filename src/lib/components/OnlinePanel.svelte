@@ -8,7 +8,7 @@
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import * as api from '$lib/lichessBoard';
   import { lichessRatings } from '$lib/lichess';
-  import { lobbyLeave, lobbySeek, lobbyState, type LobbyRole, type LobbySeek, type LobbyState } from '$lib/social';
+  import { friendsList, lobbyLeave, lobbySeek, lobbyState, sendMessage, type LobbyRole, type LobbySeek, type LobbyState } from '$lib/social';
 
   /** `onfide`: switches the Play page to the FIDE-rated opponents (offered when no one is free). */
   let { onfide }: { onfide?: () => void } = $props();
@@ -301,16 +301,40 @@
           error = 'Type your friend’s Lichess username.';
           return;
         }
-        const id = await api.challengeUser(t, name, { minutes: tc.m, increment: tc.i, rated, color });
-        waiting = {
-          text: `Waiting for ${name} to accept your ${tc.m}+${tc.i} challenge…`,
-          cancel: () => void api.cancelChallenge(t, id).catch(() => {}),
-        };
+        try {
+          const id = await api.challengeUser(t, name, { minutes: tc.m, increment: tc.i, rated, color });
+          waiting = {
+            text: `Waiting for ${name} to accept your ${tc.m}+${tc.i} challenge…`,
+            cancel: () => void api.cancelChallenge(t, id).catch(() => {}),
+          };
+        } catch (e) {
+          if (!api.refusedByLichess(e) || !(await inviteFriend(t, name, tc))) throw e;
+        }
       }
     } catch (e) {
       waiting = undefined;
       error = e instanceof Error ? e.message : 'The game could not start. Try again.';
     }
+  }
+
+  /**
+   * A friend whose Lichess settings refuse challenges: a game only the two of you
+   * can join, and a Chess Castles message with its Join button. False when they
+   * aren't a Chess Castles friend (Lichess's own error is shown then).
+   */
+  async function inviteFriend(t: string, name: string, tc: Tc): Promise<boolean> {
+    const me = lichessToken()?.username;
+    const friend = me ? (await friendsList().catch(() => undefined))?.friends.find((p) => p.uid === `lichess:${name.toLowerCase()}` || p.username.toLowerCase() === name.toLowerCase()) : undefined;
+    if (!me || !friend) return false;
+    const meWhite = color === 'white' || (color !== 'black' && Math.random() < 0.5);
+    const id = await api.openChallenge(t, { white: meWhite ? me : name, black: meWhite ? name : me, minutes: tc.m, increment: tc.i, rated });
+    await api.acceptChallenge(t, id);
+    await sendMessage(friend.uid, `⚔️ I challenge you to a ${tc.m}+${tc.i} ${rated ? 'rated' : 'casual'} game! Join: https://chesscastles.com/play/join/${id}?c=${meWhite ? 'black' : 'white'}`);
+    waiting = {
+      text: `${friend.name}'s Lichess settings don't take challenges, so we sent them a message with a button to join your ${tc.m}+${tc.i} game. Waiting for them…`,
+      cancel: () => void api.cancelChallenge(t, id).catch(() => {}),
+    };
+    return true;
   }
 
   function cancel() {
