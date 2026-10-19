@@ -15,6 +15,7 @@
     me = false,
     photo,
     rating,
+    ratingChange,
     country,
     title,
   }: {
@@ -32,6 +33,8 @@
     photo?: string;
     /** Shown under the name, e.g. "CC Rating 1612" or "1850". */
     rating?: string;
+    /** After a rated game: how the rating moved (a green ▲ or a red ▼ beside it). */
+    ratingChange?: number;
     /** FIDE federation code for the flag, e.g. "IND". */
     country?: string;
     /** A Chess Castles title, shown before the name. */
@@ -53,6 +56,11 @@
         </span>
       {/if}
       {#if rating}<span class="rating num">{rating}</span>{/if}
+      {#if ratingChange !== undefined}
+        <span class="chg num" class:up={ratingChange > 0} class:down={ratingChange < 0} aria-label="Rating {ratingChange > 0 ? 'up' : ratingChange < 0 ? 'down' : 'unchanged'} {Math.abs(ratingChange)}">
+          {ratingChange > 0 ? '▲' : ratingChange < 0 ? '▼' : '='}{ratingChange ? Math.abs(ratingChange) : ''}
+        </span>
+      {/if}
     </span>
     <span class="sub">
       {thinking ? 'Thinking…' : subtitle}
@@ -75,12 +83,43 @@
     flex-wrap: wrap;
   }
   .rating {
-    font-size: 13px;
-    font-weight: 700;
-    padding: 1px 7px;
-    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 7px;
     background: color-mix(in srgb, var(--gold) 18%, transparent);
     color: var(--gold);
+  }
+  .chg {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 7px;
+    background: var(--raised);
+    color: var(--muted);
+    animation: chg-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+  }
+  .chg.up {
+    color: var(--win);
+    background: color-mix(in srgb, var(--win) 16%, transparent);
+  }
+  .chg.down {
+    color: var(--loss);
+    background: color-mix(in srgb, var(--loss) 16%, transparent);
+  }
+  @keyframes chg-pop {
+    from {
+      transform: scale(0.4);
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chg {
+      animation: none;
+    }
   }
   .flag-wrap {
     position: relative;

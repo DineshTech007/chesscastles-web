@@ -2,7 +2,9 @@
   /**
    * A Chess Castles FIDE tournament: set it up (opponents from the FIDE list near
    * your rating), play your game each round, follow the standings, and get
-   * a trophy at the end.
+   * a trophy at the end. With friends picked, it is a club tournament: the friends
+   * are real players in it, computer players fill the rest, and Chess Castles'
+   * server keeps it so everyone sees the same (src/lib/tournament/club.ts).
    */
   import { myName as displayName } from '$lib/stores/me';
   import { onMount } from 'svelte';
@@ -13,7 +15,9 @@
   import { TIME_CONTROLS, TIME_CONTROL_ORDER, tcLabel } from '$lib/game/fideGame';
   import { speedOf } from '$lib/kfide';
   import { kfideAll, myCountry } from '$lib/stores/me';
-  import { session } from '$lib/auth';
+  import { lichessToken, session } from '$lib/auth';
+  import { friendsList, type Player } from '$lib/social';
+  import { createClub, listClubs, type ClubSummary } from '$lib/tournament/club';
   import {
     awardTrophy, completeRound, createTournament, finished, loadTournament, loadTrophies, ME, myGame, pickOpponents, placeMedal,
     playerById, rng, saveTournament, standings, type FideRow, type Format, type Tournament, type Trophy,
@@ -31,10 +35,35 @@
   let rounds = $state(5);
   let tc = $state(2);
   let name = $state('Chess Castles Open');
+  // Real players: the friends picked, and how many computer players join them.
+  let friends = $state<Player[]>([]);
+  let picked = $state<string[]>([]);
+  let botCount = $state(4);
+  let clubs = $state<ClubSummary[]>([]);
+  const withFriends = $derived(picked.length > 0);
+  const iCanInvite = $derived(!!lichessToken());
+  /** Two people play each other on Lichess: both need a Lichess account. */
+  const canPlayFriends = (f: Player) => f.uid.startsWith('lichess:');
 
   onMount(() => {
     t = loadTournament();
     trophies = loadTrophies();
+  });
+  $effect(() => {
+    if ($session.status !== 'in') return;
+    friendsList().then(
+      (r) => (friends = r.friends),
+      () => {},
+    );
+    listClubs().then(
+      (l) => (clubs = l),
+      () => {},
+    );
+  });
+  const togglePick = (uid: string) => (picked = picked.includes(uid) ? picked.filter((x) => x !== uid) : [...picked, uid]);
+  // Lichess lets apps play no bullet: with friends, the time control is blitz or slower.
+  $effect(() => {
+    if (withFriends && TIME_CONTROLS[tc].kind === 'Bullet') tc = 1;
   });
 
   const speed = $derived(speedOf(tcLabel(TIME_CONTROLS[tc])));
@@ -43,6 +72,7 @@
   const myName = $derived($session.status === 'in' ? $displayName : 'You');
 
   async function start() {
+    if (withFriends) return startClub();
     loading = true;
     error = '';
     // A tournament (all its rounds) counts once towards the plan's tournaments.
@@ -57,6 +87,28 @@
       if (opponents.length < 5) throw new Error('Not enough opponents near your rating. Try again.');
       t = createTournament({ name: name.trim() || 'Chess Castles Open', tc, format, rounds, me: { id: ME, name: myName, rating: myRating, fed }, opponents });
       saveTournament(t);
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'The tournament could not be set up.';
+    } finally {
+      loading = false;
+    }
+  }
+
+  /** A tournament with friends: kept on the server; the computer players are picked here, as for a solo one. */
+  async function startClub() {
+    loading = true;
+    error = '';
+    try {
+      let bots: { name: string; rating: number; fed: string }[] = [];
+      if (botCount > 0) {
+        let res = await fetch(`/data/fide/fed/${fed}.json`);
+        if (!res.ok) res = await fetch('/data/fide/fed/IND.json');
+        const rows: FideRow[] = await res.json();
+        bots = pickOpponents(rows, myRating, botCount, speed === 'bullet' ? 'blitz' : speed, fed, rng(Date.now())).map((b) => ({ name: b.name, rating: b.rating, fed: b.fed }));
+      }
+      const c = TIME_CONTROLS[tc];
+      const club = await createClub({ name: name.trim() || 'Chess Castles Club', tc, clock: { minutes: c.minutes, increment: c.increment }, format, rounds, friends: picked, bots });
+      await goto(`/play/tournament/club/${club.id}`);
     } catch (e) {
       error = e instanceof Error ? e.message : 'The tournament could not be set up.';
     } finally {
@@ -112,18 +164,65 @@
       <span class="cup">🏆</span>
       <div>
         <h1 class="display">FIDE tournament</h1>
-        <p>A tournament against 5 to 10 computer opponents rated like players near your CC Rating (their ratings come from the FIDE rating list). Play your game each round, watch the standings change, and win a trophy for the top three.</p>
+        <p>Play computer opponents rated like players near your CC Rating (their ratings come from the FIDE rating list), or invite your friends: real players and computer players in one tournament. Play your game each round, watch the standings change, and win a trophy for the top three.</p>
       </div>
     </section>
+
+    {#if clubs.length}
+      <section class="card">
+        <h2 class="title">Your tournaments with friends</h2>
+        <ul class="clubs">
+          {#each clubs as c (c.id)}
+            <li>
+              <a href="/play/tournament/club/{c.id}">
+                <span><strong>{c.name}</strong><span class="label">{c.done ? 'Finished' : `Round ${c.round} of ${c.rounds}`} · {c.people} real, {c.players - c.people} computer{c.owner ? ' · you organise it' : ''}</span></span>
+                {#if c.myTurn}<span class="turn">Your game</span>{/if}
+                <Icon name="chevron" size={16} />
+              </a>
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
 
     <section class="card setup">
       <label class="field"><span class="label">Tournament name</span><input bind:value={name} maxlength="40" /></label>
 
       <div class="field">
-        <span class="label">Opponents</span>
-        <div class="chips">
-          {#each [5, 6, 7, 8, 9, 10] as n (n)}<button class="chip" aria-pressed={size === n} onclick={() => (size = n)}>{n}</button>{/each}
-        </div>
+        <span class="label">Real players: your friends</span>
+        {#if $session.status !== 'in'}
+          <span class="label small">Sign in to invite your friends.</span>
+        {:else if !friends.length}
+          <span class="label small">Add friends on the <a href="/friends">Friends</a> page, then invite them here.</span>
+        {:else}
+          {#if !iCanInvite}<span class="label small">To play friends, connect your Lichess account (your games against each other are played on Lichess).</span>{/if}
+          <div class="friends">
+            {#each friends as f (f.uid)}
+              {@const ok = canPlayFriends(f) && iCanInvite}
+              <button class="friend" class:on={picked.includes(f.uid)} aria-pressed={picked.includes(f.uid)} disabled={!ok || (!picked.includes(f.uid) && picked.length >= 9)} onclick={() => togglePick(f.uid)}>
+                <span class="tick" aria-hidden="true">{picked.includes(f.uid) ? '✓' : ''}</span>
+                <span class="fname">{f.name}</span>
+                {#if !canPlayFriends(f)}<span class="label small">needs Lichess</span>{:else if f.kfide}<span class="label num">{f.kfide}</span>{/if}
+              </button>
+            {/each}
+          </div>
+          {#if withFriends}<span class="label small">{picked.length} {picked.length === 1 ? 'friend' : 'friends'} invited. They see the tournament on this page and play their games when they like.</span>{/if}
+        {/if}
+      </div>
+
+      <div class="field">
+        {#if withFriends}
+          <span class="label">Computer players</span>
+          <div class="chips">
+            {#each [0, 1, 2, 3, 4, 5, 6, 7, 8] as n (n)}<button class="chip" aria-pressed={botCount === n} disabled={picked.length + 1 + n < 3} onclick={() => (botCount = n)}>{n}</button>{/each}
+          </div>
+          <span class="label small">{picked.length + 1 + botCount} players in all: you, {picked.length} {picked.length === 1 ? 'friend' : 'friends'} and {botCount} computer {botCount === 1 ? 'player' : 'players'}.</span>
+        {:else}
+          <span class="label">Opponents</span>
+          <div class="chips">
+            {#each [5, 6, 7, 8, 9, 10] as n (n)}<button class="chip" aria-pressed={size === n} onclick={() => (size = n)}>{n}</button>{/each}
+          </div>
+        {/if}
       </div>
 
       <div class="field">
@@ -139,7 +238,7 @@
         <div class="field">
           <span class="label">Rounds</span>
           <div class="chips">
-            {#each [3, 4, 5, 6, 7] as n (n)}<button class="chip" aria-pressed={rounds === n} disabled={n > size} onclick={() => (rounds = n)}>{n}</button>{/each}
+            {#each [3, 4, 5, 6, 7] as n (n)}<button class="chip" aria-pressed={rounds === n} disabled={n > (withFriends ? picked.length + botCount : size)} onclick={() => (rounds = n)}>{n}</button>{/each}
           </div>
         </div>
       {/if}
@@ -147,13 +246,13 @@
       <div class="field">
         <span class="label">Time control</span>
         <div class="chips">
-          {#each TIME_CONTROL_ORDER as i (i)}{@const c = TIME_CONTROLS[i]}<button class="chip" aria-pressed={tc === i} onclick={() => (tc = i)}>{tcLabel(c)} <span class="label">{c.kind}</span></button>{/each}
+          {#each TIME_CONTROL_ORDER as i (i)}{@const c = TIME_CONTROLS[i]}{#if !(withFriends && c.kind === 'Bullet')}<button class="chip" aria-pressed={tc === i} onclick={() => (tc = i)}>{tcLabel(c)} <span class="label">{c.kind}</span></button>{/if}{/each}
         </div>
       </div>
 
-      <p class="label">You play as <strong>{myName}</strong>, rated <strong>{myRating}</strong> (your {speed} CC Rating). Opponents come from the {fedName(fed)} FIDE list. Your games count for CC Rating.</p>
+      <p class="label">You play as <strong>{myName}</strong>, rated <strong>{myRating}</strong> (your {speed} CC Rating). Computer opponents come from the {fedName(fed)} FIDE list. Your games against them count for CC Rating{withFriends ? '; games against friends are played on Lichess' : ''}.</p>
       {#if error}<p class="err">{error}</p>{/if}
-      <button class="btn primary big" disabled={loading} onclick={start}><span class="cup-s">🏆</span>{loading ? 'Picking your opponents…' : 'Start the tournament'}</button>
+      <button class="btn primary big" disabled={loading} onclick={start}><span class="cup-s">🏆</span>{loading ? 'Setting it up…' : withFriends ? 'Start the tournament with friends' : 'Start the tournament'}</button>
     </section>
 
     {#if trophies.length}
@@ -279,6 +378,85 @@
     border-radius: 999px;
     color: var(--muted);
     border: 1px solid var(--border);
+  }
+  .clubs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .clubs a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+    border-top: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .clubs a > span:first-child {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .turn {
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--gold);
+    color: #1b1300;
+    font-weight: 800;
+    font-size: 12.5px;
+  }
+  .friends {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 6px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .friend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--raised);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .friend.on {
+    border-color: var(--gold);
+    background: color-mix(in srgb, var(--gold) 14%, var(--raised));
+  }
+  .friend:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .tick {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    font-weight: 900;
+    color: var(--gold);
+  }
+  .friend.on .tick {
+    border-color: var(--gold);
+  }
+  .fname {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
   }
   .page {
     max-width: 860px;

@@ -22,11 +22,14 @@
   import { lowTimeMs, playMoveSound, sounds } from '$lib/sound';
   import { myCountry, myPhoto, photoSrc } from '$lib/stores/me';
   import { POINTS, study } from '$lib/study/progress';
+  import { checkClubGame } from '$lib/tournament/club';
 
   const gameId = page.params.id!;
   const color = page.url.searchParams.get('c');
   /** A game in a Lichess arena: after it, back to the arena for the next pairing. */
   const tournamentId = page.url.searchParams.get('t');
+  /** A game of two friends in a Chess Castles club tournament: its result goes to the tournament. */
+  const clubId = page.url.searchParams.get('club');
   const token = lichessToken()?.token;
   const game = new OnlineGame(color === 'white' || color === 'black' ? color : undefined);
   const queue = new PremoveQueue();
@@ -143,6 +146,8 @@
 
   function onEnd() {
     queue.clear();
+    // Lichess needs a moment to publish the result; the server reads it from there.
+    if (clubId && wasLive) setTimeout(() => void checkClubGame(clubId).catch(() => setTimeout(() => void checkClubGame(clubId).catch(() => {}), 5000)), 2500);
     if (wasLive && game.me) backToArena();
     if (saved || !game.plies.length || game.status === 'aborted') return;
     saved = true;
@@ -399,7 +404,9 @@
           <span class="display" style="color: var(--tone); font-size: 36px">{headline.text}</span>
           <p class="label">{game.endReason}</p>
           <div class="row">
-            {#if tournamentId}
+            {#if clubId}
+              <a class="btn primary" href="/play/tournament/club/{clubId}?check=1"><Icon name="trophy" size={18} />Back to the tournament</a>
+            {:else if tournamentId}
               <a class="btn primary" href="/play/lichess-tournaments/{tournamentId}?joined=1"><Icon name="trophy" size={18} />{backIn > 0 ? `Next arena game in ${backIn}…` : 'Back to the tournament'}</a>
               {#if backIn > 0}<button class="btn" onclick={stayHere}>Stay here</button>{/if}
             {:else}

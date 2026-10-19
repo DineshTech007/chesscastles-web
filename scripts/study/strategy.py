@@ -27,7 +27,8 @@ import chess
 sys.path.insert(0, os.environ.get("CAISSA_TOOL", "F:/dev/knight24/tool/gamesdb"))
 from caissa import position_key  # noqa: E402
 
-SIDE = {"caro-kann": "black", "jobava-london": "white", "chebanenko": "black"}
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from openings_cfg import SIDE  # noqa: E402
 SAMPLE = 12000
 MIN_GAMES = 40
 VALUE = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9}

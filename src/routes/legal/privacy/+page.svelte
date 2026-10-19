@@ -44,7 +44,7 @@
   <h2>4. Children</h2>
   <p>
     Many Chess Castles players are children. A child under 18 may use Chess Castles only with the consent of a parent or legal
-    guardian. We do not show advertising, we do not track children's behaviour for advertising, messaging and photos are
+    guardian. We do not track children's behaviour or show them advertising aimed at them, messaging and photos are
     limited to friends who both agreed, and any player can be blocked and reported. A parent or guardian can ask to see,
     correct or delete their child's data through <a href="/help">Help &amp; support</a>.
   </p>

@@ -130,6 +130,14 @@ export const joinTournament = (token: string, id: string) => call(token, `/api/t
 /** Leaves (pauses in) an arena tournament. */
 export const withdrawTournament = (token: string, id: string) => call(token, `/api/tournament/${encodeURIComponent(id)}/withdraw`, { method: 'POST' });
 
+/** Lichess players whose name starts with `term` (the ones you follow first, when signed in). */
+export async function autocompletePlayers(term: string, token?: string): Promise<{ id: string; name: string; title?: string; online?: boolean }[]> {
+  const res = await fetch(`${LICHESS}/api/player/autocomplete?term=${encodeURIComponent(term)}&object=true&friend=1`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+  if (!res.ok) return [];
+  const j = await res.json().catch(() => ({}));
+  return Array.isArray(j.result) ? j.result.slice(0, 8) : [];
+}
+
 /**
  * Who may challenge the player on Lichess (their privacy setting):
  * 1 nobody, 2 players near their rating, 3 their Lichess friends, 4 registered players, 5 everyone.

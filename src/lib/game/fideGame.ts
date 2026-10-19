@@ -54,6 +54,8 @@ export interface PlayedMove {
   engine?: 'maia' | 'stockfish';
   games: number;
   window: number;
+  /** How long the mover thought (ms, by the game clock); 0 before the clocks start. Sent with the game for fair play. */
+  ms?: number;
 }
 
 /** Remembers the openings of recent games so the bot can vary its choices. */
@@ -84,7 +86,7 @@ export const browserOpeningMemory: OpeningMemory = {
 
 /** A game in progress, saved after every move so it can be resumed after a lost connection or a closed browser. */
 export interface GameSnapshot {
-  moves: { uci: string; source?: MoveSource; engine?: PlayedMove['engine']; games?: number; window?: number }[];
+  moves: { uci: string; source?: MoveSource; engine?: PlayedMove['engine']; games?: number; window?: number; ms?: number }[];
   white: number;
   black: number;
   /** When the side to move started thinking (wall clock): time away counts on their clock, as in a real game. */
@@ -201,7 +203,7 @@ export class FideGame {
   /** The game so far, to resume later (see restore). */
   snapshot(): GameSnapshot {
     return {
-      moves: this.moves.map((m) => ({ uci: makeUci(m.move), source: m.source, engine: m.engine, games: m.games, window: m.window })),
+      moves: this.moves.map((m) => ({ uci: makeUci(m.move), source: m.source, engine: m.engine, games: m.games, window: m.window, ms: m.ms })),
       white: this.white,
       black: this.black,
       turnStart: this.turnStart,
@@ -218,7 +220,7 @@ export class FideGame {
       const san = sanOf(pos, move);
       const after = pos.clone();
       after.play(move);
-      this.moves.push({ move, san, after, source: m.source, engine: m.engine, games: m.games ?? 0, window: m.window ?? 0 });
+      this.moves.push({ move, san, after, source: m.source, engine: m.engine, games: m.games ?? 0, window: m.window ?? 0, ms: m.ms });
       const key = polyglotKey(after);
       this.seen.set(key, (this.seen.get(key) ?? 0) + 1);
     }
@@ -369,8 +371,9 @@ export class FideGame {
     const pos = this.position;
     const mover = pos.turn;
     const now = this.now();
+    let used = 0;
     if (this.clockRunning && this.turnStart !== undefined) {
-      const used = now - this.turnStart;
+      used = now - this.turnStart;
       const inc = this.timeControl.increment * 1000;
       if (mover === 'white') this.white = this.white - used + inc;
       else this.black = this.black - used + inc;
@@ -378,7 +381,7 @@ export class FideGame {
     const san = sanOf(pos, move);
     const after = pos.clone();
     after.play(move);
-    this.moves.push({ move, san, after, source: choice?.source, engine: choice?.engine, games: choice?.games ?? 0, window: choice?.window ?? 0 });
+    this.moves.push({ move, san, after, source: choice?.source, engine: choice?.engine, games: choice?.games ?? 0, window: choice?.window ?? 0, ms: Math.max(0, Math.round(used)) });
     this.turnStart = now;
     const key = polyglotKey(after);
     this.seen.set(key, (this.seen.get(key) ?? 0) + 1);
@@ -407,9 +410,13 @@ export class FideGame {
     this.finish('timeout', this.position.hasInsufficientMaterial(other) ? undefined : other);
   }
 
+  /** How long the side to move had been thinking when the game ended (ms): the last, unplayed move's time. */
+  endThinking = 0;
+
   private finish(how: GameEnd, winner: Color | undefined): void {
     if (this.isOver) return;
     const side = this.position.turn;
+    if (this.clockRunning && this.turnStart !== undefined) this.endThinking = Math.max(0, Math.round(this.now() - this.turnStart));
     if (this.clockRunning && how !== 'timeout') {
       if (side === 'white') this.white = this.remaining('white');
       else this.black = this.remaining('black');

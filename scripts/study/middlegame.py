@@ -15,7 +15,8 @@ import sys
 
 import chess
 
-SIDE = {"caro-kann": "black", "jobava-london": "white", "chebanenko": "black"}
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from openings_cfg import SIDE  # noqa: E402
 LESSONS = 3
 SEGMENT = 24
 

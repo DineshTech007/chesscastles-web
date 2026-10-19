@@ -195,6 +195,7 @@
       // The rating you had when the game began (this game's change is added after it ends).
       myRating: kind === 'fide' ? ($kfideAll[speed].history.find((h) => h.id === id)?.before ?? $kfideAll[speed].rating) : undefined,
       blurs,
+      ...(kind === 'fide' ? { ms: [...game.moves.map((m) => m.ms ?? 0), ...(finished ? [game.endThinking] : [])], end: finished ? game.end : undefined } : {}),
       startFen: fenOf(game.start),
       uci: game.moves.map((m) => moveToUci(m.move)),
     });
@@ -341,6 +342,8 @@
       title: me && $session.status === 'in' ? $myTitle : undefined,
       // (The opponent's rating only when its name doesn't already say it: "FIDE 1800".)
       rating: me ? `CC ${SPEED_LABEL[speed]} ${kfideText($kfideAll[speed])}` : kind === 'fide' && !opponent.includes(String(game.rating)) ? `FIDE ${game.rating}` : undefined,
+      // After the game: the new rating is shown above, with how it moved.
+      ratingChange: me && kfideChange ? kfideChange.after - kfideChange.before : undefined,
       country: me ? $myCountry || undefined : opponentCountry,
       initials: me ? ($session.status === 'in' ? $myInitials : '♙') : opponentInitials,
       photo: me && $myPhoto ? photoSrc($myPhoto) : undefined,

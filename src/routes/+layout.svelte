@@ -280,7 +280,22 @@
   const focusGame = $derived(phone && !$gameEnded && /^\/(play\/(fide|computer|online\/|tournament\/game)|watch\/(live|friend)\/)/.test(page.url.pathname));
   const collapsed = $derived(width < 960);
   /** No friend-request popup over a game, or on the Friends page (which lists the requests itself). */
-  const noPopups = $derived(/^\/(friends|play\/(fide|computer|online\/|tournament\/game))/.test(page.url.pathname));
+  const noPopups = $derived(/^\/(friends|play\/(fide|computer|online\/|tournament\/game|tournament\/club\/[^/]+\/game))/.test(page.url.pathname));
+
+  // A club tournament (with friends) waiting for your game: a bar to it, checked once a visit after signing in.
+  let clubTurn = $state<{ id: string; name: string; round: number } | undefined>();
+  let clubChecked = false;
+  $effect(() => {
+    if ($session.status !== 'in' || clubChecked) return;
+    clubChecked = true;
+    import('$lib/tournament/club')
+      .then((m) => m.listClubs())
+      .then((l) => {
+        const c = l.find((x) => x.myTurn && !x.done);
+        if (c) clubTurn = { id: c.id, name: c.name, round: c.round };
+      })
+      .catch(() => {});
+  });
 
   // Launch day, Vijayadashami (20 October 2026, India time): the festive toran and greeting, once per visit.
   let dasara = $state(false);
@@ -377,6 +392,13 @@
             }
           }}><Icon name="close" size={16} /></button>
       </div>
+    {/if}
+    {#if clubTurn && !noPopups && !onGamePage && !page.url.pathname.startsWith('/play/tournament/club/')}
+      <a class="resume-bar" href="/play/tournament/club/{clubTurn.id}" onclick={() => (clubTurn = undefined)}>
+        <span class="pulse"></span>
+        <span>Your round {clubTurn.round} game in <strong>{clubTurn.name}</strong> is ready.</span>
+        <span class="go">Play →</span>
+      </a>
     {/if}
     {#if pending && !onGamePage}
       <a class="resume-bar" href={resumeHref(pending)}>

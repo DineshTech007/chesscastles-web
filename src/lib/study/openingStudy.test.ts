@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { playSans } from '$lib/chess/position';
-import { curatedFor, planOf, PLANS, STUDY_OPENINGS, studyOpening, studyTrainerId } from './openingStudy';
+import { ALL_REPS, curatedFor, planOf, PLANS, STUDY_OPENINGS, studyOpening, studyTrainerId } from './openingStudy';
 
 describe('opening study', () => {
   it('has the three openings, with legal lines', () => {
@@ -27,6 +27,23 @@ describe('opening study', () => {
         const lp = p.lines[l];
         expect(lp?.plans.length, `${o.id} ${l}`).toBeGreaterThan(0);
         for (const t of [...lp.plans, ...(lp.watch ? [lp.watch] : [])]) expect(t.en && t.hi && t.mr, `${o.id} ${l}`).toBeTruthy();
+      }
+    }
+  });
+  it('has legal lines and written plans for the courses still being built', () => {
+    for (const [id, r] of Object.entries(ALL_REPS).filter(([, r]) => r.draft)) {
+      const p = PLANS[id];
+      expect(p?.overview.en && p.overview.hi && p.overview.mr, id).toBeTruthy();
+      expect(p.lines.other?.plans.length, `${id} other`).toBeGreaterThan(0);
+      for (const l of [r.root, ...r.lines.map((x) => x.sans)]) {
+        const words = l.split(' ');
+        const pos = playSans(l);
+        expect(Math.ceil(words.length / 2), `${id} ${l}`).toBe(pos.fullmoves - (pos.turn === 'white' ? 1 : 0));
+      }
+      for (const l of r.lines) {
+        const lp = p.lines[l.id];
+        expect(lp?.plans.length, `${id} ${l.id}`).toBeGreaterThan(0);
+        for (const t of [...lp.plans, ...(lp.watch ? [lp.watch] : [])]) expect(t.en && t.hi && t.mr, `${id} ${l.id}`).toBeTruthy();
       }
     }
   });

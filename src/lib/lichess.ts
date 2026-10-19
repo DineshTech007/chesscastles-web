@@ -91,6 +91,50 @@ const toBroadcast = (b: any): Broadcast => ({
   tier: b.tour.tier ?? 0,
 });
 
+/** Lichess broadcasts whose name matches `q` (Lichess's own search), with their dates. */
+export async function searchBroadcasts(q: string): Promise<(Broadcast & { dates?: number[] })[]> {
+  const res = await fetch(`${API}/broadcast/search?q=${encodeURIComponent(q.trim().slice(0, 80))}`);
+  if (!res.ok) return [];
+  const j = await res.json().catch(() => ({}));
+  return ((j.currentPageResults ?? []) as any[]).filter((b) => b?.tour?.id).map((b) => ({ ...toBroadcast(b), dates: Array.isArray(b.tour.dates) ? b.tour.dates : undefined }));
+}
+
+/** The words of a tournament name that tell it apart ("FIDE", "rating", "2026"… say nothing). */
+const COMMON = new Set(['fide', 'rating', 'rated', 'tournament', 'chess', 'open', 'the', 'of', 'and', 'for', 'in', 'all', 'championship', 'championships', 'classical', 'rapid', 'blitz', 'india', 'indian', '2024', '2025', '2026', '2027', 'st', 'nd', 'rd', 'th']);
+const nameWords = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, ' ')
+    .split(' ')
+    .map((w) => w.replace(/^\.+|\.+$/g, ''))
+    .filter((w) => w.length > 1 && !COMMON.has(w));
+
+/**
+ * The Lichess broadcast of a tournament (found by its name, on its dates), if there is one: for a "Watch live"
+ * button on the events page.
+ */
+export async function findBroadcast(name: string, start: string, end?: string): Promise<Broadcast | undefined> {
+  const words = nameWords(name);
+  if (!words.length) return undefined;
+  const from = Date.parse(start) - 2 * 86_400_000;
+  const to = Date.parse(end ?? start) + 3 * 86_400_000;
+  const raw = name.replace(/[^A-Za-z0-9. ]+/g, ' ').trim().split(/\s+/).slice(0, 3).join(' ');
+  for (const q of [...new Set([raw, words.slice(0, 2).join(' ')])]) {
+    let best: Broadcast | undefined;
+    let bestScore = 0;
+    for (const b of await searchBroadcasts(q).catch(() => [])) {
+      const s = b.dates?.[0] ?? b.startsAt;
+      const e = b.dates?.[1] ?? s;
+      if (!s || s > to || (e ?? s) < from) continue;
+      const have = new Set(nameWords(b.name));
+      const score = words.filter((w) => have.has(w)).length;
+      if (score > bestScore) [best, bestScore] = [b, score];
+    }
+    if (best && bestScore >= Math.min(2, words.length)) return best;
+  }
+  return undefined;
+}
+
 /**
  * The broadcasts on Lichess: live now (most important first), coming up (soonest
  * first) and recently finished.

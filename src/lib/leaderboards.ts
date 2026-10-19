@@ -32,7 +32,7 @@ export interface Row {
 export const BOARDS: { id: BoardKind; label: string; signIn: boolean; variants: { id: string; label: string }[]; unit: string }[] = [
   { id: 'kfide', label: 'CC Rating', signIn: true, unit: 'CC Rating', variants: [{ id: 'main', label: 'Overall' }, ...(['standard', 'rapid', 'blitz', 'bullet'] as KfideSpeed[]).map((s) => ({ id: s, label: SPEED_LABEL[s] }))] },
   { id: 'lichess', label: 'Lichess', signIn: true, unit: 'rating', variants: ['blitz', 'rapid', 'classical', 'bullet'].map((s) => ({ id: s, label: s[0].toUpperCase() + s.slice(1) })) },
-  { id: 'puzzles', label: 'Puzzles', signIn: true, unit: 'puzzle rating', variants: [] },
+  { id: 'puzzles', label: 'Puzzles', signIn: true, unit: 'puzzle rating', variants: [{ id: 'rating', label: 'Puzzle rating' }, { id: 'solved', label: 'Most solved' }] },
   { id: 'vision', label: 'Blindfold Gym', signIn: false, unit: '', variants: [{ id: 'rating', label: 'Vision rating' }, { id: 'sprint', label: 'Best sprint' }, { id: 'today', label: 'Today' }] },
   { id: 'study', label: 'Study', signIn: true, unit: 'points this week', variants: [] },
   { id: 'books', label: 'Audio Books', signIn: true, unit: 'chapters read', variants: [] },
@@ -51,10 +51,26 @@ export async function loadBoard(kind: BoardKind, variant = ''): Promise<Row[]> {
     const l = await boardOf(kind, weekOf(Date.now()));
     return l.map((p) => ({ key: p.uid, uid: p.uid, name: p.name, country: p.country, ccTitle: p.title, value: p.rating, me: p.me, plan: p.plan }));
   }
-  // Lichess and puzzle ratings of the Chess Castles players.
+  if (kind === 'puzzles') {
+    // Chess Castles puzzles: the puzzle rating here and how many each player solved here (not their Lichess numbers).
+    const solved = variant === 'solved';
+    const l = await boardOf(solved ? 'puzzles_solved' : 'puzzles');
+    return l.map((p) => ({
+      key: p.uid,
+      uid: p.uid,
+      name: p.name,
+      country: p.country,
+      ccTitle: p.title,
+      value: solved ? p.games : p.rating,
+      sub: solved ? `rating ${p.rating}` : `${p.games} ${p.games === 1 ? 'puzzle' : 'puzzles'} solved`,
+      me: p.me,
+      plan: p.plan,
+    }));
+  }
+  // Lichess ratings of the Chess Castles players.
   const members = await boardOf('members');
   const ratings = await lichessRatings(members.map((m) => m.uid.replace(/^lichess:/, '')));
-  const perf = kind === 'puzzles' ? 'puzzle' : variant || 'blitz';
+  const perf = variant || 'blitz';
   return members
     .flatMap((m) => {
       const u = ratings.get(m.uid.replace(/^lichess:/, ''));

@@ -24,6 +24,8 @@ import sys
 import chess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from openings_cfg import ALL, which  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "..", "masters"))
 sys.path.insert(0, os.environ.get("CAISSA_TOOL", "F:/dev/knight24/tool/gamesdb"))
 
@@ -48,36 +50,6 @@ def early(raw, n):
     return out
 
 
-def which(ms):
-    """The study opening a game belongs to (by its first moves), or None."""
-    if len(ms) < 8:
-        return None
-    if ms[0] == "e2e4" and ms[1] == "c7c6":
-        return "caro-kann"
-    white, black = ms[0::2], ms[1::2]
-    if ms[0] in ("d2d4", "b1c3", "c1f4"):
-        need = {"d2d4", "b1c3", "c1f4"}
-        seen = set()
-        for m in white[:4]:
-            if m in need:
-                seen.add(m)
-                if seen == need:
-                    return "jobava-london"
-            elif m in ("c2c4", "e2e4", "g1f3"):
-                break
-    if "d2d4" in white[:4] and "c2c4" in white[:4]:
-        need = {"d7d5", "c7c6", "g8f6", "a7a6"}
-        seen = set()
-        for m in black[:6]:
-            if m == "e7e6" and "a7a6" not in seen:
-                break
-            if m in need:
-                seen.add(m)
-        if seen == need:
-            return "chebanenko"
-    return None
-
-
 def work(args):
     db_path, lo, hi, min_elo, only = args
     from caissa import mainline_bytes, ordered_legal_moves  # noqa: F401  (imported per process)
@@ -100,15 +72,15 @@ def work(args):
         if NOT_CLASSICAL.search(event) or ONLINE_SITE.search(sites.get(sid) or ""):
             continue
         # Only one opening: skip games whose first move can't start it, without decoding further.
-        if only == "jobava-london":
+        if only == {"jobava-london"}:
             one = early(raw or b"", 1)
             if not one or one[0] not in ("d2d4", "b1c3", "c1f4"):
                 continue
         first = early(raw or b"", 12)
         if not first:
             continue
-        o = which(first)
-        if not o or (only and o != only):
+        found = [o for o in which(first) if not only or o in only]
+        if not found:
             continue
         full = early(raw or b"", 400)
         if not full:
@@ -116,8 +88,10 @@ def work(args):
         if players is None:
             players = dict(db.execute("SELECT ID, Name FROM Players"))
         year = int((date or "0")[:4]) if (date or "")[:4].isdigit() else 0
-        out.setdefault(o, []).append({"id": gid, "w": players.get(wid, "?"), "b": players.get(bid, "?"), "we": welo, "be": belo,
-                                      "y": year, "ev": event, "r": result, "m": " ".join(full)})
+        g = {"id": gid, "w": players.get(wid, "?"), "b": players.get(bid, "?"), "we": welo, "be": belo,
+                                      "y": year, "ev": event, "r": result, "m": " ".join(full)}
+        for o in found:
+            out.setdefault(o, []).append(g)
     return out
 
 
@@ -135,8 +109,9 @@ def main():
     db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     top = db.execute("SELECT MAX(ID) FROM Games").fetchone()[0]
     step = 50_000
-    jobs = [(db_path, lo, lo + step, a.min_elo, a.only) for lo in range(0, top + 1, step)]
-    openings = [a.only] if a.only else ["caro-kann", "jobava-london", "chebanenko"]
+    only = set(a.only.split(",")) if a.only else None
+    jobs = [(db_path, lo, lo + step, a.min_elo, only) for lo in range(0, top + 1, step)]
+    openings = sorted(only) if only else ALL
     files = {o: open(os.path.join(out_dir, f"{o}.jsonl"), "w", encoding="utf-8") for o in openings}
     counts = {o: 0 for o in files}
     with mp.Pool(4) as pool:

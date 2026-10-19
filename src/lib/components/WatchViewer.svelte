@@ -9,6 +9,8 @@
     title?: string;
     country?: string;
     rating?: string;
+    /** After a rated game: how the rating moved. */
+    ratingChange?: number;
   }
 </script>
 

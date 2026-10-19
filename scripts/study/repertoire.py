@@ -29,17 +29,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.environ.get("CAISSA_TOOL", "F:/dev/knight24/tool/gamesdb"))
 from caissa import position_key  # noqa: E402
 
-SIDE = {"caro-kann": "black", "jobava-london": "white", "chebanenko": "black"}
+sys.path.insert(0, HERE)
+from openings_cfg import CHAPTER_ROOT, LIMITS, PREFER, SIDE, TITLE  # noqa: E402
+
 # Where the chapters start: the opening's own starting point (the moves before it are the same in every game,
 # or are other move orders that the book still covers by transposition).
-CHAPTER_ROOT = {"caro-kann": "e4 c6", "jobava-london": "", "chebanenko": "d4 d5 c4 c6"}
 # The system's own moves: at the student's turns these are played when they are a main move, as the opening's
 # defining move order (Jobava: Nc3 and Bf4), not treated as a choice.
-PREFER = {"jobava-london": {"d2d4", "b1c3", "c1f4"}}
 # A real choice for the student: a second move with this share of the games (and enough games). A chapter ends
 # there: the student picks their move inside it.
 CHOICE_SHARE = 0.15
-TITLE = {"caro-kann": "Caro-Kann Defence", "jobava-london": "Jobava London", "chebanenko": "Chebanenko Slav"}
 BOOK_PLIES = 30
 SPLITS = 3
 MIN_SHARE = 0.012
@@ -47,7 +46,6 @@ MIN_GAMES = 25
 VAR_SHARE, VAR_GAMES, VAR_PLIES = 0.05, 8, 26
 # A young opening with fewer games (the Jobava London) gets lower limits, so every line that really occurs
 # (2...Nc6, 1...c5, 3...Bb4...) is a chapter and variations go as deep as its games allow.
-LIMITS = {"jobava-london": {"min_share": 0.003, "min_games": 20, "var_games": 4}}
 MODELS = 8
 ENDGAMES = 40
 VALUE = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9}
@@ -82,12 +80,12 @@ def is_endgame(b):
 
 def main():
     work, out_dir, chapters_path = sys.argv[1], sys.argv[2], sys.argv[3]
-    only = sys.argv[4] if len(sys.argv) > 4 else None
+    only = set(sys.argv[4].split(",")) if len(sys.argv) > 4 else None
     names = opening_names()
     # One opening rebuilt: the others keep their chapters.
     all_chapters = json.load(open(chapters_path, encoding="utf-8")) if only and os.path.exists(chapters_path) else {}
     for oid, side in SIDE.items():
-        if only and oid != only:
+        if only and oid not in only:
             continue
         lim = LIMITS.get(oid, {})
         var_games = lim.get("var_games", VAR_GAMES)

@@ -4,6 +4,7 @@ import { playSans } from '$lib/chess/position';
 import type { Opening } from '$lib/openings';
 import REPS from './repertoires.json';
 import CHAPTERS from './chapters.json';
+import { PLANS2 } from './plans2';
 
 /**
  * The opening study section: an opening (from repertoires.json, shared with
@@ -52,7 +53,11 @@ export interface StudyOpening {
 
 type ChapterFile = Record<string, { games: number; chapters: { id: string; title: string; name: string; sans: string; games: number; score: number; variations: number; depth: number; key: string }[] }>;
 
-export const STUDY_OPENINGS: StudyOpening[] = Object.entries(REPS as Record<string, Omit<StudyOpening, 'id' | 'curated'> & { eco: string[] }>).map(([id, r]) => {
+type Rep = Omit<StudyOpening, 'id' | 'curated'> & { eco: string[]; lines: StudyLine[]; draft?: boolean };
+/** Every opening in repertoires.json, the drafts too (a course whose data is still being built: not shown). */
+export const ALL_REPS = REPS as Record<string, Rep>;
+
+export const STUDY_OPENINGS: StudyOpening[] = Object.entries(ALL_REPS).filter(([, r]) => !r.draft).map(([id, r]) => {
   const found = (CHAPTERS as ChapterFile)[id];
   return {
     id,
@@ -295,6 +300,7 @@ export const PLANS: Record<string, Plans> = {
       },
     },
   },
+  ...PLANS2,
 };
 
 /** Trainer ids: "st-caro-kann" (the whole opening) or "st-caro-kann--advance" (one line). */

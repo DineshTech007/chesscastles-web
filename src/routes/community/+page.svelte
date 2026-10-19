@@ -16,6 +16,7 @@
     type Speed,
   } from '$lib/community';
   import { photoSrc } from '$lib/stores/me';
+  import { findBroadcast } from '$lib/lichess';
 
   type Tab = 'events' | 'coaches';
   let tab = $state<Tab>('events');
@@ -25,6 +26,19 @@
   let shown = $state(40);
 
   let fide = $state<IndianEvent[] | undefined>();
+  /** Tournaments on now that Lichess broadcasts: event id → the broadcast to watch. */
+  let live = $state<Record<string, string>>({});
+  let liveLooked = false;
+  $effect(() => {
+    if (!fide || liveLooked) return;
+    liveLooked = true;
+    const today = new Date().toISOString().slice(0, 10);
+    const on = fide.filter((e) => e.start <= today && (e.end ?? e.start) >= today).slice(0, 15);
+    for (const e of on)
+      void findBroadcast(e.name, e.start, e.end).then((b) => {
+        if (b) live = { ...live, [e.id]: b.id };
+      });
+  });
   let fideError = $state('');
   let local = $state<LocalEvent[]>([]);
   let coachList = $state<Coach[] | undefined>();
@@ -157,6 +171,7 @@
                 {#if e.national}<span class="tag nat">{e.national}</span>{/if}
               </div>
               <div class="links">
+                {#if live[e.id]}<a class="btn primary" href="/watch/{live[e.id]}"><Icon name="eye" size={16} />Watch live</a>{/if}
                 {#if e.brochure}<a class="btn" href={e.brochure} target="_blank" rel="noopener"><Icon name="book" size={16} />Brochure</a>{/if}
                 {#if e.onFide}<a class="btn ghost" href="https://ratings.fide.com/tournament_information.phtml?event={e.id}" target="_blank" rel="noopener">FIDE page <Icon name="external" size={14} /></a>{/if}
               </div>

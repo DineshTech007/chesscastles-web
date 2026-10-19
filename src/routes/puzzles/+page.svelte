@@ -1,15 +1,14 @@
 <script lang="ts">
   /**
    * Puzzles: rated puzzles at the player's level, one after another (never
-   * the same twice), with the road map of their rating; and Lichess's puzzle of
-   * the day in its own tab.
+   * the same twice), with the rating, levels, timer, stars, goal, charts and
+   * badges around the board (RatedPuzzles); and Lichess's puzzle of the day.
    */
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import Icon from '$lib/components/Icon.svelte';
   import RatedPuzzles from '$lib/puzzles/RatedPuzzles.svelte';
   import DailyPuzzle from '$lib/puzzles/DailyPuzzle.svelte';
-  import PuzzleRoadmap from '$lib/puzzles/PuzzleRoadmap.svelte';
 
   const tab = $derived(page.url.searchParams.get('tab') === 'daily' ? 'daily' : 'rated');
   function show(t: 'rated' | 'daily') {
@@ -23,7 +22,6 @@
 <svelte:head><title>{tab === 'daily' ? 'Puzzle of the day' : 'Puzzles'} · Chess Castles</title></svelte:head>
 
 <div class="page">
-  <PuzzleRoadmap />
   <div class="bar">
     <div class="segmented tabs" role="group" aria-label="Puzzles">
       <button aria-pressed={tab === 'rated'} onclick={() => show('rated')}>Rated puzzles</button>

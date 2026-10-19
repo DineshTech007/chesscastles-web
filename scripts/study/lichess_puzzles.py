@@ -21,6 +21,7 @@ import csv
 import io
 import json
 import random
+import os
 import sys
 
 import zstandard
@@ -48,7 +49,12 @@ MAP = {
 ENDGAME = {"endgame", "rookEndgame", "pawnEndgame", "queenEndgame", "bishopEndgame", "knightEndgame", "queenRookEndgame"}
 
 
-FAMILY = {"caro-kann": "Caro-Kann_Defense", "jobava-london": "Rapport-Jobava_System", "chebanenko": "Slav_Defense_Chebanenko_Variation"}
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from openings_cfg import LICHESS  # noqa: E402
+
+FAMILY = dict(LICHESS)
+for _o, _t in LICHESS.items():
+    MAP.setdefault(_o, [("other", _t)])
 
 
 def tag_of(name):
@@ -60,7 +66,7 @@ def tag_of(name):
 
 
 # Only tags that belong to the opening itself (no London System or general Slav puzzles in it).
-ALLOWED = {"caro-kann": ("Caro-Kann_Defense",), "jobava-london": ("Rapport-Jobava_System",), "chebanenko": ("Slav_Defense_Chebanenko_Variation",)}
+ALLOWED = {**{_o: (_t,) for _o, _t in LICHESS.items()}, "caro-kann": ("Caro-Kann_Defense",), "jobava-london": ("Rapport-Jobava_System",), "chebanenko": ("Slav_Defense_Chebanenko_Variation",)}
 # Lichess names for the student's own choices inside a chapter: the tag goes to the chapter (by its moves).
 EXTRA = {
     "caro-kann": {

@@ -10,7 +10,6 @@
     { icon: 'users', title: 'Messages only between friends', text: 'Two players can message each other only after both have agreed to be friends. There is no chat with strangers, in games or anywhere else.' },
     { icon: 'eye', title: 'Photos stay private', text: 'A profile photo is shown only to friends. Players are shown by the display name they choose.' },
     { icon: 'flag', title: 'Block and report', text: 'Anyone can be removed or blocked at once, and any player can be reported. Reports are read by the Chess Castles team.' },
-    { icon: 'shield', title: 'No advertising', text: 'Chess Castles shows no ads and never sells data. We don’t track children’s behaviour for advertising.' },
     { icon: 'lock', title: 'Your data, your choice', text: 'You can see, correct or delete your child’s data at any time by writing to us. We follow India’s data protection law (DPDP Act).' },
     { icon: 'trophy', title: 'Fair play', text: 'Games are checked for cheating, so your child plays fair games and their progress is real.' },
   ] as const;
@@ -18,14 +17,14 @@
 
 <svelte:head>
   <title>For parents · Chess Castles</title>
-  <meta name="description" content="Chess Castles for parents: a safe place for children to learn and play chess. Messages only between friends, no ads, a free plan, clear prices in rupees and a 7-day refund." />
+  <meta name="description" content="Chess Castles for parents: a safe place for children to learn and play chess. Messages only between friends, a free plan, clear prices in rupees and a 7-day refund." />
 </svelte:head>
 
 <div class="page">
   <header class="hero card">
     <p class="eyebrow">For parents</p>
     <h1 class="display">A safe place for your child to learn chess</h1>
-    <p class="sub">Lessons with Chess Guru in English, Hindi or Marathi, puzzles, games against opponents at your child’s level, and a weekly plan, without strangers, ads or surprises.</p>
+    <p class="sub">Lessons with Chess Guru in English, Hindi or Marathi, puzzles, games against opponents at your child’s level, and a weekly plan, without strangers or surprises.</p>
     <div class="ctas">
       {#if $session.status !== 'in'}<button class="btn primary big" onclick={() => startSignIn()}>Create a free account</button>{/if}
       <a class="btn big" href="/play?mode=fide">Let my child play now</a>

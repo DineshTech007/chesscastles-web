@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { startSignIn } from '$lib/auth';
   import Icon from './Icon.svelte';
-  import { FEATURE_INFO, GATE_INFO, PLAN_INFO, launchOn, limitHit, limitText, planSettings, upgradeFor } from '$lib/plans';
+  import { FEATURE_INFO, GATE_INFO, PLAN_INFO, PLANS_ON, launchOn, limitHit, limitText, planSettings, upgradeFor } from '$lib/plans';
 
   const hit = $derived($limitHit);
   const config = $derived($planSettings.config);
@@ -33,7 +33,7 @@
   <div class="scrim" role="presentation" onclick={close}></div>
   <div class="dialog card" role="dialog" aria-modal="true" aria-labelledby="limit-h">
     <button class="x" onclick={close} aria-label="Close"><Icon name="close" size={18} /></button>
-    <span class="piece"><PlanBadge plan={better ?? 'premium'} size={56} /></span>
+    {#if PLANS_ON}<span class="piece"><PlanBadge plan={better ?? 'premium'} size={56} /></span>{/if}
     <h2 id="limit-h" class="title">{title}</h2>
     {#if hit.feature}
       <p>
@@ -43,7 +43,13 @@
       </p>
     {/if}
 
-    {#if hit.signedOut}
+    {#if !PLANS_ON}
+      <p>{hit.signedOut ? 'Sign in free to use this.' : 'This is for chess coaches. Write to us from Help & support and we will set it up for you, free.'}</p>
+      <div class="btns">
+        {#if hit.signedOut}<button class="btn primary" onclick={() => (close(), startSignIn())}>Sign in</button>{:else}<button class="btn primary" onclick={() => (close(), goto('/help'))}>Help & support</button>{/if}
+        <button class="btn" onclick={close}>Not now</button>
+      </div>
+    {:else if hit.signedOut}
       {#if launchOn(launch)}
         <p class="offer">
           <strong>Launch offer:</strong> sign in free with Lichess and get <strong>{PLAN_INFO[launch.plan].name} free for {launch.days} days</strong>: unlimited FIDE-rated players, Game Reviews, Insights and more.

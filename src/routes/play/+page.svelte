@@ -13,7 +13,7 @@
   import { LEVELS, OPENINGS } from '$lib/openings';
   import { kfideAll } from '$lib/stores/me';
   import { SPEED_LABEL, kfideText, speedOf } from '$lib/kfide';
-  import { PLAN_INFO, RANK, currentPlan, hasGate, planSettings, requireGate } from '$lib/plans';
+  import { PLAN_INFO, PLANS_ON, RANK, currentPlan, hasGate, planSettings, requireGate } from '$lib/plans';
 
   type Mode = 'fide' | 'online' | 'computer';
   type ColorChoice = 'white' | 'random' | 'black';
@@ -51,7 +51,8 @@
     if (m === 'computer' || m === 'fide' || m === 'online') mode = m;
   });
 
-  const openingIncluded = $derived(RANK[$currentPlan] >= RANK[$planSettings.config.gates.bot_opening]);
+  // While everything is free (PLANS_ON off) hasGate lets everyone choose it.
+  const openingIncluded = $derived(!PLANS_ON || RANK[$currentPlan] >= RANK[$planSettings.config.gates.bot_opening]);
   const chosenOpening = $derived(openingIncluded ? OPENINGS.find((o) => o.id === opening) : undefined);
 
   function start() {

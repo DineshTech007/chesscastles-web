@@ -21,7 +21,10 @@ def main():
     work = sys.argv[1]
     only = sys.argv[2] if len(sys.argv) > 2 else None
     out = []
-    for oid in ("caro-kann", "jobava-london", "chebanenko"):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from openings_cfg import ALL
+
+    for oid in ALL:
         if only and oid != only:
             continue
         games = {}

@@ -10,7 +10,7 @@
   import { POINTS, study } from '$lib/study/progress';
   import { THEME_NAMES } from '$lib/insights/plan';
   import LimitReached from '$lib/components/LimitReached.svelte';
-  import { PLAN_INFO, RANK, currentPlan, planSettings, requireGate, useFeature } from '$lib/plans';
+  import { PLAN_INFO, PLANS_ON, RANK, currentPlan, planSettings, requireGate, useFeature } from '$lib/plans';
   import { puzzleRating, ratePuzzle } from '$lib/puzzles/rating';
   import { markSeen, seenPuzzles } from '$lib/puzzles/bank';
 
@@ -19,7 +19,8 @@
 
   /** Free's themes; every theme comes with the plan that has themed_puzzles (Premium). */
   const BASIC = ['fork', 'pin', 'mateIn1', 'mateIn2'];
-  const allThemes = $derived(RANK[$currentPlan] >= RANK[$planSettings.config.gates.themed_puzzles]);
+  // While everything is free (PLANS_ON off) hasGate gives everyone every theme.
+  const allThemes = $derived(!PLANS_ON || RANK[$currentPlan] >= RANK[$planSettings.config.gates.themed_puzzles]);
   let theme = $state(page.url.searchParams.get('theme') ?? 'fork');
   let limited = $state(false);
   const goal = Number(page.url.searchParams.get('n')) || 0;

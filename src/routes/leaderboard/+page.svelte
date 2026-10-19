@@ -120,7 +120,7 @@
     <div class="card skel"></div>
   {:else}
     {#if mine && !q}
-      <div class="mine card"><span class="rank num">#{mine.rank}</span><span>That's you: <strong class="num">{mine.value}</strong> {board.unit}</span></div>
+      <div class="mine card"><span class="rank num">#{mine.rank}</span><span>That's you: <strong class="num">{mine.value}</strong> {kind === 'puzzles' && variant === 'solved' ? 'puzzles solved' : board.unit}</span></div>
     {/if}
     <ol class="board card" aria-label="{board.label} leaderboard">
       {#each shown as r (r.key)}
@@ -142,7 +142,8 @@
         </li>
       {/each}
     </ol>
-    {#if kind === 'lichess' || kind === 'puzzles'}<p class="label foot">Lichess ratings of the players who use Chess Castles.</p>{/if}
+    {#if kind === 'lichess'}<p class="label foot">Lichess ratings of the players who use Chess Castles.</p>{/if}
+    {#if kind === 'puzzles'}<p class="label foot">Puzzles solved on Chess Castles, and the puzzle rating here.</p>{/if}
     {#if kind === 'study'}<p class="label foot">Points from puzzles, lessons, games and reading, Monday to Sunday.</p>{/if}
   {/if}
 </div>

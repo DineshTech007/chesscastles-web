@@ -29,6 +29,9 @@ export interface SavedGame {
   uci: string[];
   /** Fair play: times the player left the game's tab during their own turn. */
   blurs?: number;
+  /** Fair play: each ply's thinking time (ms), then the side to move's time when the game ended; and how it ended. */
+  ms?: number[];
+  end?: string;
   /** The account that played it ("lichess:<id>"); none when played signed out (or before accounts were noted). */
   owner?: string;
 }

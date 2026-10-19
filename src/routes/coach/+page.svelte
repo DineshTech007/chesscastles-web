@@ -104,15 +104,19 @@
   {#if choosing}
     <section class="chooser card" aria-label="Choose your coach">
       <h2 class="title">Choose your coach</h2>
-      <div class="faces">
-        {#each AVATARS as a (a.id)}
-          <button class="face" class:on={$coachAvatar === a.id} aria-pressed={$coachAvatar === a.id} onclick={() => { chooseAvatar(a.id); prefs = loadCoach(); choosing = false; }}>
-            <GuruAvatar id={a.id} size={84} talking={$coachAvatar === a.id} />
-            <span class="title">{a.name}</span>
-            <span class="label">{a.about}</span>
-          </button>
-        {/each}
-      </div>
+      {#each [{ kids: false, title: 'Chess coaches', note: 'For serious study, at any age.' }, { kids: true, title: 'For young players', note: 'Friendly characters who teach the same lessons.' }] as group (group.title)}
+        <h3 class="group-h">{group.title} <span class="label">{group.note}</span></h3>
+        <div class="faces" class:kids={group.kids}>
+          {#each AVATARS.filter((a) => !!a.kids === group.kids) as a (a.id)}
+            <button class="face" class:on={$coachAvatar === a.id} aria-pressed={$coachAvatar === a.id} onclick={() => { chooseAvatar(a.id); prefs = loadCoach(); refreshVoices(); choosing = false; }}>
+              <GuruAvatar id={a.id} size={group.kids ? 92 : 108} talking={$coachAvatar === a.id} />
+              <span class="title">{a.name}</span>
+              <span class="label">{a.about}</span>
+              <span class="vtag">{a.voice === 'male' ? "Man's voice" : "Woman's voice"}</span>
+            </button>
+          {/each}
+        </div>
+      {/each}
     </section>
   {/if}
 
@@ -273,20 +277,48 @@
     margin: 0 0 12px;
     font-size: 20px;
   }
+  .group-h {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    margin: 14px 0 8px;
+    font-size: 15px;
+    color: var(--gold);
+  }
+  .group-h .label {
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--muted);
+  }
   .faces {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+  }
+  .faces.kids {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .vtag {
+    margin-top: 2px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
   .face {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 14px 8px 12px;
+    padding: 18px 10px 14px;
     border-radius: var(--r-card);
     border: 2px solid var(--border);
-    background: var(--raised);
+    background: radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--gold) 10%, transparent), var(--raised) 70%);
+    transition:
+      transform 0.15s,
+      border-color 0.15s;
     color: inherit;
     font: inherit;
     text-align: center;
@@ -295,6 +327,10 @@
   .face .label {
     font-size: 12.5px;
     line-height: 1.3;
+  }
+  .face:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--gold) 60%, var(--border));
   }
   .face.on {
     border-color: var(--gold);

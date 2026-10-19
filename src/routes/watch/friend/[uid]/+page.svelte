@@ -24,6 +24,7 @@
   let timer: ReturnType<typeof setInterval> | undefined;
   let tick: ReturnType<typeof setInterval> | undefined;
 
+  let afterEnd = 0;
   async function poll() {
     try {
       const r = await watchLive(uid);
@@ -42,7 +43,8 @@
       game = r.game;
       sharedAt = Date.now() - (r.now - r.updated);
       error = '';
-      if (r.game.result) clearInterval(timer);
+      // Over: a few more looks, since the new rating comes a moment after the last move.
+      if (r.game.result && (r.game.myAfter !== undefined || r.game.myRating === undefined || ++afterEnd > 10)) clearInterval(timer);
     } catch (e) {
       error = e instanceof Error ? e.message : 'The game could not be loaded.';
     }
@@ -104,6 +106,7 @@
       subtitle: s === 'white' ? 'White' : 'Black',
       initials: initialsOf(isFriend ? friendName : opponent),
       rating: isFriend ? friendRating() : oppRating,
+      ratingChange: isFriend && game?.result && game.myAfter !== undefined && game.myRating !== undefined ? game.myAfter - game.myRating : undefined,
       country: isFriend ? friend?.country || undefined : undefined,
       toMove: latest && !game?.result && after?.turn === s,
       clockMs,
@@ -113,10 +116,8 @@
   function friendRating(): string | undefined {
     const g = game;
     if (g?.myRating !== undefined) {
-      if (g.result && g.myAfter !== undefined) {
-        const d = g.myAfter - g.myRating;
-        return `CC ${g.myAfter} (${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)})`;
-      }
+      // Over: the new rating (the change is shown beside it, green or red).
+      if (g.result && g.myAfter !== undefined) return `CC ${g.myAfter}`;
       return `CC ${g.myRating}`;
     }
     return friend?.kfide ? `CC ${friend.kfide}` : undefined;

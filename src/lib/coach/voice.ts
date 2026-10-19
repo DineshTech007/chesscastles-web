@@ -1,5 +1,6 @@
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { LANGS, type Lang } from './i18n';
+import { avatarInfo, coachAvatar } from './avatar';
 
 /**
  * Guru's voice, free: the device's own voices (Microsoft Edge has natural
@@ -9,13 +10,23 @@ import { LANGS, type Lang } from './i18n';
 const speechCode = (lang: Lang) => LANGS.find((l) => l.id === lang)!.speech;
 const synth = () => (typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : undefined);
 
-/** Voices for a language, the most natural first; Marathi falls back to a Hindi voice (same script). */
-export function voicesFor(lang: Lang): SpeechSynthesisVoice[] {
+/**
+ * Voices known to be a man's or a woman's (Microsoft's Indian voices in Edge and Windows, Apple's, Google's and
+ * the usual English ones). Most Android voices don't say: for a male coach such a voice is spoken lower.
+ */
+const MALE = /prabhat|madhur|manohar|ravi|hemant|rishi|aman|kunal|\bmale\b|david|mark|guy|daniel|george|ryan|thomas|fred|aaron|arthur/i;
+const FEMALE = /neerja|swara|aarohi|heera|kalpana|lekha|veena|female|zira|aria|jenny|sonia|libby|samantha|karen|moira|tessa|google us english|google हिन्दी/i;
+export const voiceGender = (v: Pick<SpeechSynthesisVoice, 'name'>): 'male' | 'female' | undefined => (MALE.test(v.name) ? 'male' : FEMALE.test(v.name) ? 'female' : undefined);
+
+/** Voices for a language, the most natural first (and the coach's gender first); Marathi falls back to a Hindi voice (same script). */
+export function voicesFor(lang: Lang, gender: 'male' | 'female' = avatarInfo(get(coachAvatar)).voice): SpeechSynthesisVoice[] {
   const all = synth()?.getVoices() ?? [];
   const code = speechCode(lang).toLowerCase();
   const prefix = code.slice(0, 2);
-  const score = (v: SpeechSynthesisVoice) =>
-    (v.lang.toLowerCase().replace('_', '-') === code ? 4 : 0) + (/natural|online|neural/i.test(v.name) ? 3 : 0) + (/google/i.test(v.name) ? 1 : 0) + (/female|swara|aarohi|neerja|heera/i.test(v.name) ? 0.5 : 0);
+  const score = (v: SpeechSynthesisVoice) => {
+    const g = voiceGender(v);
+    return (v.lang.toLowerCase().replace('_', '-') === code ? 4 : 0) + (/natural|online|neural/i.test(v.name) ? 3 : 0) + (/google/i.test(v.name) ? 1 : 0) + (g === gender ? 3.5 : g ? -3.5 : 0);
+  };
   let list = all.filter((v) => v.lang.toLowerCase().startsWith(prefix));
   if (!list.length && lang === 'mr') list = all.filter((v) => v.lang.toLowerCase().startsWith('hi'));
   return list.sort((a, b) => score(b) - score(a));
@@ -79,8 +90,11 @@ export async function speak(text: string, lang: Lang, voiceName?: string): Promi
   stopSpeaking();
   await voicesReady();
   const token = ++speakToken;
-  const voices = voicesFor(lang);
+  const coach = avatarInfo(get(coachAvatar));
+  const voices = voicesFor(lang, coach.voice);
   const voice = voices.find((v) => v.name === voiceName) ?? voices[0];
+  // A man's coach with no man's voice on the device: the voice is spoken lower, so it doesn't sound like a woman.
+  const deepen = coach.voice === 'male' && voice && voiceGender(voice) !== 'male' ? 0.78 : 1;
   const indian = /^(hi|mr)/i.test(voice?.lang ?? '');
   const spoken = indian ? forIndianVoice(speakable(text)) : speakable(text);
   const parts = spoken.match(/[^.!?।]+[.!?।]?/g) ?? [];
@@ -92,8 +106,8 @@ export async function speak(text: string, lang: Lang, voiceName?: string): Promi
       const u = new SpeechSynthesisUtterance(part.trim());
       if (voice) u.voice = voice;
       u.lang = voice?.lang ?? speechCode(lang);
-      u.rate = 0.95;
-      u.pitch = 1.05;
+      u.rate = coach.rate;
+      u.pitch = Math.max(0.1, Math.min(2, coach.pitch * deepen));
       u.onend = u.onerror = () => resolve();
       s.speak(u);
     });

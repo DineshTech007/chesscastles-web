@@ -18,7 +18,7 @@
   import { loadInsights, saveInsights, type InsightsData } from '$lib/insights/store';
   import { isWeak, resultText, studyHref, studyLineName } from '$lib/study/fromGames';
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
-  import { PLANS, PLAN_INFO, planSettings, currentPlan, useFeature } from '$lib/plans';
+  import { PLANS, PLANS_ON, PLAN_INFO, planSettings, currentPlan, useFeature } from '$lib/plans';
   import InsightsHeader from '$lib/components/InsightsHeader.svelte';
   import { t } from '$lib/i18n';
 
@@ -148,7 +148,7 @@
     <input id="ins-user" bind:value={username} placeholder={site === 'chesscom' ? $t('ins.ph.chesscom') : $t('ins.ph.lichess')} required autocomplete="off" />
     <select id="ins-count" bind:value={count} aria-label="How many games">
       {#each [10, 20, 30, 40, 50, 100, 200] as n (n)}
-        <option value={n} disabled={n > maxGames}>{$t('ins.last', { n })}{n > maxGames ? ` · ${PLAN_INFO[planFor(n)].name}` : ''}</option>
+        <option value={n} disabled={n > maxGames}>{$t('ins.last', { n })}{n > maxGames && PLANS_ON ? ` · ${PLAN_INFO[planFor(n)].name}` : ''}</option>
       {/each}
     </select>
     {#if phase === 'idle'}

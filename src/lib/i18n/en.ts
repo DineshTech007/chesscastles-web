@@ -201,7 +201,7 @@ export const en = {
   'si.close': 'Close',
   'co.legend': 'Before you start',
   'co.k1': 'We keep your name, photo, games, ratings and study progress so they follow you to every device.',
-  'co.k2': 'Only friends you accept can message you or see your photo. No ads, and we never sell your data.',
+  'co.k2': 'Only friends you accept can message you or see your photo. We never sell your data.',
   'co.k3': 'You can ask us to see or delete your data at any time.',
   'co.adult': 'I am 18 or older',
   'co.minor': 'I am under 18, and my parent or guardian has read this and agrees',

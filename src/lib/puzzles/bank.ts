@@ -39,12 +39,11 @@ export function markSeen(id: string) {
 }
 
 /**
- * The next rated puzzle for a player of `rating`: from −50 to +150 around it
- * (a little harder on average), never one seen before; nearer bands when one
- * runs out.
+ * The next rated puzzle at difficulty `level` (the learning ladder below): within about 60 points of it, never
+ * one seen before; nearer bands when one runs out.
  */
-export async function nextRated(rating: number, seen = seenPuzzles(), random = Math.random): Promise<BandPuzzle | undefined> {
-  const target = rating - 50 + random() * 200;
+export async function nextRated(level: number, seen = seenPuzzles(), random = Math.random): Promise<BandPuzzle | undefined> {
+  const target = level - 60 + random() * 120;
   const first = Math.max(MIN, Math.min(MAX, Math.floor(target / 100) * 100));
   for (const d of [0, 100, -100, 200, -200, 300, -300, 400, -400]) {
     const b = first + d;
@@ -55,14 +54,60 @@ export async function nextRated(rating: number, seen = seenPuzzles(), random = M
   return undefined;
 }
 
+// ---------- the learning ladder ----------
+
+/**
+ * How hard the next puzzle is, apart from the rating: a staircase that starts easy for someone new (600, a
+ * beginner's puzzle) and climbs a step with each puzzle solved first time, comes down a little after a miss
+ * (and a bit after a skip), so a child solves about seven in ten and keeps going from Beginner to Master,
+ * instead of meeting puzzles at the starting rating (1500) that are too hard. The rating stays the fair
+ * measure (rating.ts); the ladder only picks the puzzles.
+ */
+const LADDER = 'cc.puzzleLadder';
+export type LadderOutcome = 'clean' | 'solved' | 'missed' | 'skipped';
+
+export function ladderLevel(rating: number, attempted: number): number {
+  try {
+    const v = Number(localStorage.getItem(LADDER));
+    if (v >= MIN && v <= MAX) return v;
+  } catch {
+    /* storage blocked */
+  }
+  // New to puzzles: start easy. Someone with a real puzzle history starts a little under their rating.
+  return attempted >= 30 ? Math.max(MIN, Math.min(MAX, rating - 100)) : 600;
+}
+
+/** Moves the ladder after a puzzle (`count`: puzzles done so far, for smaller steps once the level is found). */
+export function moveLadder(level: number, outcome: LadderOutcome, count: number): number {
+  const step = count < 15 ? 70 : count < 60 ? 45 : 30;
+  const next = outcome === 'clean' ? level + step : outcome === 'solved' ? level + step / 3 : outcome === 'missed' ? level - step * 1.2 : level - 25;
+  const v = Math.round(Math.max(MIN, Math.min(MAX, next)));
+  try {
+    localStorage.setItem(LADDER, String(v));
+  } catch {
+    /* storage blocked: for this visit only */
+  }
+  return v;
+}
+
+/** The stage of a puzzle difficulty, as children understand it. */
+export const STAGES = [
+  { name: 'Beginner', from: 0, color: '#22c55e' },
+  { name: 'Intermediate', from: 1000, color: '#4d86e6' },
+  { name: 'Advanced', from: 1500, color: '#c084fc' },
+  { name: 'Master', from: 2000, color: '#edb040' },
+] as const;
+export const stageOf = (r: number) => [...STAGES].reverse().find((s) => r >= s.from) ?? STAGES[0];
+
 /** Puzzle levels, named after the pieces: the road from Pawn to King. */
-export const PUZZLE_LEVELS: { name: string; glyph: string; from: number }[] = [
-  { name: 'Pawn', glyph: '♟', from: 0 },
-  { name: 'Knight', glyph: '♞', from: 1000 },
-  { name: 'Bishop', glyph: '♝', from: 1400 },
-  { name: 'Rook', glyph: '♜', from: 1800 },
-  { name: 'Queen', glyph: '♛', from: 2200 },
-  { name: 'King', glyph: '♚', from: 2600 },
+/** The puzzle levels, each with its trophy piece: bronze, silver, gold, emerald, ruby and crystal. */
+export const PUZZLE_LEVELS: { name: string; glyph: string; from: number; image: string }[] = [
+  { name: 'Pawn', glyph: '♟', from: 0, image: '/puzzles/level-pawn.webp' },
+  { name: 'Knight', glyph: '♞', from: 1000, image: '/puzzles/level-knight.webp' },
+  { name: 'Bishop', glyph: '♝', from: 1400, image: '/puzzles/level-bishop.webp' },
+  { name: 'Rook', glyph: '♜', from: 1800, image: '/puzzles/level-rook.webp' },
+  { name: 'Queen', glyph: '♛', from: 2200, image: '/puzzles/level-queen.webp' },
+  { name: 'King', glyph: '♚', from: 2600, image: '/puzzles/level-king.webp' },
 ];
 export function levelOf(rating: number) {
   let i = 0;

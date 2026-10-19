@@ -55,6 +55,49 @@
   let tcIdx = $state(4);
   let rated = $state(true);
   let username = $state(preset ?? '');
+  // Picking the friend: your Chess Castles friends (with Lichess) to tap, and Lichess names as you type.
+  let ccFriends = $state<{ username: string; name: string; playing?: boolean }[]>([]);
+  let lichessSuggest = $state<{ id: string; name: string; title?: string; online?: boolean }[]>([]);
+  let acOpen = $state(false);
+  let acTimer: ReturnType<typeof setTimeout> | undefined;
+  let friendsLoaded = false;
+  $effect(() => {
+    if (kind !== 'friend' || friendsLoaded || $session.status !== 'in') return;
+    friendsLoaded = true;
+    friendsList().then(
+      (r) =>
+        (ccFriends = r.friends
+          .filter((p) => p.uid.startsWith('lichess:'))
+          .map((p) => ({ username: p.username || p.uid.slice(8), name: p.name, playing: (p as { playing?: boolean }).playing }))),
+      () => {},
+    );
+  });
+  $effect(() => {
+    const term = username.trim();
+    clearTimeout(acTimer);
+    if (kind !== 'friend' || term.length < 2) {
+      lichessSuggest = [];
+      return;
+    }
+    acTimer = setTimeout(async () => {
+      const list = await api.autocompletePlayers(term, lichessToken()?.token).catch(() => []);
+      if (username.trim() === term) lichessSuggest = list;
+    }, 250);
+  });
+  /** Friends first (matching what is typed), then Lichess players. */
+  const matches = $derived.by(() => {
+    const term = username.trim().toLowerCase();
+    const fr = ccFriends
+      .filter((f) => !term || f.username.toLowerCase().includes(term) || f.name.toLowerCase().includes(term))
+      .map((f) => ({ id: f.username.toLowerCase(), name: f.username, label: f.name !== f.username ? f.name : '', friend: true, online: !!f.playing, title: undefined as string | undefined }));
+    const seen = new Set(fr.map((f) => f.id));
+    const li = lichessSuggest.filter((p) => !seen.has(p.id)).map((p) => ({ id: p.id, name: p.name, label: '', friend: false, online: !!p.online, title: p.title }));
+    return [...fr, ...li].filter((m) => m.id !== term).slice(0, 8);
+  });
+  function pickName(name: string) {
+    username = name;
+    acOpen = false;
+  }
   let level = $state(4);
   let color = $state<'random' | 'white' | 'black'>('random');
   let waiting = $state<{ text: string; cancel: () => void } | undefined>();
@@ -439,10 +482,50 @@
     </div>
   {:else}
     {#if kind === 'friend'}
-      <label class="field">
-        <span class="title h">Friend’s Lichess username</span>
-        <input type="text" bind:value={username} placeholder="e.g. DrNykterstein" autocomplete="off" />
-      </label>
+      <div class="field">
+        <label class="title h" for="friend-name">Friend’s Lichess username</label>
+        {#if ccFriends.length}
+          <div class="fr-chips" role="group" aria-label="Your Chess Castles friends">
+            {#each ccFriends as f (f.username)}
+              <button class="chip" aria-pressed={username.trim().toLowerCase() === f.username.toLowerCase()} onclick={() => pickName(f.username)}>
+                {#if f.playing}<span class="live-dot" title="Playing now"></span>{/if}{f.name}
+              </button>
+            {/each}
+          </div>
+        {/if}
+        <div class="ac">
+          <input
+            id="friend-name"
+            type="text"
+            bind:value={username}
+            placeholder={ccFriends.length ? 'Or type a Lichess username' : 'Type a Lichess username'}
+            autocomplete="off"
+            role="combobox"
+            aria-expanded={acOpen && matches.length > 0}
+            aria-controls="friend-ac"
+            aria-autocomplete="list"
+            onfocus={() => (acOpen = true)}
+            oninput={() => (acOpen = true)}
+            onblur={() => setTimeout(() => (acOpen = false), 150)}
+            onkeydown={(e) => e.key === 'Escape' && (acOpen = false)}
+          />
+          {#if acOpen && matches.length && username.trim().length >= 1}
+            <ul id="friend-ac" class="ac-list" role="listbox" aria-label="Players">
+              {#each matches as m (m.id)}
+                <li role="option" aria-selected="false">
+                  <button type="button" onmousedown={(e) => e.preventDefault()} onclick={() => pickName(m.name)}>
+                    {#if m.online}<span class="live-dot" title="Online"></span>{/if}
+                    {#if m.title}<span class="ac-title">{m.title}</span>{/if}
+                    <strong>{m.name}</strong>
+                    {#if m.label}<span class="label">{m.label}</span>{/if}
+                    {#if m.friend}<span class="ac-friend">Friend</span>{/if}
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      </div>
     {:else if kind === 'ai'}
       <div class="group">
         <h3 class="title h">Level</h3>
@@ -652,6 +735,79 @@
     font-size: 16px;
     color: var(--accent);
     margin: 0;
+  }
+  .fr-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 104px;
+    overflow-y: auto;
+  }
+  .fr-chips .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--win);
+  }
+  .ac {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .ac-list {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .ac-list button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ac-list button:hover,
+  .ac-list button:focus-visible {
+    background: var(--raised);
+  }
+  .ac-title {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--gold);
+    color: #1b1300;
+  }
+  .ac-friend {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--win);
   }
   .field input {
     height: 46px;
