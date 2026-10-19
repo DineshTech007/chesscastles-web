@@ -18,6 +18,21 @@ const g = (i: number, result: string, opp: number, kind: SavedGame['kind'] = 'fi
 });
 
 describe('CC Rating', () => {
+  it('counts from a rating the owner set, from that moment on', () => {
+    const games = [g(1, '1-0', 1500), g(2, '1-0', 1500), g(10, '1-0', 1700)];
+    const plain = computeKfide(games, 1500, 'rapid');
+    const set = computeKfide(games, 1500, 'rapid', { rating: 1800, at: 5 });
+    // The first two games as before, then the third counts from 1800 (beating a 1700 from 1800 gains a little).
+    expect(set.history[1].after).toBe(plain.history[1].after);
+    expect(set.history[2].before).toBe(1800);
+    expect(set.rating).toBeGreaterThan(1800);
+    expect(set.games).toBe(3);
+    // Set after the last game: the rating is the one set.
+    expect(computeKfide(games, 1500, 'rapid', { rating: 1650, at: 99 }).rating).toBe(1650);
+    // A speed never played: it starts from it.
+    expect(computeKfide([], 1500, 'blitz', { rating: 1700, at: 1 }).rating).toBe(1700);
+  });
+
   it('rates like FIDE: K 40 for new players, expected score from the difference', () => {
     expect(expected(1600, 1800)).toBeCloseTo(0.24, 2);
     // A 1600 player wins against 1800, then draws: +30, then +9 (expected 0.27).

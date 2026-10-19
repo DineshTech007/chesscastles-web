@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { page } from '$app/state';
   import Icon from '$lib/components/Icon.svelte';
@@ -114,7 +115,7 @@
     <section class="card hero">
       <span class="av">{#if photo}<img src={photo} alt="" />{:else}{initialsOf(player.name)}{/if}{#if player.online}<span class="dot" title="Online now"></span>{/if}</span>
       <div class="who">
-        <h1 class="display">{player.name}{#if player.plan} <PlanBadge plan={player.plan} size={30} />{/if}</h1>
+        <h1 class="display"><TitleBadge title={player.title} size={22} />{player.name}{#if player.plan} <PlanBadge plan={player.plan} size={30} />{/if}</h1>
         {#if player.first || player.last}<p class="label">{[player.first, player.last].filter(Boolean).join(' ')}</p>{/if}
         {#if player.status}<p class="status">“{player.status}”</p>{/if}
         <p class="label">

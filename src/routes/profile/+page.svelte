@@ -1,4 +1,6 @@
 <script lang="ts">
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
+  import { myTitle } from '$lib/stores/me';
   import { myName, setMyName } from '$lib/stores/me';
   import { page } from '$app/state';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
@@ -155,7 +157,7 @@
       {/if}
     </div>
     <div class="who">
-      <h1 class="display">{name}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'free'} size={30} />{/if}</h1>
+      <h1 class="display">{#if $session.status === 'in'}<TitleBadge title={$myTitle} size={22} />{/if}{name}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'free'} size={30} />{/if}</h1>
       <p class="label">
         {#if $session.status === 'in'}{$session.uid.startsWith('lichess:') ? `Signed in with Lichess as ${$session.username}` : 'Signed in with Google'}{:else}Not signed in: your photo and games stay on this device.{/if}
       </p>

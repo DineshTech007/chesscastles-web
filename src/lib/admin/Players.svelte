@@ -2,7 +2,10 @@
   /** Admin: find players, see their plan, usage and reports, give plans, suspend. */
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import { featureName, grant, revoke, userAction, userDetail, users, type AdminUser, type Can, type UserDetail } from '$lib/admin';
+  import { featureName, grant, revoke, setRating, setTitle, userAction, userDetail, users, type AdminUser, type Can, type UserDetail } from '$lib/admin';
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
+  import { TITLES, TITLE_NAME } from '$lib/titles';
+  import { KFIDE_SPEEDS, SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
   import { PLANS, PLAN_INFO, untilText, type Plan } from '$lib/plans';
 
   let { can, openUid }: { can: Can[]; openUid?: string } = $props();
@@ -22,6 +25,13 @@
   let gPlan = $state<Plan>('premium');
   let gDays = $state(30);
   let gNote = $state('');
+  // Title and rating (owner).
+  let tTitle = $state('');
+  let rSpeed = $state<KfideSpeed>('rapid');
+  let rRating = $state(1500);
+  $effect(() => {
+    tTitle = open?.user.title ?? '';
+  });
   // Account actions.
   let reason = $state('');
   let confirmDelete = $state('');
@@ -118,7 +128,7 @@
     {@const u = open.user}
     <section class="card detail" aria-label="Player">
       <button class="x" onclick={() => (open = undefined)} aria-label="Close"><Icon name="close" size={18} /></button>
-      <h2 class="title">{u.name}</h2>
+      <h2 class="title"><TitleBadge title={u.title} size={15} />{u.name}</h2>
       <p class="label">
         @{u.username} · <a href="/players/{encodeURIComponent(u.uid)}" target="_blank" rel="noopener">public profile</a> · joined {date(u.joined)} · seen {ago(u.seen)}
       </p>
@@ -134,6 +144,31 @@
         <div><dt>Name, place</dt><dd>{[u.first, u.last].filter(Boolean).join(' ') || '—'}{u.location ? ` · ${u.location}` : ''}</dd></div>
         <div><dt>Reports</dt><dd>{open.reportsAbout.length} about them · {open.reportsBy} sent</dd></div>
       </dl>
+
+      {#if can.includes('owner')}
+        <h3 class="title">Title and CC Rating</h3>
+        <div class="acts">
+          <label class="lbl">Title
+            <select bind:value={tTitle}>
+              <option value="">No title</option>
+              {#each TITLES as t (t)}<option value={t}>{t} · {TITLE_NAME[t]}</option>{/each}
+            </select>
+          </label>
+          <button class="btn" disabled={busy || tTitle === (u.title ?? '')} onclick={() => act(() => setTitle(u.uid, tTitle, reason), tTitle ? `Title ${tTitle} given.` : 'Title taken away.')}>Save title</button>
+        </div>
+        <p class="label">
+          CC Ratings: {KFIDE_SPEEDS.filter((s) => u.kfideTc?.[s]).map((s) => `${SPEED_LABEL[s]} ${u.kfideTc![s]!.rating} (${u.kfideTc![s]!.games} games)`).join(' · ') || 'none yet'}
+          {#if u.ratingSet && Object.keys(u.ratingSet).length}<br />Set by you: {KFIDE_SPEEDS.filter((s) => u.ratingSet?.[s]).map((s) => `${SPEED_LABEL[s]} ${u.ratingSet![s]!.rating} on ${date(u.ratingSet![s]!.at)}`).join(' · ')}{/if}
+        </p>
+        <div class="acts">
+          <label class="lbl">Speed
+            <select bind:value={rSpeed}>{#each KFIDE_SPEEDS as s (s)}<option value={s}>{SPEED_LABEL[s]}</option>{/each}</select>
+          </label>
+          <label class="lbl">CC Rating <input type="number" min="400" max="3000" step="1" bind:value={rRating} /></label>
+          <button class="btn" disabled={busy || !(rRating >= 400 && rRating <= 3000)} onclick={() => act(() => setRating(u.uid, rSpeed, Math.round(rRating), reason), `${SPEED_LABEL[rSpeed]} CC Rating set to ${Math.round(rRating)}.`)}>Set rating</button>
+        </div>
+        <p class="label">From now on the player's {SPEED_LABEL[rSpeed]} games count from this rating (their earlier games stay in their history). It shows on leaderboards at once and on their own screens the next time they open Chess Castles. The reason box below goes into the admin log.</p>
+      {/if}
 
       <h3 class="title">Plans</h3>
       {#if !open.grants.length}
@@ -379,6 +414,15 @@
     font-size: 13px;
   }
   .give,
+  .lbl {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+  }
+  .lbl input {
+    width: 90px;
+  }
   .acts {
     display: flex;
     gap: 6px;

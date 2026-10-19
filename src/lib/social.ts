@@ -16,6 +16,8 @@ export interface Player {
   plan?: Plan;
   username: string;
   name: string;
+  /** A Chess Castles title the owner gave (CGM, CIM…). */
+  title?: string;
   country: string;
   status: string;
   fideId: string;
@@ -25,6 +27,8 @@ export interface Player {
   kfideGames: number;
   /** CC Rating at each speed played. */
   kfideTc?: Partial<Record<KfideSpeed, { rating: number; games: number }>>;
+  /** CC Ratings the owner set (the player's own profile only). */
+  ratingSet?: Partial<Record<KfideSpeed, { rating: number; at: number }>>;
   studyWeek?: string;
   studyPoints?: number;
   booksRead?: number;
@@ -126,6 +130,7 @@ export interface KfideLeader {
   name: string;
   username: string;
   country: string;
+  title?: string;
   rating: number;
   games: number;
   me: boolean;

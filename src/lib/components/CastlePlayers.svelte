@@ -5,6 +5,7 @@
    * country and a badge of their initials (photos stay private: only friends
    * see them). A player opens their profile.
    */
+  import TitleBadge from './TitleBadge.svelte';
   import { KFIDE_SPEEDS, SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
   import { call, kfideLeaders, type KfideLeader } from '$lib/social';
   import { leaderboard } from '$lib/leaderboard';
@@ -17,6 +18,7 @@
   interface Row {
     uid: string;
     name: string;
+    title?: string;
     country: string;
     rating: number;
     /** Games (CC Rating) or puzzles solved. */
@@ -29,11 +31,11 @@
   let rows = $state<Row[] | undefined>();
   let error = $state('');
 
-  /** Countries of the players (the puzzle board comes from the app's database, without them). */
-  let countries: Promise<Map<string, string>> | undefined;
-  const countryOf = () =>
-    (countries ??= call<{ players: KfideLeader[] }>('GET', 'leaders?speed=members').then(
-      (r) => new Map(r.players.map((p) => [p.uid, p.country])),
+  /** Countries and titles of the players (the puzzle board comes from the app's database, without them). */
+  let members: Promise<Map<string, { country: string; title?: string }>> | undefined;
+  const memberInfo = () =>
+    (members ??= call<{ players: KfideLeader[] }>('GET', 'leaders?speed=members').then(
+      (r) => new Map(r.players.map((p) => [p.uid, { country: p.country, title: p.title }])),
       () => new Map(),
     ));
 
@@ -44,8 +46,8 @@
     const load: Promise<Row[]> = rowsFor
       ? rowsFor(b)
       : b === 'puzzle'
-        ? Promise.all([leaderboard('puzzle', 50), countryOf()]).then(([list, c]) => list.map((p) => ({ uid: p.uid, name: p.name, country: c.get(p.uid) ?? '', rating: p.ratings.puzzle, count: p.puzzles.solved, me: p.uid === me })))
-        : kfideLeaders(b).then((list) => list.map((p) => ({ uid: p.uid, name: p.name, country: p.country, rating: p.rating, count: p.games, me: !!p.me })));
+        ? Promise.all([leaderboard('puzzle', 50), memberInfo()]).then(([list, m]) => list.map((p) => ({ uid: p.uid, name: p.name, title: m.get(p.uid)?.title, country: m.get(p.uid)?.country ?? '', rating: p.ratings.puzzle, count: p.puzzles.solved, me: p.uid === me })))
+        : kfideLeaders(b).then((list) => list.map((p) => ({ uid: p.uid, name: p.name, title: p.title, country: p.country, rating: p.rating, count: p.games, me: !!p.me })));
     load.then(
       (r) => {
         if (board === b) rows = r;
@@ -89,7 +91,7 @@
         <li class="slot"><a class="step p{p.place}" class:me={p.r.me} href="/players/{p.r.uid}">
           {#if p.place === 1}<span class="crown" aria-hidden="true"><Icon name="crown" size={26} color="var(--gold)" /></span>{/if}
           <span class="av big" style="--t: {tint(p.r.uid)}">{initials(p.r.name)}</span>
-          <span class="nm">{p.r.name}{p.r.me ? ' (you)' : ''}</span>
+          <span class="nm"><TitleBadge title={p.r.title} />{p.r.name}{p.r.me ? ' (you)' : ''}</span>
           <span class="where">
             {#if p.r.country}<img class="flag" src="/flags/{p.r.country}.svg" alt="" width="20" height="14" />{fedName(p.r.country)}{/if}
           </span>
@@ -108,7 +110,7 @@
               <span class="pos num">{i + 4}</span>
               <span class="av" style="--t: {tint(r.uid)}">{initials(r.name)}</span>
               <span class="who">
-                <span class="nm">{r.name}{r.me ? ' (you)' : ''}</span>
+                <span class="nm"><TitleBadge title={r.title} />{r.name}{r.me ? ' (you)' : ''}</span>
                 <span class="label">{#if r.country}<img class="flag" src="/flags/{r.country}.svg" alt="" width="18" height="12" />{`${fedName(r.country)} · `}{/if}{r.count} {unit}</span>
               </span>
               <strong class="num rt">{r.rating}</strong>

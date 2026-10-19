@@ -1,7 +1,7 @@
 import { derived, get, writable } from 'svelte/store';
 import { doc, serverTimestamp, updateDoc } from 'firebase/firestore/lite';
 import { db, session } from '$lib/auth';
-import { computeKfideAll } from '$lib/kfide';
+import { computeKfideAll, type KfideSpeed, type RatingSet } from '$lib/kfide';
 import { myGames, type SavedGame } from './myGames';
 import { saveProfile, smallPhoto } from '$lib/social';
 
@@ -25,10 +25,15 @@ function legacyOwner(uid: string | undefined): string | undefined {
  * FIDE-bot games kept in this browser: only the signed-in account's games,
  * so someone else signing in on the same browser starts their own CC Rating.
  */
-export const kfideAll = derived([myGames, session], ([list, s]) => {
+/** CC Ratings the owner set for this player on the admin page (from their profile; see computeKfide). */
+export const myRatingSet = writable<Partial<Record<KfideSpeed, RatingSet>>>({});
+/** This player's Chess Castles title, if the owner gave one. */
+export const myTitle = writable<string | undefined>();
+
+export const kfideAll = derived([myGames, session, myRatingSet], ([list, s, sets]) => {
   const uid = s.status === 'in' ? s.uid : undefined;
   const legacy = s.status === 'loading' ? undefined : legacyOwner(uid);
-  return computeKfideAll(list.filter((g) => ownedBy(g, uid, legacy)));
+  return computeKfideAll(list.filter((g) => ownedBy(g, uid, legacy)), undefined, s.status === 'in' ? sets : {});
 });
 
 /** Whether a game kept in this browser is this account's (or, signed out, an unmarked one). */

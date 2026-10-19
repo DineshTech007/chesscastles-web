@@ -1,4 +1,6 @@
 <script lang="ts">
+  import TitleBadge from '$lib/components/TitleBadge.svelte';
+  import { myTitle } from '$lib/stores/me';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import HeroLanding from '$lib/components/landing/HeroLanding.svelte';
   import { HERO_FEATURES } from '$lib/heroFeatures';
@@ -78,7 +80,7 @@
   <header class="hello">
     <div>
       <h1 class="display">
-        {greeting}{$session.status === 'in' ? `, ${$myName}` : ''}
+        {greeting}{#if $session.status === 'in'},&nbsp;<TitleBadge title={$myTitle} size={26} />{$myName}{/if}
         {#if PLANS_ON && $session.status === 'in'}<a class="h-plan" href="/plans" title="{PLAN_INFO[$currentPlan].name} member"><PlanBadge plan={$currentPlan} size={34} /></a>{/if}
         {#if $myCountry}<img class="h-flag" src="/flags/{$myCountry}.svg" alt={fedName($myCountry)} title={fedName($myCountry)} width="30" height="20" />{/if}
       </h1>

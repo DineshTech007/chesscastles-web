@@ -1,4 +1,5 @@
 /** The admin page's calls (server/api-worker/src/admin.ts checks the role on every one). */
+import type { KfideSpeed } from '$lib/kfide';
 import { call } from '$lib/social';
 import type { Banner, Launch, Plan, PlanConfig } from '$lib/plans';
 
@@ -24,6 +25,11 @@ export interface AdminUser {
   uid: string;
   username: string;
   name: string;
+  /** A Chess Castles title (CGM, CIM…). */
+  title?: string;
+  /** CC Rating at each speed played, and the ratings the owner set. */
+  kfideTc?: Partial<Record<KfideSpeed, { rating: number; games: number }>>;
+  ratingSet?: Partial<Record<KfideSpeed, { rating: number; at: number }>>;
   country?: string;
   first?: string;
   last?: string;
@@ -88,6 +94,10 @@ export const userDetail = (uid: string) => call<UserDetail>('GET', `admin/user/$
 export const grant = (uid: string, plan: Plan, days: number, note: string) => call<{ ok: true }>('POST', 'admin/grant', { uid, plan, days, note });
 export const revoke = (id: number) => call<{ ok: true }>('POST', 'admin/revoke', { id });
 export const userAction = (uid: string, action: 'suspend' | 'unsuspend' | 'reset_rating' | 'delete', reason: string) => call<{ ok: true }>('POST', 'admin/user', { uid, action, reason });
+/** Gives a Chess Castles title ('' takes it away). Owner only. */
+export const setTitle = (uid: string, title: string, reason: string) => call<{ ok: true }>('POST', 'admin/user', { uid, action: 'title', title, reason });
+/** From now on, the player's CC Rating at this speed starts from `rating`. Owner only. */
+export const setRating = (uid: string, speed: KfideSpeed, rating: number, reason: string) => call<{ ok: true }>('POST', 'admin/user', { uid, action: 'set_rating', speed, rating, reason });
 export const reports = (status: string) => call<{ reports: Report[] }>('GET', `admin/reports?status=${status}`).then((r) => r.reports);
 export const resolveReport = (id: number, status: string, resolution: string) => call<{ ok: true }>('POST', 'admin/report', { id, status, resolution });
 export interface Settings {
