@@ -465,7 +465,8 @@ async function learnMore(which) {
   const f = { feature: `Learn → ${which}`, used: [], notes: [] };
   const lesson = async (tab) => {
     await open(`/learn?tab=${tab}`, `Learn → ${tab}`);
-    const first = page.locator('main a[href^="/learn/"], main a[href^="/coach/"]').first();
+    // A lesson of this tab (its pane), not a link from the page's header or the sidebar.
+    const first = page.locator('.pane a[href^="/coach/"], .pane a[href^="/learn/"], main a[href^="/coach/"]').first();
     if (!(await first.count())) {
       f.notes.push('no lesson links found');
       return;
