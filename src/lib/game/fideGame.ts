@@ -284,7 +284,7 @@ export class FideGame {
     const started = this.now();
     let choice: BotChoice | undefined;
     try {
-      choice = await this.bot.choose(this.position, this.sans, this.rating, this.opening, this.playerRating);
+      choice = await this.bot.choose(this.position, this.sans, this.rating, this.opening, this.playerRating, this.engineLimit());
     } catch (e) {
       console.warn('FIDE bot:', e);
     }
@@ -301,19 +301,48 @@ export class FideGame {
     this.apply(choice.move, choice);
   }
 
+  /**
+   * How long the engines may work on the bot's move, so its clock lasts the
+   * game (the engines are slower on a phone than the time a player would
+   * take, above all in bullet): most of the move's budget, never more than
+   * an eighth of what is left. None without a clock, or while the clocks
+   * haven't started.
+   */
+  engineLimit(): number | undefined {
+    if (!this.timed || this.moves.length - this.prelude.length < 2) return undefined;
+    const left = this.remaining(this.botSide);
+    const budget = moveBudget({ left, increment: this.timeControl.increment * 1000, moveNo: this.position.fullmoves, rating: this.rating });
+    return Math.round(Math.min(budget * 0.75, left / 8));
+  }
+
   /** How long the bot "thinks" before playing (see moveTime). */
   thinkTime(source: MoveSource, confidence?: number, move?: NormalMove): number {
     if (!this.timed) return 500 + Math.round(this.random() * 900);
+    const real = this.realThinkTime(source, confidence, move);
     if (this.pace === 'quick') {
-      // Quick: a short, natural pause, a little longer when the move is not obvious.
+      // Quick: a short, natural pause, a little longer when the move is not obvious;
+      // never slower than a real player (who in bullet is quicker still).
       const c = confidence ?? 0.5;
       const ms = 500 + this.random() * 900 + (c < 0.5 ? 1000 + this.random() * 1500 : 0);
-      return Math.round(Math.min(ms, (this.position.turn === 'white' ? this.white : this.black) / 10));
+      return Math.round(Math.min(ms, (this.position.turn === 'white' ? this.white : this.black) / 10, real));
     }
+    return real;
+  }
+
+  /** A real player's thinking time, for the clock (see moveTime). */
+  private realThinkTime(source: MoveSource, confidence?: number, move?: NormalMove): number {
     if (this.moves.length - this.prelude.length < 2) return Math.round(1000 + this.random() * 2000);
     const pos = this.position;
+    // Bullet has no games database: its first moves, when they are the natural ones, are played as quickly as known theory.
+    const bulletOpening = isFast(this.timeControl) && source === 'engine' && pos.fullmoves <= 8 && (confidence ?? 0) >= 0.3;
     const kind: MoveKind =
-      countLegal(pos) === 1 ? 'forced' : source === 'opening' || (source === 'book' && pos.fullmoves <= 10) ? 'theory' : move && this.isRecapture(move) ? 'recapture' : 'normal';
+      countLegal(pos) === 1
+        ? 'forced'
+        : source === 'opening' || (source === 'book' && pos.fullmoves <= 10) || bulletOpening
+          ? 'theory'
+          : move && this.isRecapture(move)
+            ? 'recapture'
+            : 'normal';
     return moveTime({
       left: this.remaining(this.botSide),
       increment: this.timeControl.increment * 1000,
@@ -322,6 +351,7 @@ export class FideGame {
       kind,
       confidence,
       random: this.random,
+      fast: isFast(this.timeControl),
     });
   }
 
@@ -438,6 +468,20 @@ export class FideGame {
 
 export type MoveKind = 'forced' | 'theory' | 'recapture' | 'normal';
 
+/** Bullet and the fastest blitz (up to 3 minutes, counting the increment over 40 moves). */
+export const isFast = (tc: TimeControl) => tc.minutes > 0 && tc.minutes + tc.increment * 0.67 <= 3;
+
+/**
+ * A move's usual share of the clock: the time left (keeping a reserve) spread
+ * over the moves a game still usually lasts, plus most of the increment;
+ * stronger players take a little more of their time.
+ */
+export function moveBudget(o: { left: number; increment: number; moveNo: number; rating: number }): number {
+  const movesLeft = Math.max(20, 45 - o.moveNo / 2);
+  const pace = Math.min(1.1, Math.max(0.7, 0.75 + (o.rating - 1200) / 2400));
+  return ((o.left * 0.9) / movesLeft) * pace + o.increment * 0.85;
+}
+
 /**
  * Thinking time for one move, the way real players use their clock:
  * - a budget from the time left (keeping a reserve) spread over the moves a
@@ -448,11 +492,9 @@ export type MoveKind = 'forced' | 'theory' | 'recapture' | 'normal';
  * - longer in unclear positions and just after leaving the opening;
  * - stronger players take a little more of their time.
  */
-export function moveTime(o: { left: number; increment: number; moveNo: number; rating: number; kind: MoveKind; confidence?: number; random: () => number }): number {
-  const { left, increment, moveNo, random } = o;
-  const movesLeft = Math.max(20, 45 - moveNo / 2);
-  const pace = Math.min(1.1, Math.max(0.7, 0.75 + (o.rating - 1200) / 2400));
-  const budget = ((left * 0.9) / movesLeft) * pace + increment * 0.85;
+export function moveTime(o: { left: number; increment: number; moveNo: number; rating: number; kind: MoveKind; confidence?: number; random: () => number; fast?: boolean }): number {
+  const { left, moveNo, random } = o;
+  const budget = moveBudget(o);
   let ms: number;
   if (o.kind === 'forced') ms = Math.min(600 + random() * 1200, budget * 0.8);
   else if (o.kind === 'theory') ms = budget * 0.05 + (500 + random() * 2500) * Math.min(1, budget / 8000);
@@ -465,6 +507,9 @@ export function moveTime(o: { left: number; increment: number; moveNo: number; r
     const gaussian = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
     ms = budget * difficulty * leavingBook * Math.exp(gaussian * 0.45);
   }
+  // Bullet is played on instinct: about two thirds of the time a slower game would take,
+  // which also leaves room for the engines, slower on a phone than a player's hand.
+  if (o.fast && (o.kind === 'normal' || o.kind === 'recapture')) ms *= 0.65;
   // Never more than a fifth of what is left, and never instant (in bullet, a little quicker).
   return Math.max(Math.min(450, budget * 0.4), Math.round(Math.min(ms, left / 5)));
 }

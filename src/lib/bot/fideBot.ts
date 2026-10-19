@@ -27,8 +27,12 @@ export interface EnginePick {
   engine?: 'maia' | 'stockfish';
 }
 
-/** The engine's move for a position at about a rating (`opponent`: the player's rating, if known). */
-export type EngineMove = (pos: Chess, rating: number, opponent?: number) => Promise<NormalMove | EnginePick | undefined>;
+/**
+ * The engine's move for a position at about a rating (`opponent`: the
+ * player's rating, if known; `limitMs`: how long the engines may take, from
+ * the bot's clock).
+ */
+export type EngineMove = (pos: Chess, rating: number, opponent?: number, limitMs?: number) => Promise<NormalMove | EnginePick | undefined>;
 
 /** Whether a book move is safe for a player of `rating` to play (false: it loses too much). */
 export type MoveGuard = (pos: Chess, move: NormalMove, rating: number) => Promise<boolean>;
@@ -68,7 +72,7 @@ export class FideBot {
     private readonly guard?: MoveGuard,
   ) {}
 
-  async choose(pos: Chess, playedSans: string[], rating: number, openingSans?: string[], opponent?: number): Promise<BotChoice | undefined> {
+  async choose(pos: Chess, playedSans: string[], rating: number, openingSans?: string[], opponent?: number, limitMs?: number): Promise<BotChoice | undefined> {
     const fromOpening = this.openingMove(pos, playedSans, openingSans);
     if (fromOpening) return { move: fromOpening, source: 'opening', games: 0, window: 0 };
 
@@ -85,7 +89,7 @@ export class FideBot {
         }
       }
     }
-    const got = await this.engineMove(pos, rating, opponent);
+    const got = await this.engineMove(pos, rating, opponent, limitMs);
     const pick: EnginePick | undefined = got && 'move' in got ? got : got ? { move: got } : undefined;
     if (!pick || !pos.isLegal(pick.move)) return undefined;
     return { move: pick.move, source: 'engine', games: 0, window: 0, confidence: pick.confidence, engine: pick.engine };

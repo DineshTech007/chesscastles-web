@@ -253,6 +253,59 @@ async function run(name, options) {
     return moves.filter((m) => m.trim()).slice(0, 2).join(' ');
   });
 
+  // 5b. Watching a live Lichess game: its moves, the move buttons under the board, the engine.
+  await check(name, page, 'watch a live game: moves, buttons under the board, engine', async () => {
+    const tv = await (await fetch('https://lichess.org/api/tv/channels')).json();
+    await open(page, `/watch/live/${tv.blitz.gameId}`);
+    await page.waitForFunction(() => document.querySelectorAll('.moves-card button').length > 0, null, { timeout: 20000 });
+    const board = await page.locator('cg-board').first().boundingBox();
+    const prev = await page.locator('.nav-card [aria-label="Previous move"]').boundingBox();
+    expect(prev && prev.y > board.y + board.height - 2, 'the move buttons are not under the board');
+    await page.locator('label.toggle:has-text("Engine") input').check();
+    await page.waitForFunction(() => /depth \d+/.test(document.querySelector('.toggles')?.textContent ?? ''), null, { timeout: 15000 });
+    return `${await page.locator('.moves-card button').count()} moves`;
+  });
+
+  // 5c. Bullet (1+0) against the 2000 computer: it must move at a bullet pace, or it loses on time.
+  if (name === 'desktop')
+    await check(name, page, 'bullet: the computer keeps up with its clock', async () => {
+      await page.evaluate(() => localStorage.removeItem('k24.resume'));
+      await open(page, '/play/fide?r=2000&tc=6&c=black');
+      await page.locator('cg-board').first().waitFor({ timeout: 15000 });
+      const snap = () => page.evaluate(() => JSON.parse(localStorage.getItem('k24.resume') ?? 'null')?.snapshot);
+      let last;
+      const until = Date.now() + 70000;
+      while (Date.now() < until) {
+        const s = await snap();
+        if (s) last = s;
+        else if (last) break; // the game ended
+        const n = s?.moves.length ?? 0;
+        if (n >= 20) break;
+        if (n % 2 === 1) {
+          // Our move (Black): a piece, then one of the squares the board offers for it.
+          const before = n;
+          const centre = (sel) =>
+            page.evaluate((sel) => [...document.querySelectorAll(sel)].map((e) => e.getBoundingClientRect()).map((r) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 })), sel);
+          for (const p of await centre('cg-board piece.black')) {
+            await page.mouse.click(p.x, p.y);
+            const [d] = await centre('cg-board square.move-dest');
+            if (!d) continue;
+            await page.mouse.click(d.x, d.y);
+            await page.waitForTimeout(150);
+            if (((await snap())?.moves.length ?? 0) > before) break;
+          }
+        }
+        await page.waitForTimeout(50);
+      }
+      await page.evaluate(() => localStorage.removeItem('k24.resume'));
+      const botMoves = Math.ceil((last?.moves.length ?? 0) / 2);
+      expect(botMoves >= 5, `only ${botMoves} computer moves were played`);
+      // Its clock starts after its first move.
+      const avg = Math.round((60000 - last.white) / (botMoves - 1));
+      expect(avg < 1500, `the computer took ${avg} ms a move: it would lose a 1-minute game on time`);
+      return `${avg} ms a move over ${botMoves - 1} moves`;
+    });
+
   // The game above is unfinished: opening the home page must not jump back into it.
   await check(name, page, 'home page opens as asked with a game unfinished', async () => {
     await open(page, '/');

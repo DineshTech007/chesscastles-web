@@ -127,7 +127,7 @@ describe('FideBot', () => {
 describe('FideGame', () => {
   const blitz: TimeControl = { minutes: 5, increment: 3, kind: 'Blitz' };
 
-  function game(book: BookSource, opts: { human?: 'white' | 'black'; tc?: TimeControl; engine?: (p: Chess) => Promise<NormalMove | undefined> } = {}) {
+  function game(book: BookSource, opts: { human?: 'white' | 'black'; tc?: TimeControl; engine?: (p: Chess) => Promise<NormalMove | undefined>; pace?: 'quick' | 'real' } = {}) {
     const clock = { t: 0 };
     const g = new FideGame({
       bot: new FideBot(book, opts.engine ?? noEngine, seeded(1)),
@@ -139,6 +139,7 @@ describe('FideGame', () => {
         clock.t += ms;
       },
       random: seeded(1),
+      pace: opts.pace,
     });
     return { g, clock };
   }
@@ -251,6 +252,39 @@ describe('FideGame', () => {
       expect(avg(31, 50)).toBeGreaterThan(avg(11, 30) / 3);
       expect(avg(51, 70)).toBeGreaterThan(avg(11, 30) / 5);
       expect(left).toBeGreaterThan(minutes * 60_000 * 0.05);
+    }
+  });
+
+  it('in bullet, the quick pace is no slower than a real player', async () => {
+    const bullet: TimeControl = { minutes: 1, increment: 0, kind: 'Bullet' };
+    const { g } = game(new FakeBook({ e4: [e(72, 'e7e5', 5)] }), { tc: bullet, pace: 'quick' });
+    g.begin();
+    g.play(m('e2e4'));
+    await flush();
+    expect(g.sans).toEqual(['e4', 'e5']);
+    // A move that isn't obvious: "quick" alone would take 2.6 s on average.
+    let sum = 0;
+    for (let i = 0; i < 200; i++) sum += g.thinkTime('engine', 0.2);
+    expect(sum / 200).toBeLessThan(1600);
+    g.dispose();
+  });
+
+  it('lasts a bullet game, also when the engines are slow (a phone)', () => {
+    for (const [minutes, increment] of [[1, 0], [1, 1]]) {
+      for (const rating of [2000, 2800]) {
+        const random = seeded(rating + increment);
+        let left = minutes * 60_000;
+        let first40 = 0;
+        for (let n = 1; n <= 60; n++) {
+          // No games database in bullet: every move a "normal" one, each taking the engines 0.7 s.
+          const kind = n % 6 === 0 ? 'recapture' : 'normal';
+          const t = Math.max(700, moveTime({ left, increment: increment * 1000, moveNo: n, rating, kind, confidence: random(), random, fast: true }));
+          left += increment * 1000 - t;
+          if (n <= 40) first40 += t;
+        }
+        expect(left).toBeGreaterThan(0);
+        if (!increment) expect(first40).toBeLessThan(50_000);
+      }
     }
   });
 

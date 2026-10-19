@@ -140,25 +140,33 @@ const winChance = (cp: number) => 1 / (1 + Math.exp(-0.00368208 * Math.max(-1500
  * proportion to how likely a human is to play it, less often the more it
  * gives away. `opponent` is the other player's rating, if known.
  */
-export async function maiaPick(pos: Chess, rating: number, opponent?: number, tc?: TimeControl, random = Math.random): Promise<EnginePick | undefined> {
+export async function maiaPick(pos: Chess, rating: number, opponent?: number, tc?: TimeControl, random = Math.random, limitMs?: number): Promise<EnginePick | undefined> {
   const { elo, tau } = strengthFor(rating, tc);
   const oppo = opponent ? Math.min(2700, Math.max(600, elo + (opponent - rating))) : elo;
+  const started = Date.now();
   const policy = await maia.policy(pos, elo, oppo);
   if (!policy.length) return undefined;
+  // Stockfish's searches get what is left of the limit, with room for getting their answers.
+  const room = limitMs === undefined ? Infinity : (limitMs - (Date.now() - started)) * 0.7;
   const strong = rating - TIME_PRESSURE(tc) >= 2000;
   const cands = policy.filter((x, i) => i < (strong ? 8 : 6) && (i === 0 || x.p >= 0.03));
-  // A strong player also finds the best move when it isn't a natural one.
-  if (strong) {
-    const best = await bestMove(pos, 300);
+  // A strong player also finds the best move when it isn't a natural one (when there's time to look).
+  const bestMs = strong && room >= 500 ? Math.min(300, room * 0.35) : 0;
+  if (bestMs) {
+    const best = await bestMove(pos, bestMs);
     if (best && !cands.some((c) => maiaUci(pos, c.move) === maiaUci(pos, best))) cands.push({ move: best, p: 0.03 });
   }
+  const scoreMs = Math.min(fastGame(tc) ? 250 : strong ? 700 : 500, room - bestMs);
   const r = rating - TIME_PRESSURE(tc);
   let pick = cands[0];
-  if (cands.length > 1) {
+  if (cands.length > 1 && scoreMs < 100) {
+    // No time to check: the natural move, as a player short of time plays.
+    pick = pickWeighted(cands.map((c) => ({ item: c, base: c.p * c.p, wc: 0 })), 1, 1, false, random);
+  } else if (cands.length > 1) {
     // Stockfish scores Maia's candidates: the weaker ones are picked less often, and a
     // blunder far below the rating only now and then (every rating has a limit).
     const ucis = cands.map((c) => maiaUci(pos, c.move));
-    const scores = await engine.scoreMoves(fenOf(pos), ucis, fastGame(tc) ? 250 : strong ? 700 : 500);
+    const scores = await engine.scoreMoves(fenOf(pos), ucis, scoreMs);
     if (scores.size) {
       const scored = cands.map((c, i) => ({ item: c, base: c.p, wc: scores.has(ucis[i]) ? winChance(scores.get(ucis[i])!) : 0 }));
       pick = pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r), random);
@@ -177,12 +185,12 @@ const fastGame = (tc?: TimeControl) => !!tc && tc.minutes > 0 && tc.minutes + tc
  * (Stockfish's own weakened mode instead plays well and then throws in random
  * blunders no player of that rating makes.)
  */
-export async function stockfishPick(pos: Chess, rating: number, tc?: TimeControl, random = Math.random): Promise<NormalMove | undefined> {
+export async function stockfishPick(pos: Chess, rating: number, tc?: TimeControl, random = Math.random, limitMs?: number): Promise<NormalMove | undefined> {
   const moves: NormalMove[] = [];
   for (const [from, dests] of pos.allDests()) for (const to of dests) moves.push({ from, to, ...(pos.board.get(from)?.role === 'pawn' && (to >> 3 === 7 || to >> 3 === 0) ? { promotion: 'queen' as const } : {}) });
   if (moves.length <= 1) return moves[0];
   const ucis = moves.map((m) => maiaUci(pos, m));
-  const scores = await engine.scoreMoves(fenOf(pos), ucis, fastGame(tc) ? 300 : 700);
+  const scores = await engine.scoreMoves(fenOf(pos), ucis, Math.max(80, Math.min(fastGame(tc) ? 300 : 700, (limitMs ?? Infinity) * 0.7)));
   if (!scores.size) return undefined;
   const r = rating - TIME_PRESSURE(tc);
   // How far from the best move a player of this rating wanders: 6% of winning chance at 1400, halving every 600 points.
@@ -193,16 +201,21 @@ export async function stockfishPick(pos: Chess, rating: number, tc?: TimeControl
 
 /** The FIDE bot's engine: Maia-3 when it is downloaded, otherwise Stockfish. */
 export function humanMove(tc?: TimeControl): EngineMove {
-  return async (pos, rating, opponent) => {
-    if (await maia.whenReady()) {
+  return async (pos, rating, opponent, limitMs) => {
+    // Waiting for Maia to load from the browser's storage costs the clock too, and on a
+    // slow device, when Maia alone takes most of the time there is, Stockfish picks instead.
+    const started = Date.now();
+    const tooSlow = limitMs !== undefined && maia.speedMs > limitMs * 0.6;
+    if (!tooSlow && (await maia.whenReady(limitMs === undefined ? 5000 : Math.min(5000, limitMs / 3)))) {
       try {
-        const pick = await maiaPick(pos, rating, opponent, tc);
+        const pick = await maiaPick(pos, rating, opponent, tc, Math.random, limitMs === undefined ? undefined : limitMs - (Date.now() - started));
         if (pick) return pick;
       } catch (e) {
         console.warn('Maia:', e);
       }
     }
-    const move = (await stockfishPick(pos, rating, tc).catch(() => undefined)) ?? (await engineMove(pos, rating));
+    const rest = limitMs === undefined ? undefined : limitMs - (Date.now() - started);
+    const move = (await stockfishPick(pos, rating, tc, Math.random, rest).catch(() => undefined)) ?? (await engineMove(pos, rating));
     return move ? { move, engine: 'stockfish' } : undefined;
   };
 }

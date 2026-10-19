@@ -164,9 +164,13 @@ class Maia {
     this.worker?.postMessage({ type: 'download', background });
   }
 
+  /** How long one prediction takes on this device (an average of the last few, in ms; 0 before the first). */
+  speedMs = 0;
+
   /** How likely a human of `elo` (against `oppo`) is to play each legal move. */
   async policy(pos: Chess, elo: number, oppo = elo): Promise<{ move: NormalMove; p: number }[]> {
     this.init();
+    const started = Date.now();
     const black = pos.turn === 'black';
     const fen = black ? mirrorFen(fenOf(pos)) : fenOf(pos);
     const index = await this.index!;
@@ -175,6 +179,8 @@ class Maia {
       this.pending.set(id, (r) => (r instanceof Error ? reject(r) : resolve(r)));
       this.worker!.postMessage({ type: 'inference', id, tokens: boardTokens(fen).buffer, eloSelf: elo, eloOppo: oppo });
     });
+    const took = Date.now() - started;
+    this.speedMs = this.speedMs ? this.speedMs * 0.7 + took * 0.3 : took;
     const legal: { move: NormalMove; logit: number }[] = [];
     for (const [from, dests] of pos.allDests()) {
       for (const to of dests) {
