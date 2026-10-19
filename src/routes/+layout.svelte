@@ -282,6 +282,22 @@
   /** No friend-request popup over a game, or on the Friends page (which lists the requests itself). */
   const noPopups = $derived(/^\/(friends|play\/(fide|computer|online\/|tournament\/game))/.test(page.url.pathname));
 
+  // Launch day, Vijayadashami (20 October 2026, India time): the festive toran and greeting, once per visit.
+  let dasara = $state(false);
+  onMount(() => {
+    try {
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const asked = page.url.searchParams.get('dasara') === '1';
+      // (Not for the automatic site check: its clicks must reach the page.)
+      if ((today === '2026-10-20' || asked) && (asked || (!sessionStorage.getItem('cc.dasara') && !navigator.webdriver)) && !noPopups) {
+        sessionStorage.setItem('cc.dasara', '1');
+        dasara = true;
+      }
+    } catch {
+      /* no storage: no greeting */
+    }
+  });
+
   const tabs = [
     { href: '/', label: 'tab.home', icon: 'home' },
     { href: '/play', label: 'tab.play', icon: 'knight' },
@@ -380,6 +396,9 @@
 <ConsentNotice />
 {#if !noPopups}<FriendRequests />{/if}
 <ChallengePopup />
+{#if dasara}
+  {#await import('$lib/festive/Dasara.svelte') then m}<m.default onclose={() => (dasara = false)} />{/await}
+{/if}
 <InstallPrompt />
 <BoardThemeModal bind:open={$boardThemeOpen} />
 
