@@ -32,6 +32,8 @@ export interface Player {
   studyWeek?: string;
   studyPoints?: number;
   booksRead?: number;
+  /** Study progress friends can see (friends and the player only). */
+  progress?: FriendProgress;
   joined: number;
   /** False for a Lichess player who was sent a request but has not joined Chess Castles yet. */
   member?: boolean;
@@ -46,6 +48,16 @@ export interface Player {
   language?: string;
   timezone?: string;
   about?: string;
+}
+
+/** What a player's friends see of their study: puzzles, streak, and days studied this week. */
+export interface FriendProgress {
+  puzzleRating: number;
+  puzzlesWeek: number;
+  puzzlesSolved: number;
+  streak: number;
+  /** Days studied this week, 0 to 7. */
+  studyDays: number;
 }
 
 export type Relation = 'self' | 'friends' | 'incoming' | 'outgoing' | 'blocked' | 'none';
@@ -68,22 +80,45 @@ export interface Message {
 /** Unread messages and friend requests, for the menu badge. */
 export const socialBadge = writable(0);
 
+/**
+ * When the server keeps failing or says "too many requests" (a busy day), the pages that ask it again and
+ * again by themselves (the friends badge, the lobby, who is playing) pause for five minutes instead of
+ * piling on. What a person taps still goes through.
+ */
+let failures = 0;
+let restUntil = 0;
+export const serverResting = () => Date.now() < restUntil;
+function noteReply(good: boolean) {
+  if (good) failures = 0;
+  else if (++failures >= 3) {
+    restUntil = Date.now() + 5 * 60_000;
+    failures = 0;
+  }
+}
+
 /** A signed-in call to the API worker's /social/… (throws the server's error message). */
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = await auth.currentUser?.getIdToken().catch(() => undefined);
   if (!token) throw new Error('Sign in to use friends and messages.');
-  const res = await fetch(`${API}/social/${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API}/social/${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    noteReply(false);
+    throw e;
+  }
+  noteReply(res.status < 500 && res.status !== 429);
   const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(j.error ?? 'Something went wrong. Try again.');
+  if (!res.ok) throw new Error(j.error ?? (res.status === 429 || res.status >= 500 ? 'Chess Castles is very busy right now. Please try again in a few minutes.' : 'Something went wrong. Try again.'));
   return j as T;
 }
 
 export const myProfile = () => call<Player>('GET', 'me');
-export const saveProfile = (p: Partial<Omit<Player, 'photo' | 'studyWeek'>> & { photo?: string | null; studyWeek?: { week: string; points: number } }) => call<Player>('PUT', 'me', p);
+export const saveProfile = (p: Partial<Omit<Player, 'photo' | 'studyWeek'>> & { photo?: string | null; studyWeek?: { week: string; points: number }; consent?: { version: string; age: string } }) => call<Player>('PUT', 'me', p);
 export const findPlayers = (q: string) => call<{ players: Player[] }>('GET', `players?q=${encodeURIComponent(q)}`).then((r) => r.players);
 export const getPlayer = (uid: string) => call<{ player: Player; relation: Relation }>('GET', `player/${encodeURIComponent(uid)}`);
 export const friendsList = () => call<{ friends: Player[]; incoming: Player[]; outgoing: Player[] }>('GET', 'friends');
@@ -94,12 +129,20 @@ export const inbox = () => call<{ conversations: Conversation[]; unread: number 
 export const messagesWith = (uid: string, after = 0) => call<{ messages: Message[] }>('GET', `messages/${encodeURIComponent(uid)}?after=${after}`).then((r) => r.messages);
 export const sendMessage = (to: string, body: string) => call<{ id: number }>('POST', 'messages', { to, body });
 
-/** Refreshes the menu badge: unread messages plus friend requests waiting. */
+/** Friend requests waiting for an answer, and the friends, as last loaded (the home page and the popup show them). */
+export const incomingRequests = writable<Player[]>([]);
+export const friendsCache = writable<Player[]>([]);
+
+/** Refreshes the menu badge: unread messages plus friend requests waiting (and the lists behind them). */
 export async function refreshBadge() {
+  if (serverResting()) return;
   try {
     const [i, f] = await Promise.all([inbox(), friendsList()]);
+    incomingRequests.set(f.incoming);
+    friendsCache.set(f.friends);
     socialBadge.set(i.unread + f.incoming.length);
   } catch {
+    incomingRequests.set([]);
     socialBadge.set(0);
   }
 }

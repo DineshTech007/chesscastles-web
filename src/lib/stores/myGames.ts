@@ -23,6 +23,8 @@ export interface SavedGame {
   reason: string;
   timeControl: string;
   opponentRating?: number;
+  /** The player's own rating when the game began: the CC Rating at that speed (games against FIDE-rated opponents) or the Lichess rating. */
+  myRating?: number;
   startFen: string;
   uci: string[];
   /** Fair play: times the player left the game's tab during their own turn. */

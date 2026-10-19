@@ -280,7 +280,7 @@
   });
 </script>
 
-<svelte:head><title>{book ? `${book.title} · Books` : 'Books'} · Chess Castles</title></svelte:head>
+<svelte:head><title>{book ? `${book.title} · Audio Books` : 'Audio Books'} · Chess Castles</title></svelte:head>
 <svelte:window onscroll={onScroll} />
 
 <div class="top">

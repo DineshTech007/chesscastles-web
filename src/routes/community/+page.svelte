@@ -90,13 +90,13 @@
   const wa = (phone: string, text: string) => `https://wa.me/${phoneE164(phone).replace('+', '')}?text=${encodeURIComponent(text)}`;
 </script>
 
-<svelte:head><title>Community · Chess Castles</title></svelte:head>
+<svelte:head><title>FIDE & Local Events · Chess Castles</title></svelte:head>
 
 <div class="page">
   <header class="head">
     <div>
-      <h1 class="display">Community</h1>
-      <p class="label">FIDE-rated tournaments across India and chess coaches near you.</p>
+      <h1 class="display">FIDE &amp; Local Events</h1>
+      <p class="label">FIDE-rated and local tournaments across India, with dates, venues and how to register, plus chess coaches near you.</p>
     </div>
     <div class="segmented" role="group" aria-label="Show">
       <button aria-pressed={tab === 'events'} onclick={() => ((tab = 'events'), (shown = 40))}>Tournaments</button>
@@ -190,7 +190,7 @@
         {/each}
       </ul>
       {#if items.length > shown}<button class="btn more" onclick={() => (shown += 40)}>Show more</button>{/if}
-      <p class="label foot">From FIDE's list of rated tournaments in India and AICF's event pages, updated every few hours. Organisers can list their tournament in the Chess Castles app; it appears here once our team checks it.</p>
+      <p class="label foot">From FIDE's list of rated tournaments in India and AICF's event pages, updated every few hours. Organising a local tournament? Listing it here is free: send the details on WhatsApp to 96898 74178 or to support@chesscastles.com, and it appears here once our team checks it.</p>
     {/if}
   {:else if !coachList}
     <div class="card skel"></div>
@@ -199,7 +199,7 @@
     {#if !coachItems.length}
       <div class="card empty">
         <p>{coachList.length ? 'No coach matches these filters yet. Try all of India or another language.' : 'No coaches are listed yet.'}</p>
-        <p class="label">Coaches can add their profile in the Chess Castles app (Community → Coaches). Our team checks every profile before it appears.</p>
+        <p class="label">Coaches can register free: send your details on WhatsApp to 96898 74178 or to support@chesscastles.com. Our team checks every profile before it appears.</p>
       </div>
     {:else}
       <ul class="coaches">

@@ -7,6 +7,8 @@
   import Icon from '$lib/components/Icon.svelte';
   import { myGames } from '$lib/stores/myGames';
   import { study, weekOf, weekPoints } from '$lib/study/progress';
+  import { sharedPart, weekProgress } from '$lib/study/shareProgress';
+  import { puzzleRating } from '$lib/puzzles/rating';
   import { allProgress } from '$lib/books/books';
   import { watchSession } from '$lib/auth';
   import { setSound, soundOn } from '$lib/sound';
@@ -25,6 +27,9 @@
   import { afterNavigate, beforeNavigate } from '$app/navigation';
   import LimitModal from '$lib/components/LimitModal.svelte';
   import SignInModal from '$lib/components/SignInModal.svelte';
+  import ConsentNotice from '$lib/components/ConsentNotice.svelte';
+  import FriendRequests from '$lib/components/FriendRequests.svelte';
+  import { consentNeeded, consentSynced, hasConsent, markConsentSynced, readConsent } from '$lib/consent';
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
   import { boardThemeOpen } from '$lib/boardTheme';
@@ -123,16 +128,21 @@
         const now = Date.now();
         const studyWeek = { week: weekOf(now), points: weekPoints(get(study), now) };
         const booksRead = Object.values(allProgress()).reduce((n, b) => n + (b.read?.length ?? 0), 0);
-        const key = JSON.stringify([studyWeek, booksRead]);
-        if (key === lastBoards || (!studyWeek.points && !booksRead)) return;
+        // What friends see of study progress: puzzles, streak, and the days studied this week.
+        const sess = get(session);
+        const progress = sharedPart(weekProgress(get(study), get(puzzleRating), sess.status === 'in' && sess.profile ? sess.profile.puzzles.solved : 0, now));
+        const key = JSON.stringify([studyWeek, booksRead, progress]);
+        if (key === lastBoards || (!studyWeek.points && !booksRead && !progress.puzzlesSolved)) return;
         lastBoards = key;
-        void saveProfile({ studyWeek, booksRead }).catch(() => (lastBoards = ''));
+        void saveProfile({ studyWeek, booksRead, progress }).catch(() => (lastBoards = ''));
       }, 3000);
     };
     const unStudy = study.subscribe((list) => {
       void reportStudy(list);
       syncBoards();
     });
+    // A new puzzle rating reaches friends too.
+    const unPuzzle = puzzleRating.subscribe(() => syncBoards());
     // Signed in: keep the friends badge fresh, and share the CC Rating with friends.
     let badgeTimer: ReturnType<typeof setInterval> | undefined;
     const unSession = session.subscribe((s) => {
@@ -157,11 +167,19 @@
       }
       if (s.status !== 'loading') void refreshMyPlan();
       ratingsUid = '';
-      if (s.status !== 'in') return;
+      if (s.status !== 'in') {
+        consentNeeded.set(false);
+        return;
+      }
+      // Agreed to the terms: sent to the account once. Signed in from before the consent form: asked once, over the page.
+      const agreed = hasConsent() ? readConsent() : undefined;
+      consentNeeded.set(!agreed);
+      if (agreed && !consentSynced(s.uid)) void saveProfile({ consent: { version: agreed.version, age: agreed.age } }).then(() => markConsentSynced(s.uid)).catch(() => {});
       // An invite link opened before signing in: the friend who invited gets their reward.
       void sendReferral(s.username).then(refreshMyPlan);
       void refreshBadge();
-      badgeTimer = setInterval(refreshBadge, 60_000);
+      // Every two minutes, and only while the page is open in front of the player.
+      badgeTimer = setInterval(() => document.visibilityState === 'visible' && void refreshBadge(), 120_000);
       // My games on every device (games from the account come in, this browser's go up), on its own.
       void syncGames(s.uid);
       myProfile()
@@ -194,6 +212,7 @@
       unRatings();
       clearTimeout(ratingsTimer);
       unStudy();
+      unPuzzle();
       unSession();
       unResume();
       clearInterval(badgeTimer);
@@ -244,6 +263,8 @@
   // Phones: a game in progress gets the whole screen (no bottom bar) until it ends.
   const focusGame = $derived(phone && !$gameEnded && /^\/play\/(fide|computer|online\/|tournament\/game)/.test(page.url.pathname));
   const collapsed = $derived(width < 960);
+  /** No friend-request popup over a game, or on the Friends page (which lists the requests itself). */
+  const noPopups = $derived(/^\/(friends|play\/(fide|computer|online\/|tournament\/game))/.test(page.url.pathname));
 
   const tabs = [
     { href: '/', label: 'Home', icon: 'home' },
@@ -339,6 +360,8 @@
 
 <LimitModal />
 <SignInModal />
+<ConsentNotice />
+{#if !noPopups}<FriendRequests />{/if}
 <InstallPrompt />
 <BoardThemeModal bind:open={$boardThemeOpen} />
 

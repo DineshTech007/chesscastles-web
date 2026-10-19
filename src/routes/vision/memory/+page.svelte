@@ -95,11 +95,11 @@
   const right = $derived(round && phase === 'answered' ? isRight(round.question, answer) : false);
 </script>
 
-<svelte:head><title>Move Memory · Vision Gym · Chess Castles</title></svelte:head>
+<svelte:head><title>Move Memory · Blindfold Gym · Chess Castles</title></svelte:head>
 
-<FeatureGate feature="vision" ref={tabRef('memory')} back="/vision" backLabel="Vision Gym">
+<FeatureGate feature="vision" ref={tabRef('memory')} back="/vision" backLabel="Blindfold Gym">
 <div class="page">
-  <a class="back" href="/vision"><Icon name="back" size={16} />Vision Gym</a>
+  <a class="back" href="/vision"><Icon name="back" size={16} />Blindfold Gym</a>
   <header class="head">
     <div>
       <h1 class="display">Move Memory</h1>

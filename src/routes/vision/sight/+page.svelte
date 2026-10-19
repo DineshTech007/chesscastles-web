@@ -129,11 +129,11 @@
   }
 </script>
 
-<svelte:head><title>Piece Sight · Vision Gym · Chess Castles</title></svelte:head>
+<svelte:head><title>Piece Sight · Blindfold Gym · Chess Castles</title></svelte:head>
 
-<FeatureGate feature="vision" ref={tabRef('sight')} back="/vision" backLabel="Vision Gym">
+<FeatureGate feature="vision" ref={tabRef('sight')} back="/vision" backLabel="Blindfold Gym">
 <div class="page">
-  <a class="back" href="/vision"><Icon name="back" size={16} />Vision Gym</a>
+  <a class="back" href="/vision"><Icon name="back" size={16} />Blindfold Gym</a>
   <header class="head">
     <div>
       <h1 class="display">Piece Sight</h1>

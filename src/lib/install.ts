@@ -20,6 +20,27 @@ export const installWay = writable<InstallWay>('none');
 /** The install popup is open. */
 export const installOpen = writable(false);
 
+/**
+ * The popup opens by itself at most once in a while: after someone installs, says "Got it" or "Not now",
+ * it stays quiet (the menu's "Install app" is always there). Without this, a phone that already has the
+ * app kept getting the offer and people added it again and again.
+ */
+const QUIET = 'cc.installQuietUntil';
+export const installQuiet = (): boolean => {
+  try {
+    return Date.now() < Number(localStorage.getItem(QUIET) ?? 0);
+  } catch {
+    return false;
+  }
+};
+export function snoozeInstall(days: number): void {
+  try {
+    localStorage.setItem(QUIET, String(Date.now() + days * 86_400_000));
+  } catch {
+    /* asked again next visit */
+  }
+}
+
 /** Opened as the installed app (from the home screen). */
 export const isInstalledApp = () =>
   typeof window !== 'undefined' && (matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true);
@@ -28,7 +49,10 @@ let started = false;
 export function initInstall(): void {
   if (started || typeof window === 'undefined') return;
   started = true;
-  if (isInstalledApp()) return installWay.set('installed');
+  if (isInstalledApp()) {
+    snoozeInstall(365);
+    return installWay.set('installed');
+  }
   // The browser's offer can come before the site has loaded: app.html keeps it.
   const early = (window as Window & { __bip?: InstallEvent }).__bip;
   if (early) {
@@ -41,6 +65,7 @@ export function initInstall(): void {
     installWay.set('prompt');
   });
   addEventListener('appinstalled', () => {
+    snoozeInstall(365);
     deferred = undefined;
     installWay.set('installed');
   });

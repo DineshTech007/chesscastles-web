@@ -2,7 +2,7 @@
   import LegalPage from '$lib/components/LegalPage.svelte';
 </script>
 
-<LegalPage title="Terms of use" updated="17 October 2026">
+<LegalPage title="Terms of use" updated="20 October 2026">
   <p class="box">
     In short: Chess Castles is free to start, with optional plans. Play fair, be kind, and keep your account to yourself. Children under 18 need a
     parent's or guardian's permission. The CC Rating is Chess Castles' own rating, not an official FIDE rating.
@@ -24,7 +24,7 @@
 
   <h2>3. Your account</h2>
   <ul>
-    <li>You sign in with your Lichess account. Chess Castles never sees your Lichess password. Lichess's own terms also apply to your Lichess account and to games played on Lichess through Chess Castles.</li>
+    <li>You sign in with Google or with your Lichess account. Chess Castles never sees your Google or Lichess password. Before you sign in you tell us whether you are 18 or older (or under 18 with a parent or guardian who agrees) and you agree to these terms. Lichess's own terms also apply to your Lichess account and to games played on Lichess through Chess Castles.</li>
     <li>One person, one account. Do not share your account, sign in for someone else, or use several accounts.</li>
     <li>Keep your device safe. If you think someone else is using your account, sign out and tell us through <a href="/help">Help &amp; support</a>.</li>
   </ul>
@@ -58,6 +58,7 @@
 
   <h2>7. Plans</h2>
   <ul>
+    <li>Chess Castles is in <strong>beta</strong>. Until 31 December 2026 everything on Chess Castles is free to use, and features may change, break or be improved without notice. After that date some features may need a paid plan; we will announce it on the site well before and nobody is charged without agreeing first.</li>
     <li>Free is free. Premium and Elite include more of some features; what each plan includes and its limits are on the <a href="/plans">Plans page</a> and may change.</li>
     <li>Plans given free (the launch offer, invite rewards, or by Chess Castles) last for the days shown and then end. Paid plans are not on sale yet; their terms will be shown before anyone pays, and a parent or guardian must agree for anyone under 18. Cancellations and refunds follow the <a href="/legal/refunds">refund policy</a>.</li>
     <li>Invite rewards are for real friends who join. Accounts made only to collect rewards lose them.</li>
@@ -65,7 +66,7 @@
 
   <h2>8. The service</h2>
   <p>
-    Chess Castles is provided "as it is". We work hard to keep it running and correct, but we cannot promise it
+    Chess Castles is provided "as it is", and is a beta service. We work hard to keep it running and correct, but we cannot promise it
     will always be available, free of mistakes, or that your data on this device (for example games kept only in your
     browser) will never be lost. We may change, pause or end features.
   </p>

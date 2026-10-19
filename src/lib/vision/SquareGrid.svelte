@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * An empty board to answer on by tapping squares (for the Vision Gym):
+   * An empty board to answer on by tapping squares (for the Blindfold Gym):
    * coordinates on every square edge, chosen squares marked, and the right
    * and wrong ones shown after the answer.
    */

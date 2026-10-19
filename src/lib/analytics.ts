@@ -13,7 +13,7 @@ type Metric = 'view' | 'feature' | 'limit' | 'interest';
 const queue: [Metric, string][] = [];
 let timer: ReturnType<typeof setTimeout> | undefined;
 let signedIn = false;
-/** The first batch goes quickly (short visits count too), later ones every few seconds. */
+/** The first batch goes quickly (short visits count too), later ones every 30 seconds: every batch is database writes, and launch day is busy. */
 let sentOnce = false;
 
 const off = () =>
@@ -40,7 +40,7 @@ export function track(metric: Metric, key: string) {
   if (off()) return;
   queue.push([metric, key.slice(0, 64)]);
   if (queue.length >= 40) flush();
-  else if (!timer) timer = setTimeout(() => flush(), sentOnce ? 8000 : 1500);
+  else if (!timer) timer = setTimeout(() => flush(), sentOnce ? 30_000 : 1500);
 }
 
 /** A page view: the route ("/players/[uid]"), not the address, so no names are sent. */

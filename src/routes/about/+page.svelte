@@ -50,7 +50,7 @@
       <li>Endgame lessons are checked against the <a href="https://tablebase.lichess.ovh" target="_blank" rel="noopener">Lichess tablebase</a></li>
       <li><a href="https://svelte.dev" target="_blank" rel="noopener">Svelte and SvelteKit</a> (MIT), <a href="https://firebase.google.com" target="_blank" rel="noopener">Firebase</a> (Apache-2.0)</li>
       <li>Pieces: Colin M.L. Burnett (cburnett), GPL</li>
-      <li>Books: public-domain chess classics from <a href="https://www.gutenberg.org" target="_blank" rel="noopener">Project Gutenberg</a> and <a href="https://en.wikisource.org" target="_blank" rel="noopener">Wikisource</a> (Capablanca, Staunton, Philidor, Franklin, Poe and others)</li>
+      <li>Audio Books: public-domain chess classics from <a href="https://www.gutenberg.org" target="_blank" rel="noopener">Project Gutenberg</a> and <a href="https://en.wikisource.org" target="_blank" rel="noopener">Wikisource</a> (Capablanca, Staunton, Philidor, Franklin, Poe and others)</li>
     </ul>
     <p class="label">Chess Castles' website is free software under the GNU Affero General Public License v3.0 or later, like the libraries it builds on. Its source code is on <a href="https://github.com/DineshTech007/chesscastles-web" target="_blank" rel="noopener">GitHub</a>.</p>
   </section>

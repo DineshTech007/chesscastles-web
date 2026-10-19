@@ -6,7 +6,7 @@ import { makeSan } from 'chessops/san';
 import { fenOf, positionFromFen } from '$lib/chess/position';
 
 /**
- * Vision Gym: the chess skill of seeing the board in your head. Puzzles are
+ * Blindfold Gym: the chess skill of seeing the board in your head. Puzzles are
  * given as text (the pieces and the moves, no board); the board appears
  * only with the answer.
  */

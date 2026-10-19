@@ -9,7 +9,7 @@
   let kind = $state<BoardKind | undefined>();
   let rows = $state<Row[] | undefined>();
 
-  // The board to start on: CC Rating for players signed in, the Vision Gym for visitors.
+  // The board to start on: CC Rating for players signed in, the Blindfold Gym for visitors.
   $effect(() => {
     if ($session.status === 'loading' || kind) return;
     kind = $session.status === 'in' ? 'kfide' : 'vision';
@@ -31,7 +31,7 @@
     kfide: 'No CC Ratings yet: play a FIDE-rated opponent to be first.',
     lichess: 'No Lichess ratings yet.',
     puzzles: 'No puzzle ratings yet.',
-    vision: 'No one here yet: try the Vision Gym.',
+    vision: 'No one here yet: try the Blindfold Gym.',
     study: 'No one has studied this week yet.',
     books: 'No chapters read yet.',
   };

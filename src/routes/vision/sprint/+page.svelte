@@ -27,7 +27,7 @@
   onDestroy(() => clearInterval(timer));
 
   async function start() {
-    // Each sprint counts towards the plan's Vision Gym sessions.
+    // Each sprint counts towards the plan's Blindfold Gym sessions.
     if (!(await useFeature('vision'))) return;
     phase = 'starting';
     serverNote = '';
@@ -91,11 +91,11 @@
   }
 </script>
 
-<svelte:head><title>Vision Sprint · Vision Gym · Chess Castles</title></svelte:head>
+<svelte:head><title>Vision Sprint · Blindfold Gym · Chess Castles</title></svelte:head>
 <svelte:window onkeydown={onkey} />
 
 <div class="page">
-  <a class="back" href="/vision"><Icon name="back" size={16} />Vision Gym</a>
+  <a class="back" href="/vision"><Icon name="back" size={16} />Blindfold Gym</a>
   <header class="head">
     <div>
       <h1 class="display">Vision Sprint</h1>

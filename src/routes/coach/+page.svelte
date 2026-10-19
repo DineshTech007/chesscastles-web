@@ -94,7 +94,7 @@
     <div class="intro">
       <h1 class="display">Chess Guru</h1>
       <p>Lessons from beginner to advanced level: openings, middlegame tactics and strategy, and endgames. Guru explains every position, plays the moves out, and you practise each one against the engine at your level.</p>
-      <p class="label">{CATALOG.length} lessons · 3,865 openings in the library · {doneCount} finished</p>
+      <p class="label">{CATALOG.length} lessons · 3,865 named opening lines in the library · {doneCount} finished</p>
       <button class="btn ghost change" aria-expanded={choosing} onclick={() => (choosing = !choosing)}>
         <Icon name="users" size={18} />{choosing ? 'Close' : 'Change coach'}
       </button>
@@ -141,7 +141,7 @@
     </div>
     <label class="search">
       <Icon name="search" size={18} color="var(--muted)" />
-      <input bind:value={query} placeholder="Search lessons and 3,865 openings" aria-label="Search lessons and openings" />
+      <input bind:value={query} placeholder="Search lessons and 3,865 opening lines" aria-label="Search lessons and openings" />
     </label>
   </section>
 
@@ -195,7 +195,7 @@
       <p class="label">Nothing found for "{query}".</p>
     {/if}
     {#if !q && tab === 'opening'}
-      <p class="label more">Looking for another opening? Search any of the 3,865 named openings above, from the Amar Opening to the Zukertort.</p>
+      <p class="label more">Looking for another opening? Search any of the 3,865 named opening lines above (150 families, from the Sicilian and the Ruy Lopez to the Zukertort).</p>
     {/if}
   {:else}
     <a class="card insights-cta" href="/insights">

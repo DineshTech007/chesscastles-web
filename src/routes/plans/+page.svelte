@@ -184,7 +184,7 @@
         {/each}
         <tr><th scope="row">Analysis board with engine</th>{#each PLANS as p (p)}<td>Unlimited</td>{/each}</tr>
         <tr><th scope="row">Online play, lobby and arenas</th>{#each PLANS as p (p)}<td>Free</td>{/each}</tr>
-        <tr><th scope="row">Books, friends, watch, leaderboards, CC Rating</th>{#each PLANS as p (p)}<td>Free</td>{/each}</tr>
+        <tr><th scope="row">Audio Books, friends, watch, leaderboards, CC Rating</th>{#each PLANS as p (p)}<td>Free</td>{/each}</tr>
       </tbody>
     </table>
   </div>

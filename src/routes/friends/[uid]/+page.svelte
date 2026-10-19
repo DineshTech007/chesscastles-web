@@ -40,7 +40,8 @@
         if (r.relation !== 'friends') error = 'You can message friends only.';
         else {
           void poll();
-          timer = setInterval(poll, 5000);
+          // Every 6 seconds, and only while the chat is in front.
+          timer = setInterval(() => document.visibilityState === 'visible' && void poll(), 6000);
         }
       },
       () => (error = 'This player could not be loaded.'),

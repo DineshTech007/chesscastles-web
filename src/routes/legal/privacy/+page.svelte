@@ -2,7 +2,7 @@
   import LegalPage from '$lib/components/LegalPage.svelte';
 </script>
 
-<LegalPage title="Privacy policy" updated="17 October 2026">
+<LegalPage title="Privacy policy" updated="20 October 2026">
   <p class="box">
     In short: we keep only what Chess Castles needs to work, we never sell your data or show ads, messages and photos are for
     friends only, and you can ask us to delete your account and data at any time.
@@ -18,8 +18,9 @@
   <ul>
     <li><strong>Your Lichess account</strong> (its username and ID), when you sign in with Lichess: to give you a Chess Castles account. We never see your Lichess password. With your permission Lichess also lets Chess Castles play games, send challenges and join tournaments for you.</li>
     <li><strong>Profile details you choose to add</strong>: display name, first and last name, country, location, language, time zone, FIDE ID, status, "about me" and photo. Your photo is kept in Chess Castles' own database and shown only to you and your friends. We do not show photos from FIDE.</li>
+    <li><strong>Your agreement</strong>: when you sign in you tell us whether you are 18 or older (or under 18 with a parent or guardian who agrees) and agree to the terms and this policy. We keep the date, the version you agreed to and that answer, to show that you agreed.</li>
     <li><strong>Friends and messages</strong>: who you are friends with, and messages between friends.</li>
-    <li><strong>Games and progress</strong>: games you finish against Chess Castles' opponents (so you and your friends can review them), your CC Ratings, Vision Gym results, study points for the week and book chapters read (for the leaderboards).</li>
+    <li><strong>Games and progress</strong>: games you finish against Chess Castles' opponents (so you and your friends can review them), your CC Ratings, Blindfold Gym results, study points for the week and book chapters read (for the leaderboards). Your friends also see your puzzle rating, how many puzzles you solved this week, your study streak and the days you studied this week.</li>
     <li><strong>Fair-play signals</strong>: in rated games, how often you leave the game's tab during your turn, and how you play, to keep games fair (see the <a href="/legal/fair-play">Fair play policy</a>).</li>
     <li><strong>Reports, support messages and feedback</strong> you send us. Feedback sent without signing in is anonymous; signed in, it is linked to your account so we can follow up if you allow it.</li>
     <li><strong>Your plan and what you use</strong>: your plan (Free, Premium or Elite), how it was given (launch offer, invite, coach), and how many times a day you use features with limits, to apply them. Who invited you, if you joined with an invite link.</li>
@@ -33,7 +34,7 @@
   <h2>3. Who can see what</h2>
   <ul>
     <li><strong>Anyone signed in</strong>: your display name, Lichess username, country, status and ratings, your place on leaderboards, and the game you are playing right now on Chess Castles (to watch it, as on Lichess; not players you have blocked).</li>
-    <li><strong>Your friends only</strong> (both of you said yes): your photo, real name, location, "about me", your messages to them, and your finished Chess Castles games.</li>
+    <li><strong>Your friends only</strong> (both of you said yes): your photo, real name, location, "about me", your messages to them, your finished Chess Castles games and your study progress.</li>
     <li><strong>Chess Castles' team</strong>: what is needed to run the service, answer support messages and review reports.</li>
     <li><strong>Our service providers</strong>, who process data for us under their own security and privacy terms: Cloudflare (hosting and database) and Google Firebase (sign-in and profile). Data may be stored or processed outside India.</li>
     <li><strong>Lichess and chess.com</strong> receive only what you ask Chess Castles to send them (for example, your moves in a Lichess game). Their own privacy policies apply there.</li>

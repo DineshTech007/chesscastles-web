@@ -286,7 +286,7 @@
   const TILE_HAS = $derived<Record<Tab, string>>({
     start: '',
     openings: `${STUDY_OPENINGS.length} full courses · ${countOf(groups.openings).total} lessons · ${allOpenings.length} openings to practise`,
-    tactics: `${countOf(groups.tactics).total} lessons · puzzles · Vision Gym`,
+    tactics: `${countOf(groups.tactics).total} lessons · puzzles · Blindfold Gym`,
     strategy: `${countOf(groups.strategy).total} lessons · plans from master games`,
     endgames: `${countOf(groups.endgames).total} lessons · endgames from masters' games`,
     plan: `${current} ${current === 1 ? 'day' : 'days'} in a row · ${thisMonth.toLocaleString('en-IN')} points this month`,
@@ -532,7 +532,7 @@
       <div class="extras">
         <a class="extra" href="/puzzles"><Icon name="puzzle" size={22} color="var(--win)" /><span><strong>Puzzles</strong><span class="label">A new puzzle every day, and puzzles at your level</span></span></a>
         <a class="extra" href="/puzzles/themes"><Icon name="star" size={22} color="var(--win)" /><span><strong>Puzzles by theme</strong><span class="label">Only forks, only pins, only mates: practise one trick at a time</span></span></a>
-        <a class="extra" href="/vision"><Icon name="eye" size={22} color="var(--win)" /><span><strong>Vision Gym</strong><span class="label">See the board faster: squares, checks and captures</span></span></a>
+        <a class="extra" href="/vision"><Icon name="eye" size={22} color="var(--win)" /><span><strong>Blindfold Gym</strong><span class="label">See the board faster: squares, checks and captures</span></span></a>
       </div>
       {@render lessonCards(groups.tactics)}
     </section>

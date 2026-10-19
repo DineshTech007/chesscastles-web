@@ -15,7 +15,8 @@
   });
   import { formatDate } from '$lib/format';
   import { KIND_LABEL, opponentOf, outcome, type GameKind, type SavedGame } from '$lib/stores/myGames';
-  import { shownGames } from '$lib/stores/me';
+  import { kfideAll, shownGames } from '$lib/stores/me';
+  import { gameRating, ratingText } from '$lib/stores/gameRatings';
 
   let filter = $state<GameKind | 'all'>('all');
   const games = $derived($shownGames.filter((g) => filter === 'all' || g.kind === filter));
@@ -56,11 +57,13 @@
     <ul class="list">
       {#each games as g (g.id)}
         {@const o = outcome(g)}
+        {@const gr = gameRating(g, $kfideAll)}
+        {@const mine = ratingText(gr)}
         <li class="item">
           <a class="open" href="/analysis?game={g.id}">
             <span class="res {o}" aria-label={o}>{letter(g)}</span>
             <span class="text">
-              <span class="title who">vs {opponentOf(g)}</span>
+              <span class="title who">{#if mine}<span class="you num" title="Your {gr.label} rating in this game">You {mine}</span> {/if}vs {opponentOf(g)}{#if g.opponentRating && g.kind !== 'computer'} <span class="opp num">({g.opponentRating})</span>{/if}</span>
               <span class="label">
                 {KIND_LABEL[g.kind]}{g.timeControl ? ` · ${g.timeControl}` : ''} · {moves(g)} moves{g.reason ? ` · ${g.reason}` : ''}
               </span>
@@ -182,6 +185,16 @@
   }
   .who {
     font-size: 17px;
+  }
+  .you {
+    color: var(--gold);
+    font-weight: 800;
+    margin-right: 2px;
+  }
+  .opp {
+    color: var(--text-2);
+    font-weight: 500;
+    font-size: 14px;
   }
   .text .label {
     white-space: nowrap;

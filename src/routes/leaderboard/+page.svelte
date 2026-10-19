@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * Every Chess Castles leaderboard in one place: CC Rating, Lichess and puzzle
-   * ratings of Chess Castles players, the Vision Gym, study this week and books
+   * ratings of Chess Castles players, the Blindfold Gym, study this week and books
    * read; everyone or just friends.
    */
   import PlanBadge from '$lib/components/PlanBadge.svelte';
@@ -68,7 +68,7 @@
     kfide: ['No CC Ratings at this speed yet.', 'Play a FIDE-rated opponent', '/play?mode=fide'],
     lichess: ['No Chess Castles player has a Lichess rating at this speed yet.', 'Play online', '/play?mode=online'],
     puzzles: ['No puzzle ratings yet.', 'Solve puzzles', '/puzzles'],
-    vision: ['No one on this board yet.', 'Train in the Vision Gym', '/vision'],
+    vision: ['No one on this board yet.', 'Train in the Blindfold Gym', '/vision'],
     study: ['No one has studied yet this week.', 'Study now', '/learn'],
     books: ['No one has finished a chapter yet.', 'Open the library', '/books'],
   };
@@ -111,7 +111,7 @@
       <p>This leaderboard is for Chess Castles players. Sign in to see where you stand.</p>
       <div class="row">
         <button class="btn primary" onclick={() => startSignIn()}>Sign in</button>
-        <button class="btn" onclick={() => pick('vision')}>See the Vision Gym board</button>
+        <button class="btn" onclick={() => pick('vision')}>See the Blindfold Gym board</button>
       </div>
     </div>
   {:else if error}

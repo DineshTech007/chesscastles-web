@@ -7,7 +7,7 @@
    */
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { initInstall, installNow, installOpen, installWay } from '$lib/install';
+  import { initInstall, installNow, installOpen, installQuiet, installWay, snoozeInstall } from '$lib/install';
   import { track } from '$lib/analytics';
   import Icon from './Icon.svelte';
 
@@ -32,7 +32,7 @@
 
   // Once a visit, on a page that isn't busy, when this browser can install.
   $effect(() => {
-    if (!ready || BUSY.test(page.url.pathname) || $installWay === 'none' || $installWay === 'installed') return;
+    if (!ready || BUSY.test(page.url.pathname) || $installWay === 'none' || $installWay === 'installed' || installQuiet()) return;
     try {
       if (sessionStorage.getItem(KEY)) return;
       sessionStorage.setItem(KEY, '1');
@@ -43,7 +43,9 @@
     track('feature', 'install_offer');
   });
 
+  /** Closing it (any way) keeps the popup from opening by itself again for a while; an install keeps it away for good. */
   const close = () => {
+    if ($installOpen && !installed) snoozeInstall($installWay === 'prompt' ? 14 : 90);
     installOpen.set(false);
     installed = false;
   };
@@ -51,6 +53,7 @@
     track('feature', 'install_tap');
     if (await installNow()) {
       track('feature', 'install_done');
+      snoozeInstall(365);
       installed = true;
     } else close();
   }
@@ -70,6 +73,7 @@
     {:else}
       <h2 id="install-h" class="title">Get the Chess Castles app</h2>
       <p class="label">Free, and no app store needed.</p>
+      <p class="label">Already on your phone? Just open it from your home screen. No need to install it again.</p>
       <ul class="why">
         <li><Icon name="phone" size={18} color="var(--accent)" /><span>Opens from your home screen, full screen, like any app</span></li>
         <li><Icon name="sparkle" size={18} color="var(--accent)" /><span>Always up to date: new features reach it the moment we add them</span></li>

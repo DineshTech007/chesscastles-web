@@ -8,7 +8,7 @@
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import * as api from '$lib/lichessBoard';
   import { lichessRatings } from '$lib/lichess';
-  import { friendsList, lobbyLeave, lobbySeek, lobbyState, sendMessage, type LobbyRole, type LobbySeek, type LobbyState } from '$lib/social';
+  import { friendsList, serverResting, lobbyLeave, lobbySeek, lobbyState, sendMessage, type LobbyRole, type LobbySeek, type LobbyState } from '$lib/social';
 
   /** `onfide`: switches the Play page to the FIDE-rated opponents (offered when no one is free). */
   let { onfide }: { onfide?: () => void } = $props();
@@ -92,8 +92,8 @@
     let timer: ReturnType<typeof setTimeout>;
     // The lobby, every 3 s while you wait and 6 s otherwise (not while the tab is hidden).
     const poll = async () => {
-      if (lichessToken() && document.visibilityState === 'visible') await refreshLobby();
-      timer = setTimeout(poll, pool ? 3000 : 6000);
+      if (lichessToken() && document.visibilityState === 'visible' && !serverResting()) await refreshLobby();
+      timer = setTimeout(poll, pool ? 4000 : 15_000);
     };
     void poll();
     return () => {

@@ -4,7 +4,7 @@ import { API } from '$lib/api';
 import { auth, session } from '$lib/auth';
 
 /**
- * The Vision Gym leaderboards (the API worker, src/vision.ts): the server
+ * The Blindfold Gym leaderboards (the API worker, src/vision.ts): the server
  * checks every answer; only signed-in players appear.
  */
 

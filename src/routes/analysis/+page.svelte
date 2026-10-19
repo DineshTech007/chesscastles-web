@@ -17,6 +17,8 @@
   import { autoQueen } from '$lib/preferences';
   import { engine, evalLabel, whiteChances, type EngineInfo } from '$lib/engine/stockfish';
   import { myGames, type SavedGame } from '$lib/stores/myGames';
+  import { kfideAll, myName } from '$lib/stores/me';
+  import { gameRating, ratingText } from '$lib/stores/gameRatings';
   import { POINTS, study } from '$lib/study/progress';
   import { readPgn } from '$lib/chess/pgn';
   import { afterNavigate, goto } from '$app/navigation';
@@ -139,6 +141,9 @@
   let tab = $state<'engine' | 'database' | 'guru' | 'report'>('engine');
   /** The saved game on the board (My games), for a Guru review. */
   let savedId = $state<string | undefined>();
+  /** The game being reviewed, when it is one of yours: the players' ratings come from it. */
+  const savedGame = $derived(savedId ? myGames.get(savedId) : undefined);
+  const gr = $derived(savedGame ? gameRating(savedGame, $kfideAll) : undefined);
   let copied = $state('');
   /** Every move's badge (brilliant … blunder), for the line it was worked out on. */
   let review = $state<{ ucis: string[]; result: GameReview } | undefined>();
@@ -641,6 +646,23 @@
         <a class="back-link" href="/games"><Icon name="back" size={16} />My games</a>
       {/if}
       <h1 class="title page-title">{title}</h1>
+      {#if savedGame}
+        <!-- The players with their ratings when the game was played. -->
+        <div class="players" aria-label="Players">
+          {#each (['white', 'black'] as const) as side (side)}
+            {@const mineSide = savedGame.userSide === side}
+            <div class="pl" class:me={mineSide}>
+              <span class="disc {side}" aria-hidden="true"></span>
+              <span class="pl-name">{mineSide ? ($myName || 'You') : (side === 'white' ? savedGame.white : savedGame.black)}</span>
+              {#if mineSide}
+                <span class="pl-r num" title={gr?.label ? `Your ${gr.label} rating` : ''}>{gr?.label && gr.before !== undefined ? `${gr.label} ${ratingText(gr)}` : 'rating not recorded'}</span>
+              {:else if savedGame.opponentRating && savedGame.kind !== 'computer' && !(side === 'white' ? savedGame.white : savedGame.black).includes(String(savedGame.opponentRating))}
+                <span class="pl-r num">{savedGame.kind === 'fide' ? 'FIDE ' : ''}{savedGame.opponentRating}</span>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
       {#if dbNote}<p class="label db-note">{dbNote}</p>{/if}
       <div class="segmented" role="group" aria-label="Panel">
         <button aria-pressed={tab === 'engine'} onclick={() => (tab = 'engine')}>Engine</button>
@@ -949,6 +971,49 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+  }
+  .players {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 4px 0 6px;
+  }
+  .pl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border-radius: 10px;
+    background: var(--raised);
+    font-size: 14.5px;
+  }
+  .pl.me {
+    outline: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  }
+  .pl .disc {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+  }
+  .pl .disc.white {
+    background: #f4f1ea;
+  }
+  .pl .disc.black {
+    background: #1a1a1a;
+  }
+  .pl-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+  .pl-r {
+    color: var(--gold);
+    font-weight: 700;
+    white-space: nowrap;
   }
   .page-title {
     font-size: 20px;

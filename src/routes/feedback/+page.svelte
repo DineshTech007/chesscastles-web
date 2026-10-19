@@ -20,8 +20,8 @@
     ['coach', 'Chess Guru'],
     ['analysis', 'Analysis and the database'],
     ['insights', 'Game Insights'],
-    ['vision', 'Vision Gym'],
-    ['books', 'Books'],
+    ['vision', 'Blindfold Gym'],
+    ['books', 'Audio Books'],
     ['plans', 'Plans'],
     ['other', 'Something else'],
   ] as const;

@@ -23,10 +23,10 @@
   ];
 </script>
 
-<svelte:head><title>Old chess notation · Books · Chess Castles</title></svelte:head>
+<svelte:head><title>Old chess notation · Audio Books · Chess Castles</title></svelte:head>
 
 <div class="page">
-  <a class="btn ghost back" href="/books"><Icon name="back" size={18} color="currentColor" />Books</a>
+  <a class="btn ghost back" href="/books"><Icon name="back" size={18} color="currentColor" />Audio Books</a>
   <h1 class="display">How to read old chess notation</h1>
   <p class="lead">
     Books written before about 1980 use <strong>descriptive notation</strong>. It is easy once you know two ideas, and

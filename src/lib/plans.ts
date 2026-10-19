@@ -92,7 +92,7 @@ export const FEATURE_INFO: Record<Feature, { label: string; one: string; many: s
   insights: { label: 'Chess.com & Lichess Insights reports', one: 'Insights report', many: 'Insights reports' },
   guru: { label: 'Chess Guru lessons (AI coach)', one: 'Guru lesson', many: 'Guru lessons' },
   puzzle: { label: 'Rated puzzles', one: 'puzzle', many: 'puzzles' },
-  vision: { label: 'Vision Gym sessions', one: 'Vision Gym session', many: 'Vision Gym sessions' },
+  vision: { label: 'Blindfold Gym sessions', one: 'Blindfold Gym session', many: 'Blindfold Gym sessions' },
   opening: { label: 'Opening trainer courses', one: 'opening course', many: 'opening courses' },
 };
 export const GATE_INFO: Record<Gate, string> = {

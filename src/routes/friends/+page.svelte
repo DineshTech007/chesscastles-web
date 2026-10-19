@@ -1,16 +1,17 @@
 <script lang="ts">
-  /** Friends: your friends and messages, requests waiting, and finding players to add. */
+  /** Friends & Invites: your friends and messages, how they study, requests waiting, finding players to add, and inviting more. */
   import { track } from '$lib/analytics';
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
   import PlayerCard from '$lib/components/PlayerCard.svelte';
+  import FriendProgress from '$lib/components/FriendProgress.svelte';
   import { lichessToken, session, startSignIn } from '$lib/auth';
   import { challengeSetting } from '$lib/lichessBoard';
   import { formatDate } from '$lib/format';
-  import { findPlayers, friendAction, friendsList, inbox, liveFriends, refreshBadge, type Conversation, type Player } from '$lib/social';
+  import { findPlayers, friendAction, friendsList, inbox, liveFriends, refreshBadge, serverResting, type Conversation, type Player } from '$lib/social';
   import { lichessRatings, lichessStatus, searchLichess, type LichessPlayer, type LichessStatus } from '$lib/lichess';
 
-  let tab = $state<'friends' | 'find'>('friends');
+  let tab = $state<'friends' | 'find' | 'invite'>('friends');
   let friends = $state<{ friends: Player[]; incoming: Player[]; outgoing: Player[] } | undefined>();
   let convos = $state<Conversation[]>([]);
   let error = $state('');
@@ -77,16 +78,19 @@
   // Who is playing right now, kept fresh while the page is open.
   $effect(() => {
     if (tab !== 'friends') return;
-    const t = setInterval(refreshLive, 30_000);
+    const t = setInterval(() => document.visibilityState === 'visible' && !serverResting() && void refreshLive(), 60_000);
     return () => clearInterval(t);
   });
   onMount(() => {
-    if (new URLSearchParams(location.search).get('tab') === 'find') tab = 'find';
+    const t = new URLSearchParams(location.search).get('tab');
+    if (t === 'find' || t === 'invite') tab = t;
   });
 
   $effect(() => {
     const query = q;
     if (tab !== 'find' || $session.status !== 'in') return;
+    // One or two letters would read every profile for nothing: wait for a third.
+    if (query.trim().length > 0 && query.trim().length < 3) return;
     clearTimeout(timer);
     timer = setTimeout(async () => {
       const [k, l] = await Promise.all([findPlayers(query.trim()).catch(() => [] as Player[]), searchLichess(query).catch(() => [])]);
@@ -97,7 +101,7 @@
       // Who of them is playing on Lichess right now (to watch).
       const st = await lichessStatus([...onLichess.map((p) => p.id), ...k.map((p) => lichessId(p.uid)).filter(Boolean)]).catch(() => new Map());
       foundLive = st;
-    }, 300);
+    }, 600);
   });
 
   async function act(uid: string, a: 'accept' | 'remove') {
@@ -118,6 +122,25 @@
       sent = { ...sent, [p.id]: e instanceof Error ? e.message : 'That did not work.' };
     }
   }
+  /** The invite link: the site's address, with the player's name so a friend who joins is linked to them. */
+  const inviteUrl = $derived(`https://www.chesscastles.com/${$session.status === 'in' && /^[A-Za-z0-9_-]{2,30}$/.test($session.username) ? `?ref=${encodeURIComponent($session.username)}` : ''}`);
+  const inviteText = $derived(`Join me on Chess Castles: learn, play and conquer. Free chess for everyone, with FIDE-rated opponents, puzzles, an AI coach in English, Hindi and Marathi, and live games. ${inviteUrl}`);
+  let inviteCopied = $state(false);
+  async function copyInviteText() {
+    await navigator.clipboard?.writeText(inviteText).catch(() => {});
+    inviteCopied = true;
+    track('feature', 'invite_copy');
+    setTimeout(() => (inviteCopied = false), 2000);
+  }
+  async function shareInvite() {
+    track('feature', 'invite_share');
+    try {
+      await navigator.share({ title: 'Chess Castles', text: inviteText });
+    } catch {
+      /* closed */
+    }
+  }
+  const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
   let copied = $state(false);
   async function copyInvite() {
     await navigator.clipboard?.writeText(`${location.origin}/friends`).catch(() => {});
@@ -131,12 +154,13 @@
 <div class="page">
   <header class="head">
     <div>
-      <h1 class="display">Friends</h1>
-      <p class="label">Add the players you know, message them, and challenge them to a game.</p>
+      <h1 class="display">Friends &amp; Invites</h1>
+      <p class="label">Add the players you know, message them, challenge them, see how they study, and invite more friends.</p>
     </div>
     <div class="segmented" role="group" aria-label="Show">
       <button aria-pressed={tab === 'friends'} onclick={() => (tab = 'friends')}>My friends</button>
       <button aria-pressed={tab === 'find'} onclick={() => (tab = 'find')}>Find players</button>
+      <button aria-pressed={tab === 'invite'} onclick={() => (tab = 'invite')}>Invite</button>
     </div>
   </header>
 
@@ -171,6 +195,8 @@
           {/each}
         </section>
       {/if}
+
+      {#if friends.friends.length}<FriendProgress friends={friends.friends} />{/if}
 
       <section class="card block">
         <h2 class="title">My friends ({friends.friends.length})</h2>
@@ -212,6 +238,18 @@
       {/if}
       <p class="label safe">Safe by design: only friends (both said yes) can message each other or see each other's photo and details. You can remove or block anyone from their profile.</p>
     {/if}
+  {:else if tab === 'invite'}
+    <section class="card block invite">
+      <h2 class="title">Invite your friends to Chess Castles</h2>
+      <p class="label">Chess is more fun with friends. Send this to your chess group, your club or your classmates. Everyone can join free.</p>
+      <div class="preview" aria-label="Your invite message">{inviteText}</div>
+      <div class="inv-btns">
+        <a class="btn primary" href="https://wa.me/?text={encodeURIComponent(inviteText)}" target="_blank" rel="noopener" onclick={() => track('feature', 'invite_whatsapp')}><Icon name="send" size={16} />Share on WhatsApp</a>
+        {#if canShare}<button class="btn" onclick={shareInvite}><Icon name="share" size={16} />Share…</button>{/if}
+        <button class="btn" onclick={copyInviteText}><Icon name="copy" size={16} />{inviteCopied ? 'Copied ✓' : 'Copy message'}</button>
+      </div>
+      <p class="label">When a friend joins, find them under <button class="link" onclick={() => (tab = 'find')}>Find players</button> and send a friend request to see how they study and challenge them to a game.</p>
+    </section>
   {:else}
     <section class="card block">
       <label class="search">
@@ -472,6 +510,20 @@
   }
   .safe {
     margin: 0;
+  }
+  .preview {
+    padding: 12px 14px;
+    border-radius: var(--r-control);
+    border: 1px dashed var(--border);
+    background: var(--raised);
+    font-size: 14.5px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .inv-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   .skel {
     height: 200px;

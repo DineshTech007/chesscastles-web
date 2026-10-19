@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { BlindPuzzle, describe as describePos, readMove, visionRatingAfter, type VisionPuzzle } from './vision';
 import { playSans } from '$lib/chess/position';
 
-describe('Vision Gym', () => {
+describe('Blindfold Gym', () => {
   it('writes a position as text', () => {
     const [w, b] = describePos(playSans('e4 e5 Nf3'));
     expect(w.pieces).toBe('Ke1 Qd1 Ra1 Rh1 Bc1 Bf1 Nb1 Nf3');

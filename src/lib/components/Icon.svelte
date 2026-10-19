@@ -56,6 +56,10 @@
     share: 'M12 15V3M8 7l4-4 4 4M7 10H5v11h14V10h-2',
     dots: 'M12 5h.01M12 12h.01M12 19h.01',
     phone: 'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2',
+    calendar: 'M4 6h16v14H4zM4 10h16M8 3v5M16 3v5',
+    pen: 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4',
+    help: 'M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01',
+    user_plus: 'M6 8a3 3 0 1 0 6 0a3 3 0 1 0-6 0M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M18 8v6M15 11h6',
   } as const;
   export type IconName = keyof typeof ICONS;
 </script>

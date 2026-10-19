@@ -1,17 +1,53 @@
 <script lang="ts">
-  /** The sign-in chooser: Google (quickest for parents) or Lichess (needed for online games). Opened by startSignIn(). */
+  /**
+   * The sign-in chooser: Google (quickest, recommended for parents) or Lichess (recommended for players,
+   * and needed to play real opponents online). Opened by startSignIn(). Nobody signs in before agreeing to
+   * the terms and privacy policy (and saying whether they are an adult): the choice is saved in this
+   * browser and sent to the account after sign-in.
+   */
   import { signInOpen, signInWithGoogle, startLichessSignIn } from '$lib/auth';
   import { track } from '$lib/analytics';
+  import { hasConsent, readConsent, saveConsent, type AgeGroup } from '$lib/consent';
+  import { formatDate } from '$lib/format';
+  import ConsentForm from './ConsentForm.svelte';
   import Icon from './Icon.svelte';
 
   let busy = $state<'google' | 'lichess' | undefined>();
   let error = $state('');
+  let age = $state<AgeGroup | undefined>();
+  let agreed = $state(false);
+  let showErrors = $state(false);
+  /** This browser already agreed to the current terms: the form is not asked again. */
+  let known = $state(false);
+  const agreedOn = $derived(readConsent()?.at);
+
+  $effect(() => {
+    if (!$signInOpen) return;
+    known = hasConsent();
+    age = undefined;
+    agreed = false;
+    showErrors = false;
+    error = '';
+  });
+
   const close = () => {
     if (busy) return;
     signInOpen.set(false);
     error = '';
   };
+  /** True when the player may go on: they agreed before, or they agree now. */
+  function consented(): boolean {
+    if (known) return true;
+    if (!age || !agreed) {
+      showErrors = true;
+      return false;
+    }
+    saveConsent(age);
+    track('feature', `consent_${age}`);
+    return true;
+  }
   async function google() {
+    if (!consented()) return;
     busy = 'google';
     error = '';
     try {
@@ -25,6 +61,7 @@
     }
   }
   function lichess() {
+    if (!consented()) return;
     busy = 'lichess';
     track('feature', 'signin_lichess');
     void startLichessSignIn();
@@ -42,6 +79,12 @@
     <h2 id="signin-h" class="title">Sign in to Chess Castles</h2>
     <p class="label">Free. Keep your games, ratings and progress on every device.</p>
 
+    {#if known}
+      <p class="agreed">✓ You agreed to the <a href="/legal/terms" onclick={close}>terms</a> and <a href="/legal/privacy" onclick={close}>privacy policy</a>{agreedOn ? ` on ${formatDate(agreedOn)}` : ''}.</p>
+    {:else}
+      <ConsentForm bind:age bind:agreed {showErrors} />
+    {/if}
+
     <button class="opt google" onclick={google} disabled={!!busy}>
       <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
         <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
@@ -49,17 +92,22 @@
         <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
         <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
       </svg>
-      <span>{busy === 'google' ? 'Opening Google…' : 'Continue with Google'}</span>
+      <span class="opt-text">
+        <span class="opt-main">{busy === 'google' ? 'Opening Google…' : 'Continue with Google'}</span>
+        <span class="opt-sub">Quickest. No other account needed.</span>
+      </span>
+      <span class="rec">Recommended for parents</span>
     </button>
     <button class="opt lichess" onclick={lichess} disabled={!!busy}>
       <Icon name="knight" size={22} />
-      <span>{busy === 'lichess' ? 'Opening Lichess…' : 'Continue with Lichess'}</span>
+      <span class="opt-text">
+        <span class="opt-main">{busy === 'lichess' ? 'Opening Lichess…' : 'Continue with Lichess'}</span>
+        <span class="opt-sub">Play real opponents online. Your Lichess rating comes along.</span>
+      </span>
+      <span class="rec">Recommended for players</span>
     </button>
     {#if error}<p class="error" role="alert">{error}</p>{/if}
-    <p class="label fine">
-      Google is quickest for parents. Lichess is needed to play real opponents online, and you can connect it later. By signing in you agree to the
-      <a href="/legal/terms" onclick={close}>terms</a> and <a href="/legal/privacy" onclick={close}>privacy policy</a>.
-    </p>
+    <p class="label fine">Not sure? Parents choose Google. Players who want to play real opponents online choose Lichess. You can connect the other one later.</p>
   </div>
 {/if}
 
@@ -76,14 +124,14 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: min(400px, calc(100vw - 32px));
+    width: min(440px, calc(100vw - 32px));
     max-height: calc(100vh - 32px);
     overflow-y: auto;
-    padding: 26px 22px 20px;
+    padding: 24px 20px 18px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     text-align: center;
   }
   .x {
@@ -114,27 +162,73 @@
   .dialog > p {
     margin: 0;
   }
+  .agreed {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--win) 12%, var(--card));
+    font-size: 13px;
+    text-align: left;
+  }
+  .agreed a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
   .opt {
     width: 100%;
-    min-height: 52px;
+    min-height: 64px;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 12px;
+    padding: 8px 12px;
     border-radius: 14px;
     font: inherit;
-    font-weight: 700;
-    font-size: 16px;
+    text-align: left;
     cursor: pointer;
   }
   .opt:disabled {
     opacity: 0.7;
     cursor: wait;
   }
+  .opt svg {
+    flex: none;
+  }
+  .opt-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .opt-main {
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .opt-sub {
+    font-size: 12.5px;
+    opacity: 0.75;
+    line-height: 1.3;
+  }
+  .rec {
+    flex: none;
+    max-width: 92px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gold) 22%, transparent);
+    border: 1px solid var(--gold);
+    color: inherit;
+    font-size: 10.5px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: center;
+  }
   .google {
     background: #fff;
     color: #1f1f1f;
     border: 1px solid #dadce0;
+  }
+  .google .rec {
+    background: #fff4d6;
+    color: #6b4a07;
   }
   .lichess {
     background: var(--raised);

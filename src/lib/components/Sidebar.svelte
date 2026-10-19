@@ -9,6 +9,7 @@
   import { socialBadge } from '$lib/social';
   import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
   import { HERO_FEATURES } from '$lib/heroFeatures';
+  import { NAV_GROUPS } from '$lib/nav';
   import { adminMe } from '$lib/admin';
   import { installOpen, installWay } from '$lib/install';
 
@@ -25,26 +26,10 @@
   let { collapsed = false }: { collapsed?: boolean } = $props();
 
   type Item = { href: string; label: string; icon: IconName; match: string[]; not?: string[] };
-  /** Home, then the five features only Chess Castles has (in gold), then two everyday groups. */
+  /** Home, then the five features only Chess Castles has (in gold), then the everyday pages (src/lib/nav.ts). */
   const home: Item = { href: '/', label: 'Home', icon: 'home', match: ['/'] };
   const only: Item[] = HERO_FEATURES.map((f) => ({ href: f.href, label: f.short, icon: f.icon, match: f.match }));
-  const groups: Item[][] = [
-    [
-      { href: '/play', label: 'Play', icon: 'knight', match: ['/play'], not: ['/play/fide', '/play/tournament'] },
-      { href: '/puzzles', label: 'Puzzles', icon: 'puzzle', match: ['/puzzles'] },
-      { href: '/learn', label: 'Learn', icon: 'learn', match: ['/learn'], not: ['/learn/openings'] },
-      { href: '/games', label: 'My games', icon: 'history', match: ['/games'] },
-      { href: '/vision', label: 'Vision Gym', icon: 'eye', match: ['/vision'] },
-      { href: '/books', label: 'Books', icon: 'book', match: ['/books'] },
-    ],
-    [
-      { href: '/watch', label: 'Watch', icon: 'watch', match: ['/watch'] },
-      { href: '/leaderboard', label: 'Leaderboard', icon: 'star', match: ['/leaderboard'] },
-      { href: '/ratings', label: 'Ratings', icon: 'trophy', match: ['/ratings'] },
-      { href: '/community', label: 'Community', icon: 'globe', match: ['/community'] },
-      { href: '/friends', label: 'Friends', icon: 'users', match: ['/friends', '/players'] },
-    ],
-  ];
+  const groups: Item[][] = NAV_GROUPS.map((g) => g.filter((i) => i.menu !== false));
 
   const isOn = (item: Item) =>
     !item.not?.some((n) => page.url.pathname.startsWith(n)) &&

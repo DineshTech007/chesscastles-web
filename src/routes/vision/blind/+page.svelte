@@ -168,11 +168,11 @@
   const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 </script>
 
-<svelte:head><title>Blindfold puzzles · Vision Gym · Chess Castles</title></svelte:head>
+<svelte:head><title>Blindfold puzzles · Blindfold Gym · Chess Castles</title></svelte:head>
 
-<FeatureGate feature="vision" ref={tabRef('blind')} back="/vision" backLabel="Vision Gym">
+<FeatureGate feature="vision" ref={tabRef('blind')} back="/vision" backLabel="Blindfold Gym">
 <div class="page">
-  <a class="back" href="/vision"><Icon name="back" size={16} />Vision Gym</a>
+  <a class="back" href="/vision"><Icon name="back" size={16} />Blindfold Gym</a>
   <header class="head">
     <div>
       <h1 class="display">Blindfold puzzles</h1>

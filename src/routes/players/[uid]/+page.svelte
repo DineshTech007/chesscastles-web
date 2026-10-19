@@ -10,7 +10,7 @@
   import { reportPlayer, type ReportReason } from '$lib/social';
   import LichessPanel from '$lib/components/LichessPanel.svelte';
   import FriendGames from '$lib/components/FriendGames.svelte';
-  import type { LichessProfile } from '$lib/lichess';
+  import { lichessStatus, type LichessProfile } from '$lib/lichess';
   import { friendAction, getPlayer, initialsOf, playerPhoto, type Player, type Relation } from '$lib/social';
 
   const uid = decodeURIComponent(page.params.uid!);
@@ -36,6 +36,30 @@
         else error = e instanceof Error ? e.message : 'This player could not be loaded.';
       },
     );
+  });
+
+  /**
+   * Playing now: the Watch button must be on the profile itself, not only in the Friends list. It follows the
+   * player while the page is open: a Lichess game (checked on Lichess) or a game on Chess Castles (asked of our server).
+   */
+  let lichessGame = $state<string | undefined>();
+  const loaded = $derived(!!player);
+  $effect(() => {
+    if (!lichessId || $session.status !== 'in' || document.visibilityState === 'hidden') return;
+    const check = () => lichessStatus([lichessId]).then((m) => (lichessGame = m.get(lichessId)?.playingId)).catch(() => {});
+    void check();
+    const t = setInterval(() => document.visibilityState === 'visible' && void check(), 20_000);
+    return () => clearInterval(t);
+  });
+  $effect(() => {
+    if (!loaded || $session.status !== 'in') return;
+    const t = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      void getPlayer(uid).then((r) => {
+        if (player) player = { ...player, playing: r.player.playing, online: r.player.online };
+      }, () => {});
+    }, 45_000);
+    return () => clearInterval(t);
   });
 
   async function act(a: 'request' | 'accept' | 'remove' | 'block') {
@@ -125,8 +149,12 @@
         </p>
       </div>
       <div class="actions">
-        {#if player.playing && relation !== 'self'}
-          <a class="btn live-btn" href="/watch/friend/{encodeURIComponent(uid)}"><span class="pulse"></span>Watch live</a>
+        {#if relation !== 'self'}
+          {#if player.playing}
+            <a class="btn live-btn" href="/watch/friend/{encodeURIComponent(uid)}"><span class="pulse"></span>Watch live</a>
+          {:else if lichessGame}
+            <a class="btn live-btn" href="/watch/live/{lichessGame}"><span class="pulse"></span>Watch live on Lichess</a>
+          {/if}
         {/if}
         {#if relation === 'self'}
           <a class="btn" href="/profile">Edit my profile</a>

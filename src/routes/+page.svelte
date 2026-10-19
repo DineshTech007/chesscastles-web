@@ -18,11 +18,13 @@
   import { shownGames } from '$lib/stores/me';
   import { formatDate } from '$lib/format';
   import { session } from '$lib/auth';
-  import { kfideAll, myCountry } from '$lib/stores/me';
+  import { myCountry } from '$lib/stores/me';
+  import RatingStrip from '$lib/components/RatingStrip.svelte';
+  import ExploreGrid from '$lib/components/ExploreGrid.svelte';
+  import FriendRequests from '$lib/components/FriendRequests.svelte';
+  import FriendProgress from '$lib/components/FriendProgress.svelte';
+  import { friendsCache } from '$lib/social';
   import { fedName } from '$lib/fideFeds';
-  import { KFIDE_SPEEDS, SPEED_LABEL, kfideText } from '$lib/kfide';
-  import { LICHESS_LABEL, lichessRatings, type LichessRating } from '$lib/lichessRatings';
-  import { puzzleRating } from '$lib/puzzles/rating';
   import { dayOf, streak, study } from '$lib/study/progress';
   import { loadPlan, nextStep, topicOn, TOPICS, hasPlan } from '$lib/study/plan';
 
@@ -36,24 +38,7 @@
     topBroadcasts().then((b) => (live = [...b.live, ...b.soon].slice(0, 4)), () => (liveError = true));
   });
 
-  const stats = $derived.by(() => {
-    const done = $shownGames.filter((g) => outcome(g) !== 'unfinished');
-    const won = done.filter((g) => outcome(g) === 'won').length;
-    const drawn = done.filter((g) => outcome(g) === 'draw').length;
-    return { played: done.length, won, drawn, lost: done.length - won - drawn };
-  });
   const recent = $derived($shownGames.slice(0, 3));
-  /** Signed in with Lichess: the player's real Lichess ratings (the two speeds they play most there). */
-  let lichess = $state<LichessRating[]>([]);
-  $effect(() => {
-    const s = $session;
-    lichess = [];
-    if (s.status !== 'in' || !s.uid.startsWith('lichess:') || !s.username) return;
-    lichessRatings(s.username).then(
-      (list) => (lichess = [...list].sort((a, b) => b.games - a.games).slice(0, 2)),
-      () => {},
-    );
-  });
   const myStreak = $derived(streak($study, Date.now()));
   const studiedToday = $derived($study.some((a) => dayOf(a.at) === dayOf(Date.now())));
   let todayPlan = $state<{ label: string; color: string; href: string; title: string } | undefined>();
@@ -86,30 +71,11 @@
       </h1>
       <p class="sub"><strong>Learn</strong> with Chess Guru. <strong>Play</strong> FIDE-rated opponents and friends. <strong>Conquer</strong> your next tournament.</p>
     </div>
-    {#if ($session.status === 'in' && $session.profile) || stats.played}
-      <!-- Each CC Rating opens its chart on the profile (or Play, before the first game at that speed). -->
-      <div class="stats" aria-label="Your ratings and games">
-        {#each KFIDE_SPEEDS as s (s)}
-          {@const k = $kfideAll[s]}
-          <a
-            class="kf"
-            class:main={$kfideAll.main === s && k.games > 0}
-            href={k.games ? `/profile?speed=${s}#cc-ratings` : '/play?mode=fide'}
-            title={k.games ? `Your Chess Castles rating at ${SPEED_LABEL[s]} from ${k.games} ${k.games === 1 ? 'game' : 'games'} against FIDE-rated opponents. See how it changed.` : `${SPEED_LABEL[s]}: not played yet. Play a FIDE-rated opponent at this speed to get this rating.`}
-          >
-            <span class="label">CC Rating {SPEED_LABEL[s]}</span>
-            {#if k.games}<strong class="title num">{kfideText(k)}</strong>{:else}<strong class="title none">Play</strong>{/if}
-          </a>
-        {/each}
-        <a href="/puzzles" title="Your puzzle rating: a solved puzzle raises it, a missed one (or a hint) lowers it"><span class="label">Puzzle rating</span><strong class="title num">{$puzzleRating}</strong></a>
-        {#each lichess as l (l.speed)}
-          <a class="li" href="/insights" title="Your Lichess {LICHESS_LABEL[l.speed]} rating ({l.games} games). Game Insights analyses your Lichess games."><span class="label">Lichess {LICHESS_LABEL[l.speed]}</span><strong class="title num">{l.rating}{l.provisional ? '?' : ''}</strong></a>
-        {/each}
-        <a href="/games" title="Finished games you played on Chess Castles: won {stats.won}, drawn {stats.drawn}, lost {stats.lost}"><span class="label">Games played</span><strong class="title num">{stats.played}</strong></a>
-      </div>
-    {/if}
+    {#if ($session.status === 'in' && $session.profile) || $shownGames.length}<RatingStrip />{/if}
   </header>
   {/if}
+
+  {#if !showLanding}<FriendRequests inline />{/if}
 
   {#if !studiedToday && (myStreak > 0 || todayPlan)}
     <a class="nudge card" href={todayPlan?.href ?? '/puzzles'}>
@@ -137,47 +103,11 @@
     </section>
   {/if}
 
+  {#if !showLanding}<ExploreGrid />{/if}
+
   <CoachWork />
 
   <div class="row">
-    <section class="panel play" aria-labelledby="play-h">
-      <div class="play-options">
-        <h2 id="play-h" class="display play-h">Play</h2>
-        <a class="option primary" href="/play">
-          <Icon name="users" size={28} color="currentColor" />
-          <span class="opt-text">
-            <span class="title">A FIDE-rated opponent <span class="badge-new">NEW</span></span>
-            <span class="opt-sub">A real tournament feel, at the rating you pick</span>
-          </span>
-          <Icon name="chevron" size={20} color="currentColor" />
-        </a>
-        <a class="option" href="/play?mode=computer">
-          <Icon name="robot" size={26} color="var(--accent)" />
-          <span class="opt-text">
-            <span class="title">Computer</span>
-            <span class="opt-sub">Stockfish from beginner to maximum</span>
-          </span>
-        </a>
-        <a class="option" href="/insights">
-          <Icon name="coach" size={26} color="var(--accent)" />
-          <span class="opt-text">
-            <span class="title">Game Insights</span>
-            <span class="opt-sub">A deep review of your chess.com games, and a study plan</span>
-          </span>
-        </a>
-        <a class="option" href="/analysis">
-          <Icon name="analyse" size={26} color="var(--accent)" />
-          <span class="opt-text">
-            <span class="title">Analysis board</span>
-            <span class="opt-sub">Engine and 5.4 million rated games</span>
-          </span>
-        </a>
-      </div>
-      <div class="hero-board">
-        <Board fen="rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6" viewOnly coordinates={false} label="The Najdorf Sicilian" />
-      </div>
-    </section>
-
     <section class="card recent" aria-labelledby="recent-h">
       <div class="card-head">
         <h2 id="recent-h" class="title">Your games</h2>
@@ -255,6 +185,8 @@
 
     <LeaderboardCard />
   </div>
+
+  {#if !showLanding && $friendsCache.length}<FriendProgress friends={$friendsCache} limit={5} title="Friends this week" />{/if}
 
   {#if $shownGames.length}
     <GameHistory limit={8} title="Recent games" />
@@ -376,116 +308,10 @@
   .nudge:hover {
     text-decoration: none;
   }
-  .stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .stats a {
-    display: flex;
-    flex-direction: column;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--r-control);
-    padding: 7px 14px;
-    min-width: 78px;
-    color: inherit;
-    text-decoration: none;
-    transition: border-color 0.15s;
-  }
-  .stats a:hover {
-    border-color: var(--brand);
-    text-decoration: none;
-  }
-  .stats strong {
-    font-size: 22px;
-  }
-  /* The main CC Rating (the speed played most) in gold. */
-  .stats .kf.main {
-    border-color: var(--gold);
-  }
-  .stats .kf.main strong {
-    color: var(--gold);
-  }
-  .stats .none {
-    color: var(--muted);
-    font-size: 18px;
-  }
-  @media (max-width: 560px) {
-    .stats {
-      flex-wrap: wrap;
-    }
-  }
   .row {
     display: flex;
     gap: 20px;
     flex-wrap: wrap;
-  }
-  .play {
-    flex: 2 1 560px;
-    min-width: 0;
-    display: flex;
-    gap: 22px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .play-options {
-    flex: 1 1 300px;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .play-h {
-    font-size: 40px;
-  }
-  .option {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px;
-    border-radius: 14px;
-    background: var(--raised);
-    border: 1px solid var(--border);
-    color: var(--text);
-    text-decoration: none;
-    transition:
-      border-color 0.15s,
-      transform 0.15s;
-  }
-  .option:hover {
-    border-color: var(--brand);
-    transform: translateY(-1px);
-    text-decoration: none;
-  }
-  .option.primary {
-    background: var(--action);
-    border-color: var(--action);
-    color: var(--on-action);
-  }
-  .opt-text {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  .opt-text .title {
-    font-size: 19px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .opt-sub {
-    font-size: 14px;
-    opacity: 0.85;
-  }
-  .option:not(.primary) .opt-sub {
-    color: var(--muted);
-    opacity: 1;
-  }
-  .hero-board {
-    flex: 0 1 300px;
-    min-width: 220px;
-    margin: 0 auto;
   }
   .recent {
     flex: 1 1 300px;
@@ -616,10 +442,6 @@
   @media (max-width: 767px) {
     h1 {
       font-size: 36px;
-    }
-    .stats a {
-      min-width: 0;
-      padding: 6px 10px;
     }
   }
 </style>

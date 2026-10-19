@@ -1,15 +1,18 @@
 <script lang="ts">
-  /** Watches a friend's game on Chess Castles live, as an audience: the board, both clocks and the result. */
+  /**
+   * Watches a friend's game on Chess Castles live, as an audience. The viewer (WatchViewer) gives the move
+   * list and the buttons to step through it, the audience's own moves to try ideas, the engine (bar, arrow,
+   * score) and the games database, with "Live" to come back to the game as it stands.
+   */
   import { onDestroy, onMount } from 'svelte';
   import { page } from '$app/state';
-  import Board from '$lib/components/Board.svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import PlayerBar from '$lib/components/PlayerBar.svelte';
+  import WatchViewer, { type BarInfo } from '$lib/components/WatchViewer.svelte';
   import { session, startSignIn } from '$lib/auth';
-  import { fenOf, keyOf, positionFromFen, uciToMove } from '$lib/chess/position';
+  import { positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
+  import type { PgnGame, PgnPly } from '$lib/chess/pgn';
   import { getPlayer, watchLive, type LiveGame, type Player } from '$lib/social';
   import { playMoveSound } from '$lib/sound';
-  import type { Key } from '@lichess-org/chessground/types';
 
   const uid = decodeURIComponent(page.params.uid!);
   let game = $state<LiveGame | undefined>();
@@ -52,7 +55,8 @@
     if ($session.status !== 'in') return;
     void getPlayer(uid).then((r) => (friend = r.player)).catch(() => {});
     void poll();
-    timer = setInterval(poll, 2000);
+    // Every 2 seconds while the game is on and the page is in front.
+    timer = setInterval(() => document.visibilityState === 'visible' && void poll(), 2000);
     return () => clearInterval(timer);
   });
   onDestroy(() => {
@@ -60,25 +64,22 @@
     clearInterval(tick);
   });
 
-  const view = $derived.by(() => {
+  /** The shared moves as a game the viewer can step through. */
+  const pgn = $derived.by<PgnGame | undefined>(() => {
     if (!game) return undefined;
-    const pos = positionFromFen(game.start);
-    let last: Key[] | undefined;
+    const start = positionFromFen(game.start);
+    const pos = start.clone();
+    const plies: PgnPly[] = [];
     for (const u of game.uci) {
       const m = uciToMove(u);
       if (!m || !pos.isLegal(m)) break;
+      const san = sanOf(pos, m);
       pos.play(m);
-      last = [keyOf(m.from), keyOf(m.to)];
+      plies.push({ move: m, san, after: pos.clone() });
     }
-    return { fen: fenOf(pos), turn: pos.turn, check: pos.isCheck(), last };
+    return { headers: new Map(), start, plies };
   });
-  /** A clock, running on for the side to move since the friend's last move. */
-  const clock = (side: 'white' | 'black') => {
-    if (!game?.minutes) return undefined;
-    const base = side === 'white' ? game.white : game.black;
-    const running = !game.result && view?.turn === side && game.uci.length >= 2;
-    return Math.max(0, base - (running ? now - sharedAt : 0));
-  };
+
   const friendName = $derived(friend?.name ?? uid.replace(/^lichess:/, ''));
   /** Initials as the players see them: a FIDE-rated opponent shows its rating ("12" for 1200). */
   const initialsOf = (name: string) => {
@@ -86,23 +87,28 @@
     if (r) return String(Math.floor(Number(r[1]) / 100));
     return name.split(/[\s_,]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
   };
-  function bar(side: 'white' | 'black') {
-    const isFriend = game?.human === side;
+  function barFor(s: 'white' | 'black', ply: number, latest: boolean): BarInfo {
+    const isFriend = game?.human === s;
     const opponent = game?.opponent ?? '';
     // The opponent's rating, unless its name already says it ("FIDE 1200").
     const oppRating = game?.opponentRating && !opponent.includes(String(game.opponentRating)) ? `FIDE ${game.opponentRating}` : undefined;
+    const after = !pgn ? undefined : ply === 0 ? pgn.start : pgn.plies[ply - 1]?.after;
+    let clockMs: number | undefined;
+    if (latest && game?.minutes) {
+      // The clock of the side to move runs on since the friend's last move.
+      const running = !game.result && after?.turn === s && game.uci.length >= 2;
+      clockMs = Math.max(0, (s === 'white' ? game.white : game.black) - (running ? now - sharedAt : 0));
+    }
     return {
       name: isFriend ? friendName : opponent,
-      subtitle: side === 'white' ? 'White' : 'Black',
+      subtitle: s === 'white' ? 'White' : 'Black',
       initials: initialsOf(isFriend ? friendName : opponent),
       rating: isFriend ? (friend?.kfide ? `CC ${friend.kfide}` : undefined) : oppRating,
       country: isFriend ? friend?.country || undefined : undefined,
-      toMove: !game?.result && view?.turn === side,
-      clockMs: clock(side),
+      toMove: latest && !game?.result && after?.turn === s,
+      clockMs,
     };
   }
-  const bottom = $derived(game?.human ?? 'white');
-  const top = $derived(bottom === 'white' ? 'black' : 'white');
   const resultText = $derived(
     !game?.result ? '' : game.result === 'aborted' ? 'Game aborted' : game.result === '½-½' ? 'Draw' : (game.result === '1-0') === (game.human === 'white') ? `${friendName} won` : `${friendName} lost`,
   );
@@ -110,91 +116,39 @@
 
 <svelte:head><title>Watching {friendName} · Chess Castles</title></svelte:head>
 
-<div class="live">
-  {#if $session.status === 'out'}
-    <div class="card"><p>Sign in to watch your friends' games.</p><button class="btn primary" onclick={() => startSignIn()}>Sign in</button></div>
-  {:else if error && !game}
-    <div class="card msg">
-      <p>{error}</p>
-      <a class="btn" href="/friends"><Icon name="back" size={16} />Back to friends</a>
-    </div>
-  {:else if !game || !view}
-    <div class="card msg"><p class="label">Connecting to {friendName}'s game…</p></div>
-  {:else}
-    <div class="board-col">
-      <PlayerBar {...bar(top)} />
-      <Board fen={view.fen} orientation={bottom} turnColor={view.turn} lastMove={view.last} check={view.check} viewOnly label="{friendName}'s game" />
-      <PlayerBar {...bar(bottom)} />
-    </div>
-    <aside class="side card">
-      <span class="tag" class:over={!!game.result}>{game.result ? 'Finished' : '● Live on Chess Castles'}</span>
-      <h1 class="title">{friendName} vs {game.opponent}</h1>
-      <p class="label">{game.minutes ? `${game.minutes}+${game.increment}` : 'No clock'} · move {Math.ceil(game.uci.length / 2)} · you are watching</p>
-      {#if resultText}<p class="result title">{resultText}{game.reason ? ` · ${game.reason}` : ''}</p>{/if}
-      <a class="label back" href="/friends"><Icon name="back" size={14} />Back to friends</a>
-    </aside>
-  {/if}
-</div>
+{#if $session.status === 'out'}
+  <div class="card msg"><p>Sign in to watch your friends' games.</p><button class="btn primary" onclick={() => startSignIn()}>Sign in</button></div>
+{:else if error && !game}
+  <div class="card msg">
+    <p>{error}</p>
+    <a class="btn" href="/friends"><Icon name="back" size={16} />Back to friends</a>
+  </div>
+{:else if !game || !pgn}
+  <div class="card msg"><p class="label">Connecting to {friendName}'s game…</p></div>
+{:else}
+  <WatchViewer
+    game={pgn}
+    live={!game.result}
+    side={game.human}
+    heading="{friendName} vs {game.opponent}"
+    subheading="{game.minutes ? `${game.minutes}+${game.increment}` : 'No clock'} · on Chess Castles"
+    result={resultText ? `${resultText}${game.reason ? ` · ${game.reason}` : ''}` : ''}
+    backHref="/friends"
+    backLabel="Back to friends"
+    {barFor}
+  />
+{/if}
 
 <style>
-  .live {
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: flex-start;
-    max-width: 1200px;
+  .msg {
+    max-width: 720px;
     margin: 0 auto;
-  }
-  .board-col {
-    flex: 0 1 min(100%, calc(100vh - 230px), 720px);
-    min-width: min(100%, 300px);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .side {
-    flex: 1 1 280px;
-    max-width: 380px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    align-items: flex-start;
   }
-  .side h1 {
-    margin: 0;
-    font-size: 21px;
-  }
-  .side p,
   .msg p {
     margin: 0;
-  }
-  .msg {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: flex-start;
-  }
-  .tag {
-    align-self: flex-start;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--loss) 20%, transparent);
-    color: var(--loss);
-  }
-  .tag.over {
-    background: var(--raised);
-    color: var(--muted);
-  }
-  .result {
-    font-size: 19px;
-  }
-  .back {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
   }
 </style>

@@ -55,12 +55,12 @@
   const me = $derived($session.status === 'in' ? $session.uid : undefined);
 </script>
 
-<svelte:head><title>Ratings · Chess Castles</title></svelte:head>
+<svelte:head><title>FIDE Ratings · Chess Castles</title></svelte:head>
 
 <div class="page">
   <header class="head">
     <div>
-      <h1 class="display">Ratings</h1>
+      <h1 class="display">FIDE Ratings</h1>
       <p class="label">FIDE's official top lists and player ratings, and the Chess Castles leaderboards.</p>
     </div>
     <div class="segmented tabs" role="group" aria-label="Ratings">

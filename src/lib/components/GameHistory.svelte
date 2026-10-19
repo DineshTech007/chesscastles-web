@@ -2,7 +2,8 @@
   import Icon from './Icon.svelte';
   import { formatDate } from '$lib/format';
   import { KIND_LABEL, myGames, opponentOf, outcome, type SavedGame } from '$lib/stores/myGames';
-  import { shownGames } from '$lib/stores/me';
+  import { kfideAll, shownGames } from '$lib/stores/me';
+  import { gameRating, ratingText } from '$lib/stores/gameRatings';
 
   let { limit = 10, title = 'Game history' }: { limit?: number; title?: string } = $props();
   const games = $derived($shownGames.slice(0, limit));
@@ -23,6 +24,7 @@
         <thead>
           <tr>
             <th scope="col">Result</th>
+            <th scope="col">You</th>
             <th scope="col">Opponent</th>
             <th scope="col" class="hide-s">Type</th>
             <th scope="col" class="hide-s">Time</th>
@@ -34,8 +36,10 @@
         <tbody>
           {#each games as g (g.id)}
             {@const o = outcome(g)}
+            {@const gr = gameRating(g, $kfideAll)}
             <tr>
               <td><span class="res {o}" title={o}>{LETTER[o]}</span></td>
+              <td class="you num" title={gr.label ? `Your ${gr.label} rating in this game` : ''}>{ratingText(gr) || '—'}</td>
               <td class="who">
                 <span class="side {g.userSide === 'white' ? 'black' : 'white'}" aria-hidden="true"></span>
                 {opponentOf(g)}
@@ -60,6 +64,10 @@
 <style>
   .go {
     white-space: nowrap;
+  }
+  .you {
+    white-space: nowrap;
+    color: var(--text-2);
   }
   .go .guru {
     margin-left: 6px;

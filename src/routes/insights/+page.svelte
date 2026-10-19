@@ -19,6 +19,7 @@
   import { isWeak, resultText, studyHref, studyLineName } from '$lib/study/fromGames';
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import { PLANS, PLAN_INFO, planSettings, currentPlan, useFeature } from '$lib/plans';
+  import InsightsHeader from '$lib/components/InsightsHeader.svelte';
 
   let site = $state<Site>('chesscom');
   let username = $state('');
@@ -79,6 +80,11 @@
   }
 
   const report = $derived<Report | undefined>(data && data.games.length ? buildReport(data.games) : undefined);
+  /** Wins, draws and losses of the analysed games. */
+  const wdl = $derived.by(() => {
+    const sc = (data?.games ?? []).map((g) => userScore(g.game));
+    return { w: sc.filter((x) => x === 1).length, d: sc.filter((x) => x === 0.5).length, l: sc.filter((x) => x === 0).length };
+  });
   const ownMistakes = $derived(data ? mistakesToTrain(data.games).length : 0);
   const summary = $derived.by(() => {
     if (!report) return '';
@@ -172,20 +178,7 @@
   {/if}
 
   {#if report}
-    <section class="card say">
-      <p>{summary}</p>
-      <div class="row">
-        <button class="btn primary" onclick={() => (tab = 'plan')}><Icon name="learn" size={18} />See my weekly plan</button>
-        {#if ownMistakes}<a class="btn" href="/insights/mistakes"><Icon name="puzzle" size={18} />Solve {ownMistakes} of my own mistakes</a>{/if}
-      </div>
-    </section>
-
-    <section class="tiles">
-      <div class="card tile"><span class="label">Score</span><strong class="display num">{Math.round(report.score * 100)}%</strong><span class="label">{report.games} games{report.averageRating ? ` · rated about ${report.averageRating}` : ''}</span></div>
-      <div class="card tile"><span class="label">Accuracy</span><strong class="display num">{report.accuracy}%</strong><span class="label">{Math.round(report.acpl)} centipawns lost a move</span></div>
-      <div class="card tile bad"><span class="label">Blunders a game</span><strong class="display num">{report.blundersPerGame.toFixed(1)}</strong><span class="label">mistakes {report.mistakesPerGame.toFixed(1)} a game</span></div>
-      <div class="card tile"><span class="label">Biggest problem</span><strong class="title big-problem">{report.weaknesses[0]?.title ?? 'None found'}</strong>{#if report.weaknesses[0]}<button class="link label" onclick={() => (tab = 'weak')}>See why →</button>{/if}</div>
-    </section>
+    <InsightsHeader {report} {wdl} {summary} plan={preview} {ownMistakes} onplan={() => (tab = 'plan')} onweak={() => (tab = 'weak')} onadd={makePlan} />
 
     <div class="tabs" role="tablist" aria-label="Report">
       {#each TABS as [k, label] (k)}
@@ -410,14 +403,6 @@
     font-weight: 800;
     margin-bottom: 4px;
   }
-  .tile.bad strong {
-    color: var(--loss);
-  }
-  .big-problem {
-    font-size: 18px;
-    line-height: 1.25;
-    margin: 4px 0;
-  }
   .link {
     background: none;
     border: 0;
@@ -624,34 +609,10 @@
     color: var(--loss);
     margin: 0;
   }
-  .say {
-    padding: 16px 18px;
-    border-color: var(--gold);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .say p {
-    margin: 0;
-    font-size: 17px;
-  }
   .row {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-  }
-  .tiles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 12px;
-  }
-  .tile {
-    padding: 12px 16px;
-    display: flex;
-    flex-direction: column;
-  }
-  .tile strong {
-    font-size: 32px;
   }
   .study-call {
     border-color: color-mix(in srgb, var(--loss) 45%, var(--border));

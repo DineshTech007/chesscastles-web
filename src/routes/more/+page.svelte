@@ -5,6 +5,7 @@
   import { session, signOut, startSignIn } from '$lib/auth';
   import { adminMe } from '$lib/admin';
   import { HERO_FEATURES } from '$lib/heroFeatures';
+  import { NAV_ITEMS } from '$lib/nav';
   import { installOpen, installWay } from '$lib/install';
 
   let isAdmin = $state(false);
@@ -16,20 +17,13 @@
       );
   });
 
+  /** Account and policy pages; everything else comes from the shared menu list (src/lib/nav.ts). */
   const links: { href: string; label: string; icon: IconName }[] = [
     { href: '/profile', label: 'Profile, photo and CC Rating', icon: 'users' },
     { href: '/settings', label: 'Settings: premoves, auto-queen, sound, board colour', icon: 'settings' },
     ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
     { href: '/students', label: 'My students (coach tools)', icon: 'coach' },
-    { href: '/friends', label: 'Friends and messages', icon: 'users' },
-    { href: '/games', label: 'My games', icon: 'history' },
-    { href: '/watch', label: 'Watch', icon: 'watch' },
-    { href: '/vision', label: 'Vision Gym: blindfold training', icon: 'eye' },
-    { href: '/learn', label: 'Learn', icon: 'learn' },
-    { href: '/books', label: 'Books: read and listen to chess classics', icon: 'book' },
-    { href: '/leaderboard', label: 'Leaderboard', icon: 'star' },
-    { href: '/ratings', label: 'Ratings', icon: 'trophy' },
-    { href: '/community', label: 'Community: tournaments and coaches', icon: 'globe' },
+    ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.label}: ${n.blurb}`, icon: n.icon })),
     { href: '/parents', label: 'For parents: safety, prices, getting started', icon: 'shield' },
     { href: '/feedback', label: 'Send feedback', icon: 'send' },
     { href: '/help', label: 'Help & support', icon: 'bulb' },

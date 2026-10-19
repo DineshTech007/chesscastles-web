@@ -21,13 +21,13 @@
   const launch = $derived($planSettings.launch);
 
   const EVERYTHING: { icon: IconName; title: string; text: string; href: string }[] = [
-    { icon: 'globe', title: 'Play online', text: 'Quick pairing, lobby and friends', href: '/play?mode=online' },
+    { icon: 'globe', title: 'Play Lichess players', text: 'Online, free, with friends too', href: '/play?mode=online' },
     { icon: 'puzzle', title: 'Puzzles', text: 'Daily puzzle and 17 themes', href: '/puzzles' },
     { icon: 'analyse', title: 'Analysis board', text: 'Engine, import, board editor', href: '/analysis' },
     { icon: 'watch', title: 'Watch live', text: 'Top events and friends’ games', href: '/watch' },
     { icon: 'trophy', title: 'Tournaments', text: 'FIDE tournaments and arenas', href: '/play/tournament' },
-    { icon: 'eye', title: 'Vision Gym', text: 'Blindfold training', href: '/vision' },
-    { icon: 'book', title: 'Chess classics', text: 'Read and listen', href: '/books' },
+    { icon: 'eye', title: 'Blindfold Gym', text: 'Blindfold training', href: '/vision' },
+    { icon: 'book', title: 'Audio Books', text: 'Listen to the chess classics', href: '/books' },
     { icon: 'star', title: 'Leaderboards', text: 'CC Rating, puzzles, study', href: '/leaderboard' },
   ];
   const go = (id: string) => track('feature', `landing_${id}`);
@@ -51,7 +51,7 @@
       <p class="parents"><a href="/parents"><Icon name="shield" size={16} color="var(--accent)" />For parents: is it safe for my child?</a></p>
       <ul class="trust" aria-label="Chess Castles in numbers">
         <li><strong class="num">5.4M</strong><span>tournament games</span></li>
-        <li><strong class="num">3,865</strong><span>openings</span></li>
+        <li><strong class="num">3,865</strong><span>named opening lines</span></li>
         <li><strong class="num">1400–2800</strong><span>FIDE-rated opponents*</span></li>
       </ul>
     </div>

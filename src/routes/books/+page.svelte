@@ -35,7 +35,7 @@
   const pct = (b: BookMeta) => Math.round(((progress[b.slug]?.read.length ?? 0) / b.chapters) * 100);
 </script>
 
-<svelte:head><title>Books · Chess Castles</title></svelte:head>
+<svelte:head><title>Audio Books · Chess Castles</title></svelte:head>
 
 {#snippet cover(b: BookMeta, small = false)}
   <div class="cover" class:small style:--c={b.colour} aria-hidden="true">
@@ -46,7 +46,7 @@
   </div>
 {/snippet}
 
-<h1 class="display h">Books</h1>
+<h1 class="display h">Audio Books</h1>
 <p class="lead">
   Classic chess books by champions and masters, free to read or listen to. Tap <strong>Listen</strong> on any book and
   Chess Castles reads it aloud to you, chess moves included. Every book here is in the public domain.

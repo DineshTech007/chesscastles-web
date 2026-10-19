@@ -133,6 +133,7 @@
       reason: game.endReason,
       timeControl: game.initial ? `${game.initial / 60000}+${game.increment / 1000}` : '',
       opponentRating: game.opponent.rating,
+      myRating: (me === 'white' ? game.white : game.black).rating,
       startFen: fenOf(game.start),
       uci: game.plies.map((p) => moveToUci(p.move)),
     });
