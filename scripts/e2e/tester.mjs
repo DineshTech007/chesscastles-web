@@ -41,11 +41,15 @@ const SESSION_FILE = join(DATA, 'session.json');
 const BUGS_FILE = join(DATA, 'bugs.json');
 const SLOW_MS = 3000;
 /** The opening courses, studied in turn; games from the studied line follow. */
+// `line` is the curated line (the trainer and "Play it" take it); `chapter` the course's chapter
+// with the same moves (what the Model games and Lines tabs take), looked up in chapters.json.
+const CHAPTERS = JSON.parse(readFileSync('src/lib/study/chapters.json', 'utf8'));
+const chapterOf = (id, sans) => CHAPTERS[id]?.chapters.find((c) => c.sans === sans)?.id ?? sans;
 const COURSES = [
-  { id: 'caro-kann', name: 'Caro-Kann Defence', side: 'black', line: 'advance', lineName: 'Advance Variation (3.e5)' },
-  { id: 'jobava-london', name: 'Jobava London', side: 'white', line: 'e6', lineName: '3...e6' },
-  { id: 'chebanenko', name: 'Chebanenko Slav', side: 'black', line: 'e3', lineName: '5.e3' },
-];
+  { id: 'caro-kann', name: 'Caro-Kann Defence', side: 'black', line: 'advance', sans: 'e4 c6 d4 d5 e5', lineName: '3.e5' },
+  { id: 'jobava-london', name: 'Jobava London', side: 'white', line: 'e6', sans: 'd4 Nf6 Bf4 d5 Nc3 e6', lineName: '3...e6' },
+  { id: 'chebanenko', name: 'Chebanenko Slav', side: 'black', line: 'e3', sans: 'd4 d5 c4 c6 Nf3 Nf6 Nc3 a6 e3', lineName: '5.e3' },
+].map((c) => ({ ...c, chapter: chapterOf(c.id, c.sans) }));
 /** Other features, one a session. */
 const FEATURES = ['/watch', '/vision', '/books', '/leaderboard', '/ratings', '/puzzles', '/coach', '/learn/masters', '/friends', '/insights', '/games', '/learn?tab=tactics'];
 /** Rapid 15+10 (TIME_CONTROLS index 2): never blitz or bullet in this routine. */
@@ -117,14 +121,14 @@ page.on('requestfailed', (r) => {
   if (!/lichess\.org\/api\/(stream|board)|aborted/i.test(`${r.url()} ${r.failure()?.errorText}`)) failedRequests.push({ url: r.url().slice(0, 160), error: r.failure()?.errorText ?? '' });
 });
 page.on('response', (r) => {
-  if (r.status() >= 400 && !/lichess\.org|chess\.com|api\.chess/.test(r.url())) failedRequests.push({ url: r.url().slice(0, 160), error: `HTTP ${r.status()}` });
+  if (r.status() >= 400) failedRequests.push({ url: r.url().slice(0, 160), error: `HTTP ${r.status()}`, page: page.url().replace(BASE, '') });
 });
 
 async function open(path, what = path) {
-  const t0 = Date.now();
-  await page.goto(BASE + path, { waitUntil: 'domcontentloaded', timeout: 45000 });
-  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
-  const ms = Date.now() - t0;
+  await page.goto(BASE + path, { waitUntil: 'load', timeout: 45000 });
+  // The page's own load time (its load event), not the live connections some pages keep open.
+  const ms = await page.evaluate(() => Math.round(performance.getEntriesByType('navigation')[0]?.loadEventEnd ?? 0)).catch(() => 0);
+  await page.waitForTimeout(1500);
   pagesSeen.add(path.split('?')[0]);
   if (ms > SLOW_MS) slow.push({ path, ms });
   const blank = (await page.locator('main').innerText().catch(() => '')).trim().length < 20;
@@ -314,15 +318,16 @@ async function playGame(n, opp, color, opening) {
   if (id) {
     g.id = id;
     await open(`/analysis?game=${id}&review`, 'Analysis of my game');
-    await page.locator('.moves .mv svg.badge').first().waitFor({ timeout: 120_000 }).catch(() => {});
+    await page.locator('.tree .row .mv svg.badge').first().waitFor({ timeout: 120_000 }).catch(() => {});
     const marks = await page.evaluate((color) => {
       const out = [];
-      const mvs = [...document.querySelectorAll('.moves .mv')];
-      mvs.forEach((b, i) => {
-        const badge = b.querySelector('svg.badge');
-        const mine = (i % 2 === 0) === (color === 'white');
-        if (badge && mine) out.push({ ply: i + 1, san: b.textContent.trim(), kind: badge.getAttribute('aria-label') });
-      });
+      for (const row of document.querySelectorAll('.tree .row')) {
+        const no = Number((row.querySelector('.no')?.textContent ?? '').replace('.', '')) || 0;
+        const [w, b] = [...row.children].filter((e) => e.classList.contains('mv'));
+        const mine = color === 'white' ? w : b;
+        const badge = mine?.querySelector('svg.badge');
+        if (badge && no) out.push({ ply: no * 2 - (color === 'white' ? 1 : 0), san: mine.textContent.trim(), kind: badge.getAttribute('aria-label') });
+      }
       return out;
     }, color);
     const order = ['Blunder', 'Missed win', 'Mistake', 'Inaccuracy'];
@@ -347,15 +352,15 @@ async function studyCourse(c) {
   await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
   pagesSeen.add(`/learn/study/${c.id}`);
   f.used.push('course page');
-  f.intro = (await page.locator('header, .head').first().innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
+  f.intro = (await page.locator('.head-text').first().innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
   // The line's plans.
-  const chip = page.locator(`.lines .chip`).filter({ hasText: c.lineName.split(' (')[0] }).first();
+  const chip = page.locator(`.lines .chip`).filter({ hasText: c.lineName }).first();
   if (await chip.count()) await chip.click();
   await page.waitForTimeout(1500);
   f.plans = (await page.locator('main').innerText()).replace(/\s+/g, ' ').slice(0, 600);
   await shot(page, `study-${c.id}-plans`);
   // A model game, played through.
-  await open(`/learn/study/${c.id}?line=${c.line}&tab=games`, 'Model games');
+  await open(`/learn/study/${c.id}?line=${c.chapter}&tab=games`, 'Model games');
   const gcard = page.locator('.g-card').first();
   if (await gcard.waitFor({ timeout: 20000 }).then(() => true, () => false)) {
     f.modelGame = (await gcard.innerText()).replace(/\s+/g, ' ');
@@ -365,9 +370,9 @@ async function studyCourse(c) {
       await through.click();
       await page.waitForTimeout(12000);
       f.used.push('model game: play through');
-    } else bug('Model game: no "Play through" button', 'Medium', f.feature, `Open /learn/study/${c.id}?line=${c.line}&tab=games and click the first game`, 'The game viewer with Play through', 'No viewer', await shot(page, 'no-viewer'));
+    } else bug('Model game: no "Play through" button', 'Medium', f.feature, `Open /learn/study/${c.id}?line=${c.chapter}&tab=games and click the first game`, 'The game viewer with Play through', 'No viewer', await shot(page, 'no-viewer'));
     await shot(page, `study-${c.id}-model`);
-  } else bug('Model games did not load', 'Medium', f.feature, `Open /learn/study/${c.id}?line=${c.line}&tab=games`, 'A list of model games', 'None after 20 s', await shot(page, 'no-models'));
+  } else bug('Model games did not load', 'Medium', f.feature, `Open /learn/study/${c.id}?line=${c.chapter}&tab=games`, 'A list of model games', (await page.locator('main').innerText().catch(() => '')).includes('No model games') ? 'The page says "No model games for this line yet"' : 'None after 20 s', await shot(page, 'no-models'));
   // The trainer for this line: one line.
   await open(`/learn/openings/st-${c.id}--${c.line}`, 'Opening trainer');
   const build = page.locator('button:has-text("Build and start training")');
@@ -377,6 +382,179 @@ async function studyCourse(c) {
   f.trainer = (await page.locator('main').innerText()).replace(/\s+/g, ' ').slice(0, 400);
   f.used.push('trainer opened');
   await shot(page, `study-${c.id}-trainer`);
+  return f;
+}
+
+// ---- the rest of Learn: one section a session, in turn (tactics, strategy, endgames, the plan,
+// rated puzzles, a Guru review of a game, Masters, Vision Gym, Books).
+const LEARN = ['tactics', 'puzzles', 'strategy', 'guru-review', 'endgames', 'plan', 'masters', 'vision', 'books'];
+
+/** The board's position from the pieces on it (for puzzles, where the site keeps no move record). */
+async function boardFen(side) {
+  return page.evaluate((side) => {
+    const board = document.querySelector('cg-board');
+    if (!board) return '';
+    const size = board.getBoundingClientRect().width / 8;
+    const white = !document.querySelector('.cg-wrap.orientation-black');
+    const grid = Array.from({ length: 8 }, () => Array(8).fill(''));
+    for (const el of board.querySelectorAll('piece')) {
+      const m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(el.style.transform);
+      if (!m || el.classList.contains('ghost')) continue;
+      let f = Math.round(Number(m[1]) / size);
+      let r = Math.round(Number(m[2]) / size);
+      if (!white) {
+        f = 7 - f;
+        r = 7 - r;
+      }
+      const role = ['king', 'queen', 'rook', 'bishop', 'knight', 'pawn'].find((x) => el.classList.contains(x));
+      const ch = { king: 'k', queen: 'q', rook: 'r', bishop: 'b', knight: 'n', pawn: 'p' }[role];
+      grid[r][f] = el.classList.contains('white') ? ch.toUpperCase() : ch;
+    }
+    const rows = grid.map((row) => {
+      let out = '';
+      let n = 0;
+      for (const c of row) {
+        if (c) {
+          if (n) out += n;
+          n = 0;
+          out += c;
+        } else n++;
+      }
+      return out + (n || '');
+    });
+    return `${rows.join('/')} ${side[0]} - - 0 1`;
+  }, side);
+}
+
+/** Solves one puzzle on the page with the local engine (no site hints); returns what the page said. */
+async function solvePuzzle() {
+  const h = page.locator('.msg[role="status"]').first();
+  await page.locator('cg-board piece').first().waitFor({ timeout: 20000 });
+  await page.waitForTimeout(1200);
+  for (let i = 0; i < 8; i++) {
+    const text = (await h.innerText().catch(() => '')).trim();
+    if (/Solved|tricky|watch the answer|failed/i.test(text) || /Solved|tricky/i.test(await page.locator('main').innerText().catch(() => ''))) break;
+    if (/Get ready/.test(text)) {
+      await page.waitForTimeout(1200);
+      continue;
+    }
+    const side = /Black to move/i.test(text) ? 'black' : 'white';
+    const fen = await boardFen(side);
+    if (!fen) break;
+    let best;
+    try {
+      best = await bestMove(fen);
+    } catch {
+      break;
+    }
+    if (!best || best === '(none)') break;
+    const orientation = (await page.locator('.cg-wrap.orientation-black').count()) ? 'black' : 'white';
+    await clickSquare(best.slice(0, 2), orientation);
+    await clickSquare(best.slice(2, 4), orientation);
+    await page.waitForTimeout(1500);
+  }
+  return (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
+}
+
+async function learnMore(which) {
+  const f = { feature: `Learn → ${which}`, used: [], notes: [] };
+  const lesson = async (tab) => {
+    await open(`/learn?tab=${tab}`, `Learn → ${tab}`);
+    const first = page.locator('main a[href^="/learn/"], main a[href^="/coach/"]').first();
+    if (!(await first.count())) {
+      f.notes.push('no lesson links found');
+      return;
+    }
+    const href = await first.getAttribute('href');
+    await first.click();
+    await page.waitForTimeout(2500);
+    pagesSeen.add(new URL(page.url()).pathname);
+    f.used.push(`lesson ${href}`);
+    f.text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 500);
+    // A lesson's buttons: Next / Continue / Show me, a few times.
+    for (let i = 0; i < 4; i++) {
+      const b = page.locator('main button:visible').filter({ hasText: /Next|Continue|Show|Start|Play|Got it/i }).first();
+      if (!(await b.count())) break;
+      await b.click({ timeout: 4000 }).catch(() => {});
+      await page.waitForTimeout(1500);
+    }
+    await shot(page, `learn-${tab}`);
+  };
+  if (which === 'tactics') {
+    await lesson('tactics');
+    await open('/puzzles/themes', 'Themed puzzles');
+    const theme = page.locator('main a[href*="/puzzles/themes"], main button').filter({ hasText: /fork|pin|mate|hanging|back rank|skewer/i }).first();
+    if (await theme.count()) await theme.click().catch(() => {});
+    f.puzzle = await solvePuzzle();
+    f.used.push('themed puzzle');
+    await shot(page, 'learn-tactics-puzzle');
+  } else if (which === 'strategy') await lesson('strategy');
+  else if (which === 'endgames') await lesson('endgames');
+  else if (which === 'plan') {
+    await open('/learn?tab=plan', 'Learn → Plan');
+    f.text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 600);
+    f.used.push('weekly plan read');
+    await shot(page, 'learn-plan');
+  } else if (which === 'puzzles') {
+    await open('/puzzles', 'Rated puzzles');
+    const before = (await page.locator('main').innerText().catch(() => '')).match(/(\d{3,4})/)?.[1];
+    const results = [];
+    for (let i = 0; i < 4; i++) {
+      results.push(/Solved/i.test(await solvePuzzle()) ? 'solved' : 'missed');
+      const next = page.locator('main button').filter({ hasText: /Next|Skip|Another/i }).first();
+      if (!(await next.count())) break;
+      await next.click().catch(() => {});
+      await page.waitForTimeout(1500);
+    }
+    const after = (await page.locator('main').innerText().catch(() => '')).match(/(\d{3,4})/)?.[1];
+    f.puzzles = results;
+    f.text = `Puzzle rating ${before ?? '?'} → ${after ?? '?'}: ${results.join(', ')}`;
+    f.used.push('rated puzzles');
+    await shot(page, 'learn-puzzles');
+  } else if (which === 'guru-review') {
+    const g = games.find((x) => x.id);
+    if (g) {
+      await open(`/coach/review/${g.id}`, 'Guru review');
+      await page.waitForTimeout(8000);
+      for (let i = 0; i < 5; i++) {
+        const b = page.locator('main button:visible').filter({ hasText: /Next|Continue|Start|Begin/i }).first();
+        if (!(await b.count())) break;
+        await b.click({ timeout: 4000 }).catch(() => {});
+        await page.waitForTimeout(2500);
+      }
+      f.text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 600);
+      f.used.push(`Guru review of game ${g.n}`);
+      await shot(page, 'learn-guru');
+    } else f.notes.push('no game to review');
+  } else if (which === 'masters') {
+    await open('/learn/masters', 'Masters');
+    f.text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 400);
+    const first = page.locator('main a[href^="/learn/masters/"], main a.btn, main button.btn').first();
+    if (await first.count()) {
+      await first.click().catch(() => {});
+      await page.waitForTimeout(3000);
+      f.used.push('a masters lesson opened');
+    }
+    await shot(page, 'learn-masters');
+  } else if (which === 'vision') {
+    await open('/vision', 'Vision Gym');
+    const start = page.locator('main a.btn, main button.btn').first();
+    if (await start.count()) await start.click().catch(() => {});
+    await page.waitForTimeout(3000);
+    f.text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 400);
+    f.used.push('vision exercise opened');
+    await shot(page, 'learn-vision');
+  } else if (which === 'books') {
+    await open('/books', 'Books');
+    const first = page.locator('main a[href^="/books/"]').first();
+    if (await first.count()) {
+      await first.click().catch(() => {});
+      await page.waitForTimeout(3000);
+      f.used.push('a book opened');
+    }
+    f.text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 400);
+    await shot(page, 'learn-books');
+  }
   return f;
 }
 
@@ -446,6 +624,7 @@ async function signOut() {
 const before = {};
 const after = {};
 let studied;
+let learned;
 let feature;
 let phone = [];
 let signedInAs = '';
@@ -467,6 +646,7 @@ try {
   const plain = Math.min(2, GAMES);
   for (let n = 1; n <= plain; n++) await playGame(n, opp, n % 2 ? 'white' : 'black');
   studied = await studyCourse(course);
+  learned = await learnMore(LEARN[(state.session - 1) % LEARN.length]).catch((e) => ({ feature: 'Learn', used: [], notes: [String(e).slice(0, 200)] }));
   for (let n = plain + 1; n <= GAMES; n++) await playGame(n, opp, course.side, `st-${course.id}--${course.line}`);
   // The study steps were done: one level up (the persona improves by studying).
   state.skill = Math.min(20, state.skill + 1);
@@ -479,7 +659,6 @@ try {
   bug('The session stopped with an error', 'Critical', 'Session', 'Run the tester', 'The routine completes', String(e).slice(0, 300), await shot(page, 'crash'));
 }
 await browser.close();
-sf.processCommand('quit');
 
 // ---- the bug list across sessions (de-duplicated by title)
 const master = existsSync(BUGS_FILE) ? JSON.parse(readFileSync(BUGS_FILE, 'utf8')) : [];
@@ -503,7 +682,7 @@ writeFileSync(join(REPORTS, 'bugs-master.md'), [
 ].join('\n'));
 
 // ---- the session's data, for the written report
-const data = { when, base: BASE, signedInAs, skill: state.skill, session: state.session, before, after, games, studied, feature, phone, slow, consoleErrors, failedRequests, bugs, pages: [...pagesSeen] };
+const data = { when, base: BASE, signedInAs, skill: state.skill, session: state.session, before, after, games, studied, learned, feature, phone, slow, consoleErrors, failedRequests, bugs, pages: [...pagesSeen] };
 writeFileSync(join(DATA, `session-${when}.json`), JSON.stringify(data, null, 1));
 const idOf = (b) => master.find((m) => m.title === b.title)?.id ?? '';
 const md = [
@@ -516,13 +695,14 @@ const md = [
   '## 2. Bugs', '',
   bugs.length ? '| ID | Title | Severity | Feature | Steps to reproduce | Expected | Actual | Screenshot |\n|---|---|---|---|---|---|---|---|\n' + bugs.map((b) => `| ${idOf(b)} | ${b.title} | ${b.severity} | ${b.feature} | ${b.steps} | ${b.expected} | ${b.actual} | ${b.shot} |`).join('\n') : 'No bugs found this session.',
   '', `Console errors: ${consoleErrors.length}`, ...consoleErrors.slice(0, 15).map((c) => `- ${c.url.replace(BASE, '')}: ${c.text}`),
-  `Failed requests: ${failedRequests.length}`, ...failedRequests.slice(0, 15).map((c) => `- ${c.url}: ${c.error}`),
+  `Failed requests: ${failedRequests.length}`, ...[...new Map(failedRequests.map((c) => [`${c.error} ${c.url}`, c])).values()].slice(0, 15).map((c) => `- ${c.error} ${c.url} (on ${c.page})`),
   `Slow pages (over ${SLOW_MS / 1000} s): ${slow.length}`, ...slow.map((s) => `- ${s.path}: ${s.ms} ms`),
   `Phone width (390 px): ${phone.map((p) => `${p.path} ${p.error ? 'ERROR' : p.sideways ? 'sideways scroll' : 'ok'}${p.tiny ? ` (${p.tiny} tiny targets)` : ''}`).join('; ') || 'not checked'}`, '',
   '## 3. Analysis of my games', '',
   ...games.map((g) => `### Game ${g.n} (${g.result})\n\n- Biggest mistakes (my moves): ${g.mistakes.length ? g.mistakes.join('; ') : 'none marked'}\n- Review under the game: ${g.review || 'none'}\n- Report tab: ${g.reportText || 'none'}${g.problems.length ? `\n- Problems: ${g.problems.join(' ')}` : ''}`),
   '', '## 4. Weakness profile (profile page)', '', `Before: ${before.profile?.stats || 'none'}`, '', `After: ${after.profile?.stats || 'none'}`, '',
   '## 5. Study activity', '', studied ? `${studied.feature}: ${studied.used.join(', ') || 'nothing used'}\n\n- Course intro: ${studied.intro || ''}\n- Plans text: ${studied.plans || ''}\n- Model game: ${studied.modelGame || 'none'}\n- Trainer: ${studied.trainer || ''}` : 'not done',
+  '', '## 5b. More of Learn', '', learned ? `${learned.feature}: ${learned.used.join(', ') || 'nothing used'}${learned.notes.length ? ` · ${learned.notes.join('; ')}` : ''}\n\n${learned.text ?? ''}${learned.puzzle ? `\n\nPuzzle: ${learned.puzzle}` : ''}` : 'not done',
   '', '## 6. Feature tried', '', feature ? `${feature.feature} (${feature.ms} ms): headings ${JSON.stringify(feature.headings)}; ${feature.buttons} buttons/links; tapped "${feature.tapped ?? ''}"\n\n${feature.text}` : 'not done',
   '', '## 7. Feature feedback, beginner questions and UI notes', '', '(written by Aarav after reading the session: see the end of this file)', '',
   ...(notes.length ? ['Notes:', ...notes.map((n) => `- ${n}`), ''] : []),
@@ -531,3 +711,5 @@ const file = join(REPORTS, `session-${when}.md`);
 writeFileSync(file, md);
 writeFileSync(STATE_FILE, JSON.stringify({ ...state, used: [...(state.used ?? []), feature?.feature].filter(Boolean) }, null, 1));
 log(`report: ${file}; bugs this session: ${bugs.length}`);
+// Last: the engine's quit ends the process.
+sf.processCommand('quit');
