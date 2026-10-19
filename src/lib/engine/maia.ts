@@ -143,6 +143,19 @@ class Maia {
     }, delay);
   }
 
+  /**
+   * Makes sure Maia is here: loads it from the browser's storage, or downloads
+   * it now (on any device): for bullet, where it plays every move.
+   */
+  ensure() {
+    if (typeof Worker === 'undefined') return;
+    this.init();
+    const unsubscribe = maiaStatus.subscribe((s) => {
+      if (s === 'no-cache') this.download();
+      if (s !== 'loading' && s !== 'idle') queueMicrotask(() => unsubscribe());
+    });
+  }
+
   /** Downloads the model (once); `background`: at low priority. */
   download(background = false) {
     this.init();
