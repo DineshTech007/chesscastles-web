@@ -138,8 +138,21 @@ page.on('response', (r) => {
   if (r.status() >= 400) failedRequests.push({ url: r.url().slice(0, 160), error: `HTTP ${r.status()}`, page: page.url().replace(BASE, '') });
 });
 
+/** The site's consent dialog ("One quick thing", since 20 Oct 2026): answered as an adult tester, once. */
+async function consent() {
+  const dlg = page.locator('[role="dialog"]:has-text("Agree and continue"), .dialog:has-text("Agree and continue")').first();
+  if (!(await dlg.count().catch(() => 0))) return;
+  await dlg.locator('text=/I am 18 or older/').first().click({ timeout: 3000 }).catch(() => {});
+  await dlg.locator('input[type="checkbox"]').first().check({ timeout: 3000 }).catch(() => {});
+  await dlg.locator('button:has-text("Agree and continue")').first().click({ timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(1000);
+  notes.push('Answered the consent dialog ("One quick thing") as an adult tester.');
+  log('consent dialog answered');
+}
+
 async function open(path, what = path) {
   await page.goto(BASE + path, { waitUntil: 'load', timeout: 45000 });
+  await consent();
   // The page's own load time (its load event), not the live connections some pages keep open.
   const ms = await page.evaluate(() => Math.round(performance.getEntriesByType('navigation')[0]?.loadEventEnd ?? 0)).catch(() => 0);
   await page.waitForTimeout(1500);
