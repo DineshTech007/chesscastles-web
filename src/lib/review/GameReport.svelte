@@ -96,6 +96,11 @@
   </div>
   <div class="board-col">
     <Board {fen} viewOnly orientation={game.userSide} lastMove={current ? [key(current.move.from), key(current.move.to)] : undefined} {shapes} label="Review board" onswipe={(d) => go(at + (d === 'forward' ? 1 : -1))} />
+    <!-- Right under the board on every screen (on phones it stays in view with the board). -->
+    <div class="card nav-card">
+      <MoveNav ply={at + 1} max={review.all.length} go={(p) => go(p - 1)} />
+      <button class="btn slip" onclick={nextSlip}>Next slip</button>
+    </div>
     <section class="explain card" aria-live="polite">
       {#if current}
         <div class="head">
@@ -161,25 +166,24 @@
         </div>
       {/each}
     </section>
-      <div class="card nav-card">
-        <MoveNav ply={at + 1} max={review.all.length} go={(p) => go(p - 1)} />
-        <button class="btn slip" onclick={nextSlip}>Next slip</button>
-      </div>
   </div>
 </div>
 
 <style>
   .nav-card {
-    padding: 0 0 10px;
+    padding: 0 10px 0 0;
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
+    align-items: center;
+    gap: 8px;
   }
   .nav-card :global(.nav) {
     border-top: 0;
+    flex: 1;
+    min-width: 0;
   }
   .slip {
-    margin: 0 10px;
+    flex: none;
+    white-space: nowrap;
   }
   .report {
     display: flex;

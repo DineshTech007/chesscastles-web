@@ -8,6 +8,7 @@
   import { destsOf, fenOf, keyOf, moveFromKeys, moveToUci, uciToMove } from '$lib/chess/position';
   import { dailyPuzzle, type DailyPuzzle } from '$lib/lichess';
   import { POINTS, study } from '$lib/study/progress';
+  import { puzzleRating, ratePuzzle, wasRated } from '$lib/puzzles/rating';
 
   let puzzle = $state<DailyPuzzle | undefined>();
   let error = $state('');
@@ -17,10 +18,23 @@
   let status = $state<'yours' | 'wrong' | 'right' | 'solved'>('yours');
   let v = $state(0);
   let hinted = $state(false);
+  /**
+   * The puzzle rating counts the first result only: solved with no wrong move
+   * and no help is a win; a wrong move or "Show the move" is a loss. Trying
+   * again after that changes nothing, and a puzzle is rated once.
+   */
+  let rated = $state(false);
+  let change = $state<number | undefined>();
+  async function rate(clean: boolean) {
+    if (rated || !puzzle) return;
+    rated = true;
+    change = await ratePuzzle(puzzle.id, puzzle.rating, clean, puzzle.themes[0] ?? 'daily');
+  }
 
   onMount(async () => {
     try {
       puzzle = await dailyPuzzle();
+      rated = wasRated(puzzle.id);
       reset();
     } catch (e) {
       error = e instanceof Error ? e.message : 'The puzzle could not load.';
@@ -54,6 +68,7 @@
       apply(m);
       if (step >= puzzle.solution.length) {
         status = 'solved';
+        void rate(!hinted);
         study.log('puzzle', hinted ? POINTS.puzzleWithHint : POINTS.puzzleSolved, `Puzzle ${puzzle.id}`);
         return;
       }
@@ -66,6 +81,7 @@
       }, 450);
     } else {
       status = 'wrong';
+      void rate(false);
       v++; // the board snaps back
     }
   }
@@ -73,6 +89,7 @@
   function showMove() {
     if (!puzzle || !pos || status === 'solved') return;
     hinted = true;
+    void rate(false);
     const m = uciToMove(puzzle.solution[step]);
     if (m) onmove(keyOf(m.from), keyOf(m.to));
   }
@@ -137,17 +154,19 @@
       </p>
       {#if puzzle}
         <div class="meta">
-          <span class="pill gold">Rating {puzzle.rating}</span>
+          <span class="pill gold">Puzzle {puzzle.rating}</span>
+          <span class="pill mine">Your rating {$puzzleRating}{#if change}<span class="chg" class:up={change > 0}> {change > 0 ? '+' : ''}{change}</span>{/if}</span>
           {#each puzzle.themes.slice(0, 3) as t (t)}
             <span class="pill theme">{t.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>
           {/each}
         </div>
         <div class="actions">
           {#if status !== 'solved'}
-            <button class="btn" onclick={showMove}><Icon name="learn" size={18} />Show the move</button>
+            <button class="btn" onclick={showMove} title={rated ? 'Shows the next move' : 'Shows the next move. The puzzle then counts as missed for your rating.'}><Icon name="learn" size={18} />Show the move{rated ? '' : ' (counts as missed)'}</button>
           {/if}
           <button class="btn" onclick={reset}><Icon name="replay" size={18} />Start again</button>
         </div>
+        {#if rated && change === undefined && status !== 'solved'}<p class="label progress">Already rated: practise it as much as you like.</p>{/if}
         <p class="label progress">Move {Math.min(Math.ceil((step + 1) / 2), Math.ceil(puzzle.solution.length / 2))} of {Math.ceil(puzzle.solution.length / 2)}</p>
       {/if}
     </div>
@@ -223,5 +242,16 @@
   }
   .progress {
     margin: 0;
+  }
+  .mine {
+    background: var(--raised);
+    color: var(--text);
+    font-weight: 700;
+  }
+  .chg {
+    color: var(--loss);
+  }
+  .chg.up {
+    color: var(--win);
   }
 </style>

@@ -19,6 +19,8 @@
   import { kfideAll, myCountry } from '$lib/stores/me';
   import { fedName } from '$lib/fideFeds';
   import { KFIDE_SPEEDS, SPEED_LABEL, kfideText } from '$lib/kfide';
+  import { LICHESS_LABEL, lichessRatings, type LichessRating } from '$lib/lichessRatings';
+  import { puzzleRating } from '$lib/puzzles/rating';
   import { dayOf, streak, study } from '$lib/study/progress';
   import { loadPlan, nextStep, topicOn, TOPICS, hasPlan } from '$lib/study/plan';
 
@@ -39,6 +41,17 @@
     return { played: done.length, won, drawn, lost: done.length - won - drawn };
   });
   const recent = $derived($shownGames.slice(0, 3));
+  /** Signed in with Lichess: the player's real Lichess ratings (the two speeds they play most there). */
+  let lichess = $state<LichessRating[]>([]);
+  $effect(() => {
+    const s = $session;
+    lichess = [];
+    if (s.status !== 'in' || !s.uid.startsWith('lichess:') || !s.username) return;
+    lichessRatings(s.username).then(
+      (list) => (lichess = [...list].sort((a, b) => b.games - a.games).slice(0, 2)),
+      () => {},
+    );
+  });
   const myStreak = $derived(streak($study, Date.now()));
   const studiedToday = $derived($study.some((a) => dayOf(a.at) === dayOf(Date.now())));
   let todayPlan = $state<{ label: string; color: string; href: string; title: string } | undefined>();
@@ -86,9 +99,10 @@
             {#if k.games}<strong class="title num">{kfideText(k)}</strong>{:else}<strong class="title none">Play</strong>{/if}
           </a>
         {/each}
-        {#if $session.status === 'in' && $session.profile}
-          <a href="/puzzles" title="Your puzzle rating: it goes up as you solve puzzles"><span class="label">Puzzle rating</span><strong class="title num">{$session.profile.ratings.puzzle}</strong></a>
-        {/if}
+        <a href="/puzzles" title="Your puzzle rating: a solved puzzle raises it, a missed one (or a hint) lowers it"><span class="label">Puzzle rating</span><strong class="title num">{$puzzleRating}</strong></a>
+        {#each lichess as l (l.speed)}
+          <a class="li" href="/insights" title="Your Lichess {LICHESS_LABEL[l.speed]} rating ({l.games} games). Game Insights analyses your Lichess games."><span class="label">Lichess {LICHESS_LABEL[l.speed]}</span><strong class="title num">{l.rating}{l.provisional ? '?' : ''}</strong></a>
+        {/each}
         <a href="/games" title="Finished games you played on Chess Castles: won {stats.won}, drawn {stats.drawn}, lost {stats.lost}"><span class="label">Games played</span><strong class="title num">{stats.played}</strong></a>
       </div>
     {/if}
@@ -362,6 +376,7 @@
   }
   .stats {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
   .stats a {

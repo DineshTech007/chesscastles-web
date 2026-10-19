@@ -3,7 +3,9 @@
    * Solve a puzzle on the board: the opponent's first move (if any) is
    * played, then the solver finds each move; the opponent's replies come by
    * themselves. A different move that checkmates also counts. `tries` wrong
-   * moves are allowed before the answer is shown.
+   * moves are allowed before the answer is shown. `onfirst` tells the first
+   * result once, for the puzzle rating: solved with no wrong move and no hint,
+   * or not (a wrong move or a hint, at once; trying again changes nothing).
    */
   import type { Key } from '@lichess-org/chessground/types';
   import type { NormalMove } from 'chessops/types';
@@ -18,6 +20,8 @@
     opponentFirst = true,
     tries = 1,
     onresult,
+    onfirst,
+    hintButton = false,
   }: {
     /** The position before the first move. */
     fen: string;
@@ -26,7 +30,21 @@
     opponentFirst?: boolean;
     tries?: number;
     onresult?: (solved: boolean, wrongTries: number) => void;
+    onfirst?: (clean: boolean) => void;
+    /** A Hint button: it shows the piece to move, and the puzzle no longer counts as solved cleanly. */
+    hintButton?: boolean;
   } = $props();
+  let hinted = $state(false);
+  let firstSent = false;
+  function first(clean: boolean) {
+    if (firstSent) return;
+    firstSent = true;
+    onfirst?.(clean);
+  }
+  function useHint() {
+    hinted = true;
+    first(false);
+  }
 
   // A new puzzle comes as a new component (the page keys it), so the props are read once.
   // svelte-ignore state_referenced_locally
@@ -69,6 +87,7 @@
     const same = want && m.from === want.from && m.to === want.to && (m.promotion ?? 'queen') === (want.promotion ?? 'queen');
     if (!same && !after.isCheckmate()) {
       wrong++;
+      first(false);
       sounds.error();
       v++;
       if (wrong >= tries) {
@@ -81,6 +100,7 @@
     play(m);
     if (after.isCheckmate() || step >= line.length) {
       status = 'solved';
+      first(wrong === 0 && !hinted);
       onresult?.(true, wrong);
       return;
     }
@@ -101,7 +121,7 @@
     const mine = (status === 'yours' || status === 'wrong') && pos.turn === side;
     return { fen: fenOf(pos), dests: mine ? destsOf(pos) : new Map(), check: pos.isCheck(), turn: pos.turn };
   });
-  const hint = $derived(status === 'wrong' && line[step] ? [{ orig: keyOf(line[step].from), brush: 'yellow' }] : []);
+  const hint = $derived((status === 'wrong' || (hinted && status === 'yours')) && line[step] && pos.turn === side ? [{ orig: keyOf(line[step].from), brush: 'yellow' }] : []);
 </script>
 
 <div class="pb">
@@ -113,6 +133,9 @@
     {:else if status === 'solved'}Solved!
     {:else}Here is the answer.{/if}
   </p>
+  {#if hintButton && (status === 'yours' || status === 'wrong') && !hinted}
+    <button class="btn hint" onclick={useHint} title="Shows the piece to move. The puzzle then counts as missed for your rating.">Hint (counts as missed)</button>
+  {/if}
 </div>
 
 <style>
@@ -130,5 +153,8 @@
   }
   .msg.bad {
     color: var(--loss);
+  }
+  .hint {
+    align-self: flex-start;
   }
 </style>

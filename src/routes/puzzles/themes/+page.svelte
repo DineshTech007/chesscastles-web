@@ -4,7 +4,6 @@
    * Lichess puzzle database (CC0). Each solved one counts for Guru's plan
    * ("Theme puzzle: <theme>").
    */
-  import { onMount } from 'svelte';
   import { page } from '$app/state';
   import Icon from '$lib/components/Icon.svelte';
   import PuzzleBoard from '$lib/components/PuzzleBoard.svelte';
@@ -12,10 +11,10 @@
   import { THEME_NAMES } from '$lib/insights/plan';
   import LimitReached from '$lib/components/LimitReached.svelte';
   import { PLAN_INFO, RANK, currentPlan, planSettings, requireGate, useFeature } from '$lib/plans';
+  import { puzzleRating, ratePuzzle } from '$lib/puzzles/rating';
 
   type P = [string, string, string, number];
   const THEMES = ['fork', 'pin', 'skewer', 'hangingPiece', 'discoveredAttack', 'mateIn1', 'mateIn2', 'backRankMate', 'sacrifice', 'defensiveMove', 'opening', 'middlegame', 'endgame', 'rookEndgame', 'pawnEndgame', 'crushing', 'short'];
-  const KEY = 'k24.themePuzzles';
 
   /** Free's themes; every theme comes with the plan that has themed_puzzles (Premium). */
   const BASIC = ['fork', 'pin', 'mateIn1', 'mateIn2'];
@@ -23,22 +22,14 @@
   let theme = $state(page.url.searchParams.get('theme') ?? 'fork');
   let limited = $state(false);
   const goal = Number(page.url.searchParams.get('n')) || 0;
-  let rating = $state(1200);
+  /** The last puzzle's rating change. */
+  let change = $state<number | undefined>();
   let bank = $state<P[]>([]);
   let current = $state<P | undefined>();
   let round = $state(0);
   let solvedNow = $state(0);
   let result = $state<boolean | undefined>();
   let error = $state('');
-
-  onMount(() => {
-    try {
-      const s = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-      if (typeof s.rating === 'number') rating = s.rating;
-    } catch {
-      /* first visit */
-    }
-  });
 
   $effect(() => {
     const t = theme;
@@ -55,13 +46,14 @@
   });
 
   async function next() {
-    const near = bank.filter((p) => Math.abs(p[3] - rating) <= 150);
+    const near = bank.filter((p) => Math.abs(p[3] - $puzzleRating) <= 150);
     const pool = near.length ? near : bank;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     // Each puzzle counts towards the plan's puzzles a day.
     if (!(await useFeature('puzzle', pick[0]))) return void (limited = true);
     current = pick;
     result = undefined;
+    change = undefined;
     round++;
   }
   function pickTheme(t: string) {
@@ -69,17 +61,15 @@
     theme = t;
   }
 
+  /** The puzzle rating counts the first result only (a wrong move or a hint: missed). */
+  async function rate(clean: boolean) {
+    if (!current) return;
+    change = await ratePuzzle(current[0], current[3], clean, theme);
+  }
+
   function done(ok: boolean) {
     if (!current) return;
     result = ok;
-    // The puzzle rating moves like Elo against the puzzle's own rating.
-    const expected = 1 / (1 + 10 ** ((current[3] - rating) / 400));
-    rating = Math.max(400, Math.round(rating + 24 * ((ok ? 1 : 0) - expected)));
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ rating }));
-    } catch {
-      /* fine */
-    }
     if (ok) {
       solvedNow++;
       study.log('puzzle', POINTS.puzzleSolved, `Theme puzzle: ${theme}`);
@@ -101,7 +91,7 @@
       <h1 class="display">Puzzles by theme</h1>
       <p class="label">Practise one pattern until it is automatic. Puzzles from the Lichess puzzle database, at your level.</p>
     </div>
-    <div class="stat card"><span class="label">Your rating here</span><strong class="display num">{rating}</strong>{#if goal}<span class="label">{Math.min(solvedNow, goal)} of {goal} for your plan</span>{/if}</div>
+    <div class="stat card"><span class="label">Your puzzle rating</span><strong class="display num">{$puzzleRating}{#if change}<span class="chg" class:up={change > 0}>{change > 0 ? '+' : ''}{change}</span>{/if}</strong>{#if goal}<span class="label">{Math.min(solvedNow, goal)} of {goal} for your plan</span>{/if}</div>
   </header>
 
   <div class="chips" role="group" aria-label="Theme">
@@ -120,7 +110,7 @@
       <section class="board-box">
         {#key round}
           <!-- One retry after a wrong move, as a coach would allow. -->
-          <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} tries={2} onresult={done} />
+          <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} tries={2} onresult={done} onfirst={rate} hintButton />
         {/key}
       </section>
       <section class="card side">
@@ -236,5 +226,13 @@
   }
   .skel {
     height: 400px;
+  }
+  .chg {
+    font-size: 18px;
+    margin-left: 6px;
+    color: var(--loss);
+  }
+  .chg.up {
+    color: var(--win);
   }
 </style>

@@ -167,6 +167,55 @@ async function run(name, options) {
     return `${fen0} pieces, stepped 6 moves`;
   });
 
+  // 4b. The Guru review: the move buttons right under the board on every screen.
+  await check(name, page, 'review: move buttons under the board', async () => {
+    await open(page, '/coach/review/site-check');
+    await page.locator('.nav-card .nav').waitFor({ timeout: 120000 });
+    const gap = await page.evaluate(() => {
+      const b = document.querySelector('.board-col cg-board')?.getBoundingClientRect();
+      const n = document.querySelector('.nav-card')?.getBoundingClientRect();
+      return b && n ? Math.round(n.top - b.bottom) : 9999;
+    });
+    expect(gap < 60, `the move buttons are ${gap}px below the board`);
+    return `${gap}px`;
+  });
+
+  // 4c. The daily puzzle: a wrong move costs rating once; another wrong move changes nothing.
+  await check(name, page, 'puzzle rating: a miss counts once', async () => {
+    await open(page, '/');
+    await page.evaluate(() => ['k24.puzzleRating', 'k24.ratedPuzzles'].forEach((k) => localStorage.removeItem(k)));
+    await open(page, '/puzzles');
+    await page.locator('cg-board').first().waitFor({ timeout: 20000 });
+    await page.waitForTimeout(1200);
+    const box = await page.locator('cg-board').first().boundingBox();
+    const white = (await page.locator('h1.h').innerText()).includes('White');
+    const w = box.width / 8;
+    const xy = (f, r) => ({ x: box.x + w * ((white ? f : 7 - f) + 0.5), y: box.y + w * ((white ? 7 - r : r) + 0.5) });
+    const ratings = [];
+    for (let f = 0; f < 8 && ratings.length < 2; f++)
+      for (let r = 0; r < 8 && ratings.length < 2; r++)
+        for (const [df, dr] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+          if (f + df < 0 || f + df > 7 || r + dr < 0 || r + dr > 7) continue;
+          const a = xy(f, r);
+          const c = xy(f + df, r + dr);
+          if (touch) {
+            await page.touchscreen.tap(a.x, a.y);
+            await page.touchscreen.tap(c.x, c.y);
+          } else {
+            await page.mouse.click(a.x, a.y);
+            await page.mouse.click(c.x, c.y);
+          }
+          await page.waitForTimeout(250);
+          if ((await page.locator('h1.h').innerText()).includes('Not that one')) {
+            await page.waitForTimeout(800);
+            ratings.push(await page.evaluate(() => JSON.parse(localStorage.getItem('k24.puzzleRating') ?? 'null')?.attempted ?? 0));
+            break;
+          }
+        }
+    expect(ratings.length === 2, 'could not make two wrong moves');
+    expect(ratings[0] === 1 && ratings[1] === 1, `rated ${ratings.join(' then ')} times`);
+  });
+
   // 5. A game against the computer: play e4 by tapping, the computer answers.
   await check(name, page, 'play the computer: e4 and an answer', async () => {
     await open(page, '/play/computer?l=1350&c=white');

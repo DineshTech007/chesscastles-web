@@ -40,7 +40,7 @@ export interface Profile {
   /** Their photo (base64 JPEG), set in the app or here. */
   photo?: string;
   ratings: { puzzle: number; blitz: number; rapid: number };
-  puzzles: { attempted: number; solved: number; streak: number; best: number };
+  puzzles: { attempted: number; solved: number; streak: number; best: number; themes: Record<string, number> };
   games: { played: number; won: number; drawn: number; lost: number };
 }
 
@@ -81,7 +81,7 @@ export function profileFrom(uid: string, m: Record<string, any>): Profile {
       blitz: n(m.ratings, 'blitz', STARTING_RATING),
       rapid: n(m.ratings, 'rapid', STARTING_RATING),
     },
-    puzzles: { attempted: n(m.puzzles, 'attempted'), solved: n(m.puzzles, 'solved'), streak: n(m.puzzles, 'streak'), best: n(m.puzzles, 'best') },
+    puzzles: { attempted: n(m.puzzles, 'attempted'), solved: n(m.puzzles, 'solved'), streak: n(m.puzzles, 'streak'), best: n(m.puzzles, 'best'), themes: m.puzzles?.themes && typeof m.puzzles.themes === 'object' ? m.puzzles.themes : {} },
     games: { played: n(m.games, 'played'), won: n(m.games, 'won'), drawn: n(m.games, 'drawn'), lost: n(m.games, 'lost') },
   };
 }

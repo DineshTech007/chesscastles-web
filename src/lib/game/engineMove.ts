@@ -56,24 +56,58 @@ export function strengthFor(rating: number, tc?: TimeControl): { elo: number; ta
 
 /**
  * The most winning chance (0 to 1) one move may give away at a rating, so a
- * strong bot never makes a club player's blunder: no limit below 1800, then
- * 20% at 1800, 12% at 2200, 7% at 2600 and 4% at 3000. (Real 2200+ players
- * blundered 0% of moves in the calibration games.)
+ * bot never makes a blunder far below its level: 45% at 1200, 35% at 1400,
+ * 27% at 1600, then 20% at 1800, 12% at 2200, 7% at 2600 and 4% at 3000.
+ * (Real 2200+ players blundered 0% of moves in the calibration games.) Below
+ * 1800 a bigger blunder still happens now and then: see slipChance.
  */
 export function maxDrop(rating: number): number {
   const steps: [number, number][] = [
+    [1200, 0.45],
+    [1400, 0.35],
+    [1600, 0.27],
     [1800, 0.2],
     [2200, 0.12],
     [2600, 0.07],
     [3000, 0.04],
   ];
-  if (rating < steps[0][0]) return 1;
+  if (rating <= steps[0][0]) return steps[0][1];
   const i = steps.findIndex(([r]) => r >= rating);
   if (i < 0) return steps[steps.length - 1][1];
   if (i === 0) return steps[0][1];
   const [r0, d0] = steps[i - 1];
   const [r1, d1] = steps[i];
   return d0 + ((d1 - d0) * (rating - r0)) / (r1 - r0);
+}
+
+/**
+ * How often (per move) a player below 1800 may still make a move over the
+ * limit, the kind of piece-dropping blunder players at that level do make
+ * now and then: 2% of moves at 1200, 1% at 1400, 0.5% at 1600, never from 1800.
+ * (At 1400, with about 40 moves a game: one such blunder in two or three games.)
+ */
+export function slipChance(rating: number): number {
+  if (rating >= 1800) return 0;
+  if (rating <= 1200) return 0.02;
+  return rating <= 1400 ? 0.02 - ((rating - 1200) / 200) * 0.01 : rating <= 1600 ? 0.01 - ((rating - 1400) / 200) * 0.005 : 0.005 * ((1800 - rating) / 200);
+}
+
+/**
+ * Picks among candidate moves: each weighted by `base` (how likely a human is
+ * to play it) times exp(−drop / tau), where drop is the winning chance it
+ * gives away against the best candidate. Moves over the rating's limit are
+ * left out, unless this is one of the rare moves a slip is allowed (`slip`).
+ */
+export function pickWeighted<T>(cands: { item: T; base: number; wc: number }[], tau: number, limit: number, slip: boolean, random = Math.random): T {
+  const best = Math.max(...cands.map((c) => c.wc));
+  let weights = cands.map((c) => (best - c.wc > limit && !slip ? 0 : c.base * Math.exp(-(best - c.wc) / tau)));
+  if (!weights.some((w) => w > 0)) weights = cands.map((c) => (c.wc === best ? 1 : 0));
+  let roll = random() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < cands.length; i++) {
+    roll -= weights[i];
+    if (roll < 0) return cands[i].item;
+  }
+  return cands[weights.findIndex((w) => w > 0)].item;
 }
 
 /** Stockfish's own best move, at full strength. */
@@ -118,27 +152,43 @@ export async function maiaPick(pos: Chess, rating: number, opponent?: number, tc
     const best = await bestMove(pos, 300);
     if (best && !cands.some((c) => maiaUci(pos, c.move) === maiaUci(pos, best))) cands.push({ move: best, p: 0.03 });
   }
-  let weights = cands.map((c) => c.p);
-  if (cands.length > 1 && tau < 1) {
-    const ucis = cands.map((c) => maiaUci(pos, c.move));
-    const scores = await engine.scoreMoves(fenOf(pos), ucis, strong ? 700 : 500);
-    if (scores.size) {
-      const wc = ucis.map((u) => (scores.has(u) ? winChance(scores.get(u)!) : 0));
-      const best = Math.max(...wc);
-      const limit = maxDrop(rating - TIME_PRESSURE(tc));
-      weights = cands.map((c, i) => (best - wc[i] > limit ? 0 : c.p * Math.exp(-(best - wc[i]) / tau)));
-    }
-  }
-  let roll = random() * weights.reduce((a, b) => a + b, 0);
+  const r = rating - TIME_PRESSURE(tc);
   let pick = cands[0];
-  for (let i = 0; i < cands.length; i++) {
-    roll -= weights[i];
-    if (roll < 0) {
-      pick = cands[i];
-      break;
-    }
+  if (cands.length > 1) {
+    // Stockfish scores Maia's candidates: the weaker ones are picked less often, and a
+    // blunder far below the rating only now and then (every rating has a limit).
+    const ucis = cands.map((c) => maiaUci(pos, c.move));
+    const scores = await engine.scoreMoves(fenOf(pos), ucis, fastGame(tc) ? 250 : strong ? 700 : 500);
+    if (scores.size) {
+      const scored = cands.map((c, i) => ({ item: c, base: c.p, wc: scores.has(ucis[i]) ? winChance(scores.get(ucis[i])!) : 0 }));
+      pick = pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r), random);
+    } else pick = pickWeighted(cands.map((c) => ({ item: c, base: c.p, wc: 0 })), 1, 1, false, random);
   }
   return { move: pick.move, confidence: policy[0].p, engine: 'maia' };
+}
+
+/** Bullet and fast blitz: the engines get less time a move. */
+const fastGame = (tc?: TimeControl) => !!tc && tc.minutes > 0 && tc.minutes + tc.increment * 0.67 <= 3;
+
+/**
+ * Without Maia (not downloaded yet, or it can't run): Stockfish scores every
+ * legal move and one is picked like a player of the rating would, often the
+ * best, sometimes a slightly weaker one, a real blunder only now and then.
+ * (Stockfish's own weakened mode instead plays well and then throws in random
+ * blunders no player of that rating makes.)
+ */
+export async function stockfishPick(pos: Chess, rating: number, tc?: TimeControl, random = Math.random): Promise<NormalMove | undefined> {
+  const moves: NormalMove[] = [];
+  for (const [from, dests] of pos.allDests()) for (const to of dests) moves.push({ from, to, ...(pos.board.get(from)?.role === 'pawn' && (to >> 3 === 7 || to >> 3 === 0) ? { promotion: 'queen' as const } : {}) });
+  if (moves.length <= 1) return moves[0];
+  const ucis = moves.map((m) => maiaUci(pos, m));
+  const scores = await engine.scoreMoves(fenOf(pos), ucis, fastGame(tc) ? 300 : 700);
+  if (!scores.size) return undefined;
+  const r = rating - TIME_PRESSURE(tc);
+  // How far from the best move a player of this rating wanders: 6% of winning chance at 1400, halving every 600 points.
+  const tau = 0.06 * 2 ** ((1400 - r) / 600);
+  const scored = moves.filter((_, i) => scores.has(ucis[i])).map((m) => ({ item: m, base: 1, wc: winChance(scores.get(maiaUci(pos, m))!) }));
+  return pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r), random);
 }
 
 /** The FIDE bot's engine: Maia-3 when it is downloaded, otherwise Stockfish. */
@@ -152,7 +202,7 @@ export function humanMove(tc?: TimeControl): EngineMove {
         console.warn('Maia:', e);
       }
     }
-    const move = await engineMove(pos, rating);
+    const move = (await stockfishPick(pos, rating, tc).catch(() => undefined)) ?? (await engineMove(pos, rating));
     return move ? { move, engine: 'stockfish' } : undefined;
   };
 }
