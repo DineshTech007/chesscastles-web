@@ -744,5 +744,109 @@
     "key": "2061c28b7a7a1fee"
    }
   ]
+ },
+ "najdorf": {
+  "games": 243837,
+  "chapters": [
+   {
+    "id": "9ea3e622",
+    "title": "4.Nxd4",
+    "name": "Sicilian Defense",
+    "sans": "e4 c5 Nf3 d6 d4 cxd4 Nxd4",
+    "games": 77970,
+    "score": 0.477,
+    "variations": 330,
+    "depth": 9.6,
+    "key": "7b2cf8abc5c4b411"
+   },
+   {
+    "id": "d5662a13",
+    "title": "2.Nc3",
+    "name": "Sicilian Defense: Closed",
+    "sans": "e4 c5 Nc3",
+    "games": 48533,
+    "score": 0.501,
+    "variations": 668,
+    "depth": 10.6,
+    "key": "9fda525cc0b4c832"
+   },
+   {
+    "id": "5f8e73bc",
+    "title": "2.c3",
+    "name": "Sicilian Defense: Alapin Variation",
+    "sans": "e4 c5 c3",
+    "games": 40546,
+    "score": 0.501,
+    "variations": 112,
+    "depth": 11.1,
+    "key": "1297b266d226456d"
+   },
+   {
+    "id": "ee4452ed",
+    "title": "3.Bb5+",
+    "name": "Sicilian Defense: Moscow Variation",
+    "sans": "e4 c5 Nf3 d6 Bb5+",
+    "games": 24737,
+    "score": 0.49,
+    "variations": 130,
+    "depth": 10.3,
+    "key": "b54de1c6dd5cf138"
+   },
+   {
+    "id": "ac662966",
+    "title": "3.c3",
+    "name": "Sicilian Defense: Delayed Alapin Variation, with d6",
+    "sans": "e4 c5 Nf3 d6 c3",
+    "games": 7509,
+    "score": 0.47,
+    "variations": 114,
+    "depth": 8.5,
+    "key": "f049c8f168b86d3d"
+   },
+   {
+    "id": "a5a0a686",
+    "title": "4.Qxd4",
+    "name": "Sicilian Defense: Chekhover Variation",
+    "sans": "e4 c5 Nf3 d6 d4 cxd4 Qxd4",
+    "games": 7116,
+    "score": 0.469,
+    "variations": 64,
+    "depth": 8.9,
+    "key": "610fb232e064c902"
+   },
+   {
+    "id": "cbcf17dd",
+    "title": "2.d4",
+    "name": "Sicilian Defense: Smith-Morra Gambit",
+    "sans": "e4 c5 d4",
+    "games": 3999,
+    "score": 0.575,
+    "variations": 12,
+    "depth": 9.6,
+    "key": "a1786554139f67a9"
+   },
+   {
+    "id": "fccbfa02",
+    "title": "2.d3",
+    "name": "Sicilian Defense",
+    "sans": "e4 c5 d3",
+    "games": 3738,
+    "score": 0.493,
+    "variations": 230,
+    "depth": 10.3,
+    "key": "cae9892b46c6f13f"
+   },
+   {
+    "id": "3bc74f8c",
+    "title": "2.b3",
+    "name": "Sicilian Defense: Czerniak Attack",
+    "sans": "e4 c5 b3",
+    "games": 3483,
+    "score": 0.5,
+    "variations": 18,
+    "depth": 6.3,
+    "key": "e8eb2aaad8db2186"
+   }
+  ]
  }
 }
