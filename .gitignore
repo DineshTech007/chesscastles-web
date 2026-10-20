@@ -22,6 +22,9 @@ __pycache__/
 # The site check's report (scripts/e2e/site-check.mjs)
 site-check-report/
 
+# The feature videos (scripts/videos/make.mjs builds them; 30 MB of mp4)
+static/videos/
+
 # The tester (scripts/e2e/tester.mjs): its browser session and state, and its reports.
 tester-data/
 reports/
