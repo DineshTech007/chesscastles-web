@@ -398,7 +398,7 @@
       {/if}
       <div class="grow"></div>
       <FeatureVideo />
-      <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'} title={$soundOn ? 'Move sounds on' : 'Move sounds off'}>
+      <button class="icon-btn snd" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'} title={$soundOn ? 'Move sounds on' : 'Move sounds off'}>
         <Icon name={$soundOn ? 'speaker' : 'mute'} size={20} />
       </button>
       <button class="icon-btn thm" onclick={toggleTheme} aria-label={theme === 'dark' ? 'Light theme' : 'Dark theme'}>
@@ -693,7 +693,7 @@
   }
   /* The sound button is also in each game's own bar: on phones the logo keeps its room. */
   @media (max-width: 480px) {
-    .top :global(.icon-btn:first-of-type) {
+    .top :global(.icon-btn.snd) {
       display: none;
     }
   }
