@@ -21,14 +21,18 @@ export async function engineMove(pos: Chess, rating: number, _opponent?: number,
 export type Seen = (pos: Chess) => number;
 
 /**
- * Whether a move lets the game end in a draw by repetition: it brings back a position that was already on the
- * board, or after it the opponent can bring one back for the third time. Engines score a single position and
- * can't know this, so a winning bot would happily repeat into a draw. Pawn moves and captures never repeat.
+ * Whether a move lets the game end in a draw: it brings back a position that was already on the board, or
+ * after it the opponent can bring one back for the third time, or it lets the fifty-move rule end the game.
+ * Engines score a single position and can't know this, so a winning bot would happily repeat or shuffle into
+ * a draw. Pawn moves, captures and checkmates never do.
  */
 export function repeats(pos: Chess, move: NormalMove, seen: Seen): boolean {
   if (pos.board.get(move.from)?.role === 'pawn' || pos.board.get(move.to)) return false;
   const after = pos.clone();
   after.play(move);
+  if (after.isCheckmate()) return false;
+  // The 100th half-move without a capture or pawn move draws: this move, or the opponent's next one.
+  if (pos.halfmoves >= 98) return true;
   if (seen(after) >= 1) return true;
   for (const [from, dests] of after.allDests()) {
     if (after.board.get(from)?.role === 'pawn') continue;
@@ -53,6 +57,30 @@ export function materialLead(pos: Chess): number {
 
 /** A repeating move is worth a draw: 50% winning chance, whatever the engine thought of the position. */
 const DRAW = 0.5;
+
+/** Stockfish's score for a forced mate (scoreMoves gives mates as ±3000). */
+const MATE = 3000;
+/**
+ * From this rating a player who is shown a mate plays it. The winning chance stops growing at +15, so without
+ * this a forced mate looks no better than any big win, and a winning bot plays on without ever mating.
+ */
+const FINDS_MATE = 1800;
+/** From this lead (centipawns) a player of FINDS_MATE or more converts: the strongest of the moves they consider. */
+const CONVERT = 500;
+
+/**
+ * A won position, handled as a strong player does: a mate when there is one, else, from +5, the best of the
+ * moves considered (the winning chance stops growing at +15, so a weighted pick would let +18 drift to +8).
+ * Undefined when the rating or the position don't call for it. Moves that draw (`drawn`) are never chosen.
+ */
+function convert<T>(cands: T[], cp: (c: T) => number | undefined, drawn: (c: T) => boolean, rating: number, random: () => number): T | undefined {
+  if (rating < FINDS_MATE) return undefined;
+  const mates = cands.filter((c) => (cp(c) ?? 0) >= MATE);
+  if (mates.length) return mates[Math.floor(random() * mates.length)];
+  const open = cands.filter((c) => !drawn(c) && cp(c) !== undefined);
+  const top = open.sort((a, b) => cp(b)! - cp(a)!)[0];
+  return top && cp(top)! >= CONVERT ? top : undefined;
+}
 
 /**
  * How a FIDE rating is played: the Maia-3 rating whose candidate moves look
@@ -222,7 +250,8 @@ export async function maiaPick(pos: Chess, rating: number, opponent?: number, tc
     const scores = await engine.scoreMoves(fenOf(pos), ucis, scoreMs);
     if (scores.size) {
       const scored = cands.map((c, i) => ({ item: c, base: c.p, wc: isDrawn(c.move) ? DRAW : scores.has(ucis[i]) ? winChance(scores.get(ucis[i])!) : 0 }));
-      pick = pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r), random);
+      const won = convert(cands, (c) => scores.get(maiaUci(pos, c.move)), (c) => isDrawn(c.move), r, random);
+      pick = won ?? pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r), random);
     } else pick = pickWeighted(cands.map((c) => ({ item: c, base: c.p * unscored(c), wc: 0 })), 1, 1, false, random);
   }
   return { move: pick.move, confidence: policy[0].p, engine: 'maia' };
@@ -249,7 +278,8 @@ export async function stockfishPick(pos: Chess, rating: number, tc?: TimeControl
   // How far from the best move a player of this rating wanders: 6% of winning chance at 1400, halving every 600 points.
   const tau = 0.06 * 2 ** ((1400 - r) / 600);
   const scored = moves.filter((_, i) => scores.has(ucis[i])).map((m) => ({ item: m, base: 1, wc: seen && repeats(pos, m, seen) ? DRAW : winChance(scores.get(maiaUci(pos, m))!) }));
-  return pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r), random);
+  const won = convert(scored, (x) => scores.get(maiaUci(pos, x.item)), (x) => x.wc === DRAW, r, random);
+  return won ? won.item : pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r), random);
 }
 
 /** The FIDE bot's engine: Maia-3 when it is downloaded, otherwise Stockfish. */

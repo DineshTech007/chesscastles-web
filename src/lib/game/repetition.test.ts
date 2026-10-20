@@ -6,11 +6,11 @@ import type { NormalMove } from 'chessops/types';
 import { polyglotKey } from '$lib/chess/polyglot';
 
 // The engines are stand-ins: Maia's candidates and Stockfish's scores are set by each test.
-const scores = vi.hoisted(() => ({ cp: 0, play: null as string | null, policy: [] as { uci: string; p: number }[] }));
+const scores = vi.hoisted(() => ({ cp: 0, play: null as string | null, policy: [] as { uci: string; p: number }[], byMove: {} as Record<string, number> }));
 vi.mock('$lib/engine/stockfish', () => ({
   engine: {
     play: async () => scores.play,
-    scoreMoves: async (_fen: string, moves: string[]) => new Map(moves.map((m) => [m, scores.cp])),
+    scoreMoves: async (_fen: string, moves: string[]) => new Map(moves.map((m) => [m, scores.byMove[m] ?? scores.cp])),
   },
 }));
 vi.mock('$lib/engine/maia', () => ({
@@ -80,8 +80,67 @@ describe('draws by repetition', () => {
     expect(await picks(async () => makeUci((await maiaPick(position(), 2000, undefined, undefined, rnd))!.move))).toBeGreaterThan(100);
   });
 
+  it('a winning bot does not shuffle into a draw by the fifty-move rule', () => {
+    const late = Chess.fromSetup(parseFen('5k2/2q2P2/2p2KB1/p1P5/8/8/8/8 b - - 98 120').unwrap()).unwrap();
+    const none = () => 0;
+    expect(repeats(late, parseUci('c7d7') as NormalMove, none)).toBe(true);
+    expect(repeats(late, parseUci('a5a4') as NormalMove, none)).toBe(false);
+    const early = Chess.fromSetup(parseFen('5k2/2q2P2/2p2KB1/p1P5/8/8/8/8 b - - 40 120').unwrap()).unwrap();
+    expect(repeats(early, parseUci('c7d7') as NormalMove, none)).toBe(false);
+  });
+
+  it('a strong bot plays the mate it is shown; a weak one may not', async () => {
+    // Black to move: ...Qg3# is mate; the other moves keep a big win.
+    const fenMate = '6k1/5ppp/8/8/8/6q1/5P2/7K b - - 0 1';
+    const mate = () => Chess.fromSetup(parseFen(fenMate).unwrap()).unwrap();
+    scores.cp = 1400;
+    scores.byMove = { g3g1: 3000 };
+    scores.policy = [
+      { uci: 'g3f3', p: 0.6 },
+      { uci: 'g3g1', p: 0.25 },
+      { uci: 'g3e1', p: 0.15 },
+    ];
+    const rnd = seeded(9);
+    const mates = async (rating: number) => {
+      let n = 0;
+      for (let i = 0; i < 200; i++) if (makeUci((await maiaPick(mate(), rating, undefined, undefined, rnd))!.move) === 'g3g1') n++;
+      return n;
+    };
+    expect(await mates(2000)).toBe(200);
+    expect(await mates(1400)).toBeLessThan(200);
+    let sf = 0;
+    for (let i = 0; i < 200; i++) if (makeUci((await stockfishPick(mate(), 2000, undefined, rnd))!) === 'g3g1') sf++;
+    expect(sf).toBe(200);
+    scores.byMove = {};
+  });
+
+  it('a strong bot converts a won position with its best move; a weaker one may drift', async () => {
+    const won = () => Chess.fromSetup(parseFen('6k1/5ppp/8/8/8/6q1/5P2/7K b - - 0 1').unwrap()).unwrap();
+    scores.cp = 900;
+    scores.byMove = { g3e1: 1900 };
+    scores.policy = [
+      { uci: 'g3f3', p: 0.6 },
+      { uci: 'g3e1', p: 0.25 },
+      { uci: 'g3h3', p: 0.15 },
+    ];
+    const rnd = seeded(4);
+    const best = async (rating: number) => {
+      let n = 0;
+      for (let i = 0; i < 200; i++) if (makeUci((await maiaPick(won(), rating, undefined, undefined, rnd))!.move) === 'g3e1') n++;
+      return n;
+    };
+    expect(await best(2000)).toBe(200);
+    expect(await best(1400)).toBeLessThan(200);
+    scores.byMove = {};
+  });
+
   it('a losing bot takes the draw', async () => {
     scores.cp = -900;
+    scores.policy = [
+      { uci: 'c7d7', p: 0.7 },
+      { uci: 'c7c8', p: 0.2 },
+      { uci: 'c7b8', p: 0.1 },
+    ];
     const rnd = seeded(5);
     expect(await picks(async () => makeUci((await maiaPick(position(), 2000, undefined, undefined, rnd, undefined, seen))!.move))).toBe(200);
   });
