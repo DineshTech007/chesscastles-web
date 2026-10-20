@@ -9,6 +9,7 @@
   import { challengeSetting } from '$lib/lichessBoard';
   import { formatDate } from '$lib/format';
   import { findPlayers, friendAction, friendsList, inbox, liveFriends, refreshBadge, serverResting, type Conversation, type Player } from '$lib/social';
+  import { poll } from '$lib/poll';
   import { lichessRatings, lichessStatus, searchLichess, type LichessPlayer, type LichessStatus } from '$lib/lichess';
 
   let tab = $state<'friends' | 'find' | 'invite'>('friends');
@@ -60,9 +61,11 @@
   let onChessCastles = $state<Set<string>>(new Set());
   async function refreshLive() {
     const ids = (friends?.friends ?? []).map((p) => lichessId(p.uid)).filter(Boolean);
-    const [l, k] = await Promise.all([lichessStatus(ids).catch(() => new Map()), liveFriends().catch(() => [])]);
+    const [l, k] = await Promise.all([lichessStatus(ids).catch(() => new Map()), liveFriends().catch(() => undefined)]);
     live = l;
+    if (!k) return false;
     onChessCastles = new Set(k.filter((g) => !g.over).map((g) => g.uid));
+    return true;
   }
 
   $effect(() => {
@@ -78,8 +81,7 @@
   // Who is playing right now, kept fresh while the page is open.
   $effect(() => {
     if (tab !== 'friends') return;
-    const t = setInterval(() => document.visibilityState === 'visible' && !serverResting() && void refreshLive(), 60_000);
-    return () => clearInterval(t);
+    return poll(async () => !serverResting() && (await refreshLive()), 60_000, { now: false });
   });
   onMount(() => {
     const t = new URLSearchParams(location.search).get('tab');

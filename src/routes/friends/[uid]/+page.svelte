@@ -6,6 +6,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import { session, startSignIn } from '$lib/auth';
   import { getPlayer, initialsOf, messagesWith, playerPhoto, refreshBadge, sendMessage, type Message, type Player } from '$lib/social';
+  import { poll as keepAsking } from '$lib/poll';
 
   const uid = decodeURIComponent(page.params.uid!);
   let friend = $state<Player | undefined>();
@@ -14,7 +15,9 @@
   let error = $state('');
   let sending = $state(false);
   let box: HTMLDivElement | undefined = $state();
-  let timer: ReturnType<typeof setInterval> | undefined;
+  let stopPolling: (() => void) | undefined;
+  /** The error shown came from loading messages (it clears once they load again). */
+  let loadFailed = false;
 
   async function poll() {
     try {
@@ -26,9 +29,12 @@
         box?.scrollTo({ top: box.scrollHeight });
         void refreshBadge();
       }
+      if (loadFailed) (error = ''), (loadFailed = false);
+      return true;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Messages could not be loaded.';
-      clearInterval(timer);
+      loadFailed = true;
+      return false;
     }
   }
 
@@ -38,17 +44,14 @@
       (r) => {
         friend = r.player;
         if (r.relation !== 'friends') error = 'You can message friends only.';
-        else {
-          void poll();
-          // Every 6 seconds, and only while the chat is in front.
-          timer = setInterval(() => document.visibilityState === 'visible' && void poll(), 6000);
-        }
+        // Now, then every 6 seconds while the chat is in front (slower after failures).
+        else stopPolling = keepAsking(poll, 6000);
       },
       () => (error = 'This player could not be loaded.'),
     );
-    return () => clearInterval(timer);
+    return () => stopPolling?.();
   });
-  onDestroy(() => clearInterval(timer));
+  onDestroy(() => stopPolling?.());
 
   async function send(e: Event) {
     e.preventDefault();

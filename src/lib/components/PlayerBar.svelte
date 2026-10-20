@@ -18,6 +18,7 @@
     ratingChange,
     country,
     title,
+    href,
   }: {
     name: string;
     subtitle: string;
@@ -39,6 +40,8 @@
     country?: string;
     /** A Chess Castles title, shown before the name. */
     title?: string;
+    /** The player's page (their ratings and games): the name links to it. */
+    href?: string;
   } = $props();
 </script>
 
@@ -49,7 +52,7 @@
   </span>
   <span class="who">
     <span class="title name">
-      <span><TitleBadge {title} size={12} />{name}</span>
+      {#if href}<a class="profile" {href} title="See {name}'s profile and games"><TitleBadge {title} size={12} />{name}</a>{:else}<span><TitleBadge {title} size={12} />{name}</span>{/if}
       {#if country}
         <span class="flag-wrap" data-tip={fedName(country)}>
           <img class="flag" src="/flags/{country}.svg" alt={fedName(country)} width="20" height="14" />

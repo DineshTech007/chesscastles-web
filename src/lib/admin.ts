@@ -2,6 +2,7 @@
 import type { KfideSpeed } from '$lib/kfide';
 import { auth } from '$lib/auth';
 import { call } from '$lib/social';
+import { markStaff } from '$lib/analytics';
 import type { Banner, Launch, Plan, PlanConfig } from '$lib/plans';
 
 export type Role = 'owner' | 'moderator' | 'support';
@@ -10,7 +11,7 @@ export type Can = 'view' | 'grant' | 'reports' | 'suspend' | 'owner';
 export interface Overview {
   days: number;
   from: string;
-  /** Per day: visitors, views, sessions, signup. */
+  /** Per day: visitors, views, sessions, signup, errors, visitor_new / visitor_returning / visitor_signed_in, games. */
   series: Record<string, Record<string, number>>;
   top: Record<'views' | 'features' | 'limits' | 'interest' | 'ref' | 'country' | 'device' | 'visitor' | 'browser' | 'os' | 'load' | 'error', { key: string; count: number }[]>;
   /** Site health: who is on the site now, and the errors of the last week (newest first). */
@@ -125,6 +126,8 @@ export const adminMe = (): Promise<Me> => {
     );
   }
   meCache = { uid, p };
+  // An admin's browser: left out of the visitor counts.
+  p.then(() => markStaff(), () => {});
   return p;
 };
 function remember(uid: string, me: Me | null) {

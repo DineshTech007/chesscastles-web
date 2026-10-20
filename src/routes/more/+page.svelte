@@ -27,6 +27,7 @@
     { href: '/students', label: $t('more.students'), icon: 'coach' },
     ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.badge ? `${$t('nav.new')} · ` : ''}${$t(navKey(n.href))}: ${$t(navBlurbKey(n.href))}`, icon: n.icon })),
     { href: '/parents', label: $t('more.parents'), icon: 'shield' },
+    { href: '/wishes', label: 'Kind words: what players and well-wishers say', icon: 'star' },
     { href: '/feedback', label: $t('more.feedback'), icon: 'send' },
     { href: '/help', label: $t('more.help'), icon: 'bulb' },
     { href: '/legal/terms', label: $t('more.terms'), icon: 'book' },

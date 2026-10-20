@@ -8,6 +8,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import { session, startSignIn } from '$lib/auth';
   import { playingNow, type PlayingGame } from '$lib/social';
+  import { poll } from '$lib/poll';
   import { photoSrc } from '$lib/stores/me';
   import { t } from '$lib/i18n';
 
@@ -20,15 +21,16 @@
     try {
       games = (await playingNow()).games;
       error = '';
+      return true;
     } catch (e) {
       error = (e as Error).message;
+      return false;
+    } finally {
+      loaded = true;
     }
-    loaded = true;
   }
-  onMount(() => {
-    const t = setInterval(load, 15_000);
-    return () => clearInterval(t);
-  });
+  // Every 15 seconds while the page is in front (slower after failures: src/lib/poll.ts).
+  onMount(() => poll(load, 15_000, { now: false }));
   $effect(() => {
     if ($session.status === 'in') void load();
   });

@@ -16,6 +16,27 @@ let signedIn = false;
 /** The first batch goes quickly (short visits count too), later ones every 30 seconds: every batch is database writes, and launch day is busy. */
 let sentOnce = false;
 
+/** The account the AI tester signs in with (scripts/e2e/tester.mjs). */
+export const TESTER_UID = 'lichess:chesscastlestester';
+/**
+ * The owner's, an admin's or the tester's browser (it signed in as one): its visits and page views are not counted,
+ * so the dashboard shows real players only (its errors still are). Kept in this browser, signed in or out.
+ */
+let staff = false;
+try {
+  staff = typeof localStorage !== 'undefined' && localStorage.getItem('cc.staff') === '1';
+} catch {
+  /* storage blocked */
+}
+export function markStaff() {
+  staff = true;
+  try {
+    localStorage.setItem('cc.staff', '1');
+  } catch {
+    /* storage blocked: this visit only */
+  }
+}
+
 const off = () =>
   typeof window === 'undefined' || location.hostname === 'localhost' || location.hostname === '127.0.0.1' || navigator.doNotTrack === '1' || navigator.webdriver || (navigator as { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
 
@@ -113,6 +134,7 @@ export function flush(leaving = false) {
     visit,
     ev: queue.splice(0, 60),
     page: currentPage,
+    ...(staff ? { staff: true } : {}),
     ...(errs.length ? { err: errs.splice(0, 5), device: w < 700 ? 'mobile' : w < 1100 ? 'tablet' : 'desktop', browser: browserOf().browser } : {}),
   });
   const url = `${API}/track`;

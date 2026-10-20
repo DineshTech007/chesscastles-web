@@ -11,6 +11,8 @@
     rating?: string;
     /** After a rated game: how the rating moved. */
     ratingChange?: number;
+    /** The player's page on Chess Castles: the name links to it. */
+    href?: string;
   }
   let board: Board | undefined = $state();
 </script>
@@ -92,11 +94,13 @@
     else if (cursor > n) cursor = n;
   });
 
-  const pos = $derived(cursor === 0 ? game.start : game.plies[cursor - 1].after);
+  // A shorter game (a friend's next game) can come before the effect above moves the cursor back: kept in range here.
+  const at = $derived(Math.min(cursor, game.plies.length));
+  const pos = $derived(at === 0 ? game.start : game.plies[at - 1].after);
   /** The viewer's own moves from the game position at `base`. */
   let trial = $state<{ base: number; moves: NormalMove[]; sans: string[] } | undefined>();
   const trialPos = $derived.by(() => {
-    if (!trial) return undefined;
+    if (!trial || trial.base > game.plies.length) return undefined;
     const p = (trial.base === 0 ? game.start : game.plies[trial.base - 1].after).clone();
     for (const m of trial.moves) p.play(m);
     return p;
@@ -141,7 +145,7 @@
       const m = trial.moves[trial.moves.length - 1];
       return [keyOf(m.from), keyOf(m.to)];
     }
-    return cursor ? [keyOf(game.plies[cursor - 1].move.from), keyOf(game.plies[cursor - 1].move.to)] : undefined;
+    return at ? [keyOf(game.plies[at - 1].move.from), keyOf(game.plies[at - 1].move.to)] : undefined;
   });
 
   $effect(() => {

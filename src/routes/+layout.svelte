@@ -17,6 +17,7 @@
   import { setSound, soundOn } from '$lib/sound';
   import { reportStudy } from '$lib/study/reminders';
   import { myProfile, refreshBadge, saveProfile } from '$lib/social';
+  import { poll } from '$lib/poll';
   import { session } from '$lib/auth';
   import { kfide, kfideAll, myCountry, movePhotoOutOfFirebase, myFideId, myInitials, myPhoto, myRatingSet, myTitle, photoSrc, setAccountPhoto, setMyCountry, setMyName } from '$lib/stores/me';
   import { fedName } from '$lib/fideFeds';
@@ -41,7 +42,7 @@
   import FeatureVideo from '$lib/components/FeatureVideo.svelte';
   import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
   import { boardThemeOpen } from '$lib/boardTheme';
-  import { flush, pageView, reportError, setSignedIn } from '$lib/analytics';
+  import { TESTER_UID, flush, markStaff, pageView, reportError, setSignedIn } from '$lib/analytics';
   import { keepReferral, loadPlanSettings, planSettings, refreshMyPlan, sendReferral } from '$lib/plans';
 
   let { children } = $props();
@@ -151,7 +152,14 @@
         const key = JSON.stringify([studyWeek, booksRead, progress]);
         if (key === lastBoards || (!studyWeek.points && !booksRead && !progress.puzzlesSolved)) return;
         lastBoards = key;
-        void saveProfile({ studyWeek, booksRead, progress }).catch(() => (lastBoards = ''));
+        // A dropped phone connection: one more try a few seconds later, unless a newer save took over. (The progress
+        // itself stays on this device either way, and is sent again with the next change or sign-in.)
+        const save = () => saveProfile({ studyWeek, booksRead, progress });
+        void save()
+          .catch(() => new Promise((r) => setTimeout(r, 5000)).then(() => (lastBoards === key ? save() : undefined)))
+          .catch(() => {
+            if (lastBoards === key) lastBoards = '';
+          });
       }, 3000);
     };
     const unStudy = study.subscribe((list) => {
@@ -161,7 +169,7 @@
     // A new puzzle rating reaches friends too.
     const unPuzzle = puzzleRating.subscribe(() => syncBoards());
     // Signed in: keep the friends badge fresh, and share the CC Rating with friends.
-    let badgeTimer: ReturnType<typeof setInterval> | undefined;
+    let stopBadge: (() => void) | undefined;
     const unSession = session.subscribe((s) => {
       // One account at a time: a Lichess login that is not the signed-in account's (two people on one browser) signs out cleanly.
       // (A browser that lost the saved Lichess login keeps the account: only a different account signs out.)
@@ -174,8 +182,9 @@
       }
       // New games are marked with the account that plays them (CC Rating is per account).
       myGames.setOwner(s.status === 'in' ? s.uid : undefined);
-      clearInterval(badgeTimer);
+      stopBadge?.();
       setSignedIn(s.status === 'in');
+      if (s.status === 'in' && s.uid === TESTER_UID) markStaff();
       try {
         if (s.status === 'in') localStorage.setItem('cc.wasIn', '1');
         else if (s.status === 'out') localStorage.removeItem('cc.wasIn');
@@ -197,9 +206,8 @@
       if (agreed && !consentSynced(s.uid)) void saveProfile({ consent: { version: agreed.version, age: agreed.age } }).then(() => markConsentSynced(s.uid)).catch(() => {});
       // An invite link opened before signing in: the friend who invited gets their reward.
       void sendReferral(s.username).then(refreshMyPlan);
-      void refreshBadge();
-      // Every two minutes, and only while the page is open in front of the player.
-      badgeTimer = setInterval(() => document.visibilityState === 'visible' && void refreshBadge(), 120_000);
+      // Now, then every two minutes while the page is in front (slower after failures: src/lib/poll.ts).
+      stopBadge = poll(refreshBadge, 120_000);
       // My games on every device (games from the account come in, this browser's go up), on its own.
       void syncGames(s.uid);
       myProfile()
@@ -235,7 +243,7 @@
       unPuzzle();
       unSession();
       unResume();
-      clearInterval(badgeTimer);
+      stopBadge?.();
       document.removeEventListener('visibilitychange', onHide);
       removeEventListener('pagehide', onLeave);
     };

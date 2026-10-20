@@ -147,16 +147,19 @@ export const incomingRequests = writable<Player[]>([]);
 export const friendsCache = writable<Player[]>([]);
 
 /** Refreshes the menu badge: unread messages plus friend requests waiting (and the lists behind them). */
-export async function refreshBadge() {
-  if (serverResting()) return;
+/** Unread messages and friend requests for the badge; false if the server could not be reached. */
+export async function refreshBadge(): Promise<boolean> {
+  if (serverResting()) return false;
   try {
     const [i, f] = await Promise.all([inbox(), friendsList()]);
     incomingRequests.set(f.incoming);
     friendsCache.set(f.friends);
     socialBadge.set(i.unread + f.incoming.length);
+    return true;
   } catch {
     incomingRequests.set([]);
     socialBadge.set(0);
+    return false;
   }
 }
 

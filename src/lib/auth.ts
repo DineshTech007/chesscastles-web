@@ -1,3 +1,4 @@
+import { API } from '$lib/api';
 import { hasConsent } from '$lib/consent';
 import { initializeApp } from 'firebase/app';
 import {
@@ -7,6 +8,7 @@ import {
   onAuthStateChanged,
   signInWithCustomToken,
   signOut as fbSignOut,
+  type User,
 } from 'firebase/auth';
 import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore/lite';
 import { writable } from 'svelte/store';
@@ -110,7 +112,7 @@ export async function signInWithGoogle(): Promise<void> {
     const cred = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
     // A Lichess login left in this browser belongs to another account.
     localStorage.removeItem(TOKEN_KEY);
-    await ensureProfile(cred.user.uid, cred.user.displayName ?? cred.user.email?.split('@')[0] ?? 'Player');
+    await ensureProfile(cred.user, cred.user.displayName ?? cred.user.email?.split('@')[0] ?? 'Player');
   } catch (e) {
     const code = (e as { code?: string }).code ?? '';
     if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') throw new Error('');
@@ -198,15 +200,23 @@ export async function signInWithLichessToken(token: string): Promise<void> {
 
   localStorage.setItem(TOKEN_KEY, JSON.stringify({ token, username: body.username }));
   const cred = await signInWithCustomToken(auth, body.firebaseToken);
-  await ensureProfile(cred.user.uid, body.username);
+  await ensureProfile(cred.user, body.username);
 }
 
-async function ensureProfile(uid: string, username: string) {
-  const ref = doc(db, 'users', uid);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
-    await setDoc(ref, { ...newProfileDoc(username), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-  }
+/** At sign-in: the player's document (Firestore) and their Chess Castles profile (the API's), each made once. */
+async function ensureProfile(user: User, username: string) {
+  const ref = doc(db, 'users', user.uid);
+  await Promise.all([
+    getDoc(ref).then((snap) =>
+      snap.exists() ? undefined : setDoc(ref, { ...newProfileDoc(username), createdAt: serverTimestamp(), updatedAt: serverTimestamp() }),
+    ),
+    // The API makes the profile at most once (safe alongside the pages' own first calls); a failure here is fine,
+    // the next call makes it.
+    user
+      .getIdToken()
+      .then((t) => fetch(`${API}/social/me`, { headers: { Authorization: `Bearer ${t}` } }))
+      .catch(() => undefined),
+  ]);
 }
 
 /** The Lichess token for online play, if signed in. */

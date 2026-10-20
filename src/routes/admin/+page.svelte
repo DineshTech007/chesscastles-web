@@ -16,8 +16,9 @@
   import FairPlay from '$lib/admin/FairPlay.svelte';
   import Feedback from '$lib/admin/Feedback.svelte';
   import Registrations from '$lib/admin/Registrations.svelte';
+  import Wishes from '$lib/admin/Wishes.svelte';
 
-  type Tab = 'dashboard' | 'registrations' | 'players' | 'fairplay' | 'plans' | 'reports' | 'feedback' | 'team';
+  type Tab = 'dashboard' | 'registrations' | 'players' | 'fairplay' | 'plans' | 'reports' | 'feedback' | 'wishes' | 'team';
   let tab = $state<Tab>('dashboard');
   let role = $state<{ role: Role; can: Can[] } | undefined>();
   let denied = $state(false);
@@ -33,7 +34,7 @@
   onMount(() => {
     const fromHash = () => {
       const h = location.hash.slice(1) as Tab;
-      if (['dashboard', 'players', 'plans', 'reports', 'feedback', 'team'].includes(h)) tab = h;
+      if (['dashboard', 'registrations', 'players', 'fairplay', 'plans', 'reports', 'feedback', 'wishes', 'team'].includes(h)) tab = h;
     };
     fromHash();
     // The dashboard's tiles link to #reports and #feedback.
@@ -54,6 +55,7 @@
         ['plans', PLANS_ON ? 'Plans & offers' : 'Site banner', 'view'],
         ['reports', 'Reports', 'reports'],
         ['feedback', 'Feedback', 'reports'],
+        ['wishes', 'Kind words', 'owner'],
         ['team', 'Team & log', 'owner'],
       ] as [Tab, string, Can][]
     ).filter(([, , c]) => role?.can.includes(c)),
@@ -93,6 +95,8 @@
       <Reports onopen={(uid) => ((openUid = uid), go('players'))} />
     {:else if tab === 'feedback'}
       <Feedback onopen={(uid) => ((openUid = uid), go('players'))} />
+    {:else if tab === 'wishes'}
+      <Wishes />
     {:else if tab === 'team'}
       <Team />
     {/if}

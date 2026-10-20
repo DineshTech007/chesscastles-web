@@ -5,6 +5,7 @@
   import { PLANS, PLANS_ON, PLAN_INFO } from '$lib/plans';
   import { fedName } from '$lib/fideFeds';
   import DayChart from './DayChart.svelte';
+  import DayTable from './DayTable.svelte';
   import RankBars from './RankBars.svelte';
 
   let days = $state(30);
@@ -134,6 +135,8 @@
     <DayChart title="Page views per day" series={data.series.views} from={data.from} days={data.days} />
     <DayChart title="Sign-ups per day" series={data.series.signup} from={data.from} days={data.days} />
   </div>
+
+  <DayTable series={data.series} from={data.from} days={data.days} />
 
   <div class="grid2">
     <RankBars title="Most viewed pages" rows={data.top.views} name={pageName} />

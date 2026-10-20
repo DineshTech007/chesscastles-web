@@ -12,6 +12,7 @@
   import { positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
   import type { PgnGame, PgnPly } from '$lib/chess/pgn';
   import { getPlayer, watchLive, type LiveGame, type Player } from '$lib/social';
+  import { poll as keepAsking } from '$lib/poll';
   import { playMoveSound } from '$lib/sound';
 
   const uid = decodeURIComponent(page.params.uid!);
@@ -21,7 +22,7 @@
   /** Local time when the shown state was shared (server times turned into this device's clock). */
   let sharedAt = 0;
   let now = $state(Date.now());
-  let timer: ReturnType<typeof setInterval> | undefined;
+  let stopPolling: (() => void) | undefined;
   let tick: ReturnType<typeof setInterval> | undefined;
 
   let afterEnd = 0;
@@ -44,9 +45,11 @@
       sharedAt = Date.now() - (r.now - r.updated);
       error = '';
       // Over: a few more looks, since the new rating comes a moment after the last move.
-      if (r.game.result && (r.game.myAfter !== undefined || r.game.myRating === undefined || ++afterEnd > 10)) clearInterval(timer);
+      if (r.game.result && (r.game.myAfter !== undefined || r.game.myRating === undefined || ++afterEnd > 10)) stopPolling?.();
+      return true;
     } catch (e) {
       error = e instanceof Error ? e.message : 'The game could not be loaded.';
+      return false;
     }
   }
 
@@ -56,13 +59,12 @@
   $effect(() => {
     if ($session.status !== 'in') return;
     void getPlayer(uid).then((r) => (friend = r.player)).catch(() => {});
-    void poll();
-    // Every 2 seconds while the game is on and the page is in front.
-    timer = setInterval(() => document.visibilityState === 'visible' && void poll(), 2000);
-    return () => clearInterval(timer);
+    // Now, then every 2 seconds while the game is on and the page is in front (slower after failures).
+    stopPolling = keepAsking(poll, 2000);
+    return () => stopPolling?.();
   });
   onDestroy(() => {
-    clearInterval(timer);
+    stopPolling?.();
     clearInterval(tick);
   });
 
@@ -108,6 +110,7 @@
       rating: isFriend ? friendRating() : oppRating,
       ratingChange: isFriend && game?.result && game.myAfter !== undefined && game.myRating !== undefined ? game.myAfter - game.myRating : undefined,
       country: isFriend ? friend?.country || undefined : undefined,
+      href: isFriend ? `/players/${encodeURIComponent(uid)}` : undefined,
       toMove: latest && !game?.result && after?.turn === s,
       clockMs,
     };
