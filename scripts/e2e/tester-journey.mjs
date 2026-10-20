@@ -1,8 +1,8 @@
-// Aarav's journey: first-person milestone posts built from the tester's real sessions
-// (reports/aarav-data.json, from scripts/e2e/tester-data.mjs). Every game, number, opening,
-// lesson and mistake in a post comes from the data; Aarav, his family and his coach are the
-// story around it, and the page says so. Writes src/lib/journey/journey.json (the /journey
-// pages read it) and reports/journey/*.md.
+// Aarav's journey: milestone posts built from the practice account's real sessions
+// (reports/aarav-data.json, from scripts/e2e/tester-data.mjs), written as the record they
+// are: every game, number, opening, lesson and mistake comes from the data, and nothing is
+// invented around it. Writes src/lib/journey/journey.json (the /journey pages read it) and
+// reports/journey/*.md.
 //   node scripts/e2e/tester-journey.mjs [target=2500]
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -49,14 +49,8 @@ const dayText = (when) => dateOf(when).toLocaleDateString('en-IN', { day: 'numer
 const pct = (l) => (l.length ? Math.round((100 * l.filter((g) => g.result === 'win').length) / l.length) : 0);
 const rec = (l) => `${l.filter((g) => g.result === 'win').length} wins, ${l.filter((g) => g.result === 'draw').length} draws, ${l.filter((g) => g.result === 'loss').length} losses`;
 
-// The story frame (fiction, said so on the page): who is around Aarav.
-const FRAME = {
-  name: 'Aarav',
-  age: 11,
-  city: 'Pune',
-  family: 'my mother (who set the 6 pm study timer and never let me skip the review), my father (who drives me to every tournament and asks one question after each game: "which move?") and my little sister Diya, who learned the moves by watching',
-  coach: 'my coach, Deshpande sir, a FIDE Master who runs the Saturday class at our school',
-};
+/** The practice account, as the posts call it. */
+const FRAME = { name: 'Aarav', what: 'the practice account that follows the roadmap on Chess Castles' };
 
 /** The sessions up to the one where the rating first reached `m`. */
 function reached(m) {
@@ -88,22 +82,22 @@ function post(m) {
   const prof = s.profileAfter ?? {};
   const first = span[0];
   const body = [];
-  body.push(`${dayText(s.when)}. Today my CC Rating on Chess Castles touched ${s.ratingAfter}. ${m === 1600 ? `When I started, in October, it said 1500 "(new)" and I lost my first three games in a row. ` : `The last stop was ${prevMilestone(m)}. `}Between then and now: ${span.length} ${span.length === 1 ? 'session' : 'sessions'}, ${spanGames.length} rapid games (15+10, never faster: ${FRAME.coach} says fast games only teach you about the clock), ${rec(spanGames)}.`);
+  body.push(`${dayText(s.when)}: the practice account's CC Rating reached ${s.ratingAfter}. ${m === 1600 ? 'It started at 1500 "(new)" and lost three of its first five games. ' : `The last milestone was ${prevMilestone(m)}. `}Since then: ${span.length} ${span.length === 1 ? 'session' : 'sessions'}, ${spanGames.length} rapid games (15+10, never faster), ${rec(spanGames)}.`);
   if (worst) {
-    const [tp, lost] = (worst.turningPoint ?? '').replace(/by chesscastlestester/i, 'by me').split(' · ');
-    body.push(`The game I remember most is the one I lost as ${worst.color} against the ${worst.opponent} in session ${worst.session}: ${worst.worstMoves.slice(0, 2).join(' and ')}. The review marked the turning point as ${tp || 'one move'}${lost ? `, ${lost}% of the winning chances gone in one move` : ''}. My father asked his question in the car: "which move?" I knew the answer this time, and that is the whole point of the review.`);
+    const [tp, lost] = (worst.turningPoint ?? '').replace(/by chesscastlestester/i, 'by Aarav').split(' · ');
+    body.push(`The loss to look at: as ${worst.color} against the ${worst.opponent} in session ${worst.session}, with ${worst.worstMoves.slice(0, 2).join(' and ')} marked. The review's turning point was ${tp || 'one move'}${lost ? `, ${lost}% of the winning chances gone in one move` : ''}. As in every loss on this road, one move decided it; the review names it, and that move is the lesson.`);
   }
   if (studied.length) body.push(`Openings: ${studied.map((c) => `the ${c}${COURSE[c] ? ` as ${COURSE[c].side} (${COURSE[c].idea})` : ''}`).join('; ')}. Each time the same routine from Learn → Openings: the course page, one model game played through, the trainer, and only then the line against a FIDE-rated opponent. From those lines in this stretch: ${rec(lineGames)}.`);
-  if (newOpenings.length) body.push(`New in the trainer: ${newOpenings.join(', ')}. One opening a session, two moves at a time, and the trainer tells me at once when a move is not the line.`);
+  if (newOpenings.length) body.push(`New in the trainer: ${newOpenings.join(', ')}. One opening a session, trained for two moves and then played from move one in the session's last game.`);
   if (learned.length) body.push(`The rest of Learn, one thing a session: ${learned.join('; ')}.`);
-  if (prof.accuracy) body.push(`My profile says: accuracy ${prof.accuracy}%, opening ${prof.opening}, middlegame ${prof.middlegame}, endgame ${prof.endgame}; sharp moments ${prof.sharp} and calm moves ${prof.calm}. ${prof.sharp < 80 ? 'The sharp number is the low one, so tactics come first this week.' : 'The sharp number is up, which is what the puzzles were for.'}`);
-  if (upWins.length) body.push(`${upWins.length === 1 ? 'One win' : `${upWins.length} wins`} against an opponent one level up (${upWins.map((g) => g.opponent).join(', ')}). My mother says that is the one that counts.`);
-  body.push(`All my games so far: ${allGames.length}, ${rec(allGames)}; ${pct(allGames.filter((g) => g.color === 'white'))}% as White and ${pct(allGames.filter((g) => g.color === 'black'))}% as Black. Next stop: ${MILESTONES[MILESTONES.indexOf(m) + 1] ?? 'the title'}.`);
+  if (prof.accuracy) body.push(`The profile's "How you play" after this stretch: accuracy ${prof.accuracy}%, opening ${prof.opening}, middlegame ${prof.middlegame}, endgame ${prof.endgame}; sharp moments ${prof.sharp} and calm moves ${prof.calm}. ${prof.sharp < 80 ? 'The sharp number is the low one: tactics next.' : 'The sharp number is up, which is what the puzzles were for.'}`);
+  if (upWins.length) body.push(`${upWins.length === 1 ? 'One win' : `${upWins.length} wins`} against an opponent one level up (${upWins.map((g) => g.opponent).join(', ')}): game two of every session is played a hundred points above the account's own level.`);
+  body.push(`All games so far: ${allGames.length}, ${rec(allGames)}; ${pct(allGames.filter((g) => g.color === 'white'))}% won as White and ${pct(allGames.filter((g) => g.color === 'black'))}% as Black. Next milestone: ${MILESTONES[MILESTONES.indexOf(m) + 1] ?? 'none; the target is reached'}.`);
   return {
     slug: `aarav-${m}`,
     milestone: m,
     date: s.when.slice(0, 10),
-    title: m >= TARGET ? `How I reached ${m}` : `${m}: ${m === 1600 ? 'the first step' : m === 1800 ? 'the lines start to work' : m === 2000 ? 'a real player now' : m === 2200 ? 'candidate master numbers' : m === 2400 ? 'the master mark' : 'another hundred'}`,
+    title: `${m}: ${m === 1600 ? 'the first step' : m === 1800 ? 'the lines start to work' : m === 2000 ? 'the 2000 mark' : m === 2200 ? 'candidate master numbers' : m === 2400 ? 'the master mark' : m >= TARGET ? 'the target' : 'another hundred'}`,
     sessions: span.map((x) => x.session),
     games: spanGames.length,
     record: rec(spanGames),
@@ -129,19 +123,19 @@ function finalPost() {
     slug: `aarav-${TARGET}-the-whole-road`,
     milestone: TARGET,
     date: s.when.slice(0, 10),
-    title: `How a beginner reached ${TARGET}: the whole road`,
+    title: `From 1500 to ${TARGET}: the whole road, in numbers`,
     sessions: sessions.slice(0, end + 1).map((x) => x.session),
     games: all.length,
     record: rec(all),
     body: [
-      `From ${firstDay} to ${lastDay}: ${sessions.length} sessions, ${all.length} rapid games, CC Rating 1500 → ${s.ratingAfter}. ${rec(all)}. This is everything I did, in order, so that you can do it too.`,
-      `1. Slow games only. Every game was 15+10 against a FIDE-rated opponent at my level, and game two of every session against one level up. By opponent: ${byOpp.join('; ')}.`,
-      `2. Review every game, find the one move. Every loss I had was one move: the review's turning point. ${FRAME.coach} made me say in words why that move was bad before I was allowed the next game. ${FRAME.family}.`,
-      `3. Learn a line before you play it. My first ${lineEarly.length} games from a line I had seen the same day: ${rec(lineEarly)}. After I started doing the course page, a model game and the trainer first, the next ${lineLater.length}: ${rec(lineLater)}.`,
+      `From ${firstDay} to ${lastDay}: ${sessions.length} sessions, ${all.length} rapid games, CC Rating 1500 → ${s.ratingAfter}. ${rec(all)}. This is the whole routine, in order, so that a player can copy it; the full write-up is the case study at /journey/story.`,
+      `1. Slow games only. Every game was 15+10 against a FIDE-rated opponent at the account's level, and game two of every session against one level up. By opponent: ${byOpp.join('; ')}.`,
+      `2. Review every game, find the one move. Every loss on this road was one move: the review's turning point names it.`,
+      `3. Learn a line before you play it. The first ${lineEarly.length} games from a line seen the same day: ${rec(lineEarly)}. Once the course page, a model game and the trainer came first, the next ${lineLater.length}: ${rec(lineLater)}.`,
       `4. One opening at a time, then many. ${openings.length} openings in all: ${openings.join(', ')}.`,
-      `5. The rest of Learn, one thing a day: ${learned.join('; ')}.`,
-      `6. Read the numbers. My profile at the end: accuracy ${prof.accuracy}%, opening ${prof.opening}, middlegame ${prof.middlegame}, endgame ${prof.endgame}, sharp moments ${prof.sharp}, calm moves ${prof.calm}. When a number was low, that was the next week's work.`,
-      `The rating is a number. What changed is that I know, after every game, exactly which move to look at. Start there.`,
+      `5. The rest of Learn, one thing a session: ${learned.join('; ')}.`,
+      `6. Read the numbers. The profile at the end: accuracy ${prof.accuracy}%, opening ${prof.opening}, middlegame ${prof.middlegame}, endgame ${prof.endgame}, sharp moments ${prof.sharp}, calm moves ${prof.calm}. A low number was the next session's work.`,
+      `The rating is a number. What the routine changed is that, after every game, the next thing to look at is known: one move.`,
     ],
   };
 }

@@ -25,7 +25,7 @@
         </div>
       </header>
       {#each post.body as para, k (k)}<p>{para}</p>{/each}
-      <p class="label fine">Aarav is a story character; the games, ratings, openings, lessons and mistakes above are real, from a practice account on Chess Castles. Follow the same road: <a href="/learn/roadmap">the roadmap</a>.</p>
+      <p class="label fine">Aarav is Chess Castles' practice account; the games, ratings, openings, lessons and mistakes above are its real record. The whole road: <a href="/journey/story">the case study</a>; the same road for you: <a href="/learn/roadmap">the roadmap</a>.</p>
     </article>
     <nav class="pn">
       {#if prev}<a class="btn" href="/journey/{prev.slug}"><Icon name="back" size={16} />{prev.milestone}</a>{:else}<span></span>{/if}

@@ -119,13 +119,13 @@
   <section class="card found" aria-labelledby="found-h">
     <h2 id="found-h" class="title">What our tester found</h2>
     <p>
-      Aarav is a beginner account that plays and studies here every day with a weak engine choosing its moves (one notch stronger after each day of study), so we can measure what helps. After ten sessions (50 rapid games, CC Rating 1500 → 1619):
+      Aarav is a beginner account that plays and studies here every day with a weak engine choosing its moves (one notch stronger after each day of study), so we can measure what helps. After 37 sessions (173 rapid games, CC Rating 1500 → 2520; the whole record is in <a href="/journey/story">the case study</a>):
     </p>
     <ul>
       <li>Every loss came from one move: the review’s turning point lost 15–30% of the winning chances in a single move. Reviewing that move is the whole lesson.</li>
-      <li>Playing an opening line the day it was first seen: 1 win in the first 9 such games. Once the same courses were repeated with the trainer and a model game each time, the next 21 such games went 12 wins, 6 draws, 3 losses. Learn the line before you play it.</li>
-      <li>The profile’s "sharp moments" number rose from 57 to 98 with daily puzzles and reviews, ahead of the rating. Tactics show up in the numbers first.</li>
-      <li>Games against an opponent one level up (1600, 1700): 3 wins, a draw and 2 losses in 6, about the same as at the own level. Play up.</li>
+      <li>Playing an opening line the day it was first seen: 1 win in the first 9 such games. Once the course page, a model game and the trainer came first, the next 90 such games went 71 wins, 14 draws, 5 losses. Learn the line before you play it.</li>
+      <li>The profile’s "sharp moments" number rose from 57 to 98 within ten sessions of puzzles and reviews, while the rating was still at 1619. Tactics show up in the numbers first.</li>
+      <li>Game two of every session was played a level up: 37 games, 28 wins, 5 draws, 4 losses. Play up.</li>
     </ul>
     <p class="label">These are early numbers from one account; they are updated as the tester goes on.</p>
   </section>

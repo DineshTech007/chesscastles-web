@@ -1,9 +1,9 @@
 <script lang="ts">
   /**
-   * Aarav's journey: the story of a beginner going up, told from real games
-   * played on Chess Castles by our practice account (src/lib/journey/journey.json,
-   * built by scripts/e2e/tester-journey.mjs after every session). Aarav, his
-   * family and his coach are a story; the games, numbers and study are real.
+   * Aarav's journey: the record of a practice account going up the ratings on
+   * Chess Castles (src/lib/journey/journey.json, built by
+   * scripts/e2e/tester-journey.mjs after every session): real games, real
+   * numbers, real study, written as the record it is.
    */
   import journey from '$lib/journey/journey.json';
   import Aarav from '$lib/journey/Aarav.svelte';
@@ -34,7 +34,7 @@
       <p class="eyebrow label">Aarav's journey</p>
       <h1 class="display">From 1500 to {reached ? target : `${target}, one session at a time`}</h1>
       <p class="lead">
-        {hero.name}, {hero.age}, from {hero.city}, is our practice player: a story character whose chess is real. Every game, rating change, opening, lesson and mistake in these posts was played and studied on Chess Castles by a practice account that follows the <a href="/learn/roadmap">roadmap</a>; his family and his coach are the story around it.
+        {hero.name} is Chess Castles' practice account: it follows the <a href="/learn/roadmap">roadmap</a> session after session, and these posts are its record. Every game, rating change, opening, lesson, puzzle and mistake here was played and studied on Chess Castles; its playing strength was turned up one notch after each session of study. The whole road, with the study plan to copy, is in <a href="/journey/story">the case study</a>.
       </p>
       <p class="stats">
         <span><strong class="num">{hero.now}</strong> <span class="label">CC Rating now</span></span>
