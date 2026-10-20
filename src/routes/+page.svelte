@@ -5,6 +5,7 @@
   import { myTitle } from '$lib/stores/me';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import HeroLanding from '$lib/components/landing/HeroLanding.svelte';
+  import KindWordsStrip from '$lib/components/KindWordsStrip.svelte';
   import { HERO_FEATURES } from '$lib/heroFeatures';
   import { t, type Key } from '$lib/i18n';
   import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
@@ -64,6 +65,7 @@
 <div class="home">
   {#if showLanding}
     <HeroLanding closing={false} />
+    <KindWordsStrip />
   {:else}
   <header class="hello">
     <div>
