@@ -73,6 +73,7 @@
   .how:hover {
     background: color-mix(in srgb, var(--accent) 24%, transparent);
   }
+  /* Phones: a solid gold play button, so it stands out among the icons. */
   @media (max-width: 599px) {
     .how-text {
       display: none;
@@ -81,6 +82,12 @@
       width: 40px;
       padding: 0;
       justify-content: center;
+      background: var(--accent);
+      color: #0b1426;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    }
+    .how:hover {
+      background: var(--accent);
     }
   }
   .scrim {

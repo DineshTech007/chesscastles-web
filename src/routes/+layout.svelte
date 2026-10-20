@@ -379,6 +379,7 @@
         <button class="focus-back" onclick={leaveGame} aria-label="Leave the game page"><Icon name="back" size={18} />Back</button>
         <span class="focus-name">CHESS <span class="gold">CASTLES</span></span>
         <span class="focus-actions">
+          <FeatureVideo />
           <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'}><Icon name={$soundOn ? 'speaker' : 'mute'} size={18} /></button>
           <button class="icon-btn" onclick={() => ($boardThemeOpen = true)} aria-label="Board and pieces" title="Board and pieces"><Icon name="palette" size={18} /></button>
         </span>
