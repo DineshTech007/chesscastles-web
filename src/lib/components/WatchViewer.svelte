@@ -12,6 +12,7 @@
     /** After a rated game: how the rating moved. */
     ratingChange?: number;
   }
+  let board: Board | undefined = $state();
 </script>
 
 <script lang="ts">
@@ -28,6 +29,7 @@
   import type { DrawShape } from '@lichess-org/chessground/draw';
   import type { Key } from '@lichess-org/chessground/types';
   import Board from './Board.svelte';
+  import { promotionFor } from '$lib/chess/promotion';
   import Icon from './Icon.svelte';
   import MoveList from './MoveList.svelte';
   import MoveNav from './MoveNav.svelte';
@@ -119,7 +121,11 @@
     trial = trial ? { ...trial, moves: [...trial.moves, m], sans: [...trial.sans, san] } : { base: cursor, moves: [m], sans: [san] };
     following = false;
   }
-  const onmove = (orig: Key, dest: Key) => play(moveFromKeys(shown, orig, dest));
+  async function onmove(orig: Key, dest: Key) {
+    const promotion = await promotionFor(shown, orig, dest);
+    if (promotion === null) return board?.resync();
+    play(moveFromKeys(shown, orig, dest, promotion));
+  }
   function undoTrial() {
     if (!trial) return;
     trial = trial.moves.length > 1 ? { base: trial.base, moves: trial.moves.slice(0, -1), sans: trial.sans.slice(0, -1) } : undefined;
@@ -242,7 +248,7 @@
           </div>
         {/if}
         <div class="board-box">
-          <Board
+          <Board bind:this={board}
             {fen}
             {orientation}
             turnColor={shown.turn}

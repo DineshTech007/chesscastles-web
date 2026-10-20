@@ -5,6 +5,7 @@
   import type { NormalMove } from 'chessops/types';
   import type { Key } from '@lichess-org/chessground/types';
   import Board from '$lib/components/Board.svelte';
+  import { promotionFor } from '$lib/chess/promotion';
   import Icon from '$lib/components/Icon.svelte';
   import { destsOf, fenOf, keyOf, moveFromKeys, moveToUci, uciToMove } from '$lib/chess/position';
   import { dailyPuzzle, type DailyPuzzle } from '$lib/lichess';
@@ -58,10 +59,12 @@
     v++;
   }
 
-  function onmove(orig: Key, dest: Key) {
+  async function onmove(orig: Key, dest: Key) {
     if (!puzzle || !pos || status === 'solved') return;
-    const m = moveFromKeys(pos, orig, dest);
     const want = puzzle.solution[step];
+    const promotion = await promotionFor(pos, orig, dest, want ? uciToMove(want) : undefined);
+    if (promotion === null) return board?.resync();
+    const m = moveFromKeys(pos, orig, dest, promotion);
     const after = pos.clone();
     after.play(m);
     const lastStep = step === puzzle.solution.length - 1;
@@ -108,12 +111,13 @@
   });
 
   const solver = $derived(puzzle?.start.turn ?? 'white');
+  let board: Board | undefined = $state();
 </script>
 
 <div class="puzzles">
   <section class="board-col" aria-label="Puzzle board">
     {#if view}
-      <Board
+      <Board bind:this={board}
         fen={view.fen}
         orientation={solver}
         turnColor={view.turn}

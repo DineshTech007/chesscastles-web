@@ -11,6 +11,7 @@
   import type { NormalMove } from 'chessops/types';
   import type { Key } from '@lichess-org/chessground/types';
   import Board from '$lib/components/Board.svelte';
+  import { promotionFor } from '$lib/chess/promotion';
   import Icon from '$lib/components/Icon.svelte';
   import { destsOf, fenOf, keyOf, moveFromKeys, moveToUci, playSans, sanOf } from '$lib/chess/position';
   import { polyglotKey } from '$lib/chess/polyglot';
@@ -99,8 +100,10 @@
     playMoveSound(pos, r.move);
     path = [...path, r.san];
   }
-  function onmove(orig: Key, dest: Key) {
-    const m = moveFromKeys(pos, orig, dest);
+  async function onmove(orig: Key, dest: Key) {
+    const promotion = await promotionFor(pos, orig, dest);
+    if (promotion === null) return board?.resync();
+    const m = moveFromKeys(pos, orig, dest, promotion);
     if (!pos.isLegal(m)) return;
     playMoveSound(pos, m);
     path = [...path, sanOf(pos, m)];
@@ -116,11 +119,12 @@
     const m = parseSan(playSans(path.slice(0, -1).join(' ')), path[path.length - 1]);
     return m && 'from' in m ? [keyOf(m.from), keyOf(m.to)] : undefined;
   });
+  let board: Board | undefined = $state();
 </script>
 
 <div class="tree">
   <div class="board-col">
-    <Board fen={fenOf(pos)} orientation={opening.side} turnColor={pos.turn} movable={pos.isEnd() ? undefined : 'both'} dests={destsOf(pos)} lastMove={last} {onmove} label="Opening tree" />
+    <Board bind:this={board} fen={fenOf(pos)} orientation={opening.side} turnColor={pos.turn} movable={pos.isEnd() ? undefined : 'both'} dests={destsOf(pos)} lastMove={last} {onmove} label="Opening tree" />
     <div class="nav">
       <button class="btn small" onclick={() => (path = [])} disabled={!path.length}><Icon name="first" size={16} />Start</button>
       <button class="btn small" onclick={() => (path = path.slice(0, -1))} disabled={!path.length}><Icon name="back" size={16} />Back</button>

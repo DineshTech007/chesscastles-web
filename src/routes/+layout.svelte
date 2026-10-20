@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PromotionHost from '$lib/components/PromotionHost.svelte';
   import { betaOn } from '$lib/beta';
   import '../fonts.css';
   import '../app.css';
@@ -465,6 +466,8 @@
 <ConsentNotice />
 {#if !noPopups}<FriendRequests />{/if}
 <ChallengePopup />
+<PromotionHost />
+
 {#if dasara}
   {#await import('$lib/festive/Dasara.svelte') then m}<m.default onclose={() => (dasara = false)} />{/await}
 {/if}

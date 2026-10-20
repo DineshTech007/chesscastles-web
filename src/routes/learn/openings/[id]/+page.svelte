@@ -6,6 +6,7 @@
   import type { Chess } from 'chessops/chess';
   import type { Key } from '@lichess-org/chessground/types';
   import Board from '$lib/components/Board.svelte';
+  import { promotionFor } from '$lib/chess/promotion';
   import Icon from '$lib/components/Icon.svelte';
   import { CloudBook } from '$lib/book/book';
   import { polyglotKey } from '$lib/chess/polyglot';
@@ -339,11 +340,13 @@
     v++;
   }
 
-  function onmove(orig: Key, dest: Key) {
+  async function onmove(orig: Key, dest: Key) {
     if (!tree || !pos || (phase !== 'yours' && phase !== 'retry')) return;
     const edge = line[index];
     const key = nodeKey(pos);
-    const m = moveFromKeys(pos, orig, dest);
+    const promotion = await promotionFor(pos, orig, dest, uciToMove(edge.uci));
+    if (promotion === null) return board?.resync();
+    const m = moveFromKeys(pos, orig, dest, promotion);
     // Another main move of strong players: not a mistake, the player may make it theirs.
     const node = tree.nodes[key];
     const alt = node?.alts?.find((a) => sameMove(fenOf(pos!), moveToUci(m), a.uci));
@@ -452,6 +455,7 @@
         return { icon: 'trophy', text: 'Line complete. Ready for the next one?', tone: 'var(--gold)' };
     }
   });
+  let board: Board | undefined = $state();
 </script>
 
 <svelte:head><title>{opening?.name ?? 'Opening'} · Opening trainer · Chess Castles</title></svelte:head>
@@ -549,7 +553,7 @@
           </div>
         </div>
       {/if}
-      <Board
+      <Board bind:this={board}
         fen={view.fen}
         orientation={tree.userSide}
         turnColor={view.turn}

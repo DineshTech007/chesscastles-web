@@ -204,6 +204,42 @@ async function run(name, options) {
     return `${fen0} pieces, stepped 6 moves`;
   });
 
+  // 4a. Promotion, like chess.com's "Always promote to Queen": on, a queen at once; off, the piece picker
+  // (a knight is made; closing the picker puts the pawn back).
+  await check(name, page, 'promotion: always a queen, or the piece you pick', async () => {
+    const promote = async () => {
+      await open(page, `/analysis?fen=${encodeURIComponent('8/4P3/8/8/8/8/k7/6K1 w - - 0 1')}`);
+      await page.locator('cg-board').first().waitFor({ timeout: 15000 });
+      await page.waitForTimeout(600);
+      for (const sq of ['e7', 'e8']) {
+        const { x, y } = await square(page, sq);
+        if (touch) await page.touchscreen.tap(x, y);
+        else await page.mouse.click(x, y);
+        await page.waitForTimeout(250);
+      }
+    };
+    const picker = page.getByRole('dialog', { name: 'Choose a piece' });
+    await page.evaluate(() => localStorage.setItem('k24.autoQueen', '1'));
+    await promote();
+    await page.waitForTimeout(500);
+    expect(!(await picker.count()), 'the piece picker opened with "Always promote to Queen" on');
+    expect((await page.locator('body').innerText()).includes('e8=Q'), 'no queen with "Always promote to Queen" on');
+    await page.evaluate(() => localStorage.setItem('k24.autoQueen', '0'));
+    await promote();
+    await picker.waitFor({ timeout: 5000 });
+    await tap(picker.getByRole('button', { name: 'knight' }));
+    await page.waitForTimeout(500);
+    expect((await page.locator('body').innerText()).includes('e8=N'), 'the pawn did not become the knight picked');
+    await promote();
+    await picker.waitFor({ timeout: 5000 });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+    const back = await page.evaluate(() => !!document.querySelector('cg-board piece.pawn.white'));
+    expect(back && !(await picker.count()), 'closing the picker did not put the pawn back');
+    await page.evaluate(() => localStorage.removeItem('k24.autoQueen'));
+    return 'queen; picker, knight; cancel';
+  });
+
   // 4b. The Guru review: the move buttons right under the board on every screen.
   await check(name, page, 'review: move buttons under the board', async () => {
     await open(page, '/coach/review/site-check');

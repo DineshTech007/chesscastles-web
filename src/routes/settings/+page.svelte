@@ -34,7 +34,7 @@
   <section class="card block" aria-labelledby="game-h">
     <h2 id="game-h" class="title">Game preferences</h2>
     <label class="row">
-      <span><strong>Auto-queen promotion</strong><span class="label sub">A pawn reaching the last rank becomes a queen at once. Turn this off to be asked which piece every time.</span></span>
+      <span><strong>Always promote to Queen</strong><span class="label sub">On: a pawn reaching the last rank becomes a queen at once. Off: you choose the queen, rook, bishop or knight every time. Puzzles always let you choose when the answer is another piece; premoves always make a queen.</span></span>
       <input type="checkbox" checked={$autoQueen} onchange={(e) => autoQueen.set(e.currentTarget.checked)} />
     </label>
     <div class="row pace">

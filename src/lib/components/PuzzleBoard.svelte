@@ -11,6 +11,7 @@
   import type { NormalMove } from 'chessops/types';
   import { parseUci } from 'chessops/util';
   import Board from './Board.svelte';
+  import { promotionFor } from '$lib/chess/promotion';
   import { destsOf, fenOf, keyOf, moveFromKeys, positionFromFen } from '$lib/chess/position';
   import { playMoveSound, sounds } from '$lib/sound';
 
@@ -78,10 +79,12 @@
     return () => clearTimeout(t);
   });
 
-  function onmove(orig: Key, dest: Key) {
+  async function onmove(orig: Key, dest: Key) {
     if (status !== 'yours' && status !== 'wrong') return;
-    const m = moveFromKeys(pos, orig, dest);
     const want = line[step];
+    const promotion = await promotionFor(pos, orig, dest, want);
+    if (promotion === null) return board?.resync();
+    const m = moveFromKeys(pos, orig, dest, promotion);
     const after = pos.clone();
     after.play(m);
     const same = want && m.from === want.from && m.to === want.to && (m.promotion ?? 'queen') === (want.promotion ?? 'queen');
@@ -122,10 +125,11 @@
     return { fen: fenOf(pos), dests: mine ? destsOf(pos) : new Map(), check: pos.isCheck(), turn: pos.turn };
   });
   const hint = $derived((status === 'wrong' || (hinted && status === 'yours')) && line[step] && pos.turn === side ? [{ orig: keyOf(line[step].from), brush: 'yellow' }] : []);
+  let board: Board | undefined = $state();
 </script>
 
 <div class="pb">
-  <Board fen={view.fen} orientation={side} turnColor={view.turn} movable={side} dests={view.dests} lastMove={last} check={view.check} shapes={hint as never} {onmove} label="Puzzle board" />
+  <Board bind:this={board} fen={view.fen} orientation={side} turnColor={view.turn} movable={side} dests={view.dests} lastMove={last} check={view.check} shapes={hint as never} {onmove} label="Puzzle board" />
   <p class="msg" class:ok={status === 'solved'} class:bad={status === 'failed' || status === 'wrong'} role="status">
     {#if status === 'wait'}Get ready…
     {:else if status === 'yours'}{side === 'white' ? 'White' : 'Black'} to move: find the best move.

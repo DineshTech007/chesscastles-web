@@ -12,6 +12,7 @@
   import type { DrawShape } from '@lichess-org/chessground/draw';
   import type { Key } from '@lichess-org/chessground/types';
   import Board from '$lib/components/Board.svelte';
+  import { promotionFor } from '$lib/chess/promotion';
   import DbPanel from '$lib/components/DbPanel.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import MoveNav from '$lib/components/MoveNav.svelte';
@@ -123,8 +124,11 @@
     const san = sanOf(shown, m);
     trial = trial ? { ...trial, moves: [...trial.moves, m], sans: [...trial.sans, san] } : { base: ply, moves: [m], sans: [san] };
   }
-  function onmove(orig: Key, dest: Key) {
-    if (shown) play(moveFromKeys(shown, orig, dest));
+  async function onmove(orig: Key, dest: Key) {
+    if (!shown) return;
+    const promotion = await promotionFor(shown, orig, dest);
+    if (promotion === null) return board?.resync();
+    play(moveFromKeys(shown, orig, dest, promotion));
   }
   function undoTrial() {
     if (!trial) return;
@@ -152,6 +156,7 @@
   });
   const view = $derived(flip ? (orientation === 'white' ? 'black' : 'white') : orientation);
   const keyNow = $derived(shown ? polyglotKey(shown).toString(16) : '');
+  let board: Board | undefined = $state();
 </script>
 
 <svelte:window onkeydown={onkey} />
@@ -170,7 +175,7 @@
           </div>
         {/if}
         <div class="board-box">
-          <Board
+          <Board bind:this={board}
             {fen}
             orientation={view}
             turnColor={shown.turn}
