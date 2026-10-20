@@ -41,6 +41,20 @@ describe('OnlineGame', () => {
     expect(g.plies).toHaveLength(3);
   });
 
+  it('offers Abort only until the player has moved', () => {
+    const w = new OnlineGame('white');
+    w.apply(full(''));
+    expect([w.canAbort, w.movedYet]).toEqual([true, false]);
+    w.apply({ type: 'gameState', moves: 'e2e4', wtime: 600000, btime: 600000, status: 'started' });
+    // White has moved: Resign and Offer draw now (Lichess still lets the game be aborted until Black moves).
+    expect([w.canAbort, w.movedYet]).toEqual([true, true]);
+    const b = new OnlineGame('black');
+    b.apply(full('e2e4'));
+    expect(b.movedYet).toBe(false);
+    b.apply({ type: 'gameState', moves: 'e2e4 e7e5', wtime: 600000, btime: 600000, status: 'started' });
+    expect([b.canAbort, b.movedYet]).toEqual([false, true]);
+  });
+
   it('runs the clock of the side to move', () => {
     const g = new OnlineGame('white');
     g.apply(full('e2e4 e7e5'), 1000);

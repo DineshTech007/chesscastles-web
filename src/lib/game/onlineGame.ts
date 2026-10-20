@@ -59,8 +59,13 @@ export class OnlineGame {
   get opponent(): OnlinePlayer {
     return this.me === 'black' ? this.white : this.black;
   }
+  /** Lichess lets either player abort until both have moved. */
   get canAbort(): boolean {
     return !this.isOver && this.plies.length < 2;
+  }
+  /** Whether this player has made their first move (Abort until then; Resign and Offer draw after, as on Chess.com). */
+  get movedYet(): boolean {
+    return !!this.me && this.plies.length >= (this.start.turn === this.me ? 1 : 2);
   }
 
   /** Applies one line of the game stream; returns true if the board changed. */

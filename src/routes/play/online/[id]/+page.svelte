@@ -340,6 +340,14 @@
     void now;
     return bar(orientation);
   });
+  /**
+   * What the controls show, refreshed on every change (`game` itself is not reactive: read straight from it, the
+   * controls kept showing Abort all game). Abort until the player has moved, then Resign and Offer draw.
+   */
+  const controls = $derived.by(() => {
+    void v;
+    return { over: game.isOver, me: game.me, abort: game.canAbort && !game.movedYet, abortable: game.canAbort, plies: game.plies.length };
+  });
   const headline = $derived.by(() => {
     void v;
     if (game.status === 'aborted' || game.status === 'noStart') return { text: 'Game aborted', tone: 'var(--muted)' };
@@ -359,14 +367,15 @@
   </div>
 {/if}
 <div class="actions">
-  {#if game.canAbort}
+  {#if controls.abort}
     <button class="btn" onclick={() => act(() => api.abort(token!, gameId))}><Icon name="close" size={18} />Abort</button>
   {:else if confirmResign}
-    <button class="btn primary" onclick={() => act(() => api.resign(token!, gameId))}>Yes, resign</button>
+    <!-- Before the opponent's first move Lichess only aborts (no rating change). -->
+    <button class="btn primary" onclick={() => act(() => (controls.abortable ? api.abort(token!, gameId) : api.resign(token!, gameId)))}>Yes, resign</button>
     <button class="btn" onclick={() => (confirmResign = false)}>Keep playing</button>
   {:else}
     <button class="btn" onclick={() => (confirmResign = true)}><Icon name="flag" size={18} />Resign</button>
-    <button class="btn" disabled={view.iOfferDraw} onclick={() => act(() => api.draw(token!, gameId, true))}>
+    <button class="btn" disabled={view.iOfferDraw || controls.abortable} title={controls.abortable ? 'After your opponent has moved' : undefined} onclick={() => act(() => api.draw(token!, gameId, true))}>
       {view.iOfferDraw ? 'Draw offered' : 'Offer draw'}
     </button>
   {/if}
@@ -401,7 +410,7 @@
         dests={view.dests}
         lastMove={view.lastMove}
         check={view.pos.isCheck()}
-        premovable={$premovesOn && !game.isOver && viewPly === undefined}
+        premovable={$premovesOn && !controls.over && viewPly === undefined}
         queued={view.queued}
         shapes={view.shapes}
         label="Online game board"
@@ -413,8 +422,8 @@
       <!-- Phones: the move buttons and Resign / Draw right under the board, no scrolling. -->
       <div class="phone-controls">
         <MoveNav ply={viewPly ?? view.sans.length} max={view.sans.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
-        {#if viewPly !== undefined && !game.isOver}<div class="looking-row"><button class="btn primary back-live" onclick={() => go(view.sans.length)}>Back to the game</button></div>{/if}
-        {#if !game.isOver && game.me}{@render playControls()}{/if}
+        {#if viewPly !== undefined && !controls.over}<div class="looking-row"><button class="btn primary back-live" onclick={() => go(view.sans.length)}>Back to the game</button></div>{/if}
+        {#if !controls.over && controls.me}{@render playControls()}{/if}
       </div>
     </section>
 
@@ -431,13 +440,13 @@
         </div>
         <MoveList sans={view.sans} current={viewPly ?? view.sans.length} onselect={go} />
         <div class="wide-only"><MoveNav ply={viewPly ?? view.sans.length} max={view.sans.length} {go} /></div>
-        {#if viewPly !== undefined && !game.isOver}<div class="looking-row wide-only"><button class="btn primary back-live" onclick={() => go(view.sans.length)}>Back to the game</button></div>{/if}
+        {#if viewPly !== undefined && !controls.over}<div class="looking-row wide-only"><button class="btn primary back-live" onclick={() => go(view.sans.length)}>Back to the game</button></div>{/if}
       </div>
 
       {#if notice}<div class="notice">{notice}</div>{/if}
       {#if connection === 'reconnecting'}<div class="notice warn">Reconnecting to Lichess… your moves are safe.</div>{/if}
 
-      {#if game.isOver}
+      {#if controls.over}
         <div class="result panel-card" style="--tone: {headline.tone}">
           <span class="display" style="color: var(--tone); font-size: 36px">{headline.text}</span>
           <p class="label">{game.endReason}</p>
@@ -450,11 +459,11 @@
             {:else}
               <a class="btn primary" href="/play?mode=online"><Icon name="replay" size={18} />New game</a>
             {/if}
-            {#if game.plies.length}<a class="btn" href="/analysis?game=lichess-{gameId}"><Icon name="analyse" size={18} />Analyse</a>
+            {#if controls.plies}<a class="btn" href="/analysis?game=lichess-{gameId}"><Icon name="analyse" size={18} />Analyse</a>
               <ShareGame game={() => myGames.get(`lichess-${gameId}`)} />{/if}
           </div>
         </div>
-      {:else if game.me}
+      {:else if controls.me}
         <div class="wide-only">{@render playControls()}</div>
       {/if}
     </aside>
