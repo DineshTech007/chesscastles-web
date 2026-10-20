@@ -35,6 +35,7 @@
   import { stopLichessEvents, syncLichessEvents, wakeLichessEvents } from '$lib/lichessEvents';
   import { consentNeeded, consentSynced, hasConsent, markConsentSynced, readConsent } from '$lib/consent';
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
+  import FeatureVideo from '$lib/components/FeatureVideo.svelte';
   import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
   import { boardThemeOpen } from '$lib/boardTheme';
   import { flush, pageView, reportError, setSignedIn } from '$lib/analytics';
@@ -395,6 +396,7 @@
         </a>
       {/if}
       <div class="grow"></div>
+      <FeatureVideo />
       <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'} title={$soundOn ? 'Move sounds on' : 'Move sounds off'}>
         <Icon name={$soundOn ? 'speaker' : 'mute'} size={20} />
       </button>
