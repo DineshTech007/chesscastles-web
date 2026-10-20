@@ -35,7 +35,7 @@
     const today = new Date().toISOString().slice(0, 10);
     const on = fide.filter((e) => e.start <= today && (e.end ?? e.start) >= today).slice(0, 15);
     for (const e of on)
-      void findBroadcast(e.name, e.start, e.end).then((b) => {
+      void findBroadcast(e.name, e.start, e.end, e.city).then((b) => {
         if (b) live = { ...live, [e.id]: b.id };
       });
   });

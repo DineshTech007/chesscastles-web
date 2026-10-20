@@ -109,30 +109,70 @@ const nameWords = (s: string) =>
     .map((w) => w.replace(/^\.+|\.+$/g, ''))
     .filter((w) => w.length > 1 && !COMMON.has(w));
 
+/** The age group in a tournament name ("Under 15", "Under15", "U-15", "U15"), as a number. */
+export const ageGroupOf = (s: string): number | undefined => {
+  const m = /\b(?:under|u)\s*-?\s*(\d{1,2})\b/i.exec(s);
+  return m ? Number(m[1]) : undefined;
+};
+
+/**
+ * How well a Lichess broadcast's name matches a tournament's: shared telling
+ * words count one each, the same age group counts two (an "Under 15" event and
+ * an "Under15" broadcast are the same kind of thing even when the rest of the
+ * words differ), a different age group rules it out, and the venue's city in the
+ * broadcast's name counts one. A match needs 2.
+ */
+export function broadcastMatchScore(eventName: string, broadcastName: string, city?: string): number {
+  const words = nameWords(eventName);
+  const have = new Set(nameWords(broadcastName));
+  let score = words.filter((w) => have.has(w)).length;
+  const age = ageGroupOf(eventName);
+  const bAge = ageGroupOf(broadcastName);
+  if (age !== undefined && bAge !== undefined) {
+    if (age !== bAge) return 0;
+    score += 2;
+  }
+  if (city && nameWords(city).some((w) => have.has(w))) score += 1;
+  return score;
+}
+export const BROADCAST_MATCH = 2;
+
 /**
  * The Lichess broadcast of a tournament (found by its name, on its dates), if there is one: for a "Watch live"
- * button on the events page.
+ * button on the events page. Looks in Lichess's search (by the name, and by the age group alone, since the
+ * federation's name for an event often differs: "National Under 15" is broadcast as "51st Indian Sub-Junior
+ * (Under15) Open"), and among the broadcasts live or coming up right now.
  */
-export async function findBroadcast(name: string, start: string, end?: string): Promise<Broadcast | undefined> {
+export async function findBroadcast(name: string, start: string, end?: string, city?: string): Promise<Broadcast | undefined> {
   const words = nameWords(name);
   if (!words.length) return undefined;
   const from = Date.parse(start) - 2 * 86_400_000;
   const to = Date.parse(end ?? start) + 3 * 86_400_000;
+  const inDates = (b: Broadcast & { dates?: number[] }) => {
+    const s = b.dates?.[0] ?? b.startsAt;
+    const e = b.dates?.[1] ?? s;
+    return !!s && s <= to && (e ?? s) >= from;
+  };
   const raw = name.replace(/[^A-Za-z0-9. ]+/g, ' ').trim().split(/\s+/).slice(0, 3).join(' ');
-  for (const q of [...new Set([raw, words.slice(0, 2).join(' ')])]) {
-    let best: Broadcast | undefined;
-    let bestScore = 0;
-    for (const b of await searchBroadcasts(q).catch(() => [])) {
-      const s = b.dates?.[0] ?? b.startsAt;
-      const e = b.dates?.[1] ?? s;
-      if (!s || s > to || (e ?? s) < from) continue;
-      const have = new Set(nameWords(b.name));
-      const score = words.filter((w) => have.has(w)).length;
-      if (score > bestScore) [best, bestScore] = [b, score];
-    }
-    if (best && bestScore >= Math.min(2, words.length)) return best;
+  const age = ageGroupOf(name);
+  const queries = [...new Set([raw, words.slice(0, 2).join(' '), ...(age !== undefined ? [`Under${age}`, `Under ${age}`] : [])])];
+  const candidates: (Broadcast & { dates?: number[] })[] = [];
+  for (const q of queries) candidates.push(...(await searchBroadcasts(q).catch(() => [])));
+  // The broadcasts on now and coming up, which the search can miss.
+  try {
+    const top = await topBroadcasts();
+    candidates.push(...top.live, ...top.soon);
+  } catch {
+    /* the search results will do */
   }
-  return undefined;
+  let best: Broadcast | undefined;
+  let bestScore = 0;
+  for (const b of candidates) {
+    if (!inDates(b)) continue;
+    const score = broadcastMatchScore(name, b.name, city);
+    if (score > bestScore || (score === bestScore && best && b.live && !best.live)) [best, bestScore] = [b, score];
+  }
+  return best && bestScore >= Math.min(BROADCAST_MATCH, words.length) ? best : undefined;
 }
 
 /**
