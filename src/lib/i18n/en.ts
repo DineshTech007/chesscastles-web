@@ -103,6 +103,8 @@ export const en = {
   'india.made': 'Made in India',
   'india.support': 'Support an Indian chess platform',
   'land.trust.gamesNum': '5.4 Million',
+  'nav.live': 'Live on Chess Castles',
+  'nav.live.b': 'Games being played here right now',
   'land.parents': 'For parents: is it safe for my child?',
   'land.trust.games': 'tournament games',
   'land.trust.lines': 'named opening lines',

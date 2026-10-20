@@ -99,6 +99,8 @@ export const mr: Record<Key, string> = {
   'india.made': 'Made in India',
   'india.support': 'एका भारतीय chess platform ला साथ द्या',
   'land.trust.gamesNum': '54 लाख',
+  'nav.live': 'Chess Castles वर लाइव्ह',
+  'nav.live.b': 'आत्ता इथे चालू असलेले games',
   'land.parents': 'पालकांसाठी: हे माझ्या मुलासाठी सुरक्षित आहे का?',
   'land.trust.games': 'tournament games',
   'land.trust.lines': 'नाव असलेल्या opening lines',

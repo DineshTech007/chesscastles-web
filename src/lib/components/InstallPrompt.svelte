@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * "Get the Chess Castles app": offered once each time someone opens the
+   * "Get the Chess Castles app": offered every time someone opens the
    * site (not inside the installed app, and never in the middle of a game),
    * and from the menu any time. One tap where the browser can install, the
    * steps on an iPhone or in an Android browser's menu.
@@ -11,8 +11,8 @@
   import { track } from '$lib/analytics';
   import Icon from './Icon.svelte';
 
-  /** Pages where a popup would get in the way: games, puzzles, analysis, watching a game. */
-  const BUSY = /^\/(play\/.|analysis|puzzles|vision|watch\/.|learn\/.|coach)/;
+  /** Pages where a popup would get in the way: a game being played. */
+  const BUSY = /^\/play\/./;
   const KEY = 'cc.installAsked';
   let ready = $state(false);
   let installed = $state(false);
@@ -26,7 +26,10 @@
       installOpen.set(true);
       return;
     }
-    const t = setTimeout(() => (ready = true), 4000);
+    // After a festive greeting (data-festive) has finished, so the two never cover each other.
+    let t: ReturnType<typeof setTimeout>;
+    const when = () => (document.querySelector('[data-festive]') ? (t = setTimeout(when, 2000)) : (ready = true));
+    t = setTimeout(when, 2500);
     return () => clearTimeout(t);
   });
 
@@ -43,9 +46,8 @@
     track('feature', 'install_offer');
   });
 
-  /** Closing it (any way) keeps the popup from opening by itself again for a while; an install keeps it away for good. */
+  /** Closing it: offered again next time the site is opened (the owner's choice); an install keeps it away for good. */
   const close = () => {
-    if ($installOpen && !installed) snoozeInstall($installWay === 'prompt' ? 14 : 90);
     installOpen.set(false);
     installed = false;
   };

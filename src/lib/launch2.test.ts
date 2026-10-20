@@ -84,10 +84,10 @@ describe('friends see study progress', () => {
 });
 
 describe('menu', () => {
-  it('lists each page once, Learn first, Watch second, My games third', () => {
+  it('lists each page once: Learn, Watch, Live on Chess Castles (games on the site), then My games', () => {
     const hrefs = NAV_ITEMS.map((n) => n.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
-    expect(hrefs.slice(0, 3)).toEqual(['/learn', '/watch', '/games']);
+    expect(hrefs.slice(0, 4)).toEqual(['/learn', '/watch', '/live', '/games']);
     expect(NAV_ITEMS.find((n) => n.href === '/vision')?.label).toBe('Blindfold Gym');
     expect(NAV_ITEMS.find((n) => n.href === '/community')?.label).toBe('FIDE & Local Events');
   });

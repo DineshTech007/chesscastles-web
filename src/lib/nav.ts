@@ -24,6 +24,7 @@ export const NAV_GROUPS: NavItem[][] = [
   [
     { href: '/learn', label: 'Learn', icon: 'learn', match: ['/learn'], not: ['/learn/openings'], blurb: 'Lessons, your study plan and Chess Guru' },
     { href: '/watch', label: 'Watch', icon: 'watch', match: ['/watch'], blurb: 'The world’s live games and top events' },
+    { href: '/live', label: 'Live on Chess Castles', icon: 'flame', match: ['/live'], blurb: 'Games being played here right now' },
     { href: '/games', label: 'My games', icon: 'history', match: ['/games'], blurb: 'Review every game you played, with ratings' },
     { href: '/vision', label: 'Blindfold Gym', icon: 'eye', match: ['/vision'], blurb: 'See the whole board in your head' },
     { href: '/friends', label: 'Friends & Invites', icon: 'users', match: ['/friends', '/players'], blurb: 'Challenge friends, see their progress, invite more' },

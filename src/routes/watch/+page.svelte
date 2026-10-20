@@ -67,6 +67,8 @@
     <p class="label">Top tournaments, live. Open one to follow every board, with clocks and the engine.</p>
   </header>
 
+  <a class="card here" href="/live"><span class="here-dot"></span><span><strong>Live on Chess Castles</strong><span class="label">Games being played on Chess Castles right now</span></span><Icon name="chevron" color="var(--muted)" /></a>
+
   <label class="search">
     <Icon name="search" size={18} color="var(--muted)" />
     <input type="search" bind:value={q} placeholder="Search a tournament, e.g. Chennai, Olympiad, Tata Steel" aria-label="Search tournaments" />
@@ -136,6 +138,27 @@
 </div>
 
 <style>
+  .here {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    margin: 0 0 14px;
+    border-color: color-mix(in srgb, #e5534b 45%, var(--border));
+  }
+  .here > span:nth-child(2) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .here-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #e5534b;
+    flex: none;
+  }
   .search {
     display: flex;
     align-items: center;

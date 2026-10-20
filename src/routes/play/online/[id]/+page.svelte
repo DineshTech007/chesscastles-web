@@ -16,6 +16,7 @@
   import { autoQueen, premovesOn } from '$lib/preferences';
   import type { Role } from 'chessops/types';
   import { OnlineGame } from '$lib/game/onlineGame';
+  import { friendsCache, shareLive } from '$lib/social';
   import { PremoveQueue } from '$lib/game/premoves';
   import * as api from '$lib/lichessBoard';
   import { myGames } from '$lib/stores/myGames';
@@ -140,8 +141,45 @@
       if (next) send(next);
       else queue.clear();
     }
+    shareOnline();
     if (game.isOver) onEnd();
     v++;
+  }
+
+  // Signed in: the game is on "Live on Chess Castles" (and friends can follow it): every 2 s with friends,
+  // else every 8 s (each is a database write), and the end at once.
+  let lastShare = 0;
+  let shareTimer: ReturnType<typeof setTimeout> | undefined;
+  let sharedEnd = false;
+  function shareOnline() {
+    if ($session.status !== 'in' || !game.me || !game.id || !game.plies.length || sharedEnd) return;
+    if (!game.isOver) {
+      const wait = lastShare + ($friendsCache.length ? 2000 : 8000) - Date.now();
+      if (wait > 0) {
+        if (!shareTimer) shareTimer = setTimeout(() => ((shareTimer = undefined), shareOnline()), wait);
+        return;
+      }
+    }
+    clearTimeout(shareTimer);
+    shareTimer = undefined;
+    lastShare = Date.now();
+    sharedEnd = game.isOver;
+    const opp = game.opponent;
+    void shareLive({
+      opponent: opp.name,
+      opponentRating: opp.rating,
+      human: game.me,
+      minutes: Math.round(game.initial / 60000),
+      increment: Math.round(game.increment / 1000),
+      start: fenOf(game.start),
+      uci: game.plies.map((p) => moveToUci(p.move)),
+      white: game.remaining('white'),
+      black: game.remaining('black'),
+      at: Date.now(),
+      result: game.isOver ? game.result || 'aborted' : undefined,
+      reason: game.isOver ? game.endReason : undefined,
+      lichess: game.id,
+    }).catch(() => {});
   }
 
   function onEnd() {

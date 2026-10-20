@@ -21,14 +21,17 @@ export const installWay = writable<InstallWay>('none');
 export const installOpen = writable(false);
 
 /**
- * The popup opens by itself at most once in a while: after someone installs, says "Got it" or "Not now",
- * it stays quiet (the menu's "Install app" is always there). Without this, a phone that already has the
- * app kept getting the offer and people added it again and again.
+ * The popup opens once every time the site is opened (the owner's choice, 2026-10-20), until the app is
+ * installed from it: then it stays quiet for a year, so a phone that has the app isn't offered it again and
+ * again. Closing it no longer quiets it. (Before, "Got it" and "Not now" quieted it for 14 or 90 days under
+ * OLD_QUIET: those are ignored now; an install recorded there, a year long, still counts.)
  */
-const QUIET = 'cc.installQuietUntil';
+const QUIET = 'cc.installedQuietUntil';
+const OLD_QUIET = 'cc.installQuietUntil';
 export const installQuiet = (): boolean => {
   try {
-    return Date.now() < Number(localStorage.getItem(QUIET) ?? 0);
+    const old = Number(localStorage.getItem(OLD_QUIET) ?? 0);
+    return Date.now() < Number(localStorage.getItem(QUIET) ?? 0) || old > Date.now() + 100 * 86_400_000;
   } catch {
     return false;
   }

@@ -222,11 +222,34 @@ export interface LiveGame {
   /** The player's CC Rating when the game began, and after it (once it is over): shown by the player's name to those watching. */
   myRating?: number;
   myAfter?: number;
+  /** An online game against another player: its Lichess id (it is watched there). */
+  lichess?: string;
 }
 export const shareLive = (g: LiveGame) => call<{ ok: true }>('PUT', 'live', { data: JSON.stringify(g) });
 export const endLive = () => call<{ ok: true }>('DELETE', 'live');
 /** Friends with a Chess Castles game going. */
 export const liveFriends = () => call<{ games: { uid: string; name: string; opponent: string; over: boolean; updated: number }[] }>('GET', 'live').then((r) => r.games);
+/** A game being played on Chess Castles right now (the "Live on Chess Castles" page). */
+export interface PlayingGame {
+  uid: string;
+  name: string;
+  photo?: string;
+  country?: string;
+  title?: string;
+  rating?: number;
+  opponent: string;
+  opponentRating?: number;
+  color: 'white' | 'black';
+  minutes: number;
+  increment: number;
+  moves: number;
+  over: boolean;
+  result?: string;
+  lichess?: string;
+  updated: number;
+}
+/** Every game being played on Chess Castles right now (signed in). */
+export const playingNow = () => call<{ games: PlayingGame[]; now: number }>('GET', 'playing');
 /** A friend's game in progress. */
 export const watchLive = (uid: string) =>
   call<{ data: string; updated: number; now: number }>('GET', `live/${encodeURIComponent(uid)}`).then((r) => ({ game: JSON.parse(r.data) as LiveGame, updated: r.updated, now: r.now }));

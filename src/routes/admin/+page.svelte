@@ -15,8 +15,9 @@
   import Team from '$lib/admin/Team.svelte';
   import FairPlay from '$lib/admin/FairPlay.svelte';
   import Feedback from '$lib/admin/Feedback.svelte';
+  import Registrations from '$lib/admin/Registrations.svelte';
 
-  type Tab = 'dashboard' | 'players' | 'fairplay' | 'plans' | 'reports' | 'feedback' | 'team';
+  type Tab = 'dashboard' | 'registrations' | 'players' | 'fairplay' | 'plans' | 'reports' | 'feedback' | 'team';
   let tab = $state<Tab>('dashboard');
   let role = $state<{ role: Role; can: Can[] } | undefined>();
   let denied = $state(false);
@@ -47,6 +48,7 @@
     (
       [
         ['dashboard', 'Dashboard', 'view'],
+        ['registrations', 'Registrations', 'view'],
         ['players', 'Players', 'view'],
         ['fairplay', 'Fair play', 'view'],
         ['plans', PLANS_ON ? 'Plans & offers' : 'Site banner', 'view'],
@@ -79,6 +81,8 @@
   <div class="body">
     {#if tab === 'dashboard'}
       <Dashboard />
+    {:else if tab === 'registrations'}
+      <Registrations />
     {:else if tab === 'players'}
       <Players can={role.can} {openUid} />
     {:else if tab === 'fairplay'}

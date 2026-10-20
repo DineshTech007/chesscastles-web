@@ -147,20 +147,20 @@
     }
   }
 
-  /** Signed in: friends can watch the game live (sent after each move, and once at the end). */
+  /** Signed in: the game is on "Live on Chess Castles" and friends can watch it (sent as it goes, and once at the end). */
   let sharedMoves = -1;
   let shareTimer: ReturnType<typeof setTimeout> | undefined;
   let lastShare = 0;
-  const SHARE_EVERY = 2000;
+  /** Each share is a database write: every 2 s for players with friends (who follow move by move), else every 8 s. */
+  const shareEvery = () => (get(friendsCache).length ? 2000 : 8000);
   function shareWithFriends(force = false) {
-    // Only players with friends (who can watch) send each move to the server: it is a database write per move.
-    if ($session.status !== 'in' || !game.moves.length || !get(friendsCache).length) return;
+    if ($session.status !== 'in' || !game.moves.length) return;
     const n = game.moves.length + (game.isOver ? 1000 : 0);
     if (n === sharedMoves && !force) return;
     // At most one update every two seconds while the game is on (a fast bullet game would otherwise hit the
     // server's limit of 90 calls a minute, and the one refused could be the result); the end goes at once.
     if (!game.isOver && !force) {
-      const wait = lastShare + SHARE_EVERY - Date.now();
+      const wait = lastShare + shareEvery() - Date.now();
       if (wait > 0) {
         if (!shareTimer) shareTimer = setTimeout(() => ((shareTimer = undefined), shareWithFriends()), wait);
         return;

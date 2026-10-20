@@ -138,7 +138,7 @@
 </script>
 
 {#if intro}
-  <div class="intro" role="dialog" aria-label="Happy Dussehra: good always checkmates evil">
+  <div class="intro" data-festive role="dialog" aria-label="Happy Dussehra: good always checkmates evil">
     <!-- svelte-ignore a11y_media_has_caption -->
     <video bind:this={film} src="/festive/dasara-intro.mp4" poster="/festive/dasara-intro.jpg" muted playsinline preload="auto" onended={endIntro} onerror={endIntro}></video>
     {#if waiting}<button class="btn primary play-film" onclick={playFilm}>▶ Play the Dussehra film</button>{/if}
@@ -189,6 +189,7 @@
   {#if card}
     <div
       class="card-fest"
+      data-festive
       role="dialog"
       aria-label="Happy Dussehra"
       tabindex="-1"
