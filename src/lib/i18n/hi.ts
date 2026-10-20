@@ -274,5 +274,7 @@ export const hi: Record<Key, string> = {
   'more.refunds': 'रद्द करने और refund की policy',
   'more.about': 'हमारे बारे में और licences',
   'more.install': 'Chess Castles app install करें (free, हमेशा नया)',
+  'social.follow': 'Chess Castles को follow करें',
+  'social.why': 'रोज़ के puzzles, बच्चों के लिए tips और ख़बरें, English, हिंदी और मराठी में।',
   'more.board': 'Board और pieces: premium wood, marble और भी',
 };

@@ -1,5 +1,6 @@
 <script lang="ts">
   import PlanBadge from '$lib/components/PlanBadge.svelte';
+  import SocialLinks from './SocialLinks.svelte';
   import { page } from '$app/state';
   import Icon, { type IconName } from './Icon.svelte';
   import { session, signOut, startSignIn } from '$lib/auth';
@@ -111,7 +112,7 @@
       </button>
     {/if}
     {#if !collapsed}
-      <nav class="foot" aria-label="Help and policies">{#if PLANS_ON}<a href="/plans">Plans</a>{/if}{#if $installWay !== 'none' && $installWay !== 'installed'}<button class="install" onclick={() => installOpen.set(true)}>{$t('shell.install')}</button>{/if}<a href="/settings">{$t('shell.settings')}</a><a href="/parents">{$t('shell.parents')}</a><a href="/feedback">{$t('shell.feedback')}</a><a href="/help">{$t('shell.help')}</a><a href="/legal/terms">{$t('shell.terms')}</a><a href="/legal/privacy">{$t('shell.privacy')}</a><a href="/legal/fair-play">{$t('shell.fairplay')}</a><a href="/legal/refunds">{$t('shell.refunds')}</a></nav>
+      <nav class="foot" aria-label="Help and policies">{#if PLANS_ON}<a href="/plans">Plans</a>{/if}{#if $installWay !== 'none' && $installWay !== 'installed'}<button class="install" onclick={() => installOpen.set(true)}>{$t('shell.install')}</button>{/if}<a href="/settings">{$t('shell.settings')}</a><a href="/parents">{$t('shell.parents')}</a><a href="/feedback">{$t('shell.feedback')}</a><a href="/help">{$t('shell.help')}</a><a href="/legal/terms">{$t('shell.terms')}</a><a href="/legal/privacy">{$t('shell.privacy')}</a><a href="/legal/fair-play">{$t('shell.fairplay')}</a><a href="/legal/refunds">{$t('shell.refunds')}</a><SocialLinks compact /></nav>
     {/if}
   </div>
 </nav>

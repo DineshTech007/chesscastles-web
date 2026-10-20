@@ -9,6 +9,7 @@
   import { t, type Key } from '$lib/i18n';
   import { installOpen, installWay } from '$lib/install';
   import { boardThemeOpen } from '$lib/boardTheme';
+  import SocialLinks from '$lib/components/SocialLinks.svelte';
 
   let isAdmin = $state(false);
   $effect(() => {
@@ -66,6 +67,7 @@
   {/each}
   {#if isAdmin}<a href="/admin"><Icon name="chart" color="var(--accent)" /><span>Admin</span><Icon name="chevron" color="var(--muted)" /></a>{/if}
 </nav>
+<SocialLinks />
 
 <style>
   .h {

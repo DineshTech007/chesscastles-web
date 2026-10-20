@@ -1,5 +1,6 @@
 <script lang="ts">
   import TitleBadge from '$lib/components/TitleBadge.svelte';
+  import SocialLinks from '$lib/components/SocialLinks.svelte';
   import { myTitle } from '$lib/stores/me';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import HeroLanding from '$lib/components/landing/HeroLanding.svelte';
@@ -192,6 +193,8 @@
   {#if $shownGames.length}
     <GameHistory limit={8} title={$t('home.recent')} />
   {/if}
+
+  <SocialLinks />
 </div>
 
 <style>

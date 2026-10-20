@@ -282,6 +282,8 @@ export const en = {
   'more.refunds': 'Cancellation and refund policy',
   'more.about': 'About and licences',
   'more.install': 'Install the Chess Castles app (free, always up to date)',
+  'social.follow': 'Follow Chess Castles',
+  'social.why': 'Daily puzzles, tips for kids and news, in English, Hindi and Marathi.',
   'more.board': 'Board and pieces: premium wood, marble and more',
 } as const;
 

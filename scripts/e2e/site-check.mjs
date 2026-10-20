@@ -259,10 +259,23 @@ async function run(name, options) {
     await open(page, '/puzzles');
     await page.locator('cg-board').first().waitFor({ timeout: 20000 });
     const ids = new Set();
+    let last;
     for (let i = 0; i < 12; i++) {
-      await page.waitForTimeout(300);
+      // The next puzzle may come from another difficulty band (the learning ladder), loaded from the network:
+      // wait until it has really arrived, not a fixed moment.
+      await page
+        .waitForFunction(
+          (prev) => {
+            const s = JSON.parse(localStorage.getItem('k24.seenPuzzles') ?? '[]');
+            return s.length > 0 && s[s.length - 1] !== prev;
+          },
+          last,
+          { timeout: 8000 },
+        )
+        .catch(() => {});
       const seen = await page.evaluate(() => JSON.parse(localStorage.getItem('k24.seenPuzzles') ?? '[]'));
-      ids.add(seen[seen.length - 1]);
+      last = seen[seen.length - 1];
+      ids.add(last);
       await tap(page.getByRole('button', { name: /next puzzle/i }));
     }
     expect(ids.size === 12, `only ${ids.size} different puzzles in 12`);
