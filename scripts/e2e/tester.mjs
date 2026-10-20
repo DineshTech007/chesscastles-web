@@ -140,7 +140,17 @@ page.on('response', (r) => {
 
 /** The site's consent dialog ("One quick thing", since 20 Oct 2026): answered as an adult tester, once. */
 let consented = false;
+/** The fair play promise ("I promise to play fair", since 20 Oct 2026): given before a rated game. */
+async function promise() {
+  const b = page.locator('button:has-text("I promise to play fair")').first();
+  if (!(await b.count().catch(() => 0))) return;
+  await b.click({ timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  if (!notes.includes('Gave the fair play promise.')) notes.push('Gave the fair play promise.');
+  log('fair play promise given');
+}
 async function consent() {
+  await promise();
   const dlg = page.locator('[role="dialog"]:has-text("Agree and continue")').first();
   // It opens a moment after the page, once the account is known: wait for it until it has been answered once.
   const there = consented ? (await dlg.count().catch(() => 0)) > 0 : await dlg.waitFor({ timeout: 5000 }).then(() => true, () => false);
@@ -288,6 +298,7 @@ async function playGame(n, opp, color, opening, fromLine = true) {
     }
     if (pos.turn === color) {
       if (!consented) await consent();
+      else await promise();
       const best = await bestMove(makeFen(pos.toSetup()));
       if (!best || best === '(none)') break;
       const m = parseUci(best);
@@ -317,6 +328,7 @@ async function playGame(n, opp, color, opening, fromLine = true) {
       }
       stuck = 0;
     } else {
+      if (applied === 0) await promise();
       if (Date.now() - lastMoveAt > 90_000) {
         bug('The opponent did not move for 90 seconds', 'High', 'FIDE-rated game', `Play ${path} and wait for the computer's move`, 'The computer moves within its clock', 'No move for 90 s', await shot(page, 'opponent-stuck'));
         break;
