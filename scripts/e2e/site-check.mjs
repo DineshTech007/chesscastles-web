@@ -154,6 +154,35 @@ async function run(name, options) {
     expect(n > 0, 'no link to the Analysis board on the home page menu');
   });
 
+  // 3d. A first visit: the Sandstone & slate board and Merida pieces everywhere (the owner's default).
+  await check(name, page, 'default board and pieces: sandstone & slate, merida', async () => {
+    await page.evaluate(() => {
+      localStorage.removeItem('k24.board');
+      localStorage.removeItem('cc.pieces');
+      delete document.documentElement.dataset.board;
+      delete document.documentElement.dataset.pieces;
+    });
+    await open(page, '/analysis');
+    await page.locator('cg-board piece').first().waitFor({ timeout: 15000 });
+    const look = await page.evaluate(() => ({
+      board: getComputedStyle(document.querySelector('cg-board')).backgroundImage,
+      piece: getComputedStyle(document.querySelector('cg-board piece')).backgroundImage,
+    }));
+    expect(look.board.includes('stone.webp'), `the board is ${look.board.slice(0, 80)}`);
+    expect(look.piece.includes('/pieces/merida/'), `the pieces are ${look.piece.slice(0, 80)}`);
+  });
+
+  // 3c. On phones the top bar hides the palette button: the board and pieces are in the More menu.
+  if (touch)
+    await check(name, page, 'board and pieces can be picked from More', async () => {
+      await open(page, '/more');
+      const btn = page.getByRole('button', { name: /board and pieces/i });
+      expect((await btn.count()) > 0, 'no Board and pieces button on the More page');
+      await btn.first().click();
+      await page.getByRole('heading', { name: /board and pieces/i }).waitFor({ timeout: 5000 });
+      await page.keyboard.press('Escape');
+    });
+
   // 4. Analysis: a game steps forward, and on a phone the move buttons sit right under the board.
   await check(name, page, 'analysis: step through a game', async () => {
     await open(page, '/');

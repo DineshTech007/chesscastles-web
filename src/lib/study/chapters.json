@@ -848,5 +848,497 @@
     "key": "e8eb2aaad8db2186"
    }
   ]
+ },
+ "italian": {
+  "games": 36625,
+  "chapters": [
+   {
+    "id": "018e2040",
+    "title": "3...Bc5",
+    "name": "Italian Game: Giuoco Piano",
+    "sans": "e4 e5 Nf3 Nc6 Bc4 Bc5",
+    "games": 18360,
+    "score": 0.522,
+    "variations": 1129,
+    "depth": 9.8,
+    "key": "b663577df5f241bb"
+   },
+   {
+    "id": "31d1d343",
+    "title": "3...Nf6",
+    "name": "Italian Game: Two Knights Defense",
+    "sans": "e4 e5 Nf3 Nc6 Bc4 Nf6",
+    "games": 16420,
+    "score": 0.53,
+    "variations": 1176,
+    "depth": 9.8,
+    "key": "409027d3923aeaae"
+   },
+   {
+    "id": "88c3be1f",
+    "title": "3...Be7",
+    "name": "Italian Game: Hungarian Defense",
+    "sans": "e4 e5 Nf3 Nc6 Bc4 Be7",
+    "games": 1214,
+    "score": 0.606,
+    "variations": 13,
+    "depth": 5.8,
+    "key": "0fb260c9f56b07a9"
+   }
+  ]
+ },
+ "queens-gambit": {
+  "games": 172016,
+  "chapters": [
+   {
+    "id": "275b9c87",
+    "title": "2...c6",
+    "name": "Slav Defense",
+    "sans": "d4 d5 c4 c6",
+    "games": 81360,
+    "score": 0.584,
+    "variations": 218,
+    "depth": 9.9,
+    "key": "183de96daf43e744"
+   },
+   {
+    "id": "b70f98ec",
+    "title": "2...e6",
+    "name": "Queen's Gambit Declined",
+    "sans": "d4 d5 c4 e6",
+    "games": 62307,
+    "score": 0.583,
+    "variations": 1108,
+    "depth": 10.5,
+    "key": "fc30f6b3c0a1a4ad"
+   },
+   {
+    "id": "aa9f87ae",
+    "title": "2...dxc4",
+    "name": "Queen's Gambit Accepted",
+    "sans": "d4 d5 c4 dxc4",
+    "games": 20832,
+    "score": 0.565,
+    "variations": 493,
+    "depth": 10.0,
+    "key": "58413db08abdda1c"
+   },
+   {
+    "id": "e5880b0a",
+    "title": "2...Nc6",
+    "name": "Queen's Gambit Declined: Chigorin Defense",
+    "sans": "d4 d5 c4 Nc6",
+    "games": 4051,
+    "score": 0.602,
+    "variations": 20,
+    "depth": 7.6,
+    "key": "21aadc60c91291fc"
+   }
+  ]
+ },
+ "french": {
+  "games": 155039,
+  "chapters": [
+   {
+    "id": "eb15a87f",
+    "title": "3.Nc3",
+    "name": "French Defense: Paulsen Variation",
+    "sans": "e4 e6 d4 d5 Nc3",
+    "games": 62794,
+    "score": 0.438,
+    "variations": 137,
+    "depth": 9.2,
+    "key": "4f837c7daacc3079"
+   },
+   {
+    "id": "8a8f9fc6",
+    "title": "3.Nd2",
+    "name": "French Defense: Tarrasch Variation",
+    "sans": "e4 e6 d4 d5 Nd2",
+    "games": 45484,
+    "score": 0.432,
+    "variations": 171,
+    "depth": 10.5,
+    "key": "ed7adcbdf2d31a90"
+   },
+   {
+    "id": "cfd6c0cb",
+    "title": "3.e5",
+    "name": "French Defense: Advance Variation",
+    "sans": "e4 e6 d4 d5 e5",
+    "games": 15701,
+    "score": 0.469,
+    "variations": 38,
+    "depth": 9.1,
+    "key": "d56d72226c3094c4"
+   },
+   {
+    "id": "d23a066e",
+    "title": "2.d3",
+    "name": "French Defense: King's Indian Attack",
+    "sans": "e4 e6 d3",
+    "games": 10878,
+    "score": 0.458,
+    "variations": 93,
+    "depth": 9.0,
+    "key": "5aefaab4a1a36a10"
+   },
+   {
+    "id": "bfcc7915",
+    "title": "4.Nf3",
+    "name": "French Defense: Exchange Variation",
+    "sans": "e4 e6 d4 d5 exd5 exd5 Nf3",
+    "games": 4410,
+    "score": 0.513,
+    "variations": 17,
+    "depth": 5.8,
+    "key": "77bb5ba0c0025150"
+   },
+   {
+    "id": "a83a964f",
+    "title": "2.Nf3",
+    "name": "French Defense: Knight Variation",
+    "sans": "e4 e6 Nf3",
+    "games": 3354,
+    "score": 0.496,
+    "variations": 71,
+    "depth": 9.3,
+    "key": "2f2f85978dd5b0f9"
+   },
+   {
+    "id": "125d349c",
+    "title": "4.Bd3",
+    "name": "French Defense: Exchange Variation",
+    "sans": "e4 e6 d4 d5 exd5 exd5 Bd3",
+    "games": 2741,
+    "score": 0.583,
+    "variations": 29,
+    "depth": 6.2,
+    "key": "f9d216f49164f21e"
+   },
+   {
+    "id": "9d412168",
+    "title": "2.Qe2",
+    "name": "French Defense: Chigorin Variation",
+    "sans": "e4 e6 Qe2",
+    "games": 2604,
+    "score": 0.433,
+    "variations": 204,
+    "depth": 8.1,
+    "key": "624de643ab778a40"
+   }
+  ]
+ },
+ "kings-indian": {
+  "games": 143596,
+  "chapters": [
+   {
+    "id": "f73a7932",
+    "title": "4.e4",
+    "name": "King's Indian Defense: Normal Variation",
+    "sans": "d4 Nf6 c4 g6 Nc3 Bg7 e4",
+    "games": 64354,
+    "score": 0.43,
+    "variations": 515,
+    "depth": 9.2,
+    "key": "325b696440075d7d"
+   },
+   {
+    "id": "04e0a893",
+    "title": "4.Nc3",
+    "name": "King's Indian Defense: Normal Variation, King's Knight Variation",
+    "sans": "d4 Nf6 c4 g6 Nf3 Bg7 Nc3",
+    "games": 13836,
+    "score": 0.436,
+    "variations": 275,
+    "depth": 9.2,
+    "key": "2d3888dac361814a"
+   },
+   {
+    "id": "74d24f94",
+    "title": "4.g3",
+    "name": "King's Indian Defense: Fianchetto Variation",
+    "sans": "d4 Nf6 c4 g6 Nf3 Bg7 g3",
+    "games": 8198,
+    "score": 0.404,
+    "variations": 158,
+    "depth": 9.1,
+    "key": "fa492b39e154dbab"
+   },
+   {
+    "id": "105c3b50",
+    "title": "3.g3",
+    "name": "Indian Defense: Przepiorka Variation",
+    "sans": "d4 Nf6 Nf3 g6 g3",
+    "games": 5803,
+    "score": 0.46,
+    "variations": 267,
+    "depth": 9.8,
+    "key": "c6d689ab591cbb06"
+   },
+   {
+    "id": "83c46d19",
+    "title": "3.g3",
+    "name": "King's Indian Defense: Fianchetto Variation, Immediate Fianchetto",
+    "sans": "d4 Nf6 c4 g6 g3",
+    "games": 5414,
+    "score": 0.398,
+    "variations": 238,
+    "depth": 10.1,
+    "key": "9191fa7972f5713c"
+   },
+   {
+    "id": "18097edf",
+    "title": "3.Bf4",
+    "name": "London System",
+    "sans": "d4 Nf6 Nf3 g6 Bf4",
+    "games": 3650,
+    "score": 0.505,
+    "variations": 269,
+    "depth": 9.2,
+    "key": "3164d46b20ab895d"
+   },
+   {
+    "id": "2a3b596b",
+    "title": "3.Bg5",
+    "name": "Torre Attack: Fianchetto Defense",
+    "sans": "d4 Nf6 Nf3 g6 Bg5",
+    "games": 3017,
+    "score": 0.506,
+    "variations": 109,
+    "depth": 8.9,
+    "key": "2c6a65dc0941b8f6"
+   }
+  ]
+ },
+ "london": {
+  "games": 30488,
+  "chapters": [
+   {
+    "id": "89767d22",
+    "title": "3...c5",
+    "name": "Queen's Pawn Game: London System",
+    "sans": "d4 Nf6 Nf3 d5 Bf4 c5",
+    "games": 3140,
+    "score": 0.469,
+    "variations": 177,
+    "depth": 7.9,
+    "key": "bbcb748a38b75e4d"
+   },
+   {
+    "id": "60506248",
+    "title": "4...O-O",
+    "name": "London System",
+    "sans": "d4 Nf6 Nf3 g6 Bf4 Bg7 e3 O-O",
+    "games": 2665,
+    "score": 0.496,
+    "variations": 181,
+    "depth": 7.5,
+    "key": "265d46d82aea23b8"
+   },
+   {
+    "id": "09f9fe98",
+    "title": "3...e6",
+    "name": "Queen's Pawn Game: London System, with e6",
+    "sans": "d4 Nf6 Nf3 d5 Bf4 e6",
+    "games": 2351,
+    "score": 0.559,
+    "variations": 222,
+    "depth": 8.1,
+    "key": "2bcd5715dfd2c562"
+   },
+   {
+    "id": "19021f80",
+    "title": "3...c5",
+    "name": "Indian Defense: London System",
+    "sans": "d4 Nf6 Nf3 e6 Bf4 c5",
+    "games": 2037,
+    "score": 0.501,
+    "variations": 957,
+    "depth": 9.0,
+    "key": "48d6a4afbc418039"
+   },
+   {
+    "id": "a20310d7",
+    "title": "4...d6",
+    "name": "London System",
+    "sans": "d4 Nf6 Nf3 g6 Bf4 Bg7 e3 d6",
+    "games": 1829,
+    "score": 0.472,
+    "variations": 194,
+    "depth": 7.6,
+    "key": "154f3d0e2dcb833e"
+   },
+   {
+    "id": "f4d74f3e",
+    "title": "3...b6",
+    "name": "Indian Defense: London System",
+    "sans": "d4 Nf6 Nf3 e6 Bf4 b6",
+    "games": 1572,
+    "score": 0.48,
+    "variations": 746,
+    "depth": 9.1,
+    "key": "c5ce3c11bd853cdf"
+   },
+   {
+    "id": "20abe626",
+    "title": "4...c5",
+    "name": "Queen's Pawn Game: London System, with e6",
+    "sans": "d4 e6 Nf3 Nf6 Bf4 d5 e3 c5",
+    "games": 1545,
+    "score": 0.556,
+    "variations": 98,
+    "depth": 7.3,
+    "key": "6091c40904ca46bb"
+   },
+   {
+    "id": "b3e54cbf",
+    "title": "4...Bd6",
+    "name": "Queen's Pawn Game: London System, with e6",
+    "sans": "d4 e6 Nf3 Nf6 Bf4 d5 e3 Bd6",
+    "games": 1391,
+    "score": 0.557,
+    "variations": 95,
+    "depth": 7.4,
+    "key": "22b8782524979ce2"
+   },
+   {
+    "id": "9e311427",
+    "title": "3...c6",
+    "name": "Queen's Pawn Game: London System",
+    "sans": "d4 Nf6 Nf3 d5 Bf4 c6",
+    "games": 794,
+    "score": 0.555,
+    "variations": 11,
+    "depth": 4.7,
+    "key": "cfc048cbb030868b"
+   },
+   {
+    "id": "555ac98f",
+    "title": "2...Nc6",
+    "name": "Queen's Pawn Game: Chigorin Variation",
+    "sans": "d4 d5 Nf3 Nc6",
+    "games": 760,
+    "score": 0.561,
+    "variations": 12,
+    "depth": 5.0,
+    "key": "76edafb2e2fb5bc6"
+   },
+   {
+    "id": "fe5a8603",
+    "title": "2...c6",
+    "name": "Queen's Pawn Game: Zukertort Variation",
+    "sans": "d4 d5 Nf3 c6",
+    "games": 658,
+    "score": 0.532,
+    "variations": 30,
+    "depth": 6.1,
+    "key": "4f7a9abf84aa2d7e"
+   },
+   {
+    "id": "bc5247a8",
+    "title": "2...e6",
+    "name": "Queen's Pawn Game: Zukertort Variation",
+    "sans": "d4 d5 Nf3 e6",
+    "games": 657,
+    "score": 0.563,
+    "variations": 489,
+    "depth": 9.2,
+    "key": "ab778561eb486e97"
+   },
+   {
+    "id": "62a49d20",
+    "title": "1...g6",
+    "name": "Queen's Pawn Game: Modern Defense",
+    "sans": "d4 g6",
+    "games": 602,
+    "score": 0.42,
+    "variations": 951,
+    "depth": 10.6,
+    "key": "6abaeae97cd74395"
+   },
+   {
+    "id": "f9704ad1",
+    "title": "1...f5",
+    "name": "Dutch Defense",
+    "sans": "d4 f5",
+    "games": 518,
+    "score": 0.543,
+    "variations": 13,
+    "depth": 5.9,
+    "key": "1761df2bb9d0fc00"
+   },
+   {
+    "id": "28a6596e",
+    "title": "4...Nc6",
+    "name": "Indian Defense: London System",
+    "sans": "d4 e6 Nf3 Nf6 Bf4 c5 e3 Nc6",
+    "games": 472,
+    "score": 0.535,
+    "variations": 102,
+    "depth": 6.9,
+    "key": "4e163eff898fad9e"
+   },
+   {
+    "id": "611c5093",
+    "title": "1...d6",
+    "name": "Queen's Pawn Game",
+    "sans": "d4 d6",
+    "games": 464,
+    "score": 0.381,
+    "variations": 490,
+    "depth": 10.5,
+    "key": "bab42fd3d52098b3"
+   },
+   {
+    "id": "c8381a6d",
+    "title": "3...Bf5",
+    "name": "Queen's Pawn Game: London System",
+    "sans": "d4 Nf6 Nf3 d5 Bf4 Bf5",
+    "games": 429,
+    "score": 0.512,
+    "variations": 7,
+    "depth": 4.1,
+    "key": "dea3ccaa70155cbd"
+   },
+   {
+    "id": "14723c1b",
+    "title": "4...b6",
+    "name": "Indian Defense: London System",
+    "sans": "d4 e6 Nf3 Nf6 Bf4 c5 e3 b6",
+    "games": 391,
+    "score": 0.573,
+    "variations": 378,
+    "depth": 8.3,
+    "key": "8e92af0d669dbf06"
+   }
+  ]
+ },
+ "qgd": {
+  "games": 62307,
+  "chapters": [
+   {
+    "id": "8a5f3fae",
+    "title": "3.Nc3",
+    "name": "Queen's Gambit Declined: Queen's Knight Variation",
+    "sans": "d4 d5 c4 e6 Nc3",
+    "games": 37644,
+    "score": 0.426,
+    "variations": 920,
+    "depth": 10.4,
+    "key": "07a7ee1102432674"
+   },
+   {
+    "id": "88d9c3ec",
+    "title": "3.Nf3",
+    "name": "Queen's Gambit Declined",
+    "sans": "d4 d5 c4 e6 Nf3",
+    "games": 23236,
+    "score": 0.399,
+    "variations": 365,
+    "depth": 9.7,
+    "key": "27541a45a847c590"
+   }
+  ]
  }
 }

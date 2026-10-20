@@ -6,8 +6,8 @@
   import Icon from './Icon.svelte';
 
   let { open = $bindable(false) }: { open: boolean } = $props();
-  let current = $state('classic');
-  let pieces = $state('cburnett');
+  let current = $state('stone');
+  let pieces = $state('merida');
 
   $effect(() => {
     if (open) {

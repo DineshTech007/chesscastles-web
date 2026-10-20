@@ -64,11 +64,11 @@
     position: relative;
     border: 0;
     padding: 0;
-    background: #b58863;
+    background: var(--board-dark);
     cursor: pointer;
   }
   .sq.light {
-    background: #f0d9b5;
+    background: var(--board-light);
   }
   .sq:disabled {
     cursor: default;

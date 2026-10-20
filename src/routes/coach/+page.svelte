@@ -9,7 +9,8 @@
   import { LANGS, type Lang } from '$lib/coach/i18n';
   import { loadCoach, saveCoach, type CoachState } from '$lib/coach/progress';
   import { SECTIONS, type Category, type Level } from '$lib/coach/types';
-  import { speak, speaking, voicesFor, voicesReady } from '$lib/coach/voice';
+  import { CLOUD_NAMES, cloudVoice, speak, speaking, voicesFor, voicesReady } from '$lib/coach/voice';
+  import { avatarInfo } from '$lib/coach/avatar';
   import { formatDate } from '$lib/format';
   import { myGames, opponentOf, outcome } from '$lib/stores/myGames';
 
@@ -23,6 +24,11 @@
   /** The coach chooser: closed until asked for (Guru teaches by default), closed again once a coach is picked. */
   let choosing = $state(false);
 
+  // Chess Castles' natural voices (cloud): when on, they speak for every coach and the device's voice list is not needed.
+  let cloudOn = $state(false);
+  $effect(() => {
+    void cloudVoice().then((v) => (cloudOn = v));
+  });
   const refreshVoices = () => (voices = voicesFor(prefs.lang).map((v) => ({ name: v.name, lang: v.lang })));
   onMount(() => {
     prefs = loadCoach();
@@ -132,7 +138,11 @@
     <div class="setting">
       <span class="label">Guru's voice</span>
       <div class="voice-row">
-        {#if voices.length}
+        {#if cloudOn}
+          {@const g = avatarInfo($coachAvatar).voice}
+          <span class="cloud-v">Natural voice: <strong>{CLOUD_NAMES[prefs.lang][g]}</strong> <span class="label">({g === 'male' ? "man's" : "woman's"} voice)</span></span>
+          <button class="btn ghost" onclick={() => speak(SAMPLE[prefs.lang], prefs.lang)}><Icon name="speaker" size={18} />Test</button>
+        {:else if voices.length}
           <select value={chosenVoice} onchange={(e) => set({ voices: { ...prefs.voices, [prefs.lang]: (e.currentTarget as HTMLSelectElement).value } })} aria-label="Guru's voice">
             {#each voices as v (v.name)}<option value={v.name}>{v.name.replace(/^Microsoft |^Google /, '')}</option>{/each}
           </select>
@@ -227,6 +237,12 @@
 </div>
 
 <style>
+  .cloud-v {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
   .insights-cta {
     display: flex;
     flex-direction: column;

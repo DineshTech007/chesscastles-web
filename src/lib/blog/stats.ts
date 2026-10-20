@@ -22,14 +22,28 @@ export async function loadBlogStats(force = false): Promise<void> {
   loaded = Date.now();
   try {
     const res = await fetch(`${API}/blog/stats`);
-    if (res.ok) blogStats.set((await res.json()).stats ?? {});
+    // The server's numbers (up to a minute old), never lower than what this reader just added.
+    if (res.ok) {
+      const server: Record<string, Counts> = (await res.json()).stats ?? {};
+      blogStats.update((local) => {
+        const out = { ...server };
+        for (const [k, c] of Object.entries(local)) {
+          const sv = out[k] ?? ZERO;
+          out[k] = { views: Math.max(sv.views, c.views), likes: Math.max(sv.likes, c.likes), dislikes: Math.max(sv.dislikes, c.dislikes), hearts: Math.max(sv.hearts, c.hearts) };
+        }
+        return out;
+      });
+    }
   } catch {
     /* the counts stay as they are */
   }
 }
 
+// Sent as plain text: a JSON content type needs a CORS preflight, which Chrome refuses for keepalive requests
+// (it failed silently, so most views and reactions were never counted). The server reads the JSON either way.
+// Automated browsers (the site check runs on the live site every few hours) don't add to the public counts.
 const post = (path: string, body: unknown) =>
-  fetch(`${API}/blog/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true }).catch(() => {});
+  typeof navigator !== 'undefined' && navigator.webdriver ? undefined : fetch(`${API}/blog/${path}`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body), keepalive: true }).catch(() => {});
 
 /** One more view of a story, counted once a day for each reader in this browser. */
 export function countView(slug: string): void {

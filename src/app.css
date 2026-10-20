@@ -383,13 +383,17 @@ nav a,
   color: var(--engine);
 }
 
-/* The board: classic wood (cream and brown) by default, a warm last move, darker
-   premoves. The square colours are a site-wide choice (see boardTheme.ts): picking
-   a theme sets --board-light/--board-dark on <html>, and every board follows it. */
+/* The board: Sandstone & slate by default (a premium board, static/boards/stone.webp), a warm last move,
+   darker premoves. The board is a site-wide choice (see boardTheme.ts): picking a theme sets
+   --board-light/--board-dark on <html> (and a picture for the premium ones), and every board follows it. */
 :root {
+  --board-light: #dccaa4;
+  --board-dark: #4b5566;
+  --board-coord: rgba(16, 26, 60, 0.7);
+}
+:root[data-board='classic'] {
   --board-light: #f0d9b5;
   --board-dark: #b58863;
-  --board-coord: rgba(16, 26, 60, 0.7);
 }
 :root[data-board='walnut'] {
   --board-light: #e9c49a;
@@ -567,6 +571,7 @@ html .cg-wrap coords.files coord {
   background-image: url('/boards/ebony.webp');
   background-size: 100% 100%;
 }
+:root:not([data-board]) .cg-wrap cg-board,
 :root[data-board='stone'] .cg-wrap cg-board {
   background-image: url('/boards/stone.webp');
   background-size: 100% 100%;

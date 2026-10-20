@@ -162,7 +162,7 @@
   .sq {
     border: 0;
     padding: 2px;
-    background: #f0d9b5;
+    background: var(--board-light);
     color: #1f2a44;
     display: flex;
     flex-direction: column;
@@ -173,7 +173,7 @@
     min-width: 0;
   }
   .sq.dark {
-    background: #b58863;
+    background: var(--board-dark);
     color: #0f1a33;
   }
   .sq.on {

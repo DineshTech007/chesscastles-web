@@ -12,8 +12,8 @@ export interface PieceSetDef {
 }
 
 export const PIECE_SETS: PieceSetDef[] = [
-  { id: 'cburnett', name: 'Classic', credit: 'Colin M.L. Burnett, GPLv2+' },
   { id: 'merida', name: 'Merida', credit: 'Armando Hernandez Marroquin, GPLv2+' },
+  { id: 'cburnett', name: 'Classic', credit: 'Colin M.L. Burnett, GPLv2+' },
   { id: 'spatial', name: 'Spatial', credit: 'Maurizio Monge, MIT' },
   { id: 'fantasy', name: 'Fantasy', credit: 'Maurizio Monge, MIT' },
   { id: 'celtic', name: 'Celtic', credit: 'Maurizio Monge, MIT' },
@@ -33,12 +33,15 @@ export function loadPieceSet(): string {
   } catch {
     /* storage blocked */
   }
-  return 'cburnett';
+  return DEFAULT_PIECES;
 }
 
-/** Sets `data-pieces` on <html> and saves the choice ('cburnett' is the default, set by chessground's own CSS). */
+/** The default set: Merida (no data-pieces on <html>; see pieceSets.css). Classic is chessground's own CSS. */
+export const DEFAULT_PIECES = 'merida';
+
+/** Sets `data-pieces` on <html> and saves the choice. */
 export function applyPieceSet(id: string, save = true) {
-  if (id === 'cburnett') delete document.documentElement.dataset.pieces;
+  if (id === DEFAULT_PIECES) delete document.documentElement.dataset.pieces;
   else document.documentElement.dataset.pieces = id;
   if (!save) return;
   try {

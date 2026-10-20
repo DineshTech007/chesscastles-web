@@ -282,6 +282,7 @@ export const en = {
   'more.refunds': 'Cancellation and refund policy',
   'more.about': 'About and licences',
   'more.install': 'Install the Chess Castles app (free, always up to date)',
+  'more.board': 'Board and pieces: premium wood, marble and more',
 } as const;
 
 export type Key = keyof typeof en;

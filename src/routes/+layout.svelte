@@ -379,7 +379,7 @@
         <span class="focus-name">CHESS <span class="gold">CASTLES</span></span>
         <span class="focus-actions">
           <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'}><Icon name={$soundOn ? 'speaker' : 'mute'} size={18} /></button>
-          <button class="icon-btn" onclick={() => ($boardThemeOpen = true)} aria-label="Board colour" title="Board colour"><Icon name="palette" size={18} /></button>
+          <button class="icon-btn" onclick={() => ($boardThemeOpen = true)} aria-label="Board and pieces" title="Board and pieces"><Icon name="palette" size={18} /></button>
         </span>
       </div>
     {:else}
@@ -398,10 +398,10 @@
       <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'} title={$soundOn ? 'Move sounds on' : 'Move sounds off'}>
         <Icon name={$soundOn ? 'speaker' : 'mute'} size={20} />
       </button>
-      <button class="icon-btn" onclick={toggleTheme} aria-label={theme === 'dark' ? 'Light theme' : 'Dark theme'}>
+      <button class="icon-btn thm" onclick={toggleTheme} aria-label={theme === 'dark' ? 'Light theme' : 'Dark theme'}>
         <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
       </button>
-      <button class="icon-btn pal" onclick={() => ($boardThemeOpen = true)} aria-label="Board colour" title="Board colour">
+      <button class="icon-btn pal" onclick={() => ($boardThemeOpen = true)} aria-label="Board and pieces" title="Board and pieces">
         <Icon name="palette" size={20} />
       </button>
       <LangMenu />
@@ -682,9 +682,9 @@
       height: 40px;
     }
   }
-  /* The board colour button lives in Settings too: on small phones the language menu takes its place. */
+  /* Small phones: the board and pieces button stays (children pick boards often); light/dark moves to Settings. */
   @media (max-width: 480px) {
-    .top :global(.icon-btn.pal) {
+    .top :global(.icon-btn.thm) {
       display: none;
     }
   }

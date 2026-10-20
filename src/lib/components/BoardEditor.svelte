@@ -119,11 +119,11 @@
     position: relative;
     border: 0;
     padding: 0;
-    background: #f0d9b5;
+    background: var(--board-light);
     cursor: pointer;
   }
   .sq.dark {
-    background: #b58863;
+    background: var(--board-dark);
   }
   .sq:hover {
     box-shadow: inset 0 0 0 3px var(--gold);

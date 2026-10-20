@@ -70,7 +70,7 @@
       <span><strong>Light UI</strong></span>
       <input type="checkbox" checked={theme === 'light'} onchange={toggleTheme} />
     </label>
-    <button class="btn row-btn" onclick={() => ($boardThemeOpen = true)}><Icon name="palette" size={18} />Board colour<Icon name="chevron" size={16} color="var(--muted)" /></button>
+    <button class="btn row-btn" onclick={() => ($boardThemeOpen = true)}><Icon name="palette" size={18} />Board and pieces<Icon name="chevron" size={16} color="var(--muted)" /></button>
   </section>
 
   {#if PLANS_ON}

@@ -107,3 +107,16 @@
 :root[data-pieces='pixel'] .cg-wrap piece.rook.black { background-image: url('/pieces/pixel/bR.svg'); }
 :root[data-pieces='pixel'] .cg-wrap piece.queen.black { background-image: url('/pieces/pixel/bQ.svg'); }
 :root[data-pieces='pixel'] .cg-wrap piece.king.black { background-image: url('/pieces/pixel/bK.svg'); }
+/* The default set (nothing chosen): Merida. */
+:root:not([data-pieces]) .cg-wrap piece.pawn.white { background-image: url('/pieces/merida/wP.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.knight.white { background-image: url('/pieces/merida/wN.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.bishop.white { background-image: url('/pieces/merida/wB.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.rook.white { background-image: url('/pieces/merida/wR.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.queen.white { background-image: url('/pieces/merida/wQ.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.king.white { background-image: url('/pieces/merida/wK.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.pawn.black { background-image: url('/pieces/merida/bP.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.knight.black { background-image: url('/pieces/merida/bN.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.bishop.black { background-image: url('/pieces/merida/bB.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.rook.black { background-image: url('/pieces/merida/bR.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.queen.black { background-image: url('/pieces/merida/bQ.svg'); }
+:root:not([data-pieces]) .cg-wrap piece.king.black { background-image: url('/pieces/merida/bK.svg'); }

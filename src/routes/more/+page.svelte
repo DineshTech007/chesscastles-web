@@ -8,6 +8,7 @@
   import { NAV_ITEMS, navBlurbKey, navKey } from '$lib/nav';
   import { t, type Key } from '$lib/i18n';
   import { installOpen, installWay } from '$lib/install';
+  import { boardThemeOpen } from '$lib/boardTheme';
 
   let isAdmin = $state(false);
   $effect(() => {
@@ -58,6 +59,8 @@
   {#if $installWay !== 'none' && $installWay !== 'installed'}
     <button class="row-btn" onclick={() => installOpen.set(true)}><Icon name="phone" color="var(--accent)" /><span>{$t('more.install')}</span><Icon name="chevron" color="var(--muted)" /></button>
   {/if}
+  <!-- On phones the top bar has no room for the palette button: the board and pieces are picked here. -->
+  <button class="row-btn" onclick={() => boardThemeOpen.set(true)}><Icon name="palette" color="var(--accent)" /><span>{$t('more.board')}</span><Icon name="chevron" color="var(--muted)" /></button>
   {#each links as l (l.href)}
     <a href={l.href}><Icon name={l.icon} color="var(--accent)" /><span>{l.label}</span><Icon name="chevron" color="var(--muted)" /></a>
   {/each}

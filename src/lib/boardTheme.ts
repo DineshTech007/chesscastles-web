@@ -37,7 +37,8 @@ export const BOARD_THEMES: BoardThemeDef[] = [
 ];
 
 const KEY = 'k24.board';
-const DEFAULT = 'classic';
+/** The default board: Sandstone & slate (no data-board on <html>; see app.css). */
+const DEFAULT = 'stone';
 
 export function loadBoardTheme(): string {
   try {

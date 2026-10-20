@@ -93,6 +93,14 @@ const cloud = () =>
     .then((r) => (r.ok ? r.json() : { on: false }))
     .then((j) => !!j.on)
     .catch(() => false));
+/** Whether the natural cloud voices are on (for the coach page). */
+export const cloudVoice = () => cloud();
+/** The cloud voices' names, as the coach page shows them. */
+export const CLOUD_NAMES: Record<Lang, { male: string; female: string }> = {
+  en: { male: 'Prabhat', female: 'Neerja' },
+  hi: { male: 'Madhur', female: 'Swara' },
+  mr: { male: 'Manohar', female: 'Aarohi' },
+};
 let audio: HTMLAudioElement | undefined;
 const audioCache = new Map<string, string>();
 
