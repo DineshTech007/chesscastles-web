@@ -2,7 +2,7 @@
   /**
    * Vijayadashami, launch day. First a 15-second film (static/festive/dasara-intro.mp4, the owner's ad): the
    * good king's arrow brings down the evil king, fireworks, Happy Dussehra. It plays muted, so it starts by
-   * itself; Skip ends it, and it is left out for reduced motion and data saver. Then a marigold toran drops in across the top, a greeting (English and Marathi) and
+   * itself; Skip ends it. With reduced motion it waits for a tap on Play; with data saver it is left out. Then a marigold toran drops in across the top, a greeting (English and Marathi) and
    * falling petals, then all of it lifts away slowly. Festive music ("Sita Ram Tarang", instrumental) starts
    * by itself when the browser allows it, otherwise with the first tap (phones often allow no sound before one),
    * and plays until the visitor stops it with the small Music button. Shown once per visit, on the day only (the layout decides that).
@@ -26,6 +26,12 @@
   /** The opening film; the greeting starts when it ends (or is skipped). */
   let intro = $state(true);
   let film: HTMLVideoElement | undefined = $state();
+  /** Reduced motion: the film starts only when asked. */
+  let waiting = $state(false);
+  function playFilm() {
+    waiting = false;
+    film?.play().catch(endIntro);
+  }
   function endIntro() {
     if (!intro) return;
     intro = false;
@@ -108,10 +114,13 @@
       started = true;
     });
     for (const e of tapEvents) window.addEventListener(e, firstTap, { capture: true, passive: true });
-    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator as { connection?: { saveData?: boolean } }).connection?.saveData;
-    if (calm || !film) return endIntro();
-    // Muted films may always start by themselves; if this one can't (a phone in power saving), straight to the greeting.
+    if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData || !film) return endIntro();
     film.muted = true;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      waiting = true;
+      return;
+    }
+    // Muted films may always start by themselves; if this one can't (a phone in power saving), straight to the greeting.
     film.play().catch(endIntro);
     // Never stuck on the film (a slow connection).
     later(20000, endIntro);
@@ -132,6 +141,7 @@
   <div class="intro" role="dialog" aria-label="Happy Dussehra: good always checkmates evil">
     <!-- svelte-ignore a11y_media_has_caption -->
     <video bind:this={film} src="/festive/dasara-intro.mp4" poster="/festive/dasara-intro.jpg" muted playsinline preload="auto" onended={endIntro} onerror={endIntro}></video>
+    {#if waiting}<button class="btn primary play-film" onclick={playFilm}>▶ Play the Dussehra film</button>{/if}
     <div class="intro-btns">
       <button class="btn" data-music onclick={toggleMusic}>{playing ? '🔇 Stop music' : '🎵 Play music'}</button>
       <button class="btn" onclick={endIntro}>Skip ⏭</button>
@@ -208,8 +218,6 @@
     position: fixed;
     inset: 0;
     z-index: 121;
-    display: grid;
-    place-items: center;
     background: radial-gradient(120% 60% at 50% 30%, #2a1630, #07040c 70%);
     animation: intro-in 0.5s ease-out both;
   }
@@ -218,10 +226,21 @@
       opacity: 0;
     }
   }
+  /* The whole film always shows: fitted to the screen, with dark bars beside it on a wide screen. */
   .intro video {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;
+  }
+  .play-film {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 17px;
+    padding: 12px 22px;
   }
   .intro-btns {
     position: absolute;
