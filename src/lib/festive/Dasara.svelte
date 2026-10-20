@@ -1,9 +1,8 @@
 <script lang="ts">
   /**
    * Vijayadashami, launch day: a marigold toran drops in across the top, a greeting (English and Marathi) and
-   * falling petals, then all of it lifts away slowly. Soft music (made in the browser: bell, tanpura, bansuri)
-   * starts with the first tap, since phones allow no sound before one, and fades out by itself; a small button
-   * stops it. Shown once per visit, on the day only (the layout decides that).
+   * falling petals, then all of it lifts away slowly. Happy festive music (dhol, shehnai, brass) starts with
+   * the first tap, since phones allow no sound before one, and fades out by itself; a small button stops it. Shown once per visit, on the day only (the layout decides that).
    */
   import { onDestroy, onMount } from 'svelte';
   import { DasaraMusic } from './dasaraMusic';
@@ -81,6 +80,7 @@
 
   onMount(() => {
     units = Math.ceil(window.innerWidth / 110) + 1;
+    music.preload();
     for (const e of tapEvents) window.addEventListener(e, firstTap, { capture: true, passive: true });
     // The greeting leaves by itself after a while (not while a finger or the mouse rests on it).
     later(11000, () => {
