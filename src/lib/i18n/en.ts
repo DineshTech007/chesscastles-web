@@ -100,6 +100,8 @@ export const en = {
   'land.cta.play': 'Play at FIDE level',
   'land.cta.signin': 'Sign in free',
   'land.beta': 'Everything is free until 30 November 2026',
+  'india.made': 'Made in India',
+  'india.support': 'Support an Indian chess platform',
   'land.parents': 'For parents: is it safe for my child?',
   'land.trust.games': 'tournament games',
   'land.trust.lines': 'named opening lines',

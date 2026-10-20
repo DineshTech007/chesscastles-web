@@ -28,8 +28,8 @@ function stored(key: string, def: boolean) {
   };
 }
 
-/** Promote a pawn straight to a queen (off: ask which piece each time). */
-export const autoQueen = stored('k24.autoQueen', true);
+/** "Always promote to Queen": a pawn becomes a queen at once. Off (the default): the player picks the piece. */
+export const autoQueen = stored('k24.autoQueen', false);
 /** Allow queueing a move while the opponent is thinking. */
 export const premovesOn = stored('k24.premoves', true);
 

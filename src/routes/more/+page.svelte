@@ -23,7 +23,6 @@
   /** Account and policy pages; everything else comes from the shared menu list (src/lib/nav.ts). */
   const links = $derived<{ href: string; label: string; icon: IconName }[]>([
     { href: '/profile', label: $t('more.profile'), icon: 'users' },
-    { href: '/settings', label: $t('more.settings'), icon: 'settings' },
     ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
     { href: '/students', label: $t('more.students'), icon: 'coach' },
     ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.badge ? `${$t('nav.new')} · ` : ''}${$t(navKey(n.href))}: ${$t(navBlurbKey(n.href))}`, icon: n.icon })),
@@ -50,6 +49,10 @@
     <button class="btn primary" onclick={() => startSignIn()}>{$t('shell.signin')}</button>
   {/if}
 </div>
+<nav class="list" aria-label="Settings">
+  <a href="/settings"><Icon name="settings" color="var(--accent)" /><span><strong>{$t('more.settings')}</strong></span><Icon name="chevron" color="var(--muted)" /></a>
+  <button class="row-btn" onclick={() => boardThemeOpen.set(true)}><Icon name="palette" color="var(--accent)" /><span>{$t('more.board')}</span><Icon name="chevron" color="var(--muted)" /></button>
+</nav>
 <nav class="list only" aria-label="Signature features">
   <span class="only-h"><Icon name="sparkle" size={14} color="var(--accent)" />{$t('shell.signature')}</span>
   {#each HERO_FEATURES as f (f.id)}
@@ -60,8 +63,6 @@
   {#if $installWay !== 'none' && $installWay !== 'installed'}
     <button class="row-btn" onclick={() => installOpen.set(true)}><Icon name="phone" color="var(--accent)" /><span>{$t('more.install')}</span><Icon name="chevron" color="var(--muted)" /></button>
   {/if}
-  <!-- On phones the top bar has no room for the palette button: the board and pieces are picked here. -->
-  <button class="row-btn" onclick={() => boardThemeOpen.set(true)}><Icon name="palette" color="var(--accent)" /><span>{$t('more.board')}</span><Icon name="chevron" color="var(--muted)" /></button>
   {#each links as l (l.href)}
     <a href={l.href}><Icon name={l.icon} color="var(--accent)" /><span>{l.label}</span><Icon name="chevron" color="var(--muted)" /></a>
   {/each}

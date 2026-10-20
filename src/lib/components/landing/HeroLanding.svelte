@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MadeInIndia from '$lib/components/MadeInIndia.svelte';
   import { betaOn } from '$lib/beta';
   /**
    * The landing: what visitors see first (home when not signed in, and
@@ -39,6 +40,7 @@
 <div class="landing">
   <section class="hero">
     <div class="copy">
+      <MadeInIndia />
       <p class="eyebrow">Learn · Play · Conquer</p>
       <h1 class="display">{$t('land.h1a')} <span class="gold">{$t('land.h1b')}</span></h1>
       <p class="sub">{$t('land.sub')}</p>

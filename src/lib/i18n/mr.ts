@@ -96,6 +96,8 @@ export const mr: Record<Key, string> = {
   'land.cta.play': 'FIDE level वर खेळा',
   'land.cta.signin': 'Free मध्ये sign in करा',
   'land.beta': '30 नोव्हेंबर 2026 पर्यंत सगळं free',
+  'india.made': 'Made in India',
+  'india.support': 'एका भारतीय chess platform ला साथ द्या',
   'land.parents': 'पालकांसाठी: हे माझ्या मुलासाठी सुरक्षित आहे का?',
   'land.trust.games': 'tournament games',
   'land.trust.lines': 'नाव असलेल्या opening lines',

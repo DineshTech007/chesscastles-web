@@ -1,4 +1,5 @@
 <script lang="ts">
+  import QuickSettings from '$lib/components/QuickSettings.svelte';
   import PromotionHost from '$lib/components/PromotionHost.svelte';
   import { betaOn } from '$lib/beta';
   import '../fonts.css';
@@ -383,7 +384,7 @@
         <span class="focus-actions">
           <FeatureVideo />
           <button class="icon-btn" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'}><Icon name={$soundOn ? 'speaker' : 'mute'} size={18} /></button>
-          <button class="icon-btn" onclick={() => ($boardThemeOpen = true)} aria-label="Board and pieces" title="Board and pieces"><Icon name="palette" size={18} /></button>
+          <QuickSettings size={18} />
         </span>
       </div>
     {:else}
@@ -407,9 +408,7 @@
       <button class="icon-btn thm" onclick={toggleTheme} aria-label={theme === 'dark' ? 'Light theme' : 'Dark theme'}>
         <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
       </button>
-      <button class="icon-btn pal" onclick={() => ($boardThemeOpen = true)} aria-label="Board and pieces" title="Board and pieces">
-        <Icon name="palette" size={20} />
-      </button>
+      <QuickSettings />
       <LangMenu />
       <a class="top-me" href="/profile" title="Your profile" aria-label="Your profile">
         <span class="top-av">

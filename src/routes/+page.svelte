@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MadeInIndia from '$lib/components/MadeInIndia.svelte';
   import TitleBadge from '$lib/components/TitleBadge.svelte';
   import SocialLinks from '$lib/components/SocialLinks.svelte';
   import { myTitle } from '$lib/stores/me';
@@ -71,6 +72,7 @@
         {#if PLANS_ON && $session.status === 'in'}<a class="h-plan" href="/plans" title="{PLAN_INFO[$currentPlan].name} member"><PlanBadge plan={$currentPlan} size={34} /></a>{/if}
         {#if $myCountry}<img class="h-flag" src="/flags/{$myCountry}.svg" alt={fedName($myCountry)} title={fedName($myCountry)} width="30" height="20" />{/if}
       </h1>
+      <MadeInIndia />
       <p class="sub"><strong>{$t('home.learn')}</strong>{$t('home.learn2')}<strong>{$t('home.play')}</strong>{$t('home.play2')}<strong>{$t('home.conquer')}</strong>{$t('home.conquer2')}</p>
     </div>
     {#if ($session.status === 'in' && $session.profile) || $shownGames.length}<RatingStrip />{/if}

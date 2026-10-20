@@ -204,6 +204,35 @@ async function run(name, options) {
     return `${fen0} pieces, stepped 6 moves`;
   });
 
+  // 3d. Settings in the same place everywhere: the gear in the top bar, on screen, with "Always promote to
+  // Queen" (off by default) and the rest; the board and pieces open from it.
+  await check(name, page, 'settings: the gear in the top bar, with Always promote to Queen off by default', async () => {
+    await page.evaluate(() => localStorage.removeItem('k24.autoQueen'));
+    for (const path of ['/', '/puzzles', '/play/computer?l=1350&c=white']) {
+      await open(page, path);
+      const gear = page.getByRole('button', { name: 'Settings', exact: true }).locator('visible=true').first();
+      await gear.waitFor({ timeout: 10000 });
+      const box = await gear.boundingBox();
+      const vw = await page.evaluate(() => innerWidth);
+      expect(box && box.x >= 0 && box.x + box.width <= vw && box.y >= 0 && box.y < 120, `the settings gear is not on screen at the top of ${path}`);
+    }
+    await open(page, '/');
+    await tap(page.getByRole('button', { name: 'Settings', exact: true }).locator('visible=true').first());
+    const menu = page.getByRole('dialog', { name: 'Quick settings' });
+    await menu.waitFor({ timeout: 5000 });
+    const queen = menu.getByRole('checkbox', { name: /Always promote to Queen/ });
+    expect(!(await queen.isChecked()), 'Always promote to Queen is on by default');
+    await tap(queen);
+    const saved = await page.evaluate(() => localStorage.getItem('k24.autoQueen'));
+    expect(saved === '1', 'the switch did not save');
+    await tap(queen);
+    await tap(menu.getByRole('button', { name: /Board and pieces/ }));
+    await page.getByRole('heading', { name: /board and pieces/i }).waitFor({ timeout: 5000 });
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => localStorage.removeItem('k24.autoQueen'));
+    return 'gear on screen on 3 pages; off by default; saves; board and pieces';
+  });
+
   // 4a. Promotion, like chess.com's "Always promote to Queen": on, a queen at once; off, the piece picker
   // (a knight is made; closing the picker puts the pawn back).
   await check(name, page, 'promotion: always a queen, or the piece you pick', async () => {
