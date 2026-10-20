@@ -37,7 +37,7 @@
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
   import { boardThemeOpen } from '$lib/boardTheme';
-  import { flush, pageView, setSignedIn } from '$lib/analytics';
+  import { flush, pageView, reportError, setSignedIn } from '$lib/analytics';
   import { keepReferral, loadPlanSettings, planSettings, refreshMyPlan, sendReferral } from '$lib/plans';
 
   let { children } = $props();
@@ -295,6 +295,43 @@
         if (c) clubTurn = { id: c.id, name: c.name, round: c.round };
       })
       .catch(() => {});
+  });
+
+  // Site health: errors in this browser go to the admin dashboard. A page that fails to load its code after a
+  // deploy (an old tab asking for files that were replaced) reloads once by itself instead of breaking.
+  onMount(() => {
+    const chunk = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|ChunkLoadError|Unable to preload CSS/i;
+    const noise = /ResizeObserver loop|AbortError|aborted|The operation was aborted|Load failed$|NetworkError when attempting|Failed to fetch$/i;
+    const reloadOnce = (m: string) => {
+      reportError('chunk', m.slice(0, 160));
+      try {
+        if (sessionStorage.getItem('cc.reloaded')) return;
+        sessionStorage.setItem('cc.reloaded', '1');
+      } catch {
+        return;
+      }
+      flush(true);
+      setTimeout(() => location.reload(), 300);
+    };
+    const onError = (e: ErrorEvent) => {
+      const m = e.message || (e.error instanceof Error ? e.error.message : '');
+      if (!m || m === 'Script error.' || /-extension:\/\//.test(e.filename ?? '') || noise.test(m)) return;
+      if (chunk.test(m)) return reloadOnce(m);
+      reportError('js', `${m}${e.filename ? ` @ ${e.filename.split('/').pop()}:${e.lineno}` : ''}`);
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const r = e.reason;
+      const m = r instanceof Error ? `${r.name === 'Error' ? '' : `${r.name}: `}${r.message}` : typeof r === 'string' ? r : '';
+      if (!m || noise.test(m)) return;
+      if (chunk.test(m)) return reloadOnce(m);
+      reportError('promise', m);
+    };
+    addEventListener('error', onError);
+    addEventListener('unhandledrejection', onRejection);
+    return () => {
+      removeEventListener('error', onError);
+      removeEventListener('unhandledrejection', onRejection);
+    };
   });
 
   // Launch day, Vijayadashami (20 October 2026, India time): the festive toran and greeting, once per visit.

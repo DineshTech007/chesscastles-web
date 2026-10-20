@@ -1,3 +1,4 @@
+import { reportError } from '$lib/analytics';
 import type { Plan } from '$lib/plans';
 import { writable } from 'svelte/store';
 import { API } from '$lib/api';
@@ -97,6 +98,15 @@ function noteReply(good: boolean) {
 }
 
 /** A signed-in call to the API worker's /social/… (throws the server's error message). */
+/** "player/lichess%3Aabc?x=1" -> "player/:id": the route only, never a name. */
+const routeOf = (path: string) =>
+  path
+    .split('?')[0]
+    .split('/')
+    .slice(0, 3)
+    .map((p, i) => (i && (p.includes('%') || p.includes(':') || p.length > 14 || /\d/.test(p)) ? ':id' : p))
+    .join('/');
+
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = await auth.currentUser?.getIdToken().catch(() => undefined);
   if (!token) throw new Error('Sign in to use friends and messages.');
@@ -109,9 +119,12 @@ export async function call<T>(method: string, path: string, body?: unknown): Pro
     });
   } catch (e) {
     noteReply(false);
+    // Offline is not our error; a failure while online is worth knowing about.
+    if (typeof navigator !== 'undefined' && navigator.onLine) reportError('api', `network ${method} /${routeOf(path)}`);
     throw e;
   }
   noteReply(res.status < 500 && res.status !== 429);
+  if (res.status >= 500 || res.status === 429) reportError('api', `${res.status} ${method} /${routeOf(path)}`);
   const j = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(j.error ?? (res.status === 429 || res.status >= 500 ? 'Chess Castles is very busy right now. Please try again in a few minutes.' : 'Something went wrong. Try again.'));
   return j as T;

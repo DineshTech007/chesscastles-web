@@ -49,5 +49,6 @@ export const coachAvatar = writable<AvatarId>(initial());
 
 export function chooseAvatar(id: AvatarId) {
   coachAvatar.set(id);
-  updateCoach({ avatar: id });
+  // A new coach speaks in their own voice: voices picked for the last coach are set aside.
+  updateCoach({ avatar: id, voices: {} });
 }

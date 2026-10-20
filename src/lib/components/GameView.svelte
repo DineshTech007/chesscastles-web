@@ -204,12 +204,49 @@
     if (kept) void uploadGame(kept).catch(() => {});
   }
 
+  // Fair play: before the first rated game against a FIDE-level opponent, the player promises to play their own
+  // moves (once, kept in this browser). The game starts after the promise.
+  const PLEDGE = 'cc.fairPledge';
+  const pledged = () => {
+    try {
+      return !!localStorage.getItem(PLEDGE);
+    } catch {
+      return true;
+    }
+  };
+  // svelte-ignore state_referenced_locally
+  let needPledge = $state(kind === 'fide' && !game.moves.length && !game.isOver && !pledged());
+  function promise() {
+    try {
+      localStorage.setItem(PLEDGE, String(Date.now()));
+    } catch {
+      /* storage blocked: asked again next time */
+    }
+    needPledge = false;
+    sounds.start();
+    game.begin();
+  }
+  // Leaving the game tab during your own turn (counted for fair play): a gentle word when you come back.
+  let awayNote = $state(false);
+  let awayTimer: ReturnType<typeof setTimeout> | undefined;
+  function onVisible() {
+    if (document.visibilityState !== 'visible' || kind !== 'fide' || game.isOver || !blurs) return;
+    awayNote = true;
+    clearTimeout(awayTimer);
+    awayTimer = setTimeout(() => (awayNote = false), 6000);
+  }
+
   onMount(() => {
     const unsub = game.subscribe(onChange);
     const timer = setInterval(() => (now = Date.now()), 100);
-    if (!game.moves.length && !game.isOver) sounds.start();
-    game.begin();
+    document.addEventListener('visibilitychange', onVisible);
+    if (!needPledge) {
+      if (!game.moves.length && !game.isOver) sounds.start();
+      game.begin();
+    }
     return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      clearTimeout(awayTimer);
       unsub();
       clearInterval(timer);
     };
@@ -441,6 +478,24 @@
 {/snippet}
 
 <div class="game">
+  {#if needPledge}
+    <div class="pledge-scrim" role="presentation"></div>
+    <div class="pledge card" role="dialog" aria-modal="true" aria-labelledby="pledge-h">
+      <span class="p-icon" aria-hidden="true">🤝</span>
+      <h2 id="pledge-h" class="title">The fair play promise</h2>
+      <p>Before your first rated game, promise to play fair:</p>
+      <ul>
+        <li>I play my own moves, without engines, apps or other websites.</li>
+        <li>Nobody helps me during the game.</li>
+        <li>I stay on the game while it is my turn.</li>
+      </ul>
+      <p class="label">Every game is checked. Games that break the rules don't count for CC Rating, and the account can be closed.</p>
+      <button class="btn primary big" onclick={promise}>I promise to play fair</button>
+    </div>
+  {/if}
+  {#if awayNote}
+    <div class="away-note" role="status">You left the game during your turn. For fair play, please stay on this tab until the game ends.</div>
+  {/if}
   <section class="board-col" aria-label="Board">
     <PlayerBar {...top} />
     <div class="board-box">
@@ -522,6 +577,60 @@
 </div>
 
 <style>
+  .pledge-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: rgba(5, 8, 20, 0.7);
+  }
+  .pledge {
+    position: fixed;
+    z-index: 81;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(440px, calc(100vw - 28px));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 2px solid var(--gold);
+  }
+  .pledge h2 {
+    margin: 0;
+    font-size: 22px;
+  }
+  .pledge p,
+  .pledge ul {
+    margin: 0;
+  }
+  .pledge ul {
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-weight: 600;
+  }
+  .p-icon {
+    font-size: 34px;
+  }
+  .pledge .big {
+    min-height: 48px;
+  }
+  .away-note {
+    position: fixed;
+    z-index: 70;
+    left: 50%;
+    top: 14px;
+    transform: translateX(-50%);
+    width: min(460px, calc(100vw - 24px));
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--card);
+    border: 1px solid var(--loss);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    font-weight: 600;
+    font-size: 14px;
+  }
   .looking-row {
     display: flex;
     align-items: center;

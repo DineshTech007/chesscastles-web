@@ -35,6 +35,44 @@ function visitor(): { vid: string; fresh: boolean } {
   }
 }
 
+// ---------- site health: errors, the browser, page-load speed ----------
+
+export type ErrorKind = 'js' | 'promise' | 'api' | 'lichess' | 'chunk' | 'engine';
+const errs: { k: ErrorKind; m: string; p: string }[] = [];
+const sentErrors = new Set<string>();
+let currentPage = '/';
+
+/**
+ * Reports an error to the admin dashboard (Site health): each message once per visit, at most 15 a visit,
+ * without names or addresses (a route, not the page's address). Sent with the next batch.
+ */
+export function reportError(kind: ErrorKind, message: string) {
+  if (off()) return;
+  const m = String(message || '').replace(/https?:\/\/\S+/g, (u) => u.replace(/[?#].*$/, '')).replace(/\s+/g, ' ').trim().slice(0, 300);
+  if (!m || sentErrors.size >= 15 || sentErrors.has(`${kind}:${m}`)) return;
+  sentErrors.add(`${kind}:${m}`);
+  errs.push({ k: kind, m, p: currentPage });
+  if (!timer) timer = setTimeout(() => flush(), 1500);
+}
+
+function browserOf(): { browser: string; os: string } {
+  const ua = navigator.userAgent;
+  const browser = /SamsungBrowser/i.test(ua) ? 'samsung' : /Edg\//.test(ua) ? 'edge' : /OPR\//.test(ua) ? 'opera' : /Firefox\//.test(ua) ? 'firefox' : /Chrome\//.test(ua) ? 'chrome' : /Safari\//.test(ua) ? 'safari' : 'other';
+  const os = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Windows/i.test(ua) ? 'windows' : /Mac OS X/i.test(ua) ? 'mac' : /Linux/i.test(ua) ? 'linux' : 'other';
+  return { browser, os };
+}
+
+/** How long the first page took to load (ms), from the browser's navigation timing. */
+function loadTime(): number | undefined {
+  try {
+    const n = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const t = n ? n.domContentLoadedEventEnd || n.responseEnd : 0;
+    return t > 0 ? Math.round(t) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Counts one event (sent within a few seconds). */
 export function track(metric: Metric, key: string) {
   if (off()) return;
@@ -44,7 +82,10 @@ export function track(metric: Metric, key: string) {
 }
 
 /** A page view: the route ("/players/[uid]"), not the address, so no names are sent. */
-export const pageView = (route: string) => track('view', route || '/');
+export const pageView = (route: string) => {
+  currentPage = (route || '/').slice(0, 64);
+  track('view', route || '/');
+};
 
 export const setSignedIn = (v: boolean) => (signedIn = v);
 
@@ -53,20 +94,27 @@ export function flush(leaving = false) {
   clearTimeout(timer);
   timer = undefined;
   if (off()) return;
-  let visit: { ref: string; device: string; fresh: boolean; signedIn: boolean } | undefined;
+  let visit: { ref: string; device: string; fresh: boolean; signedIn: boolean; browser: string; os: string; load?: number } | undefined;
   try {
     if (!sessionStorage.getItem('cc.session')) {
       sessionStorage.setItem('cc.session', '1');
       const ref = document.referrer ? new URL(document.referrer).hostname : '';
       const w = Math.min(screen.width, innerWidth);
-      visit = { ref: ref && ref !== location.hostname ? ref.toLowerCase() : 'direct', device: w < 700 ? 'mobile' : w < 1100 ? 'tablet' : 'desktop', fresh: visitor().fresh, signedIn };
+      visit = { ref: ref && ref !== location.hostname ? ref.toLowerCase() : 'direct', device: w < 700 ? 'mobile' : w < 1100 ? 'tablet' : 'desktop', fresh: visitor().fresh, signedIn, ...browserOf(), load: loadTime() };
     }
   } catch {
     /* storage blocked */
   }
-  if (!queue.length && !visit) return;
+  if (!queue.length && !visit && !errs.length) return;
   sentOnce = true;
-  const body = JSON.stringify({ vid: visitor().vid, visit, ev: queue.splice(0, 60) });
+  const w = Math.min(screen.width, innerWidth);
+  const body = JSON.stringify({
+    vid: visitor().vid,
+    visit,
+    ev: queue.splice(0, 60),
+    page: currentPage,
+    ...(errs.length ? { err: errs.splice(0, 5), device: w < 700 ? 'mobile' : w < 1100 ? 'tablet' : 'desktop', browser: browserOf().browser } : {}),
+  });
   const url = `${API}/track`;
   try {
     if (leaving && navigator.sendBeacon) navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }));

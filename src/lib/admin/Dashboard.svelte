@@ -10,14 +10,51 @@
   let days = $state(30);
   let data = $state<Overview | undefined>();
   let error = $state('');
+  let refreshed = $state(Date.now());
   $effect(() => {
     const d = days;
     error = '';
     overview(d).then(
-      (o) => days === d && (data = o),
+      (o) => days === d && ((data = o), (refreshed = Date.now())),
       (e) => (error = e.message),
     );
   });
+  // Launch days: the health numbers refresh every minute while the dashboard is open.
+  $effect(() => {
+    const t = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      const d = days;
+      overview(d).then(
+        (o) => days === d && ((data = o), (refreshed = Date.now())),
+        () => {},
+      );
+    }, 60_000);
+    return () => clearInterval(t);
+  });
+  const today = $derived(data ? Object.keys(data.series.views ?? {}).sort().at(-1) : undefined);
+  const errorsToday = $derived(data && today ? (data.series.errors?.[today] ?? 0) : 0);
+  const slowShare = $derived.by(() => {
+    const l = data?.top.load ?? [];
+    const all = l.reduce((s, r) => s + r.count, 0);
+    return all ? Math.round((100 * (l.find((r) => r.key === 'slow')?.count ?? 0)) / all) : 0;
+  });
+  const KIND: Record<string, [string, string]> = {
+    js: ['Script', '#e64a19'],
+    promise: ['Script', '#e64a19'],
+    api: ['Our server', '#c084fc'],
+    server: ['Server crash', '#ef4444'],
+    lichess: ['Lichess', '#4d86e6'],
+    chunk: ['Old tab reloaded', '#9aa4b2'],
+    engine: ['Engine', '#edb040'],
+  };
+  const ago = (t: number) => {
+    const m = Math.round((Date.now() - t) / 60_000);
+    return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+  };
+  const browserName = (k: string) => ({ chrome: 'Chrome', edge: 'Edge', safari: 'Safari', firefox: 'Firefox', samsung: 'Samsung Internet', opera: 'Opera', other: 'Other' })[k] ?? k;
+  const osName = (k: string) => ({ android: 'Android', ios: 'iPhone / iPad', windows: 'Windows', mac: 'Mac', linux: 'Linux', other: 'Other' })[k] ?? k;
+  const loadName = (k: string) => ({ fast: 'Fast (under 2 s)', ok: 'OK (2 to 5 s)', slow: 'Slow (over 5 s)' })[k] ?? k;
+  const kindName = (k: string) => KIND[k]?.[0] ?? k;
   /** Two-letter country codes as names. */
   const countryName = (k: string) => {
     if (k === 'XX') return 'Unknown';
@@ -45,6 +82,44 @@
 {:else if !data}
   <div class="grid4">{#each [0, 1, 2, 3] as i (i)}<div class="card skel"></div>{/each}</div>
 {:else}
+  <!-- Site health first: what needs attention right now. -->
+  <section class="card health" aria-label="Site health">
+    <div class="h-top">
+      <h3 class="title">Site health</h3>
+      <span class="label">Updates every minute · {ago(refreshed)}</span>
+    </div>
+    <div class="h-kpis">
+      <div class="h-kpi"><span class="label">On the site now</span><strong class="num"><span class="pulse"></span>{data.health?.live ?? 0}</strong><span class="label">last 5 minutes</span></div>
+      <div class="h-kpi"><span class="label">Errors today</span><strong class="num" class:alert={errorsToday > 0}>{errorsToday}</strong><span class="label">from browsers</span></div>
+      <div class="h-kpi"><span class="label">Server crashes (7 days)</span><strong class="num" class:alert={(data.health?.errors ?? []).some((e) => e.kind === 'server')}>{(data.health?.errors ?? []).filter((e) => e.kind === 'server').reduce((s, e) => s + e.n, 0)}</strong><span class="label">our API</span></div>
+      <div class="h-kpi"><span class="label">Slow first loads</span><strong class="num" class:alert={slowShare >= 20}>{slowShare}%</strong><span class="label">over 5 seconds</span></div>
+    </div>
+    {#if data.health?.livePages.length}
+      <p class="label live-pages">Now on: {data.health.livePages.map((p) => `${pageName(p.page)} (${p.n})`).join(' · ')}</p>
+    {/if}
+    {#if !data.health?.errors.length}
+      <p class="ok-line">No errors in the last 7 days.</p>
+    {:else}
+      <div class="err-wrap">
+        <table class="errs">
+          <thead><tr><th scope="col">What</th><th scope="col">Error</th><th scope="col">Where</th><th scope="col">Times</th><th scope="col">Last</th></tr></thead>
+          <tbody>
+            {#each data.health.errors as e (e.kind + e.message)}
+              <tr>
+                <td><span class="kind" style="--c: {KIND[e.kind]?.[1] ?? '#9aa4b2'}">{kindName(e.kind)}</span></td>
+                <td class="msg">{e.message}</td>
+                <td class="label">{e.page ? pageName(e.page) : '–'}{e.device ? ` · ${deviceName(e.device)}` : ''}{e.browser ? ` · ${browserName(e.browser)}` : ''}</td>
+                <td class="num">{e.n}</td>
+                <td class="label nowrap">{ago(e.last)}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+      <p class="label">“Lichess” errors are often the player's side (a friend who doesn't accept challenges, an expired sign-in); many of the same one point at a real problem. “Old tab reloaded”: a page open before a deploy reloaded itself once, nothing to fix.</p>
+    {/if}
+  </section>
+
   <div class="kpis">
     <div class="card kpi"><span class="label">Visitors</span><strong class="num">{data.totals.visitors.toLocaleString()}</strong><span class="label">distinct per day, added up</span></div>
     <div class="card kpi"><span class="label">Page views</span><strong class="num">{data.totals.views.toLocaleString()}</strong><span class="label">{data.totals.visitors ? (data.totals.views / data.totals.visitors).toFixed(1) : 0} per visitor</span></div>
@@ -86,6 +161,13 @@
     <RankBars title="New or returning" rows={data.top.visitor} name={visitorName} />
   </div>
 
+  <div class="grid4">
+    <RankBars title="Browsers" rows={data.top.browser ?? []} name={browserName} empty="Counted from today." />
+    <RankBars title="Systems" rows={data.top.os ?? []} name={osName} empty="Counted from today." />
+    <RankBars title="First page load" rows={data.top.load ?? []} name={loadName} empty="Counted from today." />
+    <RankBars title="Errors by kind" rows={data.top.error ?? []} name={kindName} empty="No errors." />
+  </div>
+
   <div class="grid2">
     <section class="card usage">
       <h3 class="title">Limited features, signed-in players</h3>
@@ -120,6 +202,111 @@
 {/if}
 
 <style>
+  .health {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 12px;
+    border-color: color-mix(in srgb, var(--gold) 40%, var(--border));
+  }
+  .h-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .h-top h3 {
+    margin: 0;
+  }
+  .h-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .h-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--raised);
+  }
+  .h-kpi strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 26px;
+  }
+  .pulse {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--win);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  .alert {
+    color: var(--loss);
+  }
+  .live-pages,
+  .ok-line {
+    margin: 0;
+  }
+  .ok-line {
+    color: var(--win);
+    font-weight: 700;
+  }
+  .err-wrap {
+    max-height: 420px;
+    overflow: auto;
+  }
+  .errs {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .errs th {
+    text-align: left;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 6px 8px;
+    position: sticky;
+    top: 0;
+    background: var(--card);
+  }
+  .errs td {
+    padding: 7px 8px;
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .errs .msg {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    word-break: break-word;
+  }
+  .nowrap {
+    white-space: nowrap;
+  }
+  .kind {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 800;
+    white-space: nowrap;
+    color: var(--c);
+    background: color-mix(in srgb, var(--c) 16%, transparent);
+  }
+  @media (max-width: 900px) {
+    .h-kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
   .bar {
     display: flex;
     align-items: center;

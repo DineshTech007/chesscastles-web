@@ -4,6 +4,8 @@
  * Lichess rules: apps may seek random opponents at rapid and classical only,
  * play blitz only by direct challenge (or against its computer), and never bullet.
  */
+import { reportError } from '$lib/analytics';
+
 const LICHESS = 'https://lichess.org';
 
 export class LichessError extends Error {}
@@ -15,7 +17,10 @@ async function call(token: string, path: string, init: RequestInit = {}): Promis
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new LichessError(body.error ?? (res.status === 429 ? 'Lichess asks to wait a minute before trying again.' : `Lichess answered ${res.status}`));
+    const message = body.error ?? (res.status === 429 ? 'Lichess asks to wait a minute before trying again.' : `Lichess answered ${res.status}`);
+    // For the admin dashboard: which Lichess call failed and why (the route only: ids become ":id").
+    reportError('lichess', `${res.status} ${path.split('?')[0].replace(/\/[A-Za-z0-9]{8,}(?=\/|$)/g, '/:id').replace(/\/challenge\/[^/]+$/, '/challenge/:user')}: ${String(message).slice(0, 120)}`);
+    throw new LichessError(message);
   }
   return res;
 }

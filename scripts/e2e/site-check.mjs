@@ -277,6 +277,9 @@ async function run(name, options) {
         await page.evaluate(() => localStorage.removeItem('k24.resume'));
         await open(page, '/play/fide?r=2000&tc=6&c=black');
         await page.locator('cg-board').first().waitFor({ timeout: 15000 });
+        // The fair play promise, before the first rated game.
+        const promise = page.getByRole('button', { name: /promise to play fair/i });
+        if (await promise.count()) await promise.click();
         const snap = () => page.evaluate(() => JSON.parse(localStorage.getItem('k24.resume') ?? 'null')?.snapshot);
         let last;
         const until = Date.now() + 60000;

@@ -1,6 +1,7 @@
 import { get, writable } from 'svelte/store';
 import { LANGS, type Lang } from './i18n';
 import { avatarInfo, coachAvatar } from './avatar';
+import { API } from '$lib/api';
 
 /**
  * Guru's voice, free: the device's own voices (Microsoft Edge has natural
@@ -83,18 +84,87 @@ let speakToken = 0;
 /** True while Guru is speaking (the avatar's mouth moves). */
 export const speaking = writable(false);
 
-/** Speaks text sentence by sentence (long single utterances get cut off in Chrome). */
+// ---------- the cloud voice (server/api-worker/src/tts.ts) ----------
+
+/** Whether Chess Castles' natural cloud voices are on (asked once a visit). */
+let cloudOn: Promise<boolean> | undefined;
+const cloud = () =>
+  (cloudOn ??= fetch(`${API}/tts/status`)
+    .then((r) => (r.ok ? r.json() : { on: false }))
+    .then((j) => !!j.on)
+    .catch(() => false));
+let audio: HTMLAudioElement | undefined;
+const audioCache = new Map<string, string>();
+
+/** Plays text with the cloud voice, in pieces of up to ~900 characters; false if it could not (the device voice is used then). */
+async function speakCloud(text: string, lang: Lang, gender: 'male' | 'female', rate: number, token: number): Promise<boolean> {
+  const parts: string[] = [];
+  let cur = '';
+  for (const sentence of text.match(/[^.!?।]+[.!?।]?/g) ?? [text]) {
+    if ((cur + sentence).length > 900 && cur) {
+      parts.push(cur);
+      cur = '';
+    }
+    cur += sentence;
+  }
+  if (cur.trim()) parts.push(cur);
+  const fetchPart = async (t: string) => {
+    const k = `${lang}|${gender}|${rate}|${t}`;
+    const hit = audioCache.get(k);
+    if (hit) return hit;
+    const res = await fetch(`${API}/tts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: t.trim(), lang, gender, rate }) });
+    if (!res.ok) throw new Error(String(res.status));
+    const url = URL.createObjectURL(await res.blob());
+    audioCache.set(k, url);
+    return url;
+  };
+  try {
+    let next = fetchPart(parts[0]);
+    for (let i = 0; i < parts.length; i++) {
+      const url = await next;
+      if (token !== speakToken) return true;
+      if (i + 1 < parts.length) next = fetchPart(parts[i + 1]);
+      speaking.set(true);
+      await new Promise<void>((resolve, reject) => {
+        audio = new Audio(url);
+        audio.onended = () => resolve();
+        audio.onerror = () => reject(new Error('audio'));
+        audio.play().catch(reject);
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Speaks text in the coach's voice: Chess Castles' natural cloud voice when it is on (a real man's or woman's
+ * Indian voice in every language), else the device's voices, sentence by sentence (long single utterances get
+ * cut off in Chrome).
+ */
 export async function speak(text: string, lang: Lang, voiceName?: string): Promise<void> {
   const s = synth();
-  if (!s) return;
   stopSpeaking();
-  await voicesReady();
   const token = ++speakToken;
   const coach = avatarInfo(get(coachAvatar));
+  if (await cloud()) {
+    speaking.set(true);
+    const spokenCloud = /^(hi|mr)$/.test(lang) ? forIndianVoice(speakable(text)) : speakable(text);
+    const done = await speakCloud(spokenCloud, lang, coach.voice, coach.rate, token);
+    if (done) {
+      if (token === speakToken) speaking.set(false);
+      return;
+    }
+  }
+  if (!s || token !== speakToken) return void speaking.set(false);
+  await voicesReady();
   const voices = voicesFor(lang, coach.voice);
-  const voice = voices.find((v) => v.name === voiceName) ?? voices[0];
-  // A man's coach with no man's voice on the device: the voice is spoken lower, so it doesn't sound like a woman.
-  const deepen = coach.voice === 'male' && voice && voiceGender(voice) !== 'male' ? 0.78 : 1;
+  // A voice saved in the settings is used only if it suits the coach (a woman's voice is never a male coach's).
+  const saved = voices.find((v) => v.name === voiceName);
+  const voice = saved && (!voiceGender(saved) || voiceGender(saved) === coach.voice) ? saved : voices[0];
+  // A man's coach with no man's voice on the device: the voice is spoken much lower, so it doesn't sound like a woman.
+  const deepen = coach.voice === 'male' && voice && voiceGender(voice) !== 'male' ? 0.62 : 1;
   const indian = /^(hi|mr)/i.test(voice?.lang ?? '');
   const spoken = indian ? forIndianVoice(speakable(text)) : speakable(text);
   const parts = spoken.match(/[^.!?।]+[.!?।]?/g) ?? [];
@@ -118,6 +188,10 @@ export async function speak(text: string, lang: Lang, voiceName?: string): Promi
 export function stopSpeaking() {
   speakToken++;
   synth()?.cancel();
+  if (audio) {
+    audio.pause();
+    audio = undefined;
+  }
   speaking.set(false);
 }
 

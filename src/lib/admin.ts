@@ -12,7 +12,9 @@ export interface Overview {
   from: string;
   /** Per day: visitors, views, sessions, signup. */
   series: Record<string, Record<string, number>>;
-  top: Record<'views' | 'features' | 'limits' | 'interest' | 'ref' | 'country' | 'device' | 'visitor', { key: string; count: number }[]>;
+  top: Record<'views' | 'features' | 'limits' | 'interest' | 'ref' | 'country' | 'device' | 'visitor' | 'browser' | 'os' | 'load' | 'error', { key: string; count: number }[]>;
+  /** Site health: who is on the site now, and the errors of the last week (newest first). */
+  health?: { live: number; livePages: { page: string; n: number }[]; errors: SiteError[] };
   totals: { visitors: number; views: number; sessions: number; signups: number };
   members: { total?: number; new7?: number; new1?: number; active1?: number; active7?: number; active30?: number };
   plans: Record<Plan, number>;
@@ -21,6 +23,16 @@ export interface Overview {
   feedback: { fresh: number; avg: number | null };
   dbBytes: number;
   guruToday: number;
+}
+export interface SiteError {
+  kind: 'js' | 'promise' | 'api' | 'lichess' | 'chunk' | 'engine' | 'server';
+  message: string;
+  page: string;
+  device: string;
+  browser: string;
+  n: number;
+  first: number;
+  last: number;
 }
 export interface AdminUser {
   uid: string;
