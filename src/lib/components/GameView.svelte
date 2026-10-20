@@ -149,12 +149,27 @@
 
   /** Signed in: friends can watch the game live (sent after each move, and once at the end). */
   let sharedMoves = -1;
+  let shareTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastShare = 0;
+  const SHARE_EVERY = 2000;
   function shareWithFriends(force = false) {
     // Only players with friends (who can watch) send each move to the server: it is a database write per move.
     if ($session.status !== 'in' || !game.moves.length || !get(friendsCache).length) return;
     const n = game.moves.length + (game.isOver ? 1000 : 0);
     if (n === sharedMoves && !force) return;
+    // At most one update every two seconds while the game is on (a fast bullet game would otherwise hit the
+    // server's limit of 90 calls a minute, and the one refused could be the result); the end goes at once.
+    if (!game.isOver && !force) {
+      const wait = lastShare + SHARE_EVERY - Date.now();
+      if (wait > 0) {
+        if (!shareTimer) shareTimer = setTimeout(() => ((shareTimer = undefined), shareWithFriends()), wait);
+        return;
+      }
+    }
+    clearTimeout(shareTimer);
+    shareTimer = undefined;
     sharedMoves = n;
+    lastShare = Date.now();
     void shareLive({
       opponent,
       opponentRating: kind === 'fide' ? game.rating : undefined,
@@ -253,6 +268,7 @@
   });
   onDestroy(() => {
     gone = true;
+    clearTimeout(shareTimer);
     if (!game.isOver) save(false);
     game.dispose();
     gameEnded.set(false);
