@@ -37,7 +37,21 @@
   }
 
   /** Paragraphs, "## " headings and "- " lists (consecutive list lines become one list). */
-  type Block = { k: 'p' | 'h'; text: string } | { k: 'ul'; items: string[] } | { k: 'fig'; fig: 'board' | 'rice' | 'week'; fen?: string; caption?: string };
+  type Block = { k: 'p' | 'h'; text: string } | { k: 'ul'; items: string[] } | { k: 'fig'; fig: 'board' | 'rice' | 'week'; fen?: string; caption?: string } | { k: 'img'; src: string; caption: string };
+  /** A line's text with links: "[text](/path)" becomes a link to this site (nowhere else). */
+  type Seg = { t: string; href?: string };
+  const segs = (text: string): Seg[] => {
+    const out: Seg[] = [];
+    const re = /\[([^\]]+)\]\((\/[^)\s]*)\)/g;
+    let i = 0;
+    for (const m of text.matchAll(re)) {
+      if (m.index! > i) out.push({ t: text.slice(i, m.index) });
+      out.push({ t: m[1], href: m[2] });
+      i = m.index! + m[0].length;
+    }
+    if (i < text.length) out.push({ t: text.slice(i) });
+    return out;
+  };
   const blocks = $derived.by<Block[]>(() => {
     const out: Block[] = [];
     for (const line of post?.body[$contentLang] ?? []) {
@@ -45,6 +59,11 @@
       if (board) out.push({ k: 'fig', fig: 'board', fen: board[1].trim(), caption: board[2].trim() });
       else if (line === '[rice]') out.push({ k: 'fig', fig: 'rice' });
       else if (line === '[week]') out.push({ k: 'fig', fig: 'week' });
+      else if (/^\[img:/.test(line)) {
+        // A picture from this site: "[img:/journey/rating-curve.svg|caption]".
+        const m = /^\[img:([^|\]]+)\|?([^\]]*)\]$/.exec(line);
+        if (m) out.push({ k: 'img', src: m[1].trim(), caption: m[2].trim() });
+      }
       else if (line.startsWith('## ')) out.push({ k: 'h', text: line.slice(3) });
       else if (line.startsWith('- ')) {
         const last = out[out.length - 1];
@@ -78,8 +97,9 @@
       {#each blocks as b, i (i)}
         {#if b.k === 'h'}<h2 class="title">{b.text}</h2>
         {:else if b.k === 'fig'}<PostFigure kind={b.fig} fen={b.fen} caption={b.caption} lang={$contentLang} />
-        {:else if b.k === 'ul'}<ul>{#each b.items as it, j (j)}<li>{it}</li>{/each}</ul>
-        {:else}<p>{b.text}</p>{/if}
+        {:else if b.k === 'img'}<figure class="pic"><img src={b.src} alt={b.caption} loading="lazy" />{#if b.caption}<figcaption class="label">{b.caption}</figcaption>{/if}</figure>
+        {:else if b.k === 'ul'}<ul>{#each b.items as it, j (j)}<li>{#each segs(it) as sg, x (x)}{#if sg.href}<a href={sg.href}>{sg.t}</a>{:else}{sg.t}{/if}{/each}</li>{/each}</ul>
+        {:else}<p>{#each segs(b.text) as sg, x (x)}{#if sg.href}<a href={sg.href}>{sg.t}</a>{:else}{sg.t}{/if}{/each}</p>{/if}
       {/each}
     </article>
 
@@ -104,6 +124,20 @@
 </div>
 
 <style>
+  .pic {
+    margin: 18px 0;
+  }
+  .pic img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .pic figcaption {
+    margin-top: 6px;
+    text-align: center;
+  }
   .page {
     max-width: 720px;
     margin: 0 auto;
