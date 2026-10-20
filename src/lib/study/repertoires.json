@@ -267,8 +267,7 @@
         "name": "Classical Defence (3...Bc5)",
         "sans": "e4 e5 Nf3 Nc6 Bb5 Bc5"
       }
-    ],
-    "draft": true
+    ]
   },
   "italian": {
     "name": "Italian Game",
@@ -302,8 +301,7 @@
         "name": "Quiet replies (3...Be7, 3...d6)",
         "sans": "e4 e5 Nf3 Nc6 Bc4 Be7"
       }
-    ],
-    "draft": true
+    ]
   },
   "queens-gambit": {
     "name": "Queen's Gambit",
@@ -391,8 +389,7 @@
         "name": "Accepted (2...dxc4)",
         "sans": "d4 d5 c4 dxc4"
       }
-    ],
-    "draft": true
+    ]
   },
   "london": {
     "name": "London System",
@@ -421,8 +418,7 @@
         "name": "Against the King's Indian set-up",
         "sans": "d4 Nf6 Bf4 g6"
       }
-    ],
-    "draft": true
+    ]
   },
   "najdorf": {
     "name": "Sicilian Najdorf",
@@ -531,8 +527,7 @@
         "name": "Closed Sicilian (2.Nc3)",
         "sans": "e4 c5 Nc3"
       }
-    ],
-    "draft": true
+    ]
   },
   "french": {
     "name": "French Defence",
@@ -581,8 +576,7 @@
         "name": "Exchange Variation (3.exd5)",
         "sans": "e4 e6 d4 d5 exd5"
       }
-    ],
-    "draft": true
+    ]
   },
   "kings-indian": {
     "name": "King's Indian Defence",
@@ -652,8 +646,7 @@
         "name": "Against the London (2.Bf4)",
         "sans": "d4 Nf6 Bf4 g6"
       }
-    ],
-    "draft": true
+    ]
   },
   "qgd": {
     "name": "Queen's Gambit Declined",
@@ -731,7 +724,6 @@
         "name": "5.Bf4",
         "sans": "d4 d5 c4 e6 Nc3 Nf6 Nf3 Be7 Bf4"
       }
-    ],
-    "draft": true
+    ]
   }
 }

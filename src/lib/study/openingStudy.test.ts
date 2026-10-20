@@ -3,8 +3,8 @@ import { playSans } from '$lib/chess/position';
 import { ALL_REPS, curatedFor, planOf, PLANS, STUDY_OPENINGS, studyOpening, studyTrainerId } from './openingStudy';
 
 describe('opening study', () => {
-  it('has the three openings, with legal lines', () => {
-    expect(STUDY_OPENINGS.map((o) => o.id)).toEqual(['caro-kann', 'jobava-london', 'chebanenko']);
+  it('has the published openings, with legal lines', () => {
+    expect(STUDY_OPENINGS.map((o) => o.id)).toEqual(['caro-kann', 'jobava-london', 'chebanenko', 'ruy-lopez', 'italian', 'queens-gambit', 'london', 'najdorf', 'french', 'kings-indian', 'qgd']);
     for (const o of STUDY_OPENINGS) {
       const root = playSans(o.root);
       expect(root.fullmoves, o.id).toBeGreaterThan(1);

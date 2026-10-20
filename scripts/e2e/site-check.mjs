@@ -11,7 +11,7 @@
 // Writes <out>/report.md and results.json, with a screenshot of every failure;
 // exits with 1 when anything failed.
 import { chromium, devices } from 'playwright';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const args = process.argv.slice(2);
@@ -375,6 +375,19 @@ async function run(name, options) {
     await open(page, '/learn?tab=openings');
     await page.locator('input[aria-label="chess.com username"]').waitFor({ timeout: 10000 });
     expect((await page.locator('button:has-text("Check my openings"), button:has-text("Check again")').count()) > 0, 'no check-up button');
+  });
+
+  // 5f. Learn → Openings → Courses lists every published course (the new ones were hidden as drafts), and one opens.
+  await check(name, page, 'learn openings: every course is listed and opens', async () => {
+    const reps = JSON.parse(readFileSync(new URL('../../src/lib/study/repertoires.json', import.meta.url), 'utf8'));
+    const ids = Object.keys(reps).filter((id) => !reps[id].draft);
+    await open(page, '/learn?tab=openings&sub=courses');
+    await page.locator('a.s-card[href^="/learn/study/"]').first().waitFor({ timeout: 10000 });
+    const missing = [];
+    for (const id of ids) if (!(await page.locator(`a.s-card[href^="/learn/study/${id}"]`).count())) missing.push(id);
+    expect(!missing.length, `missing courses: ${missing.join(', ')}`);
+    await open(page, '/learn/study/ruy-lopez');
+    await page.getByText('Ruy Lopez').first().waitFor({ timeout: 10000 });
   });
 
   // 5d. The "Get the Chess Castles app" popup opens (forced: automated visits never get it) and closes.

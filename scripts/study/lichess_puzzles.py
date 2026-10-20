@@ -110,12 +110,43 @@ def level(rating):
     return 1 if rating < 1400 else 2 if rating < 1900 else 3
 
 
+def add(buckets, oid, line, row, col, rng):
+    rating = int(row[col["Rating"]])
+    themes = row[col["Themes"]].split()
+    fen = row[col["FEN"]]
+    moves = row[col["Moves"]].split()
+    # The solver is the side to move after the opponent's first move.
+    side = "black" if fen.split()[1] == "w" else "white"
+    mate = next((int(t[6:]) for t in themes if t.startswith("mateIn") and t[6:].isdigit()), None)
+    p = {"src": "lichess", "pid": row[col["PuzzleId"]], "line": line, "fen": fen, "moves": moves, "side": side,
+         "phase": "endgame" if ENDGAME & set(themes) else "middlegame", "level": level(rating), "rating": rating}
+    if mate:
+        p["mate"] = mate
+    k = (oid, line, p["phase"], p["level"])
+    seen, items = buckets.get(k, (0, []))
+    seen += 1
+    # Reservoir sampling: an even spread over the whole database.
+    if len(items) < PER:
+        items.append(p)
+    else:
+        j = rng.randrange(seen)
+        if j < PER:
+            items[j] = p
+    buckets[k] = (seen, items)
+
+
+# Openings whose tags an earlier opening also takes (every QGD puzzle is in the Queen's Gambit course too):
+# matched on their own, with their own random draw, so the other openings' samples stay the same.
+SHARED = ("qgd",)
+
+
 def main():
     src, out = sys.argv[1], sys.argv[2]
     if len(sys.argv) > 3:
         MAP.clear()
         MAP.update(chapter_map(sys.argv[3]))
     random.seed(7)
+    shared_rng = random.Random(7)
     buckets = {}  # (opening, line, phase, level) -> (seen, list)
     with open(src, "rb") as f:
         r = csv.reader(io.TextIOWrapper(zstandard.ZstdDecompressor().stream_reader(f), encoding="utf-8"))
@@ -128,32 +159,17 @@ def main():
             if int(row[col["Popularity"]]) < 60 or int(row[col["NbPlays"]]) < 300 or int(row[col["RatingDeviation"]]) > 90:
                 continue
             for oid, lines in MAP.items():
+                if oid in SHARED:
+                    continue
                 line = next((ln for ln, tag in lines if tag in tags), None)
                 if not line:
                     continue
-                rating = int(row[col["Rating"]])
-                themes = row[col["Themes"]].split()
-                fen = row[col["FEN"]]
-                moves = row[col["Moves"]].split()
-                # The solver is the side to move after the opponent's first move.
-                side = "black" if fen.split()[1] == "w" else "white"
-                mate = next((int(t[6:]) for t in themes if t.startswith("mateIn") and t[6:].isdigit()), None)
-                p = {"src": "lichess", "pid": row[col["PuzzleId"]], "line": line, "fen": fen, "moves": moves, "side": side,
-                     "phase": "endgame" if ENDGAME & set(themes) else "middlegame", "level": level(rating), "rating": rating}
-                if mate:
-                    p["mate"] = mate
-                k = (oid, line, p["phase"], p["level"])
-                seen, items = buckets.get(k, (0, []))
-                seen += 1
-                # Reservoir sampling: an even spread over the whole database.
-                if len(items) < PER:
-                    items.append(p)
-                else:
-                    j = random.randrange(seen)
-                    if j < PER:
-                        items[j] = p
-                buckets[k] = (seen, items)
+                add(buckets, oid, line, row, col, random)
                 break
+            for oid in SHARED:
+                line = next((ln for ln, tag in MAP.get(oid, ()) if tag in tags), None)
+                if line:
+                    add(buckets, oid, line, row, col, shared_rng)
     result = {}
     for (oid, line, phase, lv), (seen, items) in sorted(buckets.items()):
         result.setdefault(oid, []).extend(sorted(items, key=lambda x: x["rating"]))
