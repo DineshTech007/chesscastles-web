@@ -1,6 +1,8 @@
 <script lang="ts">
   /**
-   * Vijayadashami, launch day: a marigold toran drops in across the top, a greeting (English and Marathi) and
+   * Vijayadashami, launch day. First a 15-second film (static/festive/dasara-intro.mp4, the owner's ad): the
+   * good king's arrow brings down the evil king, fireworks, Happy Dussehra. It plays muted, so it starts by
+   * itself; Skip ends it, and it is left out for reduced motion and data saver. Then a marigold toran drops in across the top, a greeting (English and Marathi) and
    * falling petals, then all of it lifts away slowly. Festive music ("Sita Ram Tarang", instrumental) starts
    * by itself when the browser allows it, otherwise with the first tap (phones often allow no sound before one),
    * and plays until the visitor stops it with the small Music button. Shown once per visit, on the day only (the layout decides that).
@@ -20,6 +22,22 @@
   let held = false;
   const timers: ReturnType<typeof setTimeout>[] = [];
   const later = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+
+  /** The opening film; the greeting starts when it ends (or is skipped). */
+  let intro = $state(true);
+  let film: HTMLVideoElement | undefined = $state();
+  function endIntro() {
+    if (!intro) return;
+    intro = false;
+    film?.pause();
+    // The greeting leaves by itself after a while (not while a finger or the mouse rests on it).
+    later(11000, () => {
+      if (!held) {
+        card = false;
+        leave();
+      }
+    });
+  }
 
   // Enough marigold swags to cross the widest screen.
   let units = $state(12);
@@ -90,13 +108,13 @@
       started = true;
     });
     for (const e of tapEvents) window.addEventListener(e, firstTap, { capture: true, passive: true });
-    // The greeting leaves by itself after a while (not while a finger or the mouse rests on it).
-    later(11000, () => {
-      if (!held) {
-        card = false;
-        leave();
-      }
-    });
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator as { connection?: { saveData?: boolean } }).connection?.saveData;
+    if (calm || !film) return endIntro();
+    // Muted films may always start by themselves; if this one can't (a phone in power saving), straight to the greeting.
+    film.muted = true;
+    film.play().catch(endIntro);
+    // Never stuck on the film (a slow connection).
+    later(20000, endIntro);
   });
   onDestroy(() => {
     removeTapListeners();
@@ -110,6 +128,16 @@
   const leaves = Array.from({ length: 6 }, (_, k) => at((k + 1) / 7));
 </script>
 
+{#if intro}
+  <div class="intro" role="dialog" aria-label="Happy Dussehra: good always checkmates evil">
+    <!-- svelte-ignore a11y_media_has_caption -->
+    <video bind:this={film} src="/festive/dasara-intro.mp4" poster="/festive/dasara-intro.jpg" muted playsinline preload="auto" onended={endIntro} onerror={endIntro}></video>
+    <div class="intro-btns">
+      <button class="btn" data-music onclick={toggleMusic}>{playing ? '🔇 Stop music' : '🎵 Play music'}</button>
+      <button class="btn" onclick={endIntro}>Skip ⏭</button>
+    </div>
+  </div>
+{:else}
 <div class="dasara" class:out={phase === 'out'} aria-hidden={!card}>
   <div class="toran" aria-hidden="true">
     {#each Array(units) as _, u (u)}
@@ -169,12 +197,47 @@
     </div>
   {/if}
 </div>
+{/if}
 
 {#if playing && !card}
   <button class="music-chip" data-music onclick={toggleMusic} aria-label="Stop the festive music">🔇 Music</button>
 {/if}
 
 <style>
+  .intro {
+    position: fixed;
+    inset: 0;
+    z-index: 121;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(120% 60% at 50% 30%, #2a1630, #07040c 70%);
+    animation: intro-in 0.5s ease-out both;
+  }
+  @keyframes intro-in {
+    from {
+      opacity: 0;
+    }
+  }
+  .intro video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .intro-btns {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+  .intro-btns .btn {
+    background: rgba(10, 8, 20, 0.72);
+    border-color: rgba(247, 210, 122, 0.55);
+    color: #f7d27a;
+    backdrop-filter: blur(6px);
+  }
   .dasara {
     position: fixed;
     inset: 0;
