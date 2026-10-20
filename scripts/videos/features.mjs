@@ -27,8 +27,10 @@ export const FEATURES = [
     id: 'review',
     name: 'Game Report',
     match: /^\/analysis/,
+    // The practice account's shortest game, reviewed on camera (a short game's review takes about ten seconds).
     path: '/analysis?game=LAST&review',
-    steps: [{ wait: 3000 }, { click: 'button:has-text("Report")' }, { wait: 2500 }, { click: '[aria-label="Next move"]' }, { click: '[aria-label="Next move"]' }],
+    pre: [{ waitFor: 'button:has-text("Report")', timeout: 40000 }, { wait: 800 }],
+    steps: [{ wait: 2500 }, { click: 'button:has-text("Report")' }, { wait: 3500 }, { click: '.panel-nav [aria-label="Next move"]' }, { wait: 1200 }, { click: '.panel-nav [aria-label="Next move"]' }, { wait: 1200 }, { click: '.panel-nav [aria-label="Next move"]' }, { wait: 1200 }],
     say: {
       en: ['Game Report: after every game, each move gets a badge, from brilliant to blunder.', 'Open Analyse, press Report, and the turning point shows the one move that decided the game.', 'Step through the moves and see what you should have played.'],
       hi: ['Game Report: हर game के बाद हर move को एक badge मिलता है, brilliant से blunder तक।', 'Analyse खोलो, Report दबाओ, और turning point वह एक move दिखाता है जिसने game का फैसला किया।', 'Moves में आगे-पीछे जाओ और देखो कि आपको क्या खेलना चाहिए था।'],

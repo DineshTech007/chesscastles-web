@@ -52,7 +52,7 @@ function narrate(id, lang, sentences) {
   const parts = [];
   sentences.forEach((text, i) => {
     const mp3 = join(dir, `s${i}.mp3`);
-    if (!existsSync(mp3)) execFileSync('python', ['-m', 'edge_tts', '--voice', VOICES[lang], '--rate=+9%', '--text', text, '--write-media', mp3], { stdio: 'ignore' });
+    if (!existsSync(mp3)) execFileSync('python', ['-m', 'edge_tts', '--voice', VOICES[lang], `--rate=${lang === 'en' ? '+6%' : '+16%'}`, '--text', text, '--write-media', mp3], { stdio: 'ignore' });
     const wav = join(dir, `s${i}.wav`);
     execFileSync(ffmpeg, ['-y', '-i', mp3, '-af', `apad=pad_dur=${GAP}`, '-ar', '24000', '-ac', '1', wav], { stdio: 'ignore' });
     starts.push(t);
@@ -150,6 +150,8 @@ async function dialogs(page) {
 
 async function runStep(page, step) {
   if (step.wait) return page.waitForTimeout(step.wait);
+  // Wait for something to appear (a review to finish, a page to load), up to its timeout.
+  if (step.waitFor) return page.locator(step.waitFor).first().waitFor({ timeout: step.timeout ?? 20000 }).catch(() => console.log('   (not seen in time:', step.waitFor, ')'));
   if (step.click) {
     const loc = page.locator(step.click).first();
     try {
@@ -191,22 +193,45 @@ const lastGame = (() => {
     return undefined;
   }
 })();
+// The practice account's shortest finished game (its review on camera takes the least time).
 const gameIds = (() => {
   try {
     const files = readdirSync('tester-data').filter((f) => /^session-.*\.json$/.test(f)).sort();
-    for (const f of files.reverse()) {
+    let best;
+    for (const f of files) {
       const d = JSON.parse(readFileSync(join('tester-data', f), 'utf8'));
-      const g = d.games.find((x) => x.id);
-      if (g) return g.id;
+      for (const g of d.games) if (g.id && g.moves >= 20 && g.result !== '?' && (!best || g.moves < best.moves)) best = g;
     }
+    return best?.id;
   } catch {
     /* none */
   }
   return undefined;
 })();
 
+/** Signs in as the practice account once (answering the consent dialog), and keeps the browser state for the recordings. */
+const STATE = join(WORK, 'state.json');
+async function signInOnce() {
+  if (!process.env.NIGHT24_TEST_TOKEN || existsSync(STATE)) return;
+  const browser = await chromium.launch({ channel: 'msedge' });
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await ctx.newPage();
+  await page.goto(`${BASE}/auth/token#token=${encodeURIComponent(process.env.NIGHT24_TEST_TOKEN)}`, { waitUntil: 'load' });
+  await page.waitForURL((u) => u.pathname === '/', { timeout: 20000 }).catch(() => {});
+  await page.locator('[role="dialog"]:has-text("Agree and continue")').first().waitFor({ timeout: 6000 }).catch(() => {});
+  await dialogs(page);
+  await page.waitForTimeout(1500);
+  // My games once, so the account's games are in this browser for the Game Report video.
+  await page.goto(`${BASE}/games`, { waitUntil: 'load' });
+  await page.waitForTimeout(3000);
+  await ctx.storageState({ path: STATE, indexedDB: true });
+  await browser.close();
+  console.log('signed in; state kept');
+}
+
 async function record(feature, lang, narration) {
-  const session = existsSync('tester-data/session.json') ? { storageState: 'tester-data/session.json' } : {};
+  await signInOnce();
+  const session = existsSync(STATE) ? { storageState: STATE } : {};
   const dir = join(WORK, `${feature.id}-${lang}`);
   for (const f of readdirSync(dir)) if (f.endsWith('.webm')) rmSync(join(dir, f));
   const browser = await chromium.launch({ channel: 'msedge' });
@@ -214,17 +239,15 @@ async function record(feature, lang, narration) {
   const page = await ctx.newPage();
   // The site's content language, so the page itself shows the same language as the voice.
   await page.addInitScript((l) => localStorage.setItem('cc.lang', l), lang);
-  // Signed in as the practice account (its games, its profile), through the token sign-in.
-  if (process.env.NIGHT24_TEST_TOKEN) {
-    await page.goto(`${BASE}/auth/token#token=${encodeURIComponent(process.env.NIGHT24_TEST_TOKEN)}`, { waitUntil: 'load' });
-    await page.waitForURL((u) => u.pathname === '/', { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(1500);
-    await dialogs(page);
-  }
+  const ctxStart = Date.now();
   const path = feature.path.replace('LAST', gameIds ?? lastGame ?? '');
   await page.goto(BASE + path, { waitUntil: 'load' });
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1400);
   await dialogs(page);
+  // Steps before the clock starts (a review to finish, say): not in the video.
+  for (const step of feature.pre ?? []) await runStep(page, step);
+  // The recording began with the context: the time before the page was ready is cut off.
+  const offset = (Date.now() - ctxStart) / 1000;
   await page.evaluate(() => {
     const d = document.createElement('div');
     d.id = 'cc-cap';
@@ -242,7 +265,7 @@ async function record(feature, lang, narration) {
   await ctx.close();
   await browser.close();
   const webm = readdirSync(dir).find((f) => f.endsWith('.webm'));
-  return join(dir, webm);
+  return { webm: join(dir, webm), offset };
 }
 
 for (const feature of FEATURES) {
@@ -252,8 +275,8 @@ for (const feature of FEATURES) {
     const out = join(OUT, `${feature.id}-${lang}.mp4`);
     console.log(`${feature.id} · ${lang}`);
     const narration = narrate(feature.id, lang, feature.say[lang]);
-    const webm = await record(feature, lang, narration);
-    execFileSync(ffmpeg, ['-y', '-i', webm, '-i', narration.voice, '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-preset', 'medium', '-crf', '24', '-pix_fmt', 'yuv420p', '-r', '25', '-c:a', 'aac', '-b:a', '96k', '-t', String((narration.total + 0.9).toFixed(2)), '-movflags', '+faststart', out], { stdio: 'ignore' });
+    const { webm, offset } = await record(feature, lang, narration);
+    execFileSync(ffmpeg, ['-y', '-ss', offset.toFixed(2), '-i', webm, '-i', narration.voice, '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-preset', 'medium', '-crf', '24', '-pix_fmt', 'yuv420p', '-r', '25', '-c:a', 'aac', '-b:a', '96k', '-movflags', '+faststart', out], { stdio: 'ignore' });
     const poster = join(OUT, `${feature.id}.jpg`);
     if (lang === 'en') execFileSync(ffmpeg, ['-y', '-ss', '2', '-i', out, '-frames:v', '1', '-q:v', '4', poster], { stdio: 'ignore' });
     console.log(`   ${out} (${(narration.total + 0.9).toFixed(1)} s)`);
