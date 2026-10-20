@@ -15,10 +15,16 @@ export interface BoardThemeDef {
   emoji: string;
   light: string;
   dark: string;
+  /** Premium boards: a real material, as a picture of the whole board (static/boards, scripts/boards). */
+  image?: string;
 }
 
 export const BOARD_THEMES: BoardThemeDef[] = [
   { id: 'classic', name: 'Classic', emoji: '♟️', light: '#f0d9b5', dark: '#b58863' },
+  { id: 'wood', name: 'Maple & walnut', emoji: '🪵', light: '#d9a865', dark: '#5a3a22', image: '/boards/wood.webp' },
+  { id: 'marble', name: 'Marble', emoji: '🏛️', light: '#e9e9e6', dark: '#1f4a35', image: '/boards/marble.webp' },
+  { id: 'ebony', name: 'Ebony & ivory', emoji: '🎹', light: '#efe6d2', dark: '#3d3530', image: '/boards/ebony.webp' },
+  { id: 'stone', name: 'Sandstone & slate', emoji: '🪨', light: '#dccaa4', dark: '#4b5566', image: '/boards/stone.webp' },
   { id: 'walnut', name: 'Walnut wood', emoji: '🪵', light: '#e9c49a', dark: '#8b5a2b' },
   { id: 'forest', name: 'Forest', emoji: '🌲', light: '#eeeed2', dark: '#769656' },
   { id: 'ocean', name: 'Ocean', emoji: '🌊', light: '#dee9f2', dark: '#4b7fa6' },

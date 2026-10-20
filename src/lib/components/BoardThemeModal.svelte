@@ -1,22 +1,33 @@
 <script lang="ts">
-  /** The board colour picker: classic wood or something more fun, for every board on the site. */
+  /** The board and piece picker: premium materials, classic colours or something fun, and the piece set, for every board on the site. */
   import { BOARD_THEMES, applyBoardTheme, loadBoardTheme } from '$lib/boardTheme';
+  import { PIECE_SETS, applyPieceSet, loadPieceSet, pieceImage } from '$lib/pieceSets';
   import { track } from '$lib/analytics';
   import Icon from './Icon.svelte';
 
   let { open = $bindable(false) }: { open: boolean } = $props();
   let current = $state('classic');
+  let pieces = $state('cburnett');
 
   $effect(() => {
-    if (open) current = loadBoardTheme();
+    if (open) {
+      current = loadBoardTheme();
+      pieces = loadPieceSet();
+    }
   });
 
   function pick(id: string) {
     current = id;
     applyBoardTheme(id);
     track('feature', `board_theme_${id}`);
-    open = false;
   }
+  function pickPieces(id: string) {
+    pieces = id;
+    applyPieceSet(id);
+    track('feature', `piece_set_${id}`);
+  }
+  const premium = BOARD_THEMES.filter((t) => t.image);
+  const colours = BOARD_THEMES.filter((t) => !t.image);
   const close = () => (open = false);
 </script>
 
@@ -26,10 +37,26 @@
   <div class="scrim" role="presentation" onclick={close}></div>
   <div class="dialog card" role="dialog" aria-modal="true" aria-labelledby="board-theme-h">
     <button class="x" onclick={close} aria-label="Close"><Icon name="close" size={18} /></button>
-    <h2 id="board-theme-h" class="title">Board colour</h2>
+    <h2 id="board-theme-h" class="title">Board and pieces</h2>
     <p class="label">Pick a look for every chess board on the site.</p>
+    <div class="preview" aria-hidden="true">
+      <span class="pv-board" style={BOARD_THEMES.find((t) => t.id === current)?.image ? `background-image: url(${BOARD_THEMES.find((t) => t.id === current)?.image}); background-size: 200% 200%;` : `background: ${BOARD_THEMES.find((t) => t.id === current)?.light}; background-image: repeating-conic-gradient(${BOARD_THEMES.find((t) => t.id === current)?.dark} 0 25%, ${BOARD_THEMES.find((t) => t.id === current)?.light} 0 50%); background-size: 50% 50%;`}>
+        <img src={pieceImage(pieces, 'wK')} alt="" /><img src={pieceImage(pieces, 'bQ')} alt="" /><img src={pieceImage(pieces, 'bN')} alt="" /><img src={pieceImage(pieces, 'wP')} alt="" />
+      </span>
+    </div>
+    <h3 class="sub-h">Premium boards</h3>
     <div class="grid">
-      {#each BOARD_THEMES as t (t.id)}
+      {#each premium as t (t.id)}
+        <button class="swatch" class:on={current === t.id} onclick={() => pick(t.id)} aria-pressed={current === t.id}>
+          <span class="mini" style="background-image: url({t.image}); background-size: 200% 200%;" aria-hidden="true"></span>
+          <span class="name">{t.emoji} {t.name}</span>
+          {#if current === t.id}<Icon name="check" size={16} color="var(--accent)" />{/if}
+        </button>
+      {/each}
+    </div>
+    <h3 class="sub-h">Colours</h3>
+    <div class="grid">
+      {#each colours as t (t.id)}
         <button class="swatch" class:on={current === t.id} onclick={() => pick(t.id)} aria-pressed={current === t.id}>
           <span class="mini" style="background: {t.light}; background-image: repeating-conic-gradient({t.dark} 0 25%, {t.light} 0 50%); background-size: 50% 50%;" aria-hidden="true"></span>
           <span class="name">{t.emoji} {t.name}</span>
@@ -37,10 +64,61 @@
         </button>
       {/each}
     </div>
+    <h3 class="sub-h">Pieces</h3>
+    <div class="grid pieces">
+      {#each PIECE_SETS as p (p.id)}
+        <button class="swatch" class:on={pieces === p.id} onclick={() => pickPieces(p.id)} aria-pressed={pieces === p.id} title={p.credit}>
+          <span class="pset" aria-hidden="true"><img src={pieceImage(p.id, 'wN')} alt="" /><img src={pieceImage(p.id, 'bQ')} alt="" /></span>
+          <span class="name">{p.name}{p.kids ? ' 🧒' : ''}</span>
+          {#if pieces === p.id}<Icon name="check" size={16} color="var(--accent)" />{/if}
+        </button>
+      {/each}
+    </div>
+    <p class="label credits">Pieces from the Lichess collection, by their authors: {PIECE_SETS.map((p) => `${p.name} (${p.credit})`).join(', ')}.</p>
+    <button class="btn primary done" onclick={close}>Done</button>
   </div>
 {/if}
 
 <style>
+  .preview {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0 8px;
+  }
+  .pv-board {
+    display: grid;
+    grid-template-columns: repeat(2, 56px);
+    grid-template-rows: repeat(2, 56px);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  }
+  .pv-board img {
+    width: 56px;
+    height: 56px;
+  }
+  .sub-h {
+    margin: 12px 0 6px;
+    font-size: 14px;
+    color: var(--gold);
+  }
+  .pset {
+    display: inline-flex;
+    gap: 0;
+    flex: none;
+  }
+  .pset img {
+    width: 26px;
+    height: 26px;
+  }
+  .credits {
+    margin: 10px 0 0;
+    font-size: 11px;
+  }
+  .done {
+    margin-top: 12px;
+    width: 100%;
+  }
   .scrim {
     position: fixed;
     inset: 0;

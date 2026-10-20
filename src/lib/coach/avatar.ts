@@ -13,8 +13,9 @@ export interface AvatarInfo {
   id: AvatarId;
   name: string;
   about: string;
-  /** The portrait. */
+  /** The portrait, and a short talking loop played while the coach speaks. */
   image: string;
+  video: string;
   /** For young children (shown as a group in the chooser). */
   kids?: boolean;
   voice: 'male' | 'female';
@@ -24,13 +25,13 @@ export interface AvatarInfo {
 }
 
 export const AVATARS: AvatarInfo[] = [
-  { id: 'guruji', name: 'Guruji', about: 'A senior grandmaster coach: calm, wise and patient', image: '/coach/guruji.webp', voice: 'male', pitch: 0.92, rate: 0.9 },
-  { id: 'rohan', name: 'Coach Rohan', about: 'A young titled coach: clear and energetic', image: '/coach/rohan.webp', voice: 'male', pitch: 0.98, rate: 0.98 },
-  { id: 'meera', name: 'Coach Meera', about: 'A patient coach who explains every idea step by step', image: '/coach/meera.webp', voice: 'female', pitch: 1, rate: 0.95 },
-  { id: 'hoot', name: 'Professor Hoot', about: 'A wise owl professor for young players', image: '/coach/hoot.webp', kids: true, voice: 'female', pitch: 1.12, rate: 0.95 },
-  { id: 'gaja', name: 'Gaja', about: 'A gentle elephant from chaturanga, the first chess', image: '/coach/gaja.webp', kids: true, voice: 'male', pitch: 1.02, rate: 0.92 },
-  { id: 'robo', name: 'Robo', about: 'A friendly chess robot', image: '/coach/robo.webp', kids: true, voice: 'male', pitch: 1.1, rate: 1 },
-  { id: 'knight', name: 'Knight Guru', about: 'The Chess Castles knight, the first Guru', image: '/coach/knight.webp', kids: true, voice: 'male', pitch: 1, rate: 0.95 },
+  { id: 'guruji', name: 'Guruji', about: 'A senior grandmaster coach: calm, wise and patient', image: '/coach/guruji.webp', video: '/coach/talk/guruji.mp4', voice: 'male', pitch: 0.92, rate: 0.9 },
+  { id: 'rohan', name: 'Coach Rohan', about: 'A young titled coach: clear and energetic', image: '/coach/rohan.webp', video: '/coach/talk/rohan.mp4', voice: 'male', pitch: 0.98, rate: 0.98 },
+  { id: 'meera', name: 'Coach Meera', about: 'A patient coach who explains every idea step by step', image: '/coach/meera.webp', video: '/coach/talk/meera.mp4', voice: 'female', pitch: 1, rate: 0.95 },
+  { id: 'hoot', name: 'Professor Hoot', about: 'A wise owl professor for young players', image: '/coach/hoot.webp', video: '/coach/talk/hoot.mp4', kids: true, voice: 'female', pitch: 1.12, rate: 0.95 },
+  { id: 'gaja', name: 'Gaja', about: 'A gentle elephant from chaturanga, the first chess', image: '/coach/gaja.webp', video: '/coach/talk/gaja.mp4', kids: true, voice: 'male', pitch: 1.02, rate: 0.92 },
+  { id: 'robo', name: 'Robo', about: 'A friendly chess robot', image: '/coach/robo.webp', video: '/coach/talk/robo.mp4', kids: true, voice: 'male', pitch: 1.1, rate: 1 },
+  { id: 'knight', name: 'Knight Guru', about: 'The Chess Castles knight, the first Guru', image: '/coach/knight.webp', video: '/coach/talk/knight.mp4', kids: true, voice: 'male', pitch: 1, rate: 0.95 },
 ];
 
 /** Looks that were replaced: the closest new one. */

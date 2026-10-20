@@ -618,5 +618,131 @@
     "key": "5674f032bbf68bf3"
    }
   ]
+ },
+ "ruy-lopez": {
+  "games": 119572,
+  "chapters": [
+   {
+    "id": "5f5ce30a",
+    "title": "5...Be7",
+    "name": "Ruy Lopez: Closed",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7",
+    "games": 40757,
+    "score": 0.559,
+    "variations": 59,
+    "depth": 7.9,
+    "key": "99b0f53f7ae359fc"
+   },
+   {
+    "id": "a593360d",
+    "title": "3...Nf6",
+    "name": "Ruy Lopez: Berlin Defense",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 Nf6",
+    "games": 18561,
+    "score": 0.552,
+    "variations": 78,
+    "depth": 9.5,
+    "key": "10fd4254dfedaf8b"
+   },
+   {
+    "id": "75dc752d",
+    "title": "5...b5",
+    "name": "Ruy Lopez: Morphy Defense",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O b5",
+    "games": 9373,
+    "score": 0.567,
+    "variations": 97,
+    "depth": 7.7,
+    "key": "ed78ecc52be54850"
+   },
+   {
+    "id": "641c8315",
+    "title": "5...Nxe4",
+    "name": "Ruy Lopez: Open",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Nxe4",
+    "games": 5710,
+    "score": 0.568,
+    "variations": 42,
+    "depth": 8.0,
+    "key": "30cbc889b69f527e"
+   },
+   {
+    "id": "748172af",
+    "title": "4...d6",
+    "name": "Ruy Lopez: Morphy Defense, Modern Steinitz Defense",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 d6",
+    "games": 5476,
+    "score": 0.558,
+    "variations": 164,
+    "depth": 8.6,
+    "key": "915d5f70b3392686"
+   },
+   {
+    "id": "6e803b32",
+    "title": "3...f5",
+    "name": "Ruy Lopez: Schliemann Defense",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 f5",
+    "games": 4158,
+    "score": 0.589,
+    "variations": 23,
+    "depth": 8.0,
+    "key": "df7c1038cc9fc3c3"
+   },
+   {
+    "id": "bdc0a496",
+    "title": "3...g6",
+    "name": "Ruy Lopez: Fianchetto Defense",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 g6",
+    "games": 2803,
+    "score": 0.537,
+    "variations": 118,
+    "depth": 9.1,
+    "key": "a2a725fa09987c56"
+   },
+   {
+    "id": "4a97b97d",
+    "title": "3...Nge7",
+    "name": "Ruy Lopez: Cozio Defense",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 Nge7",
+    "games": 2424,
+    "score": 0.544,
+    "variations": 100,
+    "depth": 9.4,
+    "key": "755cca1cc99e65a0"
+   },
+   {
+    "id": "add31572",
+    "title": "3...Bc5",
+    "name": "Ruy Lopez: Classical Variation",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 Bc5",
+    "games": 2063,
+    "score": 0.571,
+    "variations": 51,
+    "depth": 8.6,
+    "key": "e60e32fab825049e"
+   },
+   {
+    "id": "3023a0fb",
+    "title": "4...Nge7",
+    "name": "Ruy Lopez: Morphy Defense, Cozio Defense",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nge7",
+    "games": 1565,
+    "score": 0.488,
+    "variations": 14,
+    "depth": 7.5,
+    "key": "96a875acdac8e456"
+   },
+   {
+    "id": "9fb16c56",
+    "title": "5...Bc5",
+    "name": "Ruy Lopez: Morphy Defense, M\u00f8ller Variation",
+    "sans": "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Bc5",
+    "games": 1465,
+    "score": 0.523,
+    "variations": 18,
+    "depth": 7.6,
+    "key": "2061c28b7a7a1fee"
+   }
+  ]
  }
 }

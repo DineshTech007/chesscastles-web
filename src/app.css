@@ -429,6 +429,23 @@ nav a,
   --board-light: #eaf4df;
   --board-dark: #3f6b3a;
 }
+/* Premium boards: real materials (static/boards). */
+:root[data-board='wood'] {
+  --board-light: #d9a865;
+  --board-dark: #5a3a22;
+}
+:root[data-board='marble'] {
+  --board-light: #e9e9e6;
+  --board-dark: #1f4a35;
+}
+:root[data-board='ebony'] {
+  --board-light: #efe6d2;
+  --board-dark: #3d3530;
+}
+:root[data-board='stone'] {
+  --board-light: #dccaa4;
+  --board-dark: #4b5566;
+}
 .cg-wrap cg-board {
   background-color: var(--board-light);
   background-image: repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
@@ -535,4 +552,22 @@ html .cg-wrap coords.files coord {
   flex: 1 1 0;
   text-align: right;
   padding: 0 4px 1px 0;
+}
+
+/* The premium boards' pictures (after the checkerboard rule, so they win). */
+:root[data-board='wood'] .cg-wrap cg-board {
+  background-image: url('/boards/wood.webp');
+  background-size: 100% 100%;
+}
+:root[data-board='marble'] .cg-wrap cg-board {
+  background-image: url('/boards/marble.webp');
+  background-size: 100% 100%;
+}
+:root[data-board='ebony'] .cg-wrap cg-board {
+  background-image: url('/boards/ebony.webp');
+  background-size: 100% 100%;
+}
+:root[data-board='stone'] .cg-wrap cg-board {
+  background-image: url('/boards/stone.webp');
+  background-size: 100% 100%;
 }

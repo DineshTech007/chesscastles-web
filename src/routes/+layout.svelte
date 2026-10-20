@@ -297,6 +297,11 @@
       .catch(() => {});
   });
 
+  // The chosen piece set (pieceSets.ts), on every board.
+  onMount(() => {
+    void import('$lib/pieceSets').then((m) => m.applyPieceSet(m.loadPieceSet(), false));
+  });
+
   // Site health: errors in this browser go to the admin dashboard. A page that fails to load its code after a
   // deploy (an old tab asking for files that were replaced) reloads once by itself instead of breaking.
   onMount(() => {

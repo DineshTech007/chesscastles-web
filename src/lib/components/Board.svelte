@@ -6,6 +6,7 @@
   import type { Color, Dests, Key } from '@lichess-org/chessground/types';
   import '@lichess-org/chessground/assets/chessground.base.css';
   import '@lichess-org/chessground/assets/chessground.cburnett.css';
+  import '$lib/pieceSets.css';
 
   let {
     fen,

@@ -14,7 +14,8 @@
   import { useFeature } from '$lib/plans';
   import { POINTS, study } from '$lib/study/progress';
   import { PUZZLE_LEVELS, STAGES, ladderLevel, levelOf, markSeen, moveLadder, nextRated, stageOf, type BandPuzzle, type LadderOutcome } from './bank';
-  import { puzzleHistory, puzzleRating, puzzleStats, ratePuzzle } from './rating';
+  import { newRating, puzzleHistory, puzzleRating, puzzleStats, ratePuzzle } from './rating';
+  import { puzzleSounds } from './puzzleSounds';
   import { BADGES, daysInRow, lastWeek, recordPuzzle, rewards, setGoal, setTimer, timerFor, type Badge } from './rewards';
 
   let current = $state<BandPuzzle | undefined>();
@@ -50,6 +51,18 @@
   const limit = $derived(current ? timerFor(current[3]) : 60);
   const elapsed = $derived(startedAt ? Math.max(0, ((stoppedAt || now) - startedAt) / 1000) : 0);
   const left = $derived(Math.max(0, Math.ceil(limit - elapsed)));
+  /** What this puzzle can do to the rating: solved first time, or missed. */
+  const stakes = $derived(
+    current ? { win: newRating(before, current[3], 1, $puzzleStats.attempted) - before, lose: newRating(before, current[3], 0, $puzzleStats.attempted) - before } : undefined,
+  );
+  // The last seconds tick (with the timer on, while the puzzle is open).
+  let lastTick = 0;
+  $effect(() => {
+    const l = left;
+    if (!timerOn || result !== undefined || !current || l > 5 || l <= 0 || l === lastTick) return;
+    lastTick = l;
+    puzzleSounds.tick();
+  });
   const timerOn = $derived($rewards.timer);
   const today = $derived(lastWeek($rewards).at(-1)!.log);
   const goalPct = $derived(Math.min(1, today.solved / Math.max(1, $rewards.goal)));
@@ -137,14 +150,19 @@
     const s = $puzzleStats;
     const r = recordPuzzle({ solved: ok, clean: !!firstClean, inTime, streak: s.streak, solvedTotal: s.solved, rating: $puzzleRating });
     stars = r.stars;
-    if (ok) party++;
+    if (ok) {
+      party++;
+      puzzleSounds.solved();
+      for (let i = 1; i <= stars; i++) setTimeout(() => puzzleSounds.star(i), 450 + i * 230);
+    } else puzzleSounds.missed();
     for (const b of r.earned) queue.push(b);
-    if (!toast) showToast();
+    if (!toast) setTimeout(showToast, ok ? 1200 : 300);
   }
 
   function showToast() {
     toast = queue.shift();
     if (!toast) return;
+    puzzleSounds.fanfare();
     toastTimer = setTimeout(() => {
       toast = undefined;
       setTimeout(showToast, 300);
@@ -167,7 +185,8 @@
     <!-- On phones: the numbers that matter, right above the board. -->
     <div class="hud" aria-hidden="true">
       <span class="hud-r"><img class="hud-piece" src={lv.level.image} alt="" width="30" height="30" /><strong class="num">{Math.round(shownRating.current)}</strong></span>
-      {#if change !== undefined}<span class="delta num" class:up={change > 0} class:down={change < 0}>{change > 0 ? '▲' : change < 0 ? '▼' : '='}{Math.abs(change) || ''}</span>{/if}
+      {#if change !== undefined}<span class="delta num" class:up={change > 0} class:down={change < 0}>{change > 0 ? '▲' : change < 0 ? '▼' : '='}{Math.abs(change) || ''}</span>
+      {:else if result === undefined && stakes}<span class="hud-stakes num" title="Rating if solved first try / if missed"><b class="up">+{stakes.win}</b> / <b class="down">{stakes.lose}</b></span>{/if}
       <span class="grow"></span>
       {#if $puzzleStats.streak > 0}<span class="hud-streak">🔥{$puzzleStats.streak}</span>{/if}
       {#if timerOn && current && result === undefined}<span class="hud-time num" class:low={left <= 10}>⏱ {left}s</span>{/if}
@@ -179,6 +198,11 @@
         {/key}
       {:else}
         <div class="placeholder">{error || 'Finding a puzzle at your level…'}</div>
+      {/if}
+      {#if change !== undefined && result !== undefined}
+        {#key round}
+          <div class="pop" class:up={change > 0} class:down={change < 0} aria-hidden="true">{change > 0 ? `+${change}` : change}<span class="pop-label">{change > 0 ? 'rating up!' : change < 0 ? 'rating' : ''}</span></div>
+        {/key}
       {/if}
       {#key party}
         {#if party}
@@ -255,6 +279,11 @@
             {#each STAGES as x (x.name)}<li class:done={ladder >= x.from} class:at={x === stageOf(ladder)} style="--c: {x.color}" title={x.name}></li>{/each}
           </ol>
         </div>
+        {#if result === undefined && stakes}
+          <p class="stakes">Solve it first try: <b class="up num">+{stakes.win}</b> <span class="sep">·</span> Miss: <b class="down num">{stakes.lose}</b></p>
+        {:else if change !== undefined}
+          <p class="moved"><span class="num">{before}</span> → <strong class="num">{before + change}</strong> <span class="delta num" class:up={change > 0} class:down={change < 0}>{change > 0 ? '▲' : change < 0 ? '▼' : '='} {Math.abs(change) || ''}</span></p>
+        {/if}
         {#if result === undefined}
           <p class="msg">{timerOn ? (left > 0 ? 'Find the best move before the clock runs out for a speed star!' : "Time's up, but keep going: you can still solve it!") : 'Find the best move, then keep finding them.'}</p>
           <p class="label small">⭐ solve it · ⭐ first try, no hint{timerOn ? ' · ⭐ before the clock ends' : ''}</p>
@@ -392,6 +421,12 @@
     align-items: center;
     gap: 6px;
     font-size: 22px;
+  }
+  .hud-stakes {
+    font-size: 15px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--raised);
   }
   .hud-time {
     padding: 2px 10px;
@@ -567,6 +602,89 @@
   .pnow {
     position: relative;
     overflow: visible;
+  }
+  .stakes,
+  .moved {
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--raised);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .stakes b,
+  .moved strong {
+    font-size: 18px;
+  }
+  .moved strong {
+    font-size: 22px;
+  }
+  .up {
+    color: var(--win);
+  }
+  .down {
+    color: var(--loss);
+  }
+  .sep {
+    color: var(--muted);
+    margin: 0 4px;
+  }
+  .pop {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 22px;
+    border-radius: 18px;
+    font-family: var(--font-title);
+    font-size: 56px;
+    font-weight: 900;
+    line-height: 1;
+    color: #fff;
+    background: rgba(13, 22, 49, 0.82);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    animation: pop-rise 2.2s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  }
+  .pop.up {
+    color: #4ade80;
+    border: 3px solid #22c55e;
+  }
+  .pop.down {
+    color: #f87171;
+    border: 3px solid #ef4444;
+  }
+  .pop-label {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  @keyframes pop-rise {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -30%) scale(0.5);
+    }
+    15% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+    25% {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    75% {
+      opacity: 1;
+      transform: translate(-50%, -60%);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -85%);
+    }
   }
   .stage {
     display: flex;
@@ -984,6 +1102,21 @@
     }
   }
   @media (max-width: 900px) {
+    .side .pnow {
+      order: -1;
+    }
+    .buddy {
+      width: 70px;
+      height: 70px;
+      top: -26px;
+      right: -2px;
+    }
+    .now-top {
+      padding-right: 56px;
+    }
+    .pop {
+      font-size: 44px;
+    }
     .hud {
       display: flex;
     }
@@ -1018,6 +1151,7 @@
     .confetti,
     .star.on,
     .buddy,
+    .pop,
     .pclock.low,
     .ba,
     .toast,

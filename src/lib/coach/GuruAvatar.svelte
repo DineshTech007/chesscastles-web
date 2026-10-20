@@ -1,7 +1,8 @@
 <script lang="ts">
   /**
    * Chess Guru, in the look the student chose (see avatar.ts): a portrait in a gold-ringed circle. While Guru
-   * talks, the portrait breathes, rings spread from it and a small voice meter moves under it.
+   * talks, the coach comes alive (a short talking loop), rings spread from it and a small voice meter moves.
+   * Without motion (reduced motion), the portrait only.
    */
   import { AVATARS, coachAvatar, type AvatarId } from './avatar';
 
@@ -13,7 +14,10 @@
 <span class="flu" class:talking class:ring style="--s: {size}px" role="img" aria-label="{info.name}, your coach">
   <span class="wave"></span>
   <span class="wave w2"></span>
-  <span class="disc"><img src={info.image} alt="" width={size} height={size} loading="lazy" decoding="async" /></span>
+  <span class="disc">
+    <img src={info.image} alt="" width={size} height={size} loading="lazy" decoding="async" />
+    {#if talking}<video class="talk" src={info.video} poster={info.image} autoplay loop muted playsinline preload="auto" aria-hidden="true"></video>{/if}
+  </span>
   {#if talking && size >= 48}
     <span class="meter" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   {/if}
@@ -47,6 +51,19 @@
     object-fit: cover;
     display: block;
     transform-origin: 50% 70%;
+  }
+  .talk {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: fade-in 0.25s ease-out;
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
   }
   .wave {
     position: absolute;
@@ -88,6 +105,10 @@
   .talking img {
     animation: breathe 0.9s infinite alternate ease-in-out;
   }
+  /* The talking loop moves by itself: the portrait under it stays still. */
+  .talking:has(.talk) img {
+    animation: none;
+  }
   .talking .wave {
     animation: ring 1.4s infinite ease-out;
   }
@@ -115,6 +136,9 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .talk {
+      display: none;
+    }
     .talking img,
     .talking .wave,
     .meter i {

@@ -63,4 +63,22 @@
     gap: 8px;
     flex-wrap: wrap;
   }
+  /* Phones: the shortcuts in one short row, so the board and the puzzle card fit on the screen. */
+  @media (max-width: 600px) {
+    .page {
+      gap: 10px;
+    }
+    .more {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      width: 100%;
+      scrollbar-width: none;
+    }
+    .more .btn {
+      flex: none;
+      min-height: 38px;
+      padding: 0 12px;
+      font-size: 13.5px;
+    }
+  }
 </style>

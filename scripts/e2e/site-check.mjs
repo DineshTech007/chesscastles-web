@@ -146,6 +146,14 @@ async function run(name, options) {
     }
   });
 
+  // 3b. The Analysis board stays in the menu (it was once hidden by mistake): the sidebar on a computer,
+  // the bottom tabs on a phone.
+  await check(name, page, 'the Analysis board is in the menu', async () => {
+    await open(page, '/');
+    const n = await page.locator('a[href="/analysis"]').count();
+    expect(n > 0, 'no link to the Analysis board on the home page menu');
+  });
+
   // 4. Analysis: a game steps forward, and on a phone the move buttons sit right under the board.
   await check(name, page, 'analysis: step through a game', async () => {
     await open(page, '/');
