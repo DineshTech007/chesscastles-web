@@ -286,7 +286,7 @@ export class FideGame {
     const started = this.now();
     let choice: BotChoice | undefined;
     try {
-      choice = await this.bot.choose(this.position, this.sans, this.rating, this.opening, this.playerRating, this.engineLimit());
+      choice = await this.bot.choose(this.position, this.sans, this.rating, this.opening, this.playerRating, this.engineLimit(), (p) => this.seen.get(polyglotKey(p)) ?? 0);
     } catch (e) {
       console.warn('FIDE bot:', e);
     }
