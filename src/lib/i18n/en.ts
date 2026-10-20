@@ -293,6 +293,8 @@ export const en = {
   'wishes.h': 'In their own words',
   'wishes.more': 'Show more',
   'wishes.all': 'See all kind words',
+  'wishes.inEnglish': 'Read in English',
+  'wishes.inOriginal': 'Read the original in {lang}',
   'more.install': 'Install the Chess Castles app (free, always up to date)',
   'social.follow': 'Follow Chess Castles',
   'social.why': 'Daily puzzles, tips for kids and news, in English, Hindi and Marathi.',

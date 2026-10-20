@@ -253,6 +253,8 @@ export interface PlayingGame {
 }
 /** Every game being played on Chess Castles right now (signed in). */
 export const playingNow = () => call<{ games: PlayingGame[]; now: number }>('GET', 'playing');
+/** Where a game being played is watched (with the engine and the games database): on Lichess's stream, or shared. */
+export const watchHref = (g: Pick<PlayingGame, 'uid' | 'lichess'>) => (g.lichess ? `/watch/live/${g.lichess}` : `/watch/friend/${encodeURIComponent(g.uid)}`);
 /** A friend's game in progress. */
 export const watchLive = (uid: string) =>
   call<{ data: string; updated: number; now: number }>('GET', `live/${encodeURIComponent(uid)}`).then((r) => ({ game: JSON.parse(r.data) as LiveGame, updated: r.updated, now: r.now }));

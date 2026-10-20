@@ -1,25 +1,30 @@
 <script lang="ts">
   /**
    * One person's kind words (the /wishes page, the home page's strip and the admin page's preview): who they are
-   * above, their words below. Long words get a scroll bar inside the card; `compact` shows the first lines only,
+   * above, their words below. Words written in another language show their English translation first, with a
+   * switch to the original. Long words get a scroll bar inside the card; `compact` shows the first lines only,
    * with a link to the page.
    */
   import { t } from '$lib/i18n';
-  import { toParagraphs, wishPhotoUrl, type Wish } from '$lib/wishes';
+  import { toParagraphs, WISH_LANG_NAME, wishPhotoUrl, type Wish } from '$lib/wishes';
 
   let {
     wish,
     photo,
     compact = false,
   }: {
-    wish: Pick<Wish, 'id' | 'name' | 'role' | 'text' | 'photo'>;
+    wish: Pick<Wish, 'id' | 'name' | 'role' | 'text' | 'lang' | 'en' | 'photo'>;
     /** A photo to show instead (the admin page's new one). */
     photo?: string;
     /** The first lines only, and "Show more" to the page (the home page). */
     compact?: boolean;
   } = $props();
 
-  const paragraphs = $derived(toParagraphs(wish.text));
+  /** English is the default wherever a translation exists; the reader can switch to the original. */
+  const translated = $derived(!!wish.en?.trim() && wish.lang !== 'en');
+  let original = $state(false);
+  const shown = $derived(translated && !original ? wish.en : wish.text);
+  const paragraphs = $derived(toParagraphs(shown));
   const src = $derived(photo ?? wishPhotoUrl(wish));
   const initials = $derived(
     wish.name
@@ -39,9 +44,13 @@
       <strong>{wish.name || 'Name'}</strong>
       {#if wish.role}<span class="label">{wish.role}</span>{/if}
     </span>
-    <span class="mark" aria-hidden="true">“</span>
+    {#if translated}
+      <button type="button" class="lang" onclick={() => (original = !original)} aria-pressed={original}>
+        {original ? $t('wishes.inEnglish') : $t('wishes.inOriginal', { lang: WISH_LANG_NAME[wish.lang] ?? 'original' })}
+      </button>
+    {/if}
   </header>
-  <div class="words" tabindex={compact ? undefined : 0}>
+  <div class="words" tabindex={compact ? undefined : 0} lang={translated && !original ? 'en' : wish.lang === 'other' ? undefined : wish.lang}>
     {#each paragraphs as p, i (i)}<p>{p}</p>{/each}
   </div>
   {#if compact}<a class="more" href="/wishes">{$t('wishes.more')} →</a>{/if}
@@ -89,13 +98,21 @@
   .id strong {
     font-size: 16px;
   }
-  .mark {
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 56px;
-    line-height: 0.6;
+  .lang {
+    flex: none;
     align-self: flex-start;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--gold);
+    background: transparent;
     color: var(--gold);
-    opacity: 0.35;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .lang:hover {
+    background: color-mix(in srgb, var(--gold) 14%, transparent);
   }
   /* Long words scroll inside the card, so a page of many people stays easy to walk through. */
   .words {
@@ -155,6 +172,12 @@
   @media (max-width: 480px) {
     .wish {
       padding: 16px 16px 14px;
+    }
+    .who {
+      flex-wrap: wrap;
+    }
+    .lang {
+      font-size: 12px;
     }
     .words {
       max-height: 260px;

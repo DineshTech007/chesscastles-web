@@ -5,6 +5,10 @@
 import { API } from '$lib/api';
 import { call } from '$lib/social';
 
+export type WishLang = 'en' | 'hi' | 'mr' | 'other';
+/** The language's own name, for the "Read the original in …" link. */
+export const WISH_LANG_NAME: Record<WishLang, string> = { en: 'English', hi: 'हिन्दी', mr: 'मराठी', other: 'original' };
+
 export interface Wish {
   id: string;
   name: string;
@@ -12,6 +16,10 @@ export interface Wish {
   role: string;
   /** As written; shown as paragraphs (toParagraphs). */
   text: string;
+  /** The language the words were written in. */
+  lang: WishLang;
+  /** An English translation, when the words are not in English: shown first, with a link to the original. */
+  en: string;
   /** The photo's version (0: no photo). */
   photo: number;
   hidden: boolean;
@@ -93,7 +101,7 @@ export async function fetchWishes(): Promise<Wish[]> {
 // The owner's side (admin page).
 export const adminWishes = () => call<{ wishes: Wish[] }>('GET', 'admin/wishes').then((r) => r.wishes);
 /** `photo`: a new photo (base64 JPEG), null to take it away, undefined to keep it. */
-export const saveWish = (w: { id?: string; name: string; role: string; text: string; hidden: boolean; photo?: string | null }) => call<{ wish: Wish }>('POST', 'admin/wishes', w).then((r) => r.wish);
+export const saveWish = (w: { id?: string; name: string; role: string; text: string; lang: WishLang; en: string; hidden: boolean; photo?: string | null }) => call<{ wish: Wish }>('POST', 'admin/wishes', w).then((r) => r.wish);
 export const deleteWish = (id: string) => call<{ ok: true }>('DELETE', `admin/wishes/${id}`);
 
 /**

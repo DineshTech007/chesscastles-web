@@ -285,6 +285,8 @@ export const hi: Record<Key, string> = {
   'wishes.h': 'उनके अपने शब्दों में',
   'wishes.more': 'और पढ़ें',
   'wishes.all': 'सभी शुभकामनाएँ देखें',
+  'wishes.inEnglish': 'English में पढ़ें',
+  'wishes.inOriginal': 'मूल संदेश {lang} में पढ़ें',
   'more.install': 'Chess Castles app install करें (free, हमेशा नया)',
   'social.follow': 'Chess Castles को follow करें',
   'social.why': 'रोज़ के puzzles, बच्चों के लिए tips और ख़बरें, English, हिंदी और मराठी में।',

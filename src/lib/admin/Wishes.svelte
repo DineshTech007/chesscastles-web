@@ -5,11 +5,11 @@
    */
   import { onMount } from 'svelte';
   import WishCard from '$lib/components/WishCard.svelte';
-  import { adminWishes, deleteWish, saveWish, wishPhoto, wishPhotoUrl, type Wish } from '$lib/wishes';
+  import { adminWishes, deleteWish, saveWish, wishPhoto, wishPhotoUrl, type Wish, type WishLang } from '$lib/wishes';
 
   let list = $state<Wish[]>([]);
   let loadError = $state('');
-  const empty = () => ({ id: undefined as string | undefined, name: '', role: '', text: '', hidden: false, photo: 0 });
+  const empty = () => ({ id: undefined as string | undefined, name: '', role: '', text: '', lang: 'mr' as WishLang, en: '', hidden: false, photo: 0 });
   let form = $state(empty());
   /** A new photo (base64 JPEG), or null: the photo is being taken away; undefined: as it is. */
   let newPhoto = $state<string | null | undefined>();
@@ -42,7 +42,7 @@
   }
 
   function edit(w: Wish) {
-    form = { id: w.id, name: w.name, role: w.role, text: w.text, hidden: w.hidden, photo: w.photo };
+    form = { id: w.id, name: w.name, role: w.role, text: w.text, lang: w.lang ?? 'other', en: w.en ?? '', hidden: w.hidden, photo: w.photo };
     newPhoto = undefined;
     message = '';
     scrollTo({ top: 0, behavior: 'smooth' });
@@ -57,7 +57,7 @@
     busy = true;
     message = '';
     try {
-      const saved = await saveWish({ id: form.id, name: form.name, role: form.role, text: form.text, hidden: form.hidden, photo: newPhoto });
+      const saved = await saveWish({ id: form.id, name: form.name, role: form.role, text: form.text, lang: form.lang, en: form.en, hidden: form.hidden, photo: newPhoto });
       message = form.id ? `Saved. ${saved.hidden ? 'Hidden from the page.' : 'It is on the Kind words page.'}` : `Added. ${saved.hidden ? 'Hidden from the page for now.' : 'It is on the Kind words page.'}`;
       reset();
       await load();
@@ -88,6 +88,17 @@
       <label>Name <input bind:value={form.name} maxlength="80" required placeholder="e.g. Abhijit Kunte" /></label>
       <label>Who they are <span class="label">(optional)</span><input bind:value={form.role} maxlength="120" placeholder="e.g. Grandmaster, Pune · Chess coach · Parent" /></label>
       <label>Their words<textarea bind:value={form.text} rows="9" maxlength="6000" required placeholder="Paste the message here…"></textarea></label>
+      <label>Written in
+        <select bind:value={form.lang}>
+          <option value="mr">Marathi</option>
+          <option value="hi">Hindi</option>
+          <option value="en">English</option>
+          <option value="other">Another language</option>
+        </select>
+      </label>
+      {#if form.lang !== 'en'}
+        <label>English translation <span class="label">(shown first; readers can switch to the original)</span><textarea bind:value={form.en} rows="9" maxlength="6000" placeholder="The same message in English…"></textarea></label>
+      {/if}
       <div class="photo-row">
         <span>Photo <span class="label">(optional; cut to a square)</span></span>
         <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={pick} />
@@ -103,7 +114,7 @@
     </form>
     <div class="preview">
       <span class="label">Preview</span>
-      <WishCard wish={{ id: form.id ?? 'new', name: form.name, role: form.role, text: form.text || 'Their words appear here, in paragraphs.', photo: newPhoto === null ? 0 : form.photo }} photo={previewPhoto} />
+      <WishCard wish={{ id: form.id ?? 'new', name: form.name, role: form.role, text: form.text || 'Their words appear here, in paragraphs.', lang: form.lang, en: form.lang === 'en' ? '' : form.en, photo: newPhoto === null ? 0 : form.photo }} photo={previewPhoto} />
     </div>
   </div>
 </section>

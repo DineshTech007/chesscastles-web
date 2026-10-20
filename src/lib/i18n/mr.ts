@@ -285,6 +285,8 @@ export const mr: Record<Key, string> = {
   'wishes.h': 'त्यांच्याच शब्दांत',
   'wishes.more': 'आणखी वाचा',
   'wishes.all': 'सर्व शुभेच्छा पाहा',
+  'wishes.inEnglish': 'English मध्ये वाचा',
+  'wishes.inOriginal': 'मूळ संदेश {lang} मध्ये वाचा',
   'more.install': 'Chess Castles app install करा (free, नेहमी नवीन)',
   'social.follow': 'Chess Castles ला follow करा',
   'social.why': 'रोजचे puzzles, मुलांसाठी tips आणि बातम्या, English, हिंदी आणि मराठीत.',

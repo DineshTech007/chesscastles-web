@@ -7,7 +7,7 @@
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
   import { session, startSignIn } from '$lib/auth';
-  import { playingNow, type PlayingGame } from '$lib/social';
+  import { playingNow, watchHref, type PlayingGame } from '$lib/social';
   import { poll } from '$lib/poll';
   import { photoSrc } from '$lib/stores/me';
   import { t } from '$lib/i18n';
@@ -39,7 +39,6 @@
   const ended = $derived(games.filter((g) => g.over));
   const tc = (g: PlayingGame) => (g.minutes || g.increment ? `${g.minutes}+${g.increment}` : 'No clock');
   const initials = (name: string) => name.split(/\s+/).map((w) => w[0] ?? '').join('').slice(0, 2).toUpperCase();
-  const watchHref = (g: PlayingGame) => (g.lichess ? `/watch/live/${g.lichess}` : `/watch/friend/${encodeURIComponent(g.uid)}`);
 </script>
 
 <svelte:head><title>Live on Chess Castles</title></svelte:head>
