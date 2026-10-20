@@ -1,6 +1,10 @@
 <script lang="ts" module>
-  /** Chess Castles' social accounts (more join here as they open: YouTube, WhatsApp Channel…). */
-  export const SOCIAL = [{ id: 'instagram', name: 'Instagram', handle: '@chesscastles', href: 'https://www.instagram.com/chesscastles/' }] as const;
+  /** Chess Castles' social accounts (the WhatsApp Channel joins when its invite link is known). */
+  export const SOCIAL = [
+    { id: 'youtube', name: 'YouTube', handle: '@ChessCastles', href: 'https://www.youtube.com/@ChessCastles' },
+    { id: 'instagram', name: 'Instagram', handle: '@chesscastles', href: 'https://www.instagram.com/chesscastles/' },
+    { id: 'facebook', name: 'Facebook', handle: 'Chess Castles', href: 'https://www.facebook.com/profile.php?id=61595313726973' },
+  ] as const;
 </script>
 
 <script lang="ts">
@@ -25,6 +29,11 @@
       <rect x="6" y="6" width="12" height="12" rx="3.6" fill="none" stroke="#fff" stroke-width="1.8" />
       <circle cx="12" cy="12" r="2.9" fill="none" stroke="#fff" stroke-width="1.8" />
       <circle cx="16.6" cy="7.4" r="1.1" fill="#fff" />
+    </svg>
+  {:else if id === 'youtube'}
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="1.5" y="5" width="21" height="14" rx="4.2" fill="#FF0000" />
+      <path d="M10 9v6l5.2-3z" fill="#fff" />
     </svg>
   {:else if id === 'facebook'}
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
