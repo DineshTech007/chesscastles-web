@@ -95,6 +95,7 @@ export const hi: Record<Key, string> = {
   'land.sub': 'Online खेलिए, puzzles हल कीजिए, analyse कीजिए और दुनिया के सबसे अच्छे players के games live देखिए, सब free। फिर Chess Castles के पाँच ख़ास features से और आगे बढ़िए।',
   'land.cta.play': 'FIDE level पर खेलें',
   'land.cta.signin': 'Free में sign in करें',
+  'land.beta': '30 नवंबर 2026 तक सब कुछ free',
   'land.parents': 'Parents के लिए: क्या यह मेरे बच्चे के लिए सुरक्षित है?',
   'land.trust.games': 'tournament games',
   'land.trust.lines': 'नाम वाली opening lines',

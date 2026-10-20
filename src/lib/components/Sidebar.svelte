@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { betaOn } from '$lib/beta';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import SocialLinks from './SocialLinks.svelte';
   import { page } from '$app/state';
@@ -43,6 +44,7 @@
   <a class="brand" href="/" aria-label="Chess Castles: Learn, Play, Conquer (home)">
     <img class="crest logo-dark" src="/brand/chesscastles-crest-dark.svg" alt="" width="40" height="45" />
     <img class="crest logo-light" src="/brand/chesscastles-crest-light.svg" alt="" width="40" height="45" />
+    {#if betaOn()}<span class="beta" title="Beta: everything is free until 30 November 2026">BETA</span>{/if}
     {#if !collapsed}
       <span class="brand-text">
         <span class="name">CHESS <span class="c2">CASTLES</span></span>
@@ -236,6 +238,21 @@
     color: var(--text);
     white-space: nowrap;
   }
+  /* BETA on the crest's foot (the name fills the rail's width). */
+  .beta {
+    position: absolute;
+    left: 1px;
+    top: 33px;
+    padding: 1px 4px 0;
+    border-radius: 4px;
+    background: var(--gold);
+    color: #0b1426;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.3;
+    pointer-events: none;
+  }
   .c2 {
     color: var(--gold);
   }
@@ -258,6 +275,7 @@
     display: none !important;
   }
   .brand {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 10px;

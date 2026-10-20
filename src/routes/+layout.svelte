@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { betaOn } from '$lib/beta';
   import '../fonts.css';
   import '../app.css';
   import { navigating, page, updated } from '$app/state';
@@ -390,6 +391,7 @@
         <a class="phone-brand" href="/" aria-label="Chess Castles: Learn, Play, Conquer (home)">
           <img class="logo-dark" src="/brand/chesscastles-crest-dark.svg" alt="" height="36" />
           <img class="logo-light" src="/brand/chesscastles-crest-light.svg" alt="" height="36" />
+          {#if betaOn()}<span class="pb-beta" title="Beta: everything is free until 30 November 2026">BETA</span>{/if}
           <span class="pb-text">
             <span class="pb-name">CHESS <span class="pb-c2">CASTLES</span></span>
             <span class="pb-slogan">LEARN · PLAY · CONQUER</span>
@@ -638,6 +640,24 @@
   }
   .pb-c2 {
     color: var(--gold);
+  }
+  /* BETA on the crest's foot (not beside the name: the phone top bar has no room to spare). */
+  .phone-brand {
+    position: relative;
+  }
+  .pb-beta {
+    position: absolute;
+    left: -4px;
+    top: 26px;
+    padding: 1px 3px 0;
+    border-radius: 4px;
+    background: var(--gold);
+    color: #0b1426;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.3;
+    pointer-events: none;
   }
   .pb-slogan {
     font-size: 10px;

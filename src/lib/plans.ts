@@ -16,7 +16,7 @@ import { call } from '$lib/social';
 import { track } from '$lib/analytics';
 
 /**
- * Plans are switched off until they start (planned for 1 January 2027):
+ * Plans are switched off until they start (planned for 1 December 2026, after the beta: src/lib/beta.ts):
  * every feature is open to everyone with no limits, and the site shows no
  * plan names, badges, prices or offers. Coach tools stay with the accounts
  * that have them (the server checks those). Set to true to bring plans back.

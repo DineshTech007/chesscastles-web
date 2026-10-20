@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { betaOn } from '$lib/beta';
   /**
    * The landing: what visitors see first (home when not signed in, and
    * /features for ads). Everything a chess site has, plus the five features
@@ -47,6 +48,9 @@
           <button class="btn big" onclick={() => (go('hero_signin'), startSignIn())}>{$t('land.cta.signin')}</button>
         {/if}
       </div>
+      {#if !PLANS_ON && betaOn()}
+        <p class="offer beta-note"><span class="beta">BETA</span><span>{$t('land.beta')}</span></p>
+      {/if}
       {#if PLANS_ON && launchOn(launch) && $session.status !== 'in'}
         <p class="offer"><PlanBadge plan={launch.plan} size={22} /><span><strong>Launch offer:</strong> {PLAN_INFO[launch.plan].name} free for {launch.days} days. No card needed.</span></p>
       {/if}
@@ -180,6 +184,15 @@
   }
   .ctas .btn {
     gap: 8px;
+  }
+  .beta-note .beta {
+    padding: 2px 6px 1px;
+    border: 1px solid var(--gold);
+    border-radius: 5px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--gold);
   }
   .offer {
     display: flex;

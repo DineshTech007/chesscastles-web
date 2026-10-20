@@ -48,7 +48,7 @@
     <h2 id="cost-h" class="title">What does it cost?</h2>
     {#if !PLANS_ON}
     <ul>
-      <li><strong>Everything is free right now</strong>: games, puzzles, lessons, Game Review, Insights, books and the analysis board, with no daily limits and no payments.</li>
+      <li><strong>Everything is free until 30 November 2026</strong> (Chess Castles is in beta): games, puzzles, lessons, Game Review, Insights, books and the analysis board, with no daily limits and no payments.</li>
       <li>Nobody can be charged: there is nothing to buy.</li>
     </ul>
     {:else}

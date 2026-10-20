@@ -94,8 +94,8 @@
 {#if !PLANS_ON}
 <section class="hero">
   <p class="eyebrow">Plans</p>
-  <h1 class="title">Everything is free right now</h1>
-  <p class="sub">Play, puzzles, lessons, Game Review, Insights and books: no daily limits and nothing to pay.</p>
+  <h1 class="title">Everything is free until 30 November 2026</h1>
+  <p class="sub">Chess Castles is in beta. Play, puzzles, lessons, Game Review, Insights and books: no daily limits and nothing to pay.</p>
   <p class="sub"><a class="btn primary" href="/">Back to Chess Castles</a></p>
 </section>
 {:else}

@@ -99,6 +99,7 @@ export const en = {
   'land.sub': 'Play online, solve puzzles, analyse and watch the world’s best live, all free. Then go further with five features built only for Chess Castles.',
   'land.cta.play': 'Play at FIDE level',
   'land.cta.signin': 'Sign in free',
+  'land.beta': 'Everything is free until 30 November 2026',
   'land.parents': 'For parents: is it safe for my child?',
   'land.trust.games': 'tournament games',
   'land.trust.lines': 'named opening lines',
