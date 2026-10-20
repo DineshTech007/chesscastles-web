@@ -51,6 +51,8 @@ export const hi: Record<Key, string> = {
   'nav.guide.b': 'Parents और beginners के जवाब, 3 भाषाओं में',
   'nav.blog': 'Blogs और Forum',
   'nav.blog.b': 'कहानियाँ, बच्चों के लिए tips और chess का इतिहास',
+  'nav.wishes': 'शुभकामनाएँ',
+  'nav.wishes.b': 'खिलाड़ी, coaches और शुभचिंतक क्या कहते हैं',
   'nav.new': 'नया',
 
   'hero.fide.short': 'FIDE level पर खेलें',

@@ -53,6 +53,8 @@ export const en = {
   'nav.guide.b': 'Answers for parents and beginners, in 3 languages',
   'nav.blog': 'Blogs & Forum',
   'nav.blog.b': 'Stories, tips for kids and chess history',
+  'nav.wishes': 'Kind words',
+  'nav.wishes.b': 'What players, coaches and well-wishers say',
   'nav.new': 'NEW',
 
   // ---- the five signature features

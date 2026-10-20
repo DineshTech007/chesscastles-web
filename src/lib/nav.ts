@@ -41,6 +41,7 @@ export const NAV_GROUPS: NavItem[][] = [
   [
     { href: '/guide', label: 'Chess Guide', icon: 'help', match: ['/guide'], blurb: 'Answers for parents and beginners, in 3 languages' },
     { href: '/blog', label: 'Blogs & Forum', icon: 'pen', match: ['/blog'], badge: 'NEW', blurb: 'Stories, tips for kids and chess history' },
+    { href: '/wishes', label: 'Kind words', icon: 'star', match: ['/wishes'], blurb: 'What players, coaches and well-wishers say' },
   ],
 ];
 

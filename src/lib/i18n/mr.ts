@@ -51,6 +51,8 @@ export const mr: Record<Key, string> = {
   'nav.guide.b': 'पालक आणि beginners साठी उत्तरं, 3 भाषांमध्ये',
   'nav.blog': 'Blogs आणि Forum',
   'nav.blog.b': 'गोष्टी, मुलांसाठी tips आणि chess चा इतिहास',
+  'nav.wishes': 'शुभेच्छा',
+  'nav.wishes.b': 'खेळाडू, coaches आणि हितचिंतक काय म्हणतात',
   'nav.new': 'नवीन',
 
   'hero.fide.short': 'FIDE level वर खेळा',
