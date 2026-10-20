@@ -1,8 +1,9 @@
 <script lang="ts">
   /**
    * Vijayadashami, launch day: a marigold toran drops in across the top, a greeting (English and Marathi) and
-   * falling petals, then all of it lifts away slowly. Happy festive music (dhol, shehnai, brass) starts with
-   * the first tap, since phones allow no sound before one, and fades out by itself; a small button stops it. Shown once per visit, on the day only (the layout decides that).
+   * falling petals, then all of it lifts away slowly. Festive music ("Sita Ram Tarang", instrumental) starts
+   * by itself when the browser allows it, otherwise with the first tap (phones often allow no sound before one),
+   * and plays until the visitor stops it with the small Music button. Shown once per visit, on the day only (the layout decides that).
    */
   import { onDestroy, onMount } from 'svelte';
   import { DasaraMusic } from './dasaraMusic';
@@ -81,6 +82,13 @@
   onMount(() => {
     units = Math.ceil(window.innerWidth / 110) + 1;
     music.preload();
+    // Straight away if the browser allows sound before a tap; if not, the first tap starts it.
+    void music.autoplay().then((ok) => {
+      if (!ok) return;
+      if (muted) return music.stop();
+      playing = true;
+      started = true;
+    });
     for (const e of tapEvents) window.addEventListener(e, firstTap, { capture: true, passive: true });
     // The greeting leaves by itself after a while (not while a finger or the mouse rests on it).
     later(11000, () => {

@@ -1,8 +1,9 @@
 /**
- * Happy festive music for Vijayadashami: dhol and tasha drums, shehnai, brass and bells, about half a minute,
- * fading out at the end (static/festive/dasara.mp3, made for Chess Castles with Runway). It downloads only when
- * the greeting opens. Phones only allow sound after a tap, so `start` must be called from a tap (or click)
- * handler.
+ * Festive music for Vijayadashami: "Sita Ram Tarang (instrumental)" by Kontraa (Pixabay, free for commercial
+ * use), its first minute and a half, at a gentle volume (static/festive/dasara.mp3). It downloads only when the
+ * greeting opens and plays over and over until the visitor stops it. Browsers allow sound before the visitor's
+ * first tap only sometimes: `autoplay` tries at once, and `start` (called from a tap or click handler) always
+ * works.
  */
 
 const SRC = '/festive/dasara.mp3';
@@ -18,15 +19,30 @@ export class DasaraMusic {
     if (!this.audio && typeof Audio !== 'undefined') {
       const a = new Audio(SRC);
       a.preload = 'auto';
-      a.onended = () => this.done();
+      a.loop = true;
       this.audio = a;
     }
     return this.audio;
   }
 
-  /** Starts downloading the music (no sound), so it plays at once on the first tap. */
+  /** Starts downloading the music (no sound), so it plays at once when asked. */
   preload(): void {
     this.el();
+  }
+
+  /** Tries to start without a tap; true if the browser allowed it. */
+  async autoplay(): Promise<boolean> {
+    const a = this.el();
+    if (!a || this.playing) return this.playing;
+    try {
+      clearInterval(this.fade);
+      a.volume = VOLUME;
+      await a.play();
+      this.playing = true;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Starts the music (call it inside a tap/click handler). */
