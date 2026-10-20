@@ -117,7 +117,7 @@ export const FEATURES = [
   },
   {
     id: 'database',
-    name: '5M game database',
+    name: '5 Million game database',
     match: /^\/analysis\?tab=database/,
     path: '/analysis?tab=database',
     steps: [{ wait: 2500 }, { move: ['e2', 'e4'] }, { wait: 2000 }, { move: ['c7', 'c5'] }, { wait: 2500 }],

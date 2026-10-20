@@ -165,7 +165,7 @@
 
   async function loadFromUrl() {
     const q = page.url.searchParams;
-    // Opened from the menu's "5M game database": straight to the database tab.
+    // Opened from the menu's "5 Million game database": straight to the database tab.
     if (q.get('tab') === 'database') tab = 'database';
     else if (q.get('tab') === 'guru') tab = 'guru';
     savedId = undefined;

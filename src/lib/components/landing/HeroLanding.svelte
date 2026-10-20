@@ -56,9 +56,8 @@
       {#if PLANS_ON && launchOn(launch) && $session.status !== 'in'}
         <p class="offer"><PlanBadge plan={launch.plan} size={22} /><span><strong>Launch offer:</strong> {PLAN_INFO[launch.plan].name} free for {launch.days} days. No card needed.</span></p>
       {/if}
-      <p class="parents"><a href="/parents"><Icon name="shield" size={16} color="var(--accent)" />{$t('land.parents')}</a></p>
       <ul class="trust" aria-label="Chess Castles in numbers">
-        <li><strong class="num">5.4M</strong><span>{$t('land.trust.games')}</span></li>
+        <li><strong class="num">{$t('land.trust.gamesNum')}</strong><span>{$t('land.trust.games')}</span></li>
         <li><strong class="num">3,865</strong><span>{$t('land.trust.lines')}</span></li>
         <li><strong class="num">1400–2800</strong><span>{$t('land.trust.opp')}</span></li>
       </ul>
@@ -203,15 +202,6 @@
     margin: 14px 0 0;
     font-size: 14.5px;
     color: var(--text-2);
-  }
-  .parents {
-    margin: 14px 0 0;
-  }
-  .parents a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 700;
   }
   .trust {
     list-style: none;

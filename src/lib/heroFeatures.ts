@@ -40,7 +40,7 @@ export const HERO_FEATURES: HeroFeature[] = [
   },
   {
     id: 'database',
-    short: '5M game database',
+    short: '5 Million game database',
     title: '5 million games behind every review',
     promise: 'Review any game with the engine and 5.4 million real tournament games side by side. See what strong players chose in your exact position, and open their games.',
     facts: ['5.4 million games', 'Move-by-move review', 'Brilliant to blunder'],

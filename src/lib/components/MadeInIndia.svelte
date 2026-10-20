@@ -11,7 +11,8 @@
 
 <style>
   .india {
-    display: inline-flex;
+    display: flex;
+    width: fit-content;
     align-items: center;
     flex-wrap: wrap;
     gap: 6px 10px;

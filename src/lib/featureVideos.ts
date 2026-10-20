@@ -14,7 +14,7 @@ export interface FeatureVideo {
 }
 
 export const FEATURE_VIDEOS: FeatureVideo[] = [
-  { id: 'database', name: { en: '5M game database', hi: '5M game database', mr: '5M game database' }, match: /^\/analysis\?tab=database/ },
+  { id: 'database', name: { en: '5 Million game database', hi: '50 लाख games का database', mr: '50 लाख games चा database' }, match: /^\/analysis\?tab=database/ },
   { id: 'review', name: { en: 'Game Report', hi: 'Game Report', mr: 'Game Report' }, match: /^\/analysis/ },
   { id: 'fide-play', name: { en: 'Play at FIDE level', hi: 'FIDE level पर खेलो', mr: 'FIDE level वर खेळा' }, match: /^\/play(\/fide)?(\?|$)/ },
   { id: 'puzzles', name: { en: 'Puzzles', hi: 'Puzzles', mr: 'Puzzles' }, match: /^\/puzzles/ },
