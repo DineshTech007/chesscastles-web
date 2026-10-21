@@ -25,6 +25,32 @@
   const COLORS = ['#3b5bdb', '#7048e8', '#0c8599', '#e8590c', '#2f9e44', '#c2255c', '#1971c2', '#9c36b5'];
   const colorOf = (name: string) => COLORS[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % COLORS.length];
 
+  /** Which tiles show a picture (frames arriving), checked every second. */
+  const els = new Map<string, HTMLVideoElement>();
+  let pictures = $state<Record<string, boolean>>({});
+  $effect(() => {
+    const t = setInterval(() => {
+      const next: Record<string, boolean> = {};
+      for (const [uid, el] of els) next[uid] = el.isConnected && el.videoWidth > 0 && el.readyState >= 2;
+      if (JSON.stringify(next) !== JSON.stringify(pictures)) pictures = next;
+    }, 1000);
+    return () => clearInterval(t);
+  });
+  function watch(el: HTMLVideoElement, uid: string) {
+    els.set(uid, el);
+    return { destroy: () => els.get(uid) === el && els.delete(uid) };
+  }
+  /** What is wrong with someone's tile, in a word (the owner, 2026-10-22: a student's camera showed nothing). */
+  function trouble(p: (typeof tiles)[number]): string {
+    if (p.uid === live.me.uid || !live.inVoice || !p.voice) return '';
+    const st = live.peerStates[p.uid];
+    if (st === 'failed' || st === 'disconnected')
+      return live.relayed ? 'Connection lost: reconnecting…' : "Can't connect: this network blocks direct calls (the coach can switch on the relay)";
+    if (!st || st === 'new' || st === 'connecting') return 'Connecting…';
+    if (p.cam && pictures[p.uid] === false) return 'No picture yet: the camera may be in use by another app';
+    return '';
+  }
+
   /** Puts a stream into its video element (and keeps it there when the element is reused). */
   function stream(el: HTMLVideoElement, s: MediaStream) {
     const set = (v: MediaStream) => {
@@ -44,10 +70,11 @@
   <button class="tile" class:large class:speaking={(live.levels[p.uid] ?? 0) > 0.12} onclick={() => (focus = focus === p.uid ? undefined : p.uid)} aria-label="{p.name}{large ? ': smaller' : ': bigger'}">
     {#if s}
       <!-- svelte-ignore a11y_media_has_caption -->
-      <video use:stream={s} autoplay playsinline muted class:mirror={p.uid === live.me.uid}></video>
+      <video use:stream={s} use:watch={p.uid} autoplay playsinline muted class:mirror={p.uid === live.me.uid}></video>
     {:else}
       <span class="avatar" style="background: {colorOf(p.name)}">{p.name.trim().charAt(0).toUpperCase()}</span>
     {/if}
+    {#if trouble(p)}<span class="trouble">{trouble(p)}</span>{:else if p.uid === live.me.uid && s && pictures[p.uid] === false}<span class="trouble">No picture: is another app or browser using the camera?</span>{/if}
     <span class="cap">{p.hand ? '✋ ' : ''}{p.name}{p.uid === live.me.uid ? ' (you)' : p.coach ? ' · Coach' : ''}{p.voice ? (p.mic ? ' 🎙️' : ' 🔇') : ''}</span>
   </button>
 {/snippet}
@@ -159,6 +186,22 @@
   }
   .big .cap {
     font-size: 13px;
+  }
+  .trouble {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 6px;
+    font: 700 11px var(--font-body);
+    color: #fff;
+    background: rgba(200, 60, 40, 0.85);
+    padding: 3px 6px;
+    border-radius: 6px;
+    text-align: left;
+  }
+  .big .trouble,
+  .large .trouble {
+    font-size: 14px;
   }
   .scrim {
     position: fixed;

@@ -94,6 +94,9 @@ export class Live {
   micOn = $state(false);
   micError = $state('');
   levels = $state<Record<string, number>>({});
+  /** Each voice/video connection's state, by uid (the gallery says when one cannot connect). */
+  peerStates = $state<Record<string, string>>({});
+  relayed = $state(false);
   joiningVoice = $state(false);
 
   readonly room: Room;
@@ -112,7 +115,13 @@ export class Live {
         if (s === 'closed') this.leaveVoice();
       },
     );
-    this.tick = setInterval(() => (this.now = this.room.now()), 250);
+    let n = 0;
+    this.tick = setInterval(() => {
+      this.now = this.room.now();
+      if (++n % 4 || !this.voice) return;
+      const st = this.voice.states();
+      if (JSON.stringify(st) !== JSON.stringify(this.peerStates)) this.peerStates = st;
+    }, 250);
     document.addEventListener('visibilitychange', this.onAway);
     window.addEventListener('blur', this.onAway);
     window.addEventListener('focus', this.onAway);
@@ -393,6 +402,7 @@ export class Live {
         },
       );
       this.voice.sendTo = (uid) => this.coach || uid === this.info.coach || this.settings.peers !== false;
+      this.relayed = this.voice.relayed;
       await this.voice.start();
       this.micError = this.voice.micError;
       this.inVoice = true;
@@ -452,6 +462,7 @@ export class Live {
     this.camOn = '';
     this.coachVideo = undefined;
     this.videos = {};
+    this.peerStates = {};
     for (const t of this.localVideo?.getTracks() ?? []) t.stop();
     this.localVideo = undefined;
     if (this.status === 'open') this.room.send({ t: 'voice', on: false, mic: false });

@@ -207,6 +207,15 @@ export class Voice {
     }
   }
 
+  /** Each connection's state (new, connecting, connected, disconnected, failed): shown on the tiles. */
+  states(): Record<string, string> {
+    return Object.fromEntries([...this.peers].map(([uid, p]) => [uid, p.pc.connectionState]));
+  }
+  /** Whether a relay (TURN) is set up: without one, some networks block direct calls. */
+  get relayed() {
+    return this.ice.some((s) => [s.urls].flat().some((u) => String(u).startsWith('turn')));
+  }
+
   /** Who is connected and can be heard. */
   connected(): string[] {
     return [...this.peers].filter(([, p]) => p.pc.connectionState === 'connected').map(([uid]) => uid);
