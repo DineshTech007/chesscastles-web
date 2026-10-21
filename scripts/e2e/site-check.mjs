@@ -204,6 +204,38 @@ async function run(name, options) {
     return `${fen0} pieces, stepped 6 moves`;
   });
 
+  // 3c'. Phones: a finger that drags a piece, or lands just beside one, never steps the game back (2026-10-21: the
+  // board's swipe through the moves took quick sideways drags, and touches on the edge of a piece's next square, as
+  // swipes). A swipe from the middle of an empty square still steps back.
+  if (touch) {
+    await check(name, page, 'phone drags: a piece drag never steps the game back, a swipe still does', async () => {
+      await open(page, '/');
+      await page.evaluate(() => sessionStorage.setItem('k24.importPgn', '[White "A"]\n[Black "B"]\n\n1. e4 e5 2. Nf3 Nc6 *'));
+      await open(page, '/analysis?import=1');
+      await page.locator('.mv.cur').first().waitFor({ timeout: 8000 });
+      const cdp = await page.context().newCDPSession(page);
+      const s = (await page.locator('cg-board').first().boundingBox()).width / 8;
+      const quick = async (from, dx) => {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from.x, y: from.y }] });
+        for (let i = 1; i <= 5; i++) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from.x + (dx * i) / 5, y: from.y }] });
+          await page.waitForTimeout(30);
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForTimeout(600);
+      };
+      const current = async () => (await page.locator('.mv.cur').first().innerText()).trim();
+      const d3 = await square(page, 'd3');
+      await quick({ x: d3.x, y: d3.y + s * 0.3 }, 2 * s); // beside the d2 pawn
+      expect((await current()) === 'Nc6', `a sideways drag beside a pawn stepped the game back to ${await current()}`);
+      await quick(await square(page, 'a1'), 2 * s); // the a1 rook, dragged sideways
+      expect((await current()) === 'Nc6', `a quick sideways rook drag stepped the game back to ${await current()}`);
+      await quick(await square(page, 'd5'), 2 * s); // the middle of an empty square
+      expect((await current()) === 'Nf3', `a swipe on an empty square no longer steps back (at ${await current()})`);
+      await cdp.detach().catch(() => {});
+    });
+  }
+
   // 3d. Settings in the same place everywhere: the gear in the top bar, on screen, with "Always promote to
   // Queen" (off by default) and the rest; the board and pieces open from it.
   await check(name, page, 'settings: the gear in the top bar, with Always promote to Queen off by default', async () => {
