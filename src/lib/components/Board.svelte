@@ -61,6 +61,15 @@
     const k = cg?.getKeyAtDomPos([x, y]);
     return !!k && !!cg?.state.pieces.has(k);
   };
+  /**
+   * A piece under the finger or close to it (0.4 of a square): on a phone a square is about 45 px and a finger often
+   * lands on the edge of the next one; a drag meant for a piece must never become a swipe. (A swipe from the middle
+   * of an empty square stays a swipe.)
+   */
+  const nearPiece = (x: number, y: number) => {
+    const reach = ((cg?.state.dom.bounds().width ?? 0) / 8) * 0.4;
+    return [[0, 0], [reach, 0], [-reach, 0], [0, reach], [0, -reach]].some(([dx, dy]) => pieceAt(x + dx, y + dy));
+  };
   function onpointerdown(e: PointerEvent) {
     // Chessground remembers where the board was; on a phone, anything appearing or going above the board (a
     // clock, a banner, a dialog) moves it without a scroll or a resize, and a drag with the old place drops the
@@ -68,7 +77,7 @@
     // chessground's own touchstart).
     cg?.state.dom.bounds.clear();
     if (!onswipe || e.pointerType !== 'touch') return;
-    touch = { x: e.clientX, y: e.clientY, t: Date.now(), onPiece: pieceAt(e.clientX, e.clientY) || !!(e.target as HTMLElement).closest('piece') };
+    touch = { x: e.clientX, y: e.clientY, t: Date.now(), onPiece: nearPiece(e.clientX, e.clientY) || !!(e.target as HTMLElement).closest('piece') };
   }
   function onpointerup(e: PointerEvent) {
     if (!touch) return;
@@ -136,7 +145,11 @@
       movable: { color: movable, dests: movable ? dests : new Map() },
       premovable: { enabled: premovable },
     });
-    cg.setAutoShapes(shapes);
+  });
+  // The arrows on their own (an engine's arrow changes several times a second): redrawing the position, legal moves
+  // and all for each one made dragging a piece jerky.
+  $effect(() => {
+    cg?.setAutoShapes(shapes);
   });
 
   /** Clears the board's own premove (the page keeps its own queue). */

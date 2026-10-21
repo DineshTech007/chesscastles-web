@@ -416,7 +416,7 @@
         label="Online game board"
         {onmove}
         {onpremove}
-        onswipe={(d) => go((viewPly ?? game.plies.length) + (d === 'forward' ? 1 : -1))}
+        onswipe={controls.over ? (d) => go((viewPly ?? game.plies.length) + (d === 'forward' ? 1 : -1)) : undefined}
       />
       <PlayerBar {...bottom} />
       <!-- Phones: the move buttons and Resign / Draw right under the board, no scrolling. -->

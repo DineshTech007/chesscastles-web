@@ -552,7 +552,7 @@
         label="Game board"
         {onmove}
         {onpremove}
-        onswipe={(d) => go((viewPly ?? g.sans.length) + (d === 'forward' ? 1 : -1))}
+        onswipe={g.isOver ? (d) => go((viewPly ?? g.sans.length) + (d === 'forward' ? 1 : -1)) : undefined}
       />
     </div>
     <PlayerBar {...bottom} />
