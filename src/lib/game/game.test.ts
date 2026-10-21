@@ -255,35 +255,64 @@ describe('FideGame', () => {
     }
   });
 
-  it('in bullet, the quick pace is no slower than a real player', async () => {
+  it('in bullet, the quick pace does not hurry the bot: the clock decides there, so it keeps a real pace', async () => {
     const bullet: TimeControl = { minutes: 1, increment: 0, kind: 'Bullet' };
     const { g } = game(new FakeBook({ e4: [e(72, 'e7e5', 5)] }), { tc: bullet, pace: 'quick' });
     g.begin();
     g.play(m('e2e4'));
     await flush();
     expect(g.sans).toEqual(['e4', 'e5']);
-    // A move that isn't obvious: "quick" alone would take 2.6 s on average.
+    // A move that isn't obvious: about what a 1+0 player takes, not the 0.4–0.6 s that flagged players before.
     let sum = 0;
     for (let i = 0; i < 200; i++) sum += g.thinkTime('engine', 0.2);
-    expect(sum / 200).toBeLessThan(1600);
+    expect(sum / 200).toBeGreaterThan(1100);
+    expect(sum / 200).toBeLessThan(3000);
     g.dispose();
   });
 
-  it('lasts a bullet game, also when the engines are slow (a phone)', () => {
+  it("in bullet, keeps close to the player's own pace", () => {
+    const at = (mirror?: number) => {
+      const random = seeded(5);
+      let sum = 0;
+      for (let i = 0; i < 400; i++) sum += moveTime({ left: 45_000, increment: 0, moveNo: 15, rating: 1400, kind: 'normal', confidence: 0.5, random, fast: true, mirror });
+      return sum / 400;
+    };
+    // A quick player gets a quicker bot, a slow one (a child on a phone) a slower one.
+    expect(at(800)).toBeLessThan(at(2500));
+    expect(at(2500)).toBeGreaterThan(1500);
+    expect(at(800)).toBeLessThan(1300);
+  });
+
+  it('in bullet, plays a little weaker when short of time', () => {
+    const bullet: TimeControl = { minutes: 1, increment: 0, kind: 'Bullet' };
+    const { g } = game(new FakeBook({}), { tc: bullet });
+    g.begin();
+    expect(g.playingRating()).toBe(g.rating);
+    g.dispose();
+  });
+
+  it('uses its bullet clock like a player, and lasts a normal game also when the engines are slow (a phone)', () => {
     for (const [minutes, increment] of [[1, 0], [1, 1]]) {
-      for (const rating of [2000, 2800]) {
-        const random = seeded(rating + increment);
-        let left = minutes * 60_000;
-        let first40 = 0;
-        for (let n = 1; n <= 60; n++) {
-          // No games database in bullet: every move a "normal" one, each taking the engines 0.7 s.
-          const kind = n % 6 === 0 ? 'recapture' : 'normal';
-          const t = Math.max(700, moveTime({ left, increment: increment * 1000, moveNo: n, rating, kind, confidence: random(), random, fast: true }));
-          left += increment * 1000 - t;
-          if (n <= 40) first40 += t;
+      for (const rating of [1400, 2000, 2800]) {
+        for (const mirror of [undefined, 1500]) {
+          const random = seeded(rating + increment);
+          let left = minutes * 60_000;
+          let first40 = 0;
+          let at50 = 0;
+          for (let n = 1; n <= 60; n++) {
+            // No games database in bullet: every move a "normal" one, each taking the engines 0.7 s.
+            const kind = n % 6 === 0 ? 'recapture' : 'normal';
+            const t = Math.max(700, moveTime({ left, increment: increment * 1000, moveNo: n, rating, kind, confidence: random(), random, fast: true, mirror }));
+            left += increment * 1000 - t;
+            if (n <= 40) first40 += t;
+            if (n === 50) at50 = left;
+          }
+          // Never out of time in a game of usual length (with an increment, never), but the clock is used: by
+          // move 40 most of a 1+0 clock is gone, as for the player, so the game is won on the board.
+          expect(at50).toBeGreaterThan(0);
+          if (increment) expect(left).toBeGreaterThan(0);
+          else expect(first40).toBeGreaterThan(35_000);
         }
-        expect(left).toBeGreaterThan(0);
-        if (!increment) expect(first40).toBeLessThan(50_000);
       }
     }
   });

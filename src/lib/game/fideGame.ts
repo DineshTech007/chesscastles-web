@@ -286,7 +286,7 @@ export class FideGame {
     const started = this.now();
     let choice: BotChoice | undefined;
     try {
-      choice = await this.bot.choose(this.position, this.sans, this.rating, this.opening, this.playerRating, this.engineLimit(), (p) => this.seen.get(polyglotKey(p)) ?? 0);
+      choice = await this.bot.choose(this.position, this.sans, this.playingRating(), this.opening, this.playerRating, this.engineLimit(), (p) => this.seen.get(polyglotKey(p)) ?? 0);
     } catch (e) {
       console.warn('FIDE bot:', e);
     }
@@ -317,11 +317,33 @@ export class FideGame {
     return Math.round(Math.min(budget * 0.75, left / 8));
   }
 
+  /**
+   * The rating the bot plays this move at: in bullet and the fastest blitz, a player short of time plays worse
+   * (under a sixth of the starting clock a little, under a twelfth more), as the players it stands for do.
+   */
+  playingRating(): number {
+    if (!this.timed || !isFast(this.timeControl) || this.moves.length - this.prelude.length < 2) return this.rating;
+    const share = this.remaining(this.botSide) / (this.timeControl.minutes * 60_000 + this.timeControl.increment * 40_000);
+    return share < 1 / 12 ? this.rating - 300 : share < 1 / 6 ? this.rating - 150 : this.rating;
+  }
+
+  /** The player's average time a move after the first few (their pace), once there are enough moves to tell. */
+  playerPace(): number | undefined {
+    const own = this.moves
+      .slice(this.prelude.length)
+      .filter((m) => m.source === undefined && (m.ms ?? 0) > 0)
+      .slice(3)
+      .map((m) => m.ms ?? 0);
+    return own.length >= 3 ? own.reduce((a, b) => a + b, 0) / own.length : undefined;
+  }
+
   /** How long the bot "thinks" before playing (see moveTime). */
   thinkTime(source: MoveSource, confidence?: number, move?: NormalMove): number {
     if (!this.timed) return 500 + Math.round(this.random() * 900);
     const real = this.realThinkTime(source, confidence, move);
-    if (this.pace === 'quick') {
+    // In bullet and the fastest blitz the clock decides games: the bot keeps a real player's pace there whatever
+    // the pace chosen ("quick" only saves waiting in slower games, where the player has time to spare).
+    if (this.pace === 'quick' && !isFast(this.timeControl)) {
       // Quick: a short, natural pause, a little longer when the move is not obvious;
       // never slower than a real player (who in bullet is quicker still).
       const c = confidence ?? 0.5;
@@ -354,6 +376,7 @@ export class FideGame {
       confidence,
       random: this.random,
       fast: isFast(this.timeControl),
+      mirror: this.playerPace(),
     });
   }
 
@@ -483,9 +506,10 @@ export const isFast = (tc: TimeControl) => tc.minutes > 0 && tc.minutes + tc.inc
  * over the moves a game still usually lasts, plus most of the increment;
  * stronger players take a little more of their time.
  */
-export function moveBudget(o: { left: number; increment: number; moveNo: number; rating: number }): number {
+export function moveBudget(o: { left: number; increment: number; moveNo: number; rating: number; fast?: boolean }): number {
   const movesLeft = Math.max(20, 45 - o.moveNo / 2);
-  const pace = Math.min(1.1, Math.max(0.7, 0.75 + (o.rating - 1200) / 2400));
+  // In bullet everyone spends their whole clock (the reserve is all they keep).
+  const pace = o.fast ? 1 : Math.min(1.1, Math.max(0.7, 0.75 + (o.rating - 1200) / 2400));
   return ((o.left * 0.9) / movesLeft) * pace + o.increment * 0.85;
 }
 
@@ -499,7 +523,18 @@ export function moveBudget(o: { left: number; increment: number; moveNo: number;
  * - longer in unclear positions and just after leaving the opening;
  * - stronger players take a little more of their time.
  */
-export function moveTime(o: { left: number; increment: number; moveNo: number; rating: number; kind: MoveKind; confidence?: number; random: () => number; fast?: boolean }): number {
+export function moveTime(o: {
+  left: number;
+  increment: number;
+  moveNo: number;
+  rating: number;
+  kind: MoveKind;
+  confidence?: number;
+  random: () => number;
+  fast?: boolean;
+  /** The player's average time a move (fast games: the bot keeps about the same pace). */
+  mirror?: number;
+}): number {
   const { left, moveNo, random } = o;
   const budget = moveBudget(o);
   let ms: number;
@@ -514,9 +549,9 @@ export function moveTime(o: { left: number; increment: number; moveNo: number; r
     const gaussian = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
     ms = budget * difficulty * leavingBook * Math.exp(gaussian * 0.45);
   }
-  // Bullet is played on instinct: about two thirds of the time a slower game would take,
-  // which also leaves room for the engines, slower on a phone than a player's hand.
-  if (o.fast && (o.kind === 'normal' || o.kind === 'recapture')) ms *= 0.65;
+  // Bullet and the fastest blitz: a real player's use of the clock, and close to the player's own pace (half the
+  // budget's time, half theirs, give or take), so the games are won on the board rather than on the clock.
+  if (o.fast && o.mirror && (o.kind === 'normal' || o.kind === 'recapture')) ms = ms * 0.5 + o.mirror * (0.6 + 0.8 * random()) * 0.5;
   // Never more than a fifth of what is left, and never instant (in bullet, a little quicker).
   return Math.max(Math.min(450, budget * 0.4), Math.round(Math.min(ms, left / 5)));
 }

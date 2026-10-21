@@ -155,6 +155,10 @@
         {#if mode === 'fide'}
           {@const sp = speedOf(tcLabel(TIME_CONTROLS[tc]))}
           <p class="mine-cc">Your {SPEED_LABEL[sp]} CC Rating <strong class="num">{kfideText($kfideAll[sp])}</strong></p>
+          {#if TIME_CONTROLS[tc].kind === 'Bullet'}
+            <!-- Bullet is decided by quick hands as much as by chess: worth saying to a student before they lose on time. -->
+            <p class="bullet-note">Bullet is a race against the clock: your opponent plays at your speed, but every second counts. To learn and enjoy the game, 10+0 or 15+10 works best.</p>
+          {/if}
         {/if}
       </div>
     {/if}
@@ -333,6 +337,14 @@
   .mine-cc {
     margin: 4px 0 0;
     font-size: 14px;
+    color: var(--text-2);
+  }
+  .bullet-note {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
     color: var(--text-2);
   }
   .mine-cc strong {
