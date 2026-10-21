@@ -13,7 +13,7 @@
     photo,
     compact = false,
   }: {
-    wish: Pick<Wish, 'id' | 'name' | 'role' | 'text' | 'lang' | 'en' | 'photo'>;
+    wish: Pick<Wish, 'id' | 'name' | 'role' | 'text' | 'lang' | 'en' | 'photo' | 'thumb'>;
     /** A photo to show instead (the admin page's new one). */
     photo?: string;
     /** The first lines only, and "Show more" to the page (the home page). */

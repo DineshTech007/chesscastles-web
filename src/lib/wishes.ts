@@ -22,6 +22,8 @@ export interface Wish {
   en: string;
   /** The photo's version (0: no photo). */
   photo: number;
+  /** Its small copy's version (160 px, what the cards show; 0 or missing: none yet). */
+  thumb?: number;
   hidden: boolean;
   created: number;
   updated: number;
@@ -89,7 +91,11 @@ function splitLong(p: string): string[] {
   return out;
 }
 
-export const wishPhotoUrl = (w: Pick<Wish, 'id' | 'photo'>) => (w.photo ? `${API}/wishes/${w.id}/photo?v=${w.photo}` : undefined);
+/** The photo as the cards show it: its small copy when there is one (PageSpeed, 2026-10-21), else the photo. */
+export const wishPhotoUrl = (w: Pick<Wish, 'id' | 'photo' | 'thumb'>) =>
+  !w.photo ? undefined : w.thumb ? `${API}/wishes/${w.id}/photo?s=1&v=${w.thumb}` : `${API}/wishes/${w.id}/photo?v=${w.photo}`;
+/** The full photo, readable by the admin page's script (to make its small copy). */
+export const wishFullPhotoUrl = (w: Pick<Wish, 'id' | 'photo'>) => `${API}/wishes/${w.id}/photo?v=${w.photo}&cors=1`;
 
 /** The words on the page, newest first (hidden ones left out). */
 export async function fetchWishes(): Promise<Wish[]> {
@@ -101,7 +107,8 @@ export async function fetchWishes(): Promise<Wish[]> {
 // The owner's side (admin page).
 export const adminWishes = () => call<{ wishes: Wish[] }>('GET', 'admin/wishes').then((r) => r.wishes);
 /** `photo`: a new photo (base64 JPEG), null to take it away, undefined to keep it. */
-export const saveWish = (w: { id?: string; name: string; role: string; text: string; lang: WishLang; en: string; hidden: boolean; photo?: string | null }) => call<{ wish: Wish }>('POST', 'admin/wishes', w).then((r) => r.wish);
+export const saveWish = (w: { id?: string; name: string; role: string; text: string; lang: WishLang; en: string; hidden: boolean; photo?: string | null; thumb?: string }) =>
+  call<{ wish: Wish }>('POST', 'admin/wishes', w).then((r) => r.wish);
 export const deleteWish = (id: string) => call<{ ok: true }>('DELETE', `admin/wishes/${id}`);
 
 /**
@@ -126,4 +133,21 @@ export async function wishPhoto(file: Blob): Promise<string | undefined> {
     if (b64 && b64.length * 0.75 <= 120_000) return b64;
   }
   return undefined;
+}
+
+/** The photo's small copy: 160 px square, cut as wishPhoto cuts it (a few KB; the cards show 48 to 64 px). */
+export async function wishThumb(file: Blob): Promise<string | undefined> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return undefined;
+  }
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = Math.min(160, side);
+  const g = canvas.getContext('2d')!;
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) * 0.3, side, side, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.82).split(',')[1] || undefined;
 }

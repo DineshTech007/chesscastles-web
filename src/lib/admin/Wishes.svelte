@@ -5,7 +5,7 @@
    */
   import { onMount } from 'svelte';
   import WishCard from '$lib/components/WishCard.svelte';
-  import { adminWishes, deleteWish, saveWish, wishPhoto, wishPhotoUrl, type Wish, type WishLang } from '$lib/wishes';
+  import { adminWishes, deleteWish, saveWish, wishFullPhotoUrl, wishPhoto, wishPhotoUrl, wishThumb, type Wish, type WishLang } from '$lib/wishes';
 
   let list = $state<Wish[]>([]);
   let loadError = $state('');
@@ -13,6 +13,8 @@
   let form = $state(empty());
   /** A new photo (base64 JPEG), or null: the photo is being taken away; undefined: as it is. */
   let newPhoto = $state<string | null | undefined>();
+  /** The new photo's small copy (160 px), sent with it. */
+  let newThumb: string | undefined;
   let busy = $state(false);
   let message = $state('');
   let fileInput: HTMLInputElement | undefined = $state();
@@ -24,8 +26,26 @@
     try {
       list = await adminWishes();
       loadError = '';
+      void addSmallCopies(list);
     } catch (e) {
       loadError = e instanceof Error ? e.message : 'Could not load.';
+    }
+  }
+  /** Photos saved before small copies were made: their copies are made here, quietly, once. */
+  let copying = false;
+  async function addSmallCopies(wishes: Wish[]) {
+    if (copying) return;
+    copying = true;
+    try {
+      for (const w of wishes.filter((x) => x.photo && !x.thumb)) {
+        const res = await fetch(wishFullPhotoUrl(w)).catch(() => undefined);
+        const thumb = res?.ok ? await wishThumb(await res.blob()) : undefined;
+        if (!thumb) continue;
+        const saved = await saveWish({ id: w.id, name: w.name, role: w.role, text: w.text, lang: w.lang ?? 'other', en: w.en ?? '', hidden: w.hidden, thumb }).catch(() => undefined);
+        if (saved) list = list.map((x) => (x.id === saved.id ? saved : x));
+      }
+    } finally {
+      copying = false;
     }
   }
   onMount(load);
@@ -38,6 +58,7 @@
     const b64 = await wishPhoto(file);
     if (!b64) return void (message = "That picture couldn't be used. Try a JPEG or PNG photo.");
     newPhoto = b64;
+    newThumb = await wishThumb(file);
     message = '';
   }
 
@@ -50,6 +71,7 @@
   function reset() {
     form = empty();
     newPhoto = undefined;
+    newThumb = undefined;
   }
 
   async function save(e: Event) {
@@ -57,7 +79,7 @@
     busy = true;
     message = '';
     try {
-      const saved = await saveWish({ id: form.id, name: form.name, role: form.role, text: form.text, lang: form.lang, en: form.en, hidden: form.hidden, photo: newPhoto });
+      const saved = await saveWish({ id: form.id, name: form.name, role: form.role, text: form.text, lang: form.lang, en: form.en, hidden: form.hidden, photo: newPhoto, thumb: typeof newPhoto === 'string' ? newThumb : undefined });
       message = form.id ? `Saved. ${saved.hidden ? 'Hidden from the page.' : 'It is on the Kind words page.'}` : `Added. ${saved.hidden ? 'Hidden from the page for now.' : 'It is on the Kind words page.'}`;
       reset();
       await load();

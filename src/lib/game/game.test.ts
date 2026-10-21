@@ -144,6 +144,30 @@ describe('FideGame', () => {
     return { g, clock };
   }
 
+  it("takeback: the player's last move and the reply go, on the player's turn only", async () => {
+    const { g } = game(new FakeBook({ e4: [e(72, 'e7e5', 10)], 'e4 e5 Nf3': [e(72, 'b8c6', 10)] }), { tc: { minutes: 0, increment: 0, kind: 'Rapid' } });
+    g.begin();
+    expect(g.canTakeback).toBe(false);
+    expect(g.play(m('e2e4'))).toBe(true);
+    expect(g.canTakeback).toBe(false); // the computer is thinking
+    await flush();
+    expect(g.sans).toEqual(['e4', 'e5']);
+    expect(g.play(m('g1f3'))).toBe(true);
+    await flush();
+    expect(g.sans).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+    expect(g.takeback()).toBe(true);
+    expect(g.sans).toEqual(['e4', 'e5']);
+    expect(g.myTurn).toBe(true);
+    // Another move from there: the computer answers as usual.
+    expect(g.play(m('g1f3'))).toBe(true);
+    await flush();
+    expect(g.sans).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+    expect(g.takeback() && g.takeback()).toBe(true);
+    expect(g.sans).toEqual([]);
+    expect(g.takeback()).toBe(false);
+    g.dispose();
+  });
+
   it('the bot opens as White and answers the player', async () => {
     const { g } = game(new FakeBook({ '': [e(72, 'e2e4', 10)], 'e4 e5': [e(72, 'g1f3', 10)] }), { human: 'black' });
     g.begin();

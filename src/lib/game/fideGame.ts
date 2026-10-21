@@ -277,6 +277,32 @@ export class FideGame {
     if (!this.isOver) this.finish('resignation', this.botSide);
   }
 
+  /** Whether the player's last move can be taken back now (see takeback). */
+  get canTakeback(): boolean {
+    return !this.isOver && !this.botThinking && this.moves.some((m, i) => i >= this.prelude.length && m.source === undefined);
+  }
+
+  /**
+   * Takes back the player's last move and the computer's reply to it (owner's request, 2026-10-21, as chess.com
+   * allows against its computer): only in a friendly game (the page decides), on the player's turn. The positions
+   * go back out of the repetition count with them; the clocks are left as they are.
+   */
+  takeback(): boolean {
+    if (!this.canTakeback) return false;
+    let i = this.moves.length - 1;
+    while (this.moves[i].source !== undefined) i--;
+    for (const m of this.moves.splice(i)) {
+      const key = polyglotKey(m.after);
+      const n = (this.seen.get(key) ?? 1) - 1;
+      if (n > 0) this.seen.set(key, n);
+      else this.seen.delete(key);
+    }
+    this.turnStart = this.now();
+    this.notify();
+    void this.bot.prefetchReplies(this.position);
+    return true;
+  }
+
   abort(): void {
     if (this.canAbort) this.finish('aborted', undefined);
   }

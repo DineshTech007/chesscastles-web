@@ -127,6 +127,8 @@ export const resign = (token: string, gameId: string) => call(token, `/api/board
 export const abort = (token: string, gameId: string) => call(token, `/api/board/game/${gameId}/abort`, { method: 'POST' });
 export const draw = (token: string, gameId: string, accept: boolean) => call(token, `/api/board/game/${gameId}/draw/${accept ? 'yes' : 'no'}`, { method: 'POST' });
 export const claimVictory = (token: string, gameId: string) => call(token, `/api/board/game/${gameId}/claim-victory`, { method: 'POST' });
+/** The opponent left: end the game as a draw instead of claiming the win. */
+export const claimDraw = (token: string, gameId: string) => call(token, `/api/board/game/${gameId}/claim-draw`, { method: 'POST' });
 
 /**
  * Joins a Lichess arena tournament (needs the tournament:write permission), or says "still here" when already in.

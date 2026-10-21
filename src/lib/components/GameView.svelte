@@ -12,7 +12,8 @@
   import MoveList from './MoveList.svelte';
   import MoveNav from '$lib/components/MoveNav.svelte';
   import PlayerBar from './PlayerBar.svelte';
-  import { destsOf, fenOf, isPromotion, keyOf, materialOf, moveFromKeys, moveToUci } from '$lib/chess/position';
+  import { destsOf, fenOf, isPromotion, keyOf, materialOf, moveFromKeys, moveToUci, uciToMove } from '$lib/chess/position';
+  import { engine } from '$lib/engine/stockfish';
   import PromotionPicker from './PromotionPicker.svelte';
   import { autoQueen, premovesOn } from '$lib/preferences';
   import { makeBoardFen } from 'chessops/fen';
@@ -97,6 +98,32 @@
   /** The result over the board (You won! / Play again and ways to learn), a moment after the last move. */
   let sheet = $state(false);
 
+  /**
+   * Friendly games against the computer (not rated): Undo and Hint, as chess.com allows there (owner's request,
+   * 2026-10-21). Rated games (FIDE-level opponents, tournaments) never have them.
+   */
+  // svelte-ignore state_referenced_locally
+  const friendly = kind === 'computer';
+  /** The hint: the engine's best move, shown as an arrow until the next move. */
+  let hint = $state<{ from: Key; to: Key; at: number } | undefined>();
+  let hinting = $state(false);
+  async function askHint() {
+    if (!game.myTurn || hinting) return;
+    hinting = true;
+    const at = game.moves.length;
+    const info = await engine.evaluate(fenOf(game.position), 14, 1, 1500).catch(() => undefined);
+    hinting = false;
+    const best = info?.pv[0] ? uciToMove(info.pv[0]) : undefined;
+    if (best && game.moves.length === at && !gone) hint = { from: keyOf(best.from), to: keyOf(best.to), at };
+  }
+  function undo() {
+    if (!game.takeback()) return;
+    queue.clear();
+    board?.cancelPremove();
+    board?.unselect();
+    hint = undefined;
+  }
+
   async function reviewAfterGame() {
     const g = myGames.get(id);
     if (!g || g.uci.length < 4) return;
@@ -116,6 +143,8 @@
   function onChange() {
     v++;
     const n = game.moves.length;
+    // A move taken back (Undo): the next one makes its sound again.
+    if (n < seenMoves) seenMoves = n;
     if (n > seenMoves) {
       const last = game.moves[n - 1];
       // (The last move only knocks: the result has its own sound.)
@@ -346,6 +375,7 @@
       queued: queue.moves.flatMap((m) => [keyOf(m.from), keyOf(m.to)]) as Key[],
       shapes: [
         ...queue.moves.map((m) => ({ orig: keyOf(m.from), dest: keyOf(m.to), brush: 'blue' })),
+        ...(hint && hint.at === game.moves.length && active ? [{ orig: hint.from, dest: hint.to, brush: 'green' }] : []),
         ...(game.isOver && last && badges[game.moves.length - 1] ? [{ orig: keyOf(last.move.to), customSvg: { html: boardBadge(badges[game.moves.length - 1]!) } }] : []),
       ],
       lastBot: [...game.moves].reverse().find((m) => m.source),
@@ -467,6 +497,8 @@
       counts: game.sourceCounts,
       maiaMoves: game.moves.filter((m) => m.engine === 'maia').length,
       queued: queue.length,
+      myTurn: game.myTurn,
+      canUndo: game.canTakeback,
     };
   });
   const counts = $derived(g.counts);
@@ -541,6 +573,7 @@
     me={{ name: mine.name, initials: mine.initials, photo: mine.photo, rating: mine.rating }}
     opponent={{ name: theirs.name, initials: theirs.initials, rating: theirs.rating }}
     ratingChange={kfideChange ? { label: 'CC', after: kfideChange.after, delta: kfideChange.after - kfideChange.before } : undefined}
+    accuracy={summary ? { me: summary.sides[game.human].accuracy, opponent: summary.sides[opposite(game.human)].accuracy } : reviewing !== undefined ? { progress: reviewing } : undefined}
     {againLabel}
     onagain={() => ((sheet = false), onagain())}
     analyseHref={game.moves.length ? `/analysis?game=${id}` : undefined}
@@ -564,6 +597,10 @@
     <button class="btn" onclick={() => (confirmResign = false)}>Keep playing</button>
   {:else}
     <button class="btn" onclick={() => (confirmResign = true)}><Icon name="flag" size={18} />Resign</button>
+  {/if}
+  {#if friendly}
+    <button class="btn mini" onclick={undo} disabled={!g.canUndo}><Icon name="undo" size={18} />Undo</button>
+    <button class="btn mini" onclick={askHint} disabled={!g.myTurn || hinting}><Icon name="bulb" size={18} />{hinting ? 'Thinking…' : 'Hint'}</button>
   {/if}
   {#if g.queued}
     <button class="btn" onclick={cancelPremoves}><Icon name="undo" size={18} />Cancel premoves ({g.queued})</button>
@@ -828,6 +865,9 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+  }
+  .actions .btn.mini {
+    flex: 1 1 90px;
   }
   .actions .btn {
     flex: 1 1 140px;

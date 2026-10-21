@@ -16,9 +16,11 @@
     me,
     opponent,
     ratingChange,
+    accuracy,
     againLabel = 'Play again',
     onagain,
     againHref,
+    alt,
     analyseHref,
     guruHref,
     harder,
@@ -32,10 +34,14 @@
     opponent: Side;
     /** A rated game: the new rating and how it moved. */
     ratingChange?: { label: string; after: number; delta: number };
+    /** Each side's accuracy once every move is checked (`progress` 0..1 while it is), as chess.com shows it. */
+    accuracy?: { me?: number; opponent?: number; progress?: number };
     againLabel?: string;
     onagain?: () => void;
     /** Instead of `onagain`: a page to go to (a new online game, the tournament). */
     againHref?: string;
+    /** A second way on, under the first ("New game" under "Rematch"). */
+    alt?: { label: string; href: string };
     analyseHref?: string;
     guruHref?: string;
     /** After a win: a stronger opponent to try next. */
@@ -71,7 +77,7 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && onclose()} />
 
-{#snippet avatar(s: Side, mine: boolean)}
+{#snippet avatar(s: Side, mine: boolean, acc?: number)}
   <div class="side" class:mine>
     <span class="av">{#if s.photo}<img src={s.photo} alt="" />{:else}{s.initials}{/if}</span>
     <span class="nm">{s.name}</span>
@@ -81,6 +87,7 @@
     {:else if s.rating}
       <span class="rt num">{s.rating}</span>
     {/if}
+    {#if acc !== undefined}<span class="acc num" class:mine>{Math.round(acc)}%<small>accuracy</small></span>{/if}
   </div>
 {/snippet}
 
@@ -102,10 +109,16 @@
   </div>
 
   <div class="vs">
-    {@render avatar(me, true)}
+    {@render avatar(me, true, accuracy?.me)}
     <span class="vs-x">vs</span>
-    {@render avatar(opponent, false)}
+    {@render avatar(opponent, false, accuracy?.opponent)}
   </div>
+  {#if accuracy?.progress !== undefined && accuracy.me === undefined}
+    <div class="acc-wait" role="status">
+      <span>Checking every move… {Math.round(accuracy.progress * 100)}%</span>
+      <span class="acc-bar"><i style="width: {Math.round(accuracy.progress * 100)}%"></i></span>
+    </div>
+  {/if}
 
   <div class="actions">
     {#if againHref}
@@ -113,6 +126,7 @@
     {:else if onagain}
       <button class="btn primary again" onclick={onagain}><Icon name="replay" size={20} />{againLabel}</button>
     {/if}
+    {#if alt}<a class="btn" href={alt.href}>{alt.label}</a>{/if}
 
     {#if outcome === 'won'}
       <div class="two">
@@ -314,6 +328,45 @@
   }
   .rt .down {
     color: var(--loss);
+  }
+  .acc {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 2px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    line-height: 1;
+    color: var(--text);
+  }
+  .acc.mine {
+    color: var(--tone);
+  }
+  .acc small {
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .acc-wait {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: -6px;
+    font-size: 12.5px;
+    color: var(--text-2);
+    text-align: center;
+  }
+  .acc-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .acc-bar i {
+    display: block;
+    height: 100%;
+    background: var(--gold);
+    transition: width 0.3s;
   }
   .actions {
     display: flex;

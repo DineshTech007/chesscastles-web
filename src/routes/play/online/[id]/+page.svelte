@@ -26,6 +26,9 @@
   import { POINTS, study } from '$lib/study/progress';
   import { checkClubGame } from '$lib/tournament/club';
   import { ABORTS_NOTE, abortsToday, noteAbort } from '$lib/game/aborts';
+  import { onLichessEvent, openWhenStarted } from '$lib/lichessEvents';
+  import { analyseGame, type GameReview } from '$lib/coach/review';
+  import { quota } from '$lib/plans';
 
   const gameId = page.params.id!;
   const color = page.url.searchParams.get('c');
@@ -41,6 +44,29 @@
   let now = $state(Date.now());
   let connection = $state<'connecting' | 'live' | 'reconnecting'>('connecting');
   let notice = $state('');
+  /** The opponent left (Lichess's opponentGone): since when, and the seconds until the win can be claimed. */
+  let gone = $state<{ at: number; secs: number } | undefined>();
+  /**
+   * A rematch sent from here (owner's request, 2026-10-21, as on Lichess and chess.com): the same clock, colours
+   * swapped, a new Lichess challenge to the same opponent; its game opens by itself when they accept.
+   */
+  let rematch = $state<{ id?: string; state: 'sending' | 'waiting' | 'declined' } | undefined>();
+  let rematchStarted = false;
+  /** After a game played here: every move checked, for each side's accuracy on the result (as for games here). */
+  let summary = $state<GameReview | undefined>();
+  let reviewing = $state<number | undefined>();
+  async function reviewAfterGame() {
+    const g = myGames.get(`lichess-${gameId}`);
+    if (!g || g.uci.length < 4) return;
+    reviewing = 0;
+    try {
+      summary = await analyseGame(g, (p) => (reviewing = p), quota('review_depth'), () => stopped);
+    } catch {
+      /* left the page, or the engine can't run */
+    } finally {
+      reviewing = undefined;
+    }
+  }
   let confirmResign = $state(false);
   /** Abort asks first (as on chess.com): a real opponent is waiting. After a few aborts in a day, a word at the start. */
   let confirmAbort = $state(false);
@@ -68,7 +94,46 @@
     stopped = true;
     ctl?.abort();
     clearInterval(backTimer);
+    // Left while the rematch waits: it is taken back (never once its game started: that would abort it).
+    if (rematch?.state === 'waiting' && rematch.id && token && !rematchStarted) void api.cancelChallenge(token, rematch.id).catch(() => {});
   });
+  onMount(() =>
+    onLichessEvent((e) => {
+      if (!rematch?.id) return;
+      if (e.type === 'gameStart' && e.game?.gameId === rematch.id) rematchStarted = true;
+      if (e.type === 'challengeDeclined' && e.challenge?.id === rematch.id) rematch = { state: 'declined' };
+    }),
+  );
+  const opponentPlayer = () => (game.me === 'white' ? game.black : game.white);
+  const rematchLabel = $derived(!rematch ? 'Rematch' : rematch.state === 'sending' ? 'Sending…' : rematch.state === 'waiting' ? 'Waiting… tap to cancel' : 'Rematch again');
+  async function sendRematch() {
+    const t = token;
+    if (!t || !game.me) return;
+    if (rematch?.state === 'waiting' && rematch.id) {
+      void api.cancelChallenge(t, rematch.id).catch(() => {});
+      rematch = undefined;
+      return;
+    }
+    if (rematch?.state === 'sending') return;
+    const opp = opponentPlayer();
+    const color = game.me === 'white' ? 'black' : 'white';
+    const tc = { minutes: Math.max(1, Math.round(game.initial / 60000)), increment: Math.round(game.increment / 1000) };
+    rematch = { state: 'sending' };
+    try {
+      if (opp.ai) {
+        // Lichess's computer: the game starts at once.
+        const id = await api.challengeAi(t, { level: opp.ai, ...tc, color });
+        rematchStarted = true;
+        return void goto(`/play/online/${id}?c=${color}`);
+      }
+      const id = await api.challengeUser(t, opp.name, { ...tc, rated: game.rated, color });
+      openWhenStarted(id);
+      rematch = { id, state: 'waiting' };
+    } catch (e) {
+      rematch = undefined;
+      notice = e instanceof Error ? e.message : 'The rematch could not be sent.';
+    }
+  }
 
   // As on Lichess: after an arena game you go back to the arena by yourself, and it pairs you again.
   function backToArena() {
@@ -142,7 +207,7 @@
       const mine = game.me && (before % 2 === 0 ? 'white' : 'black') === game.me;
       if (!mine) playMoveSound(before ? game.plies[before - 1].after : game.start, last.move, false);
     }
-    if (o.type === 'opponentGone' && o.gone) notice = 'Your opponent left the game.';
+    if (o.type === 'opponentGone') gone = o.gone ? { at: Date.now(), secs: Number(o.claimWinInSeconds) || 0 } : undefined;
     // Their move landed: our first queued premove goes at once.
     if (game.plies.length > before && game.myTurn && queue.length) {
       const next = queue.takeNext(game.position);
@@ -225,6 +290,7 @@
       uci: game.plies.map((p) => moveToUci(p.move)),
     });
     study.log('game', POINTS.gameFinished, `Lichess game vs ${game.opponent.name}`);
+    if (wasLive) void reviewAfterGame();
   }
 
   async function send(m: ReturnType<typeof moveFromKeys>) {
@@ -379,6 +445,21 @@
 <svelte:head><title>Online game · Chess Castles</title></svelte:head>
 
 {#snippet playControls()}
+{#if gone}
+  <!-- The opponent left: after Lichess's wait, the win can be claimed (or a draw), as on Lichess. -->
+  {@const left = Math.max(0, Math.ceil((gone.at + gone.secs * 1000 - now) / 1000))}
+  <div class="notice warn gone" role="status">
+    {#if left > 0}
+      <span>Your opponent left the game. If they don't come back in {left} s, you can claim the win.</span>
+    {:else}
+      <span>Your opponent left the game.</span>
+      <div class="gone-btns">
+        <button class="btn primary" onclick={() => act(() => api.claimVictory(token!, gameId))}><Icon name="trophy" size={18} />Claim victory</button>
+        <button class="btn" onclick={() => act(() => api.claimDraw(token!, gameId))}>Call it a draw</button>
+      </div>
+    {/if}
+  </div>
+{/if}
 {#if aborted >= ABORTS_NOTE && controls.plies < 2}
   <div class="notice warn" role="note">You aborted {aborted} games today. Please play the games you start: your opponents want to play too.</div>
 {/if}
@@ -426,8 +507,11 @@
     reason={game.endReason}
     me={{ name: mine.name, initials: mine.initials, photo: mine.photo, rating: mine.rating }}
     opponent={{ name: theirs.name, initials: theirs.initials, rating: theirs.rating }}
-    againLabel={clubId || tournamentId ? 'Back to the tournament' : 'New game'}
-    againHref={clubId ? `/play/tournament/club/${clubId}?check=1` : tournamentId ? `/play/lichess-tournaments/${tournamentId}?joined=1` : '/play?mode=online'}
+    accuracy={summary ? { me: summary.sides[game.me].accuracy, opponent: summary.sides[game.me === 'white' ? 'black' : 'white'].accuracy } : reviewing !== undefined ? { progress: reviewing } : undefined}
+    againLabel={clubId || tournamentId ? 'Back to the tournament' : rematchLabel}
+    againHref={clubId ? `/play/tournament/club/${clubId}?check=1` : tournamentId ? `/play/lichess-tournaments/${tournamentId}?joined=1` : undefined}
+    onagain={clubId || tournamentId ? undefined : sendRematch}
+    alt={clubId || tournamentId ? undefined : { label: 'New game', href: '/play?mode=online' }}
     analyseHref={controls.plies ? `/analysis?game=lichess-${gameId}` : undefined}
     guruHref={controls.plies >= 4 ? `/coach/review/lichess-${gameId}` : undefined}
     onclose={() => (sheet = false)}
@@ -493,6 +577,8 @@
         <div class="result panel-card" style="--tone: {headline.tone}">
           <span class="display" style="color: var(--tone); font-size: 36px">{headline.text}</span>
           <p class="label">{game.endReason}</p>
+          {#if rematch?.state === 'waiting'}<p class="label rematch-note">Rematch sent to {opponentPlayer().name}: waiting for them to accept.</p>
+          {:else if rematch?.state === 'declined'}<p class="label rematch-note">{opponentPlayer().name} declined the rematch.</p>{/if}
           <div class="row">
             {#if clubId}
               <a class="btn primary" href="/play/tournament/club/{clubId}?check=1"><Icon name="trophy" size={18} />Back to the tournament</a>
@@ -500,7 +586,8 @@
               <a class="btn primary" href="/play/lichess-tournaments/{tournamentId}?joined=1"><Icon name="trophy" size={18} />{backIn > 0 ? `Next arena game in ${backIn}…` : 'Back to the tournament'}</a>
               {#if backIn > 0}<button class="btn" onclick={stayHere}>Stay here</button>{/if}
             {:else}
-              <a class="btn primary" href="/play?mode=online"><Icon name="replay" size={18} />New game</a>
+              <button class="btn primary" onclick={sendRematch} disabled={rematch?.state === 'sending'}><Icon name="replay" size={18} />{rematchLabel}</button>
+              <a class="btn" href="/play?mode=online">New game</a>
             {/if}
             {#if controls.plies}<a class="btn" href="/analysis?game=lichess-{gameId}"><Icon name="analyse" size={18} />Analyse</a>
               <ShareGame game={() => myGames.get(`lichess-${gameId}`)} />{/if}
@@ -609,6 +696,20 @@
     margin: 0;
     font-size: 13.5px;
     color: var(--text-2);
+  }
+  .gone {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .gone-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .rematch-note {
+    margin: 0;
+    color: var(--gold);
   }
   .notice.warn {
     background: color-mix(in srgb, var(--engine) 16%, var(--card));
