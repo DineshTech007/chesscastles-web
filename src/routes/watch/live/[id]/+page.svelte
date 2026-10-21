@@ -104,12 +104,12 @@
   // Lichess sends no status while the game is on, then one when it ends.
   const finished = $derived(ended || (!!info?.status && !['started', 'created'].includes(info.status)));
   /** How a Lichess game ended, in words. */
-  const HOW: Record<string, string> = { mate: 'Checkmate', resign: 'Resignation', outoftime: 'On time', timeout: 'Left the game', stalemate: 'Stalemate', draw: 'Draw' };
+  const HOW: Record<string, string> = { mate: 'by checkmate', resign: 'by resignation', outoftime: 'on time', timeout: 'as the other left the game', stalemate: 'Draw by stalemate', draw: 'Draw' };
   const resultText = $derived(
     !finished
       ? ''
       : info?.winner
-        ? `${info.winner === 'white' ? info.white.name : info.black.name} won${info.status && HOW[info.status] ? ` · ${HOW[info.status]}` : ''}`
+        ? `${info.winner === 'white' ? info.white.name : info.black.name} won${info.status && HOW[info.status] ? ` ${HOW[info.status]}` : ''}`
         : info?.status === 'draw' || info?.status === 'stalemate'
           ? HOW[info.status]
           : 'Game over',

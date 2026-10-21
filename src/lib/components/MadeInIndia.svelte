@@ -1,9 +1,13 @@
 <script lang="ts">
-  /** "Made in India" with the flag, on the home page: Chess Castles is an Indian chess platform. */
+  /**
+   * "Made in India" with the flag: Chess Castles is an Indian chess platform. `compact`: one small line, at the top of
+   * the home page, right under the Chess Castles name (owner's request, 2026-10-21).
+   */
   import { t } from '$lib/i18n';
+  let { compact = false }: { compact?: boolean } = $props();
 </script>
 
-<p class="india">
+<p class="india" class:compact>
   <img src="/flags/IND.svg" alt="" width="24" height="16" />
   <strong>{$t('india.made')}</strong>
   <span>{$t('india.support')}</span>
@@ -36,5 +40,22 @@
   }
   span {
     color: var(--text-2);
+  }
+  .compact {
+    flex-wrap: nowrap;
+    gap: 6px;
+    max-width: 100%;
+    margin: 0;
+    padding: 3px 12px 3px 8px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .compact img {
+    width: 18px;
+    height: 12px;
+  }
+  .compact span {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 </style>

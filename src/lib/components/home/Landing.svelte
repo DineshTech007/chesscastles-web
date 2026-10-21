@@ -13,14 +13,15 @@
   import { t, type Key } from '$lib/i18n';
 
   const FEATURES: { art: string; h: Key; b: Key; href: string }[] = [
-    { art: '/art/play.webp', h: 'home.land.f.play.h', b: 'home.land.f.play.b', href: '/play' },
-    { art: '/art/puzzles.webp', h: 'home.land.f.puz.h', b: 'home.land.f.puz.b', href: '/puzzles' },
-    { art: '/art/learn.webp', h: 'home.land.f.learn.h', b: 'home.land.f.learn.b', href: '/learn' },
-    { art: '/art/friends.webp', h: 'home.land.f.friends.h', b: 'home.land.f.friends.b', href: '/friends' },
+    { art: '/art/play-256.webp', h: 'home.land.f.play.h', b: 'home.land.f.play.b', href: '/play' },
+    { art: '/art/puzzles-256.webp', h: 'home.land.f.puz.h', b: 'home.land.f.puz.b', href: '/puzzles' },
+    { art: '/art/learn-256.webp', h: 'home.land.f.learn.h', b: 'home.land.f.learn.b', href: '/learn' },
+    { art: '/art/friends-256.webp', h: 'home.land.f.friends.h', b: 'home.land.f.friends.b', href: '/friends' },
   ];
 </script>
 
 <div class="landing">
+  <MadeInIndia compact />
   <header class="hero">
     <h1 class="display">{$t('home.land.h1')}</h1>
     <p class="sub">{$t('home.land.sub')}</p>
@@ -54,10 +55,7 @@
   <section class="parents card" aria-labelledby="par-h">
     <h2 id="par-h" class="sec-h">{$t('home.land.parents.h')}</h2>
     <p>{$t('home.land.parents.b')}</p>
-    <div class="par-row">
-      <MadeInIndia />
-      <a class="btn" href="/parents">{$t('home.land.parents.more')}</a>
-    </div>
+    <a class="btn par-more" href="/parents">{$t('home.land.parents.more')}</a>
   </section>
 </div>
 
@@ -71,7 +69,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 6px;
+    margin-top: -8px;
   }
   .hero h1 {
     margin: 0;
@@ -166,12 +164,8 @@
     margin: 0;
     color: var(--text-2);
   }
-  .par-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+  .par-more {
+    align-self: flex-start;
   }
   @media (max-width: 480px) {
     .hero h1 {

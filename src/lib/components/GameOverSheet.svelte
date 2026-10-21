@@ -11,6 +11,7 @@
   type Side = { name: string; initials: string; photo?: string; rating?: string };
   let {
     outcome,
+    onsignin,
     reason,
     me,
     opponent,
@@ -41,11 +42,13 @@
     harder?: { label: string; href: string };
     /** More under the buttons (after three losses in a row: a slower game or a lower level). */
     extra?: Snippet;
+    /** A visitor (not signed in): signing in keeps the game (owner's request, 2026-10-21: more visitors as members). */
+    onsignin?: () => void;
     onclose: () => void;
   } = $props();
 
   const HEAD = { won: 'You won!', lost: 'You lost', draw: 'Draw' } as const;
-  const ART = { won: '/art/trophy.webp', lost: '/art/play.webp', draw: '/art/friends.webp' } as const;
+  const ART = { won: 'trophy', lost: 'play', draw: 'friends' } as const;
   const COLORS = ['#f2c14e', '#edb040', '#38d2ff', '#22c55e', '#f472b6', '#ffffff', '#a78bfa'];
   // svelte-ignore state_referenced_locally
   const confetti =
@@ -93,7 +96,7 @@
   <button class="x" onclick={onclose} aria-label="Close and look at the board"><Icon name="close" size={18} /></button>
 
   <div class="top">
-    <img class="art" src={ART[outcome]} alt="" width="120" height="120" />
+    <img class="art" src="/art/{ART[outcome]}-256.webp" srcset="/art/{ART[outcome]}-256.webp 256w, /art/{ART[outcome]}.webp 512w" sizes="120px" alt="" width="120" height="120" />
     <h2 id="go-h" class="display head">{HEAD[outcome]}</h2>
     <p class="reason">{reason}</p>
   </div>
@@ -129,6 +132,12 @@
       {#if guruHref}<a class="guru-link" href={guruHref}><Icon name="coach" size={16} />Review this game with Guru</a>{/if}
     {/if}
     {#if extra}{@render extra()}{/if}
+    {#if onsignin}
+      <div class="join">
+        <p><strong>Keep this game.</strong> Sign in free: your games and rating stay in your account on every device, you climb the leaderboard and play your friends.</p>
+        <button class="btn primary" onclick={onsignin}>Sign in free</button>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -390,6 +399,27 @@
     font-size: 14px;
     color: var(--gold);
     text-decoration: none;
+  }
+  .join {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px dashed color-mix(in srgb, var(--gold) 60%, var(--border));
+    background: color-mix(in srgb, var(--gold) 8%, transparent);
+  }
+  .join p {
+    flex: 1;
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .join strong {
+    color: var(--text);
+  }
+  .join .btn {
+    flex: none;
   }
   .confetti {
     position: absolute;

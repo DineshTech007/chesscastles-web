@@ -1,9 +1,10 @@
 <script lang="ts">
   /**
-   * The home page's first card: a game in one tap (owner's request, 2026-10-21: "a playing portal", as on
-   * chess.com). Four clocks to pick from and Play: an opponent at the player's level ("Match my level" once their
-   * CC Rating at that speed means something, else the level they last chose, else a friendly one for a child).
-   * The Play page keeps every other choice (rating, colour, opening, the computer, online).
+   * The home page's first card: a game in two taps (owner's requests, 2026-10-21: "a playing portal", as on
+   * chess.com; one Play button first, the clocks after it; no 1-minute games here, children learn more slower).
+   * Play, then a clock: an opponent at the player's level ("Match my level" once their CC Rating at that speed
+   * means something, else the level they last chose, else a friendly one for a child). The Play page keeps every
+   * other choice (rating, colour, opening, bullet, the computer, online).
    */
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
@@ -14,17 +15,17 @@
   import { speedOf } from '$lib/kfide';
   import { kfideAll } from '$lib/stores/me';
 
-  let { compact = false }: { compact?: boolean } = $props();
-
-  /** TIME_CONTROLS' positions: 1+0, 5+0, 10+0, 15+10. */
+  /** TIME_CONTROLS' positions: 5+0, 10+0, 15+10, 30+0. */
   const CLOCKS: { tc: number; name: string; kind: string; icon: IconName }[] = [
-    { tc: 6, name: '1 min', kind: 'Bullet', icon: 'flame' },
     { tc: 0, name: '5 min', kind: 'Blitz', icon: 'puzzle' },
     { tc: 1, name: '10 min', kind: 'Blitz', icon: 'history' },
     { tc: 2, name: '15+10', kind: 'Rapid', icon: 'history' },
+    { tc: 3, name: '30 min', kind: 'Rapid', icon: 'history' },
   ];
   const KEY = 'k24.playSetup';
+  /** The clock played last (it is marked among the choices); 15+10 the first time. */
   let tc = $state(2);
+  let choosing = $state(false);
   let saved = $state<{ rating?: number; color?: string }>({});
   onMount(() => {
     try {
@@ -36,46 +37,57 @@
     }
   });
 
-  const mine = $derived($kfideAll[speedOf(tcLabel(TIME_CONTROLS[tc]))]);
-  const level = $derived(mine.games >= 5 ? matchLevel(mine.rating) : saved.rating ? clampLevel(saved.rating) : FIRST_LEVEL);
-  const clock = $derived(CLOCKS.find((c) => c.tc === tc)!);
+  const ccAt = (i: number) => $kfideAll[speedOf(tcLabel(TIME_CONTROLS[i]))];
+  const levelAt = (i: number) => {
+    const mine = ccAt(i);
+    return mine.games >= 5 ? matchLevel(mine.rating) : saved.rating ? clampLevel(saved.rating) : FIRST_LEVEL;
+  };
 
-  function play() {
+  function play(i: number) {
     try {
       const s = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-      localStorage.setItem(KEY, JSON.stringify({ ...s, mode: 'fide', tc }));
+      localStorage.setItem(KEY, JSON.stringify({ ...s, mode: 'fide', tc: i }));
     } catch {
       /* private mode */
     }
+    const mine = ccAt(i);
     const c = saved.color === 'white' || saved.color === 'black' ? saved.color : Math.random() < 0.5 ? 'white' : 'black';
-    void goto(`/play/fide?r=${level}&tc=${tc}&c=${c}${mine.games ? `&me=${mine.rating}` : ''}`);
+    void goto(`/play/fide?r=${levelAt(i)}&tc=${i}&c=${c}${mine.games ? `&me=${mine.rating}` : ''}`);
   }
 </script>
 
-<section class="play-card" class:compact aria-labelledby="pc-h">
-  <img class="art" src="/art/play.webp" alt="" width="243" height="256" />
+<section class="play-card" aria-labelledby="pc-h">
+  <img class="art" src="/art/play-256.webp" srcset="/art/play-256.webp 256w, /art/play.webp 512w" sizes="(min-width: 700px) 230px, 128px" alt="" width="243" height="256" fetchpriority="high" />
   <div class="head">
     <h2 id="pc-h" class="display">{$t('home.play.h')}</h2>
-    <p class="lvl">{$t('home.play.level', { level: levelName(level) })}</p>
+    <p class="lvl">{$t('home.play.level', { level: levelName(levelAt(tc)) })}</p>
   </div>
 
-  <div class="clocks" role="radiogroup" aria-label={$t('home.play.clock')}>
-    {#each CLOCKS as c (c.tc)}
-      <button role="radio" aria-checked={tc === c.tc} class:on={tc === c.tc} onclick={() => (tc = c.tc)}>
-        <Icon name={c.icon} size={16} />
-        <strong class="num">{c.name}</strong>
-        <span>{c.kind}</span>
-      </button>
-    {/each}
-  </div>
-
-  <button class="go" onclick={play}><Icon name="play" size={20} />{$t('home.play.go', { tc: clock.name })}</button>
+  {#if !choosing}
+    <button class="go" onclick={() => (choosing = true)}><Icon name="play" size={20} />{$t('home.play.now')}</button>
+  {:else}
+    <div class="choose">
+      <div class="choose-h">
+        <span>{$t('home.play.choose')}</span>
+        <button class="x" onclick={() => (choosing = false)} aria-label={$t('home.play.close')}><Icon name="close" size={16} /></button>
+      </div>
+      <div class="clocks" role="group" aria-label={$t('home.play.clock')}>
+        {#each CLOCKS as c (c.tc)}
+          <button class:on={tc === c.tc} onclick={() => play(c.tc)}>
+            <Icon name={c.icon} size={18} />
+            <strong class="num">{c.name}</strong>
+            <span>{c.kind}</span>
+          </button>
+        {/each}
+      </div>
+    </div>
+  {/if}
 
   <nav class="other" aria-label={$t('home.play.other')}>
     <a href="/friends"><Icon name="users" size={16} />{$t('home.play.friend')}</a>
     <a href="/play?mode=online"><Icon name="globe" size={16} />{$t('home.play.online')}</a>
     <a href="/play/tournament"><Icon name="trophy" size={16} />{$t('home.play.tournament')}</a>
-    <a href="/play"><Icon name="dots" size={16} />{$t('home.play.more')}</a>
+    <a href="/play"><Icon name="dots" size={16} /><span class="sr-only">{$t('home.play.h')}: </span>{$t('home.play.more')}</a>
   </nav>
 </section>
 
@@ -112,7 +124,7 @@
     pointer-events: none;
     filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.45));
   }
-  /* Tall enough that the clocks start below the picture. */
+  /* Tall enough that what follows starts below the picture. */
   .head {
     padding-right: 120px;
     min-height: 102px;
@@ -127,49 +139,12 @@
     font-size: 14.5px;
     color: color-mix(in srgb, currentColor 72%, transparent);
   }
-  .clocks {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-  }
-  .clocks button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    padding: 8px 2px 7px;
-    border-radius: 14px;
-    border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
-    background: color-mix(in srgb, currentColor 6%, transparent);
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, transform 0.1s;
-  }
-  .clocks button:active {
-    transform: scale(0.97);
-  }
-  .clocks strong {
-    font-size: 15.5px;
-    white-space: nowrap;
-  }
-  .clocks span {
-    font-size: 11.5px;
-    opacity: 0.7;
-  }
-  .clocks button.on {
-    background: color-mix(in srgb, var(--gold) 22%, transparent);
-    border-color: var(--gold);
-  }
-  .clocks button.on :global(svg) {
-    color: var(--gold);
-  }
   .go {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    min-height: 56px;
+    min-height: 58px;
     border: 0;
     border-radius: 16px;
     background: linear-gradient(180deg, #f7cd62, #edb040 55%, #d99a24);
@@ -179,7 +154,7 @@
     color: #0b1426;
     font: inherit;
     font-family: var(--font-title);
-    font-size: 21px;
+    font-size: 22px;
     font-weight: 800;
     cursor: pointer;
     margin-bottom: 6px;
@@ -190,6 +165,75 @@
     box-shadow:
       0 2px 0 #b07816,
       0 6px 14px rgba(237, 176, 64, 0.24);
+  }
+  .choose {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: open 0.2s ease-out;
+  }
+  @keyframes open {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  .choose-h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .x {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    color: inherit;
+    cursor: pointer;
+  }
+  .clocks {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .clocks button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 12px 2px 10px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .clocks button:active {
+    transform: scale(0.96);
+  }
+  .clocks button :global(svg) {
+    color: var(--gold);
+  }
+  .clocks strong {
+    font-size: 16px;
+    white-space: nowrap;
+  }
+  .clocks span {
+    font-size: 11.5px;
+    opacity: 0.75;
+  }
+  /* The clock played last. */
+  .clocks button.on {
+    background: color-mix(in srgb, var(--gold) 28%, transparent);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 1px var(--gold);
   }
   .other {
     display: grid;
@@ -226,8 +270,8 @@
       transform: translateY(-50%);
     }
     .head,
-    .clocks,
     .go,
+    .choose,
     .other {
       max-width: calc(100% - 270px);
     }

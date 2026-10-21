@@ -9,7 +9,7 @@
   import { LANGS, type Lang } from '$lib/coach/i18n';
   import { loadCoach, saveCoach, type CoachState } from '$lib/coach/progress';
   import { SECTIONS, type Category, type Level } from '$lib/coach/types';
-  import { CLOUD_NAMES, cloudVoice, speak, speaking, voicesFor, voicesReady } from '$lib/coach/voice';
+  import { CLOUD_NAMES, cloudVoice, speak, speaking, stopSpeaking, voicesFor, voicesReady } from '$lib/coach/voice';
   import { avatarInfo } from '$lib/coach/avatar';
   import { formatDate } from '$lib/format';
   import { myGames, opponentOf, outcome } from '$lib/stores/myGames';
@@ -71,6 +71,18 @@
   ];
   const LEVELS: (Level | 'all')[] = ['all', 'beginner', 'intermediate', 'advanced'];
 
+  /** A tap on Guru: Guru says hello again (a second tap stops). With no voice on this device, the face still talks a moment. */
+  let waving = $state(false);
+  function hello() {
+    if ($speaking) return stopSpeaking();
+    if (!cloudOn && !voices.length) {
+      waving = true;
+      setTimeout(() => (waving = false), 2600);
+      return;
+    }
+    void speak(SAMPLE[prefs.lang], prefs.lang, cloudOn ? undefined : chosenVoice);
+  }
+
   const q = $derived(query.trim().toLowerCase());
   const lessons = $derived(
     CATALOG.filter((l) => (q ? `${l.title} ${l.blurb} ${l.section}`.toLowerCase().includes(q) : l.category === tab)).filter((l) => level === 'all' || l.level === level),
@@ -96,7 +108,9 @@
 
 <div class="page">
   <section class="hero card">
-    <GuruAvatar size={104} talking={$speaking} />
+    <button class="guru-tap" onclick={hello} aria-label={$speaking ? 'Stop Guru' : 'Hear Guru say hello'} title="Tap Guru">
+      <GuruAvatar size={104} talking={$speaking || waving} />
+    </button>
     <div class="intro">
       <h1 class="display">Chess Guru</h1>
       <p>Lessons from beginner to advanced level: openings, middlegame tactics and strategy, and endgames. Guru explains every position, plays the moves out, and you practise each one against the engine at your level.</p>
@@ -264,6 +278,18 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+  .guru-tap {
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+    transition: transform 0.12s;
+  }
+  .guru-tap:active {
+    transform: scale(0.95);
   }
   .hero {
     display: flex;

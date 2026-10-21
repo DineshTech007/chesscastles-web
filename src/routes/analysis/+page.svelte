@@ -143,6 +143,24 @@
   /** The game being reviewed, when it is one of yours: the players' ratings come from it. */
   const savedGame = $derived(savedId ? myGames.get(savedId) : undefined);
   const gr = $derived(savedGame ? gameRating(savedGame, $kfideAll) : undefined);
+  /**
+   * Who plays which side, by the board (owner's request, 2026-10-21: it was not clear who is White and who is
+   * Black): the name, the rating, and the score once the game is over. From your saved game, or an imported game's
+   * tags; just "White" and "Black" on an empty board.
+   */
+  function sidePlayer(side: 'white' | 'black') {
+    const result = savedGame ? savedGame.result : (headers.get('Result') ?? '*');
+    const score = result === '1-0' ? (side === 'white' ? '1' : '0') : result === '0-1' ? (side === 'black' ? '1' : '0') : /^(1\/2-1\/2|½-½)$/.test(result) ? '½' : '';
+    if (savedGame) {
+      const me = savedGame.userSide === side;
+      const name = me ? $myName || 'You' : side === 'white' ? savedGame.white : savedGame.black;
+      const opp = savedGame.opponentRating && savedGame.kind !== 'computer' && !name.includes(String(savedGame.opponentRating)) ? `${savedGame.kind === 'fide' ? 'FIDE ' : ''}${savedGame.opponentRating}` : undefined;
+      const rating = me ? (gr?.label && gr.before !== undefined ? `${gr.label} ${ratingText(gr)}` : undefined) : opp;
+      return { name, rating, me, score };
+    }
+    const elo = headers.get(side === 'white' ? 'WhiteElo' : 'BlackElo');
+    return { name: headers.get(side === 'white' ? 'White' : 'Black') ?? playerNames[side], rating: elo && elo !== '?' ? elo : undefined, me: false, score };
+  }
   let copied = $state('');
   /** Every move's badge (brilliant … blunder), for the line it was worked out on. */
   let review = $state<{ ucis: string[]; result: GameReview } | undefined>();
@@ -207,6 +225,7 @@
         if (g) {
           load(g.start, g.plies.map((p) => moveToUci(p.move)), q.has('review'));
           title = `${g.headers.get('White') ?? 'White'} – ${g.headers.get('Black') ?? 'Black'}`;
+          headers = g.headers;
           cursor = Math.min(line.length, Number(q.get('ply')) || line.length);
         }
       } catch {
@@ -589,6 +608,15 @@
     />
   </section>
 {:else}
+{#snippet nameBar(side: 'white' | 'black')}
+  {@const p = sidePlayer(side)}
+  <div class="name-bar" class:me={p.me}>
+    <span class="nb-disc {side}" aria-hidden="true"></span>
+    <span class="nb-name">{p.name}</span>
+    {#if p.rating}<span class="nb-r num">{p.rating}</span>{/if}
+    {#if p.score}<span class="nb-score num" class:won={p.score === '1'}>{p.score}</span>{/if}
+  </div>
+{/snippet}
 <div class="analysis">
   <section class="board-col" aria-label="Board">
     {#if engineOn}
@@ -612,6 +640,7 @@
         {/if}
       </div>
     {/if}
+    {@render nameBar(orientation === 'white' ? 'black' : 'white')}
     <div class="board-row">
       {#if engineOn}
         <div class="evalbar" aria-label="Evaluation {info ? evalLabel(info) : 'pending'}" class:flipped={orientation === 'black'}>
@@ -639,6 +668,7 @@
         />
       </div>
     </div>
+    {@render nameBar(orientation)}
     <div class="card under-board">
       <MoveNav ply={cursor} max={line.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
     </div>
@@ -908,6 +938,56 @@
   .board-row {
     display: flex;
     gap: 8px;
+  }
+  .name-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 2px 4px;
+    font-size: 15px;
+  }
+  .nb-disc {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    border-radius: 50%;
+    border: 1px solid #777;
+  }
+  .nb-disc.white {
+    background: #f4f1ea;
+  }
+  .nb-disc.black {
+    background: #1a1a1a;
+  }
+  .nb-name {
+    min-width: 0;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .name-bar.me .nb-name {
+    color: var(--gold);
+  }
+  .nb-r {
+    flex: none;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .nb-score {
+    margin-left: auto;
+    flex: none;
+    min-width: 24px;
+    padding: 0 6px;
+    border-radius: 6px;
+    background: var(--raised);
+    font-weight: 800;
+    text-align: center;
+  }
+  .nb-score.won {
+    background: var(--win);
+    color: #fff;
   }
   /* Phones and narrow windows: the move buttons under the board instead of in the panel below. */
   .under-board {

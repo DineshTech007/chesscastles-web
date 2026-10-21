@@ -10,6 +10,9 @@ const config = {
     adapter: adapter({ fallback: 'index.html', precompress: false }),
     // Checks for a new deploy every 5 minutes (see beforeNavigate in +layout.svelte).
     version: { pollInterval: 300_000 },
+    // The first screen's small style files go inside the page (PageSpeed, 2026-10-21: seven of them blocked the
+    // first paint on a phone for about 0.6 s). style-src allows inline styles, so the CSP needs nothing more.
+    inlineStyleThreshold: 10_240,
     // Content Security Policy (as a <meta> tag; SvelteKit adds the hash of its own
     // start-up script). Scripts only from this site; data only to the services
     // Chess Castles uses. The engines' workers have their own files.

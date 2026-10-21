@@ -35,6 +35,14 @@
     <button class="x" onclick={close} aria-label="Close"><Icon name="close" size={18} /></button>
     {#if PLANS_ON}<span class="piece"><PlanBadge plan={better ?? 'premium'} size={56} /></span>{/if}
     <h2 id="limit-h" class="title">{title}</h2>
+    {#if hit.guest}
+      <!-- A visitor's daily tries are used: signing in is free and opens everything. -->
+      <p>Sign in free to keep playing: it takes a few seconds with Google or Lichess. Your games, ratings and puzzles stay in your account, on every device.</p>
+      <div class="btns">
+        <button class="btn primary" onclick={() => (close(), startSignIn())}>Sign in free</button>
+        <button class="btn" onclick={close}>Not now</button>
+      </div>
+    {:else}
     {#if hit.feature}
       <p>
         {PLAN_INFO[hit.plan].name}{hit.plan === 'free' ? ' (free)' : ''} includes {limitText(config.limits[hit.feature][hit.plan]).toLowerCase()}.
@@ -67,6 +75,7 @@
         <button class="btn primary" onclick={() => (close(), goto('/plans'))}><Icon name="crown" size={16} />See plans</button>
         <button class="btn" onclick={close}>Not now</button>
       </div>
+    {/if}
     {/if}
   </div>
 {/if}

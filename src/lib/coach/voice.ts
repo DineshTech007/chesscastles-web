@@ -132,9 +132,10 @@ async function speakCloud(text: string, lang: Lang, gender: 'male' | 'female', r
       const url = await next;
       if (token !== speakToken) return true;
       if (i + 1 < parts.length) next = fetchPart(parts[i + 1]);
-      speaking.set(true);
       await new Promise<void>((resolve, reject) => {
         audio = new Audio(url);
+        // Guru's face moves when the sound starts (not while it downloads, which made the face talk first).
+        audio.onplaying = () => token === speakToken && speaking.set(true);
         audio.onended = () => resolve();
         audio.onerror = () => reject(new Error('audio'));
         audio.play().catch(reject);
@@ -157,7 +158,6 @@ export async function speak(text: string, lang: Lang, voiceName?: string): Promi
   const token = ++speakToken;
   const coach = avatarInfo(get(coachAvatar));
   if (await cloud()) {
-    speaking.set(true);
     const spokenCloud = /^(hi|mr)$/.test(lang) ? forIndianVoice(speakable(text)) : speakable(text);
     const done = await speakCloud(spokenCloud, lang, coach.voice, coach.rate, token);
     if (done) {
@@ -176,7 +176,6 @@ export async function speak(text: string, lang: Lang, voiceName?: string): Promi
   const indian = /^(hi|mr)/i.test(voice?.lang ?? '');
   const spoken = indian ? forIndianVoice(speakable(text)) : speakable(text);
   const parts = spoken.match(/[^.!?।]+[.!?।]?/g) ?? [];
-  speaking.set(true);
   for (const part of parts) {
     if (token !== speakToken) return;
     if (!part.trim()) continue;
@@ -186,6 +185,7 @@ export async function speak(text: string, lang: Lang, voiceName?: string): Promi
       u.lang = voice?.lang ?? speechCode(lang);
       u.rate = coach.rate;
       u.pitch = Math.max(0.1, Math.min(2, coach.pitch * deepen));
+      u.onstart = () => token === speakToken && speaking.set(true);
       u.onend = u.onerror = () => resolve();
       s.speak(u);
     });

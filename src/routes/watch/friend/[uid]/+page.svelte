@@ -10,6 +10,7 @@
   import LearnFromGame from '$lib/components/LearnFromGame.svelte';
   import { levelName } from '$lib/game/levels';
   import WatchViewer, { type BarInfo } from '$lib/components/WatchViewer.svelte';
+  import { endWords, isDrawWords } from '$lib/game/endWords';
   import { session, startSignIn } from '$lib/auth';
   import { positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
   import type { PgnGame, PgnPly } from '$lib/chess/pgn';
@@ -127,9 +128,15 @@
     }
     return friend?.kfide ? `CC ${friend.kfide}` : undefined;
   }
-  const resultText = $derived(
-    !game?.result ? '' : game.result === 'aborted' ? 'Game aborted' : game.result === '½-½' ? 'Draw' : (game.result === '1-0') === (game.human === 'white') ? `${friendName} won` : `${friendName} lost`,
-  );
+  /** For anyone watching: who won and how ("FIDE 1625 won by resignation", "Draw by repetition"). */
+  const resultText = $derived.by(() => {
+    if (!game?.result) return '';
+    if (game.result === 'aborted') return 'Game aborted';
+    const how = endWords(game.reason);
+    if (game.result === '½-½') return how && isDrawWords(how) ? how : 'Draw';
+    const winner = (game.result === '1-0') === (game.human === 'white') ? friendName : game.opponent;
+    return `${winner} won${how ? ` ${how}` : ''}`;
+  });
 </script>
 
 <svelte:head><title>Watching {friendName} · Chess Castles</title></svelte:head>
@@ -150,7 +157,7 @@
     side={game.human}
     heading="{friendName} vs {game.opponent}"
     subheading="{game.minutes ? `${game.minutes}+${game.increment}` : 'No clock'} · on Chess Castles"
-    result={resultText ? `${resultText}${game.reason ? ` · ${game.reason}` : ''}` : ''}
+    result={resultText}
     outcome={game.result === '1-0' || game.result === '0-1' || game.result === '½-½' ? game.result : undefined}
     backHref="/friends"
     backLabel="Back to friends"

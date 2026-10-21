@@ -104,7 +104,11 @@
         error = 'You have solved every puzzle near your rating in this browser. Well done!';
         return;
       }
-      void useFeature('puzzle', p[0]);
+      // A visitor's free puzzles for today used up: the sign-in popup opens, and the next puzzle waits for it.
+      if (!(await useFeature('puzzle', p[0]))) {
+        error = 'You’ve solved today’s free puzzles. Sign in free to keep going: your puzzle rating stays in your account.';
+        return;
+      }
       markSeen(p[0]);
       current = p;
       result = undefined;

@@ -401,9 +401,9 @@
     {:else}
     <header class="top">
       {#if phone}
-        <a class="phone-brand" href="/" aria-label="Chess Castles: Learn, Play, Conquer (home)">
-          <img class="logo-dark" src="/brand/chesscastles-crest-dark.svg" alt="" height="36" />
-          <img class="logo-light" src="/brand/chesscastles-crest-light.svg" alt="" height="36" />
+        <a class="phone-brand" href="/" title="Chess Castles: Learn, Play, Conquer (home)">
+          <img class="logo-dark" src="/brand/chesscastles-crest-dark.svg" alt="" width="32" height="36" />
+          <img class="logo-light" src="/brand/chesscastles-crest-light.svg" alt="" width="32" height="36" />
           {#if betaOn()}<span class="pb-beta" title="Beta: everything is free until 30 November 2026">BETA</span>{/if}
           <span class="pb-text">
             <span class="pb-name">CHESS <span class="pb-c2">CASTLES</span></span>

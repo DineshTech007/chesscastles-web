@@ -4,6 +4,7 @@
   import Icon from './Icon.svelte';
   import { friendGames } from '$lib/social';
   import { KIND_LABEL, outcome, pgnOfSaved, type SavedGame } from '$lib/stores/myGames';
+  import { endWordsCap } from '$lib/game/endWords';
   import { formatDate } from '$lib/format';
 
   let { uid, name }: { uid: string; name: string } = $props();
@@ -41,7 +42,7 @@
           <span class="res {o}">{LETTER[o]}</span>
           <span class="t">
             <strong>vs {g.userSide === 'white' ? g.black : g.white}</strong>
-            <span class="label">{KIND_LABEL[g.kind]}{g.timeControl ? ` · ${g.timeControl}` : ''} · {g.reason} · {formatDate(g.playedAt)}</span>
+            <span class="label">{KIND_LABEL[g.kind]}{g.timeControl ? ` · ${g.timeControl}` : ''} · {endWordsCap(g.reason)} · {formatDate(g.playedAt)}</span>
           </span>
           <button class="btn small" onclick={() => review(g)}><Icon name="analyse" size={15} />Review</button>
         </li>

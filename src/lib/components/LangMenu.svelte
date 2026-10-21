@@ -21,7 +21,7 @@
 <svelte:window onkeydown={(e) => open && e.key === 'Escape' && (open = false)} onclick={(e) => open && !(e.target as HTMLElement).closest?.('.lm') && (open = false)} />
 
 <div class="lm">
-  <button class="lm-btn" aria-haspopup="menu" aria-expanded={open} aria-label={$t('lang.menu')} title={$t('lang.menu')} onclick={() => (open = !open)}>
+  <button class="lm-btn" aria-haspopup="menu" aria-expanded={open} aria-label="{SHORT[$contentLang]} · {$t('lang.menu')}" title={$t('lang.menu')} onclick={() => (open = !open)}>
     <Icon name="globe" size={18} /><span class="code">{SHORT[$contentLang]}</span>
   </button>
   {#if open}

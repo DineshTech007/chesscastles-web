@@ -166,6 +166,8 @@ export interface LimitHit {
   /** India day ("2026-10-18") when the next free use comes. */
   next?: string;
   signedOut: boolean;
+  /** A visitor's daily tries are used up (GUEST_LIMITS): signing in, free, opens everything. */
+  guest?: boolean;
 }
 export const limitHit = writable<LimitHit | undefined>();
 
@@ -182,6 +184,53 @@ function localUses(): Record<string, LocalUse> {
 }
 
 /**
+ * Visitors (not signed in) try Chess Castles first, then sign in, free, to keep going (owner's choice, 2026-10-21:
+ * many visitors, few members): so many a day in this browser while plans are off. Members have no limits.
+ */
+export const GUEST_LIMITS: Partial<Record<Feature, number>> = { fide_game: 3, puzzle: 10, tournament: 1 };
+
+/** Resolves once the sign-in is known (a page opened directly finds it out a moment after it starts). */
+function sessionKnown(): Promise<void> {
+  return new Promise((resolve) => {
+    let stop: (() => void) | undefined;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      setTimeout(() => stop?.());
+      resolve();
+    };
+    stop = session.subscribe((s) => {
+      if (s.status !== 'loading') finish();
+    });
+    if (done) stop();
+    setTimeout(finish, 4000);
+  });
+}
+
+/** A visitor's use, counted in this browser: false once today's tries are used (the sign-in popup opens). */
+function guestUse(feature: Feature, ref?: string): boolean {
+  const n = GUEST_LIMITS[feature];
+  // (Not for the automatic site check, which plays as a visitor.)
+  if (n === undefined || (typeof navigator !== 'undefined' && navigator.webdriver)) return true;
+  const all = localUses();
+  const list = (all[feature] ?? []).filter((u) => u.day >= today());
+  if (ref && list.some((u) => u.ref === ref)) return true;
+  if (list.length >= n) {
+    track('limit', `guest_${feature}`);
+    limitHit.set({ feature, plan: 'free', limit: n, per: 'day', signedOut: true, guest: true });
+    return false;
+  }
+  all[feature] = [...list, { day: today(), ref }].slice(-500);
+  try {
+    localStorage.setItem(LOCAL, JSON.stringify(all));
+  } catch {
+    /* storage full or blocked: let it go */
+  }
+  return true;
+}
+
+/**
  * Asks before a limited feature starts: true to go ahead (the use is
  * counted), false when the plan's limit is reached (the limit popup opens).
  * `ref`: the game, opening or puzzle, so the same one opened again is free.
@@ -189,7 +238,11 @@ function localUses(): Record<string, LocalUse> {
  */
 export async function useFeature(feature: Feature, ref?: string): Promise<boolean> {
   track('feature', feature);
-  if (!PLANS_ON) return true;
+  if (!PLANS_ON) {
+    if (!GUEST_LIMITS[feature]) return true;
+    await sessionKnown();
+    return get(session).status === 'out' ? guestUse(feature, ref) : true;
+  }
   if (get(session).status === 'in') {
     try {
       const r = await call<{ ok: boolean; plan: Plan; used?: number; limit?: number | null; per?: Per; next?: string; again?: boolean }>('POST', 'plan/use', { feature, ref });

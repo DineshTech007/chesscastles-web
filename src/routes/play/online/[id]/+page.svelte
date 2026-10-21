@@ -25,6 +25,7 @@
   import { myCountry, myPhoto, photoSrc } from '$lib/stores/me';
   import { POINTS, study } from '$lib/study/progress';
   import { checkClubGame } from '$lib/tournament/club';
+  import { ABORTS_NOTE, abortsToday, noteAbort } from '$lib/game/aborts';
 
   const gameId = page.params.id!;
   const color = page.url.searchParams.get('c');
@@ -41,6 +42,9 @@
   let connection = $state<'connecting' | 'live' | 'reconnecting'>('connecting');
   let notice = $state('');
   let confirmResign = $state(false);
+  /** Abort asks first (as on chess.com): a real opponent is waiting. After a few aborts in a day, a word at the start. */
+  let confirmAbort = $state(false);
+  const aborted = abortsToday();
   let saved = false;
   /** The result over the board, once, at the end of a game played here (not one opened after it ended). */
   let sheet = $state(false);
@@ -375,6 +379,9 @@
 <svelte:head><title>Online game · Chess Castles</title></svelte:head>
 
 {#snippet playControls()}
+{#if aborted >= ABORTS_NOTE && controls.plies < 2}
+  <div class="notice warn" role="note">You aborted {aborted} games today. Please play the games you start: your opponents want to play too.</div>
+{/if}
 {#if view.theyOfferDraw}
   <div class="notice offer">
     <span>{game.opponent.name} offers a draw.</span>
@@ -383,8 +390,12 @@
   </div>
 {/if}
 <div class="actions">
-  {#if controls.abort}
-    <button class="btn" onclick={() => act(() => api.abort(token!, gameId))}><Icon name="close" size={18} />Abort</button>
+  {#if controls.abort && confirmAbort}
+    <p class="abort-q">Abort this game? {game.opponent.name} is waiting to play. Aborting is unfair to your opponent, and Lichess limits players who abort often.</p>
+    <button class="btn primary" onclick={() => (noteAbort(), (confirmAbort = false), act(() => api.abort(token!, gameId)))}>Yes, abort</button>
+    <button class="btn" onclick={() => (confirmAbort = false)}>Keep playing</button>
+  {:else if controls.abort}
+    <button class="btn" onclick={() => (confirmAbort = true)}><Icon name="close" size={18} />Abort</button>
   {:else if confirmResign}
     <!-- Before the opponent's first move Lichess only aborts (no rating change). -->
     <button class="btn primary" onclick={() => act(() => (controls.abortable ? api.abort(token!, gameId) : api.resign(token!, gameId)))}>Yes, resign</button>
@@ -592,6 +603,12 @@
     background: color-mix(in srgb, var(--brand) 14%, var(--card));
     border: 1px solid var(--border);
     font-size: 14.5px;
+  }
+  .abort-q {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--text-2);
   }
   .notice.warn {
     background: color-mix(in srgb, var(--engine) 16%, var(--card));

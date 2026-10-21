@@ -47,7 +47,7 @@
     </a>
 
     <a class="tcard art-card" href="/puzzles">
-      <img src="/art/puzzles.webp" alt="" width="256" height="245" />
+      <img src="/art/puzzles-256.webp" alt="" width="256" height="245" loading="lazy" />
       <div class="txt">
         <strong>{$t('home.puzzles.h')}</strong>
         <span class="big num">{$puzzleRating}</span>
@@ -57,7 +57,7 @@
     </a>
 
     <a class="tcard art-card" href={lesson?.href ?? '/learn'}>
-      <img src="/art/learn.webp" alt="" width="256" height="243" />
+      <img src="/art/learn-256.webp" alt="" width="256" height="243" loading="lazy" />
       <div class="txt">
         <strong>{$t('home.learn.h')}</strong>
         <span class="sub two-lines">{lesson ? $t('home.learn.today', { title: lesson.title }) : $t('home.learn.sub')}</span>

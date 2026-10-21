@@ -38,6 +38,15 @@
     { m: 30, i: 0 },
     { m: 30, i: 20 },
   ];
+  /**
+   * Bullet with a friend (owner's request, 2026-10-21): Lichess plays bullet only on its own site and app, so these
+   * open lichess.org's challenge with the friend filled in (a Google-account friend: Lichess makes a link to send).
+   */
+  const BULLET: Tc[] = [
+    { m: 1, i: 0 },
+    { m: 1, i: 1 },
+  ];
+  let bullet = $state<Tc | undefined>();
   const key = (t: Tc) => `${t.m}+${t.i}`;
   const tcOf = (k: string) => TCS.find((t) => key(t) === k) ?? TCS[4];
   /** Lichess's speeds, from the estimated game time (minutes + 40 × increment). */
@@ -56,7 +65,7 @@
   let rated = $state(true);
   let username = $state(preset ?? '');
   // Picking the friend: your Chess Castles friends to tap (Lichess and Google accounts), and Lichess names as you type.
-  let ccFriends = $state<{ username: string; name: string; playing?: boolean }[]>([]);
+  let ccFriends = $state<{ uid: string; username: string; name: string; playing?: boolean }[]>([]);
   let lichessSuggest = $state<{ id: string; name: string; title?: string; online?: boolean }[]>([]);
   let acOpen = $state(false);
   let acTimer: ReturnType<typeof setTimeout> | undefined;
@@ -68,7 +77,7 @@
       (r) =>
         (ccFriends = r.friends
           .filter((p) => p.member !== false && (p.username || p.uid.startsWith('lichess:')))
-          .map((p) => ({ username: p.username || p.uid.slice(8), name: p.name, playing: (p as { playing?: boolean }).playing }))),
+          .map((p) => ({ uid: p.uid, username: p.username || p.uid.slice(8), name: p.name, playing: (p as { playing?: boolean }).playing }))),
       () => {},
     );
   });
@@ -331,10 +340,20 @@
     void quickPair(t);
   }
 
+  /** A bullet game with a friend: on lichess.org, opened at once from the tap (a new tab, not blocked). */
+  function bulletOnLichess() {
+    const name = username.trim();
+    const f = ccFriends.find((x) => x.username.toLowerCase() === name.toLowerCase());
+    const li = f ? (f.uid.startsWith('lichess:') ? f.uid.slice(8) : undefined) : name || undefined;
+    track('feature', 'lichess_bullet_friend');
+    window.open(li ? `https://lichess.org/?user=${encodeURIComponent(li)}#friend` : 'https://lichess.org/#friend', '_blank', 'noopener');
+  }
+
   async function start() {
     const t = lichessToken()?.token;
     if (!t) return;
     error = '';
+    if (kind === 'friend' && bullet) return bulletOnLichess();
     if (!events) listen(t);
     const tc = TCS[tcIdx];
     if (kind === 'pair') return quickPair(tc);
@@ -559,14 +578,24 @@
     <div class="group">
       <h3 class="title h">Time control</h3>
       <div class="tcs">
+        {#if kind === 'friend'}
+          {#each BULLET as t (key(t))}
+            <button class="tile" aria-pressed={bullet === t} onclick={() => (bullet = t)}>
+              <span class="title num">{key(t)}</span><span class="label">Bullet · Lichess</span>
+            </button>
+          {/each}
+        {/if}
         {#each TCS as t, idx (key(t))}
           {@const n = kind === 'pair' ? (waitingAt[key(t)] ?? 0) : 0}
-          <button class="tile" aria-pressed={tcIdx === idx} onclick={() => (tcIdx = idx)}>
+          <button class="tile" aria-pressed={tcIdx === idx && !(kind === 'friend' && bullet)} onclick={() => ((tcIdx = idx), (bullet = undefined))}>
             <span class="title num">{key(t)}</span><span class="label">{speed(t)}</span>
             {#if n}<span class="badge">{n} waiting</span>{/if}
           </button>
         {/each}
       </div>
+      {#if kind === 'friend' && bullet}
+        <p class="label bullet-note">Lichess plays bullet only on its own website and app (games here can be Blitz at the fastest). This opens Lichess with your friend filled in: choose {key(bullet)} there and send.</p>
+      {/if}
     </div>
 
     {#if kind !== 'pair'}
@@ -586,7 +615,7 @@
     {#if error}<p class="error">{error}</p>{/if}
     <button class="btn primary big block" onclick={start}>
       <Icon name="play" size={18} fill color="currentColor" />
-      {kind === 'pair' ? `Find an opponent · ${key(TCS[tcIdx])}` : kind === 'friend' ? 'Send challenge' : `Play level ${level}`}
+      {kind === 'pair' ? `Find an opponent · ${key(TCS[tcIdx])}` : kind === 'friend' ? (bullet ? `Play ${key(bullet)} on Lichess` : 'Send challenge') : `Play level ${level}`}
     </button>
   {/if}
 {/if}
@@ -878,6 +907,10 @@
     width: 20px;
     height: 20px;
     accent-color: var(--action);
+  }
+  .bullet-note {
+    margin: 8px 0 0;
+    font-size: 13px;
   }
   .error {
     margin: 0;

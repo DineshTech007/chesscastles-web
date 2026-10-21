@@ -24,12 +24,14 @@
   import { thousands } from '$lib/format';
   import { kfideAll, myCountry, myPhoto, photoSrc } from '$lib/stores/me';
   import { KFIDE_PROVISIONAL, kfideText, SPEED_LABEL, speedOf } from '$lib/kfide';
-  import { session } from '$lib/auth';
+  import { session, startSignIn } from '$lib/auth';
   import { analyseGame, type GameReview } from '$lib/coach/review';
   import ReviewSummary from '$lib/review/ReviewSummary.svelte';
   import { quota } from '$lib/plans';
   import { lowTimeMs, playMoveSound, playOutcome, sounds } from '$lib/sound';
   import { clearResume, saveResume } from '$lib/game/resume';
+  import { ABORTS_NOTE, abortsToday, noteAbort } from '$lib/game/aborts';
+  import { uuid } from '$lib/uuid';
   import { friendsCache, shareLive, uploadGame } from '$lib/social';
   import { get } from 'svelte/store';
   import { boardBadge, type MoveClass } from '$lib/review/badges';
@@ -68,7 +70,7 @@
   } = $props();
 
   // svelte-ignore state_referenced_locally
-  const id = gameId ?? crypto.randomUUID();
+  const id = gameId ?? uuid();
   const queue = new PremoveQueue();
   let board: Board | undefined = $state();
   let v = $state(0);
@@ -81,6 +83,9 @@
   // svelte-ignore state_referenced_locally
   let seenMoves = game.moves.length;
   let confirmResign = $state(false);
+  /** Abort asks first (as on chess.com); after a few aborts in a day, a word under the board at the start. */
+  let confirmAbort = $state(false);
+  const aborted = abortsToday();
   /** The move shown while looking back through the game (undefined: the live position). */
   let viewPly = $state<number | undefined>();
   /** After the game: every move's badge (brilliant … blunder), and the progress while they are worked out. */
@@ -542,13 +547,18 @@
     guruHref={game.moves.length >= 4 ? `/coach/review/${id}` : undefined}
     {harder}
     extra={toughRun && (toughRun.slower || toughRun.lower) ? toughNote : undefined}
+    onsignin={$session.status === 'out' ? () => startSignIn() : undefined}
     onclose={() => (sheet = false)}
   />
 {/if}
 
 {#snippet actionButtons()}
-  {#if g.canAbort}
-    <button class="btn" onclick={() => game.abort()}><Icon name="close" size={18} />Abort</button>
+  {#if g.canAbort && confirmAbort}
+    <p class="abort-q">Abort this game? Every game you finish makes you a better player, and aborted games are counted.</p>
+    <button class="btn primary" onclick={() => (noteAbort(), game.abort())}>Yes, abort</button>
+    <button class="btn" onclick={() => (confirmAbort = false)}>Keep playing</button>
+  {:else if g.canAbort}
+    <button class="btn" onclick={() => (confirmAbort = true)}><Icon name="close" size={18} />Abort</button>
   {:else if confirmResign}
     <button class="btn primary" onclick={() => game.resign()}>Yes, resign</button>
     <button class="btn" onclick={() => (confirmResign = false)}>Keep playing</button>
@@ -609,6 +619,9 @@
       />
     </div>
     <PlayerBar {...bottom} />
+    {#if aborted >= ABORTS_NOTE && !g.isOver && g.sans.length < 2}
+      <p class="abort-note" role="note">You aborted {aborted} games today. Please play the games you start: finishing them is how you get better.</p>
+    {/if}
     {#if game.timed && !g.isOver && g.sans.length === 0}
       <p class="first-move" role="status">
         <Icon name="history" size={16} />
@@ -907,6 +920,21 @@
     .board-col {
       gap: 6px;
     }
+  }
+  .abort-q {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--text-2);
+  }
+  .abort-note {
+    margin: 4px 0 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--loss) 45%, var(--border));
+    background: color-mix(in srgb, var(--loss) 10%, var(--card));
+    font-size: 13.5px;
+    font-weight: 600;
   }
   .over-strip {
     display: flex;

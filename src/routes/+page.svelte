@@ -42,6 +42,7 @@
   {#if showLanding}
     <Landing />
   {:else}
+    <MadeInIndia compact />
     <header class="hello">
       <h1 class="display">
         {$t(greetingKey)}{#if $session.status === 'in' && $myName},&nbsp;<TitleBadge title={$myTitle} size={22} />{$myName}{/if}
@@ -89,7 +90,6 @@
     <ExploreIcons />
 
     <footer class="foot">
-      <MadeInIndia />
       <SocialLinks />
     </footer>
   {/if}
@@ -108,7 +108,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-top: 4px;
+    margin-top: -12px;
   }
   .hello h1 {
     margin: 0;

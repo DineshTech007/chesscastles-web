@@ -14,6 +14,7 @@
   import { loadShared } from '$lib/share';
   import { formatDate } from '$lib/format';
   import { playMoveSound } from '$lib/sound';
+  import { endWordsCap } from '$lib/game/endWords';
   import type { Chess } from 'chessops/chess';
   import type { NormalMove } from 'chessops/types';
   import type { Key } from '@lichess-org/chessground/types';
@@ -99,7 +100,7 @@
       <div class="card head">
         <span class="label">{KIND_LABEL[game.kind] ?? 'Analysis'}{game.timeControl ? ` · ${game.timeControl}` : ''} · {formatDate(game.playedAt)}</span>
         <h1 class="title">{game.white} <span class="vs">vs</span> {game.black}</h1>
-        <p class="res"><strong>{resultText}</strong>{game.reason ? ` · ${game.reason}` : ''}</p>
+        <p class="res"><strong>{resultText}</strong>{game.reason ? ` · ${endWordsCap(game.reason)}` : ''}</p>
         <div class="btns">
           <button class="btn primary" onclick={analyse}><Icon name="analyse" size={16} />Review every move</button>
           <button class="btn" onclick={() => (orientation = orientation === 'white' ? 'black' : 'white')}><Icon name="flip" size={16} />Flip</button>

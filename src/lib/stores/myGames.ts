@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
+import { uuid } from '$lib/uuid';
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 export type GameKind = 'computer' | 'fide' | 'lichess';
@@ -89,7 +90,7 @@ function createStore() {
     /** Keeps a game (one without moves is not worth keeping). */
     save(g: Omit<SavedGame, 'id' | 'playedAt'> & Partial<Pick<SavedGame, 'id' | 'playedAt'>>) {
       if (!g.uci.length) return;
-      const game: SavedGame = { id: g.id ?? crypto.randomUUID(), playedAt: g.playedAt ?? Date.now(), ...(owner ? { owner } : {}), ...g };
+      const game: SavedGame = { id: g.id ?? uuid(), playedAt: g.playedAt ?? Date.now(), ...(owner ? { owner } : {}), ...g };
       list = [game, ...list.filter((x) => x.id !== game.id)];
       write(list);
       set(list);

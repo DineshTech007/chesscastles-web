@@ -258,9 +258,31 @@
   <section class="board-col" aria-label="Board">
     <a class="back-top" href={backHref}><Icon name="back" size={16} />{backLabel}</a>
     <div class="stage">
+      {#if narrow && engineOn}
+        <!-- Phones: the evaluation and the engine's two best lines above the board (as on the analysis board), so the
+             board keeps the screen's whole width. -->
+        <div class="eng-strip">
+          <div class="h-bar" role="img" aria-label={finalShown ? `Result ${outcome}` : `Evaluation ${info ? evalLabel(info) : 'pending'}`}>
+            <span class="h-white" style="width: {whiteShare * 100}%"></span>
+            <span class="h-text num" class:right={whiteShare < 0.5}>{finalShown ? outcome : info ? evalLabel(info) : ''}</span>
+          </div>
+          {#if shown.isEnd()}
+            <p class="s-wait">{shown.isCheckmate() ? 'Checkmate' : 'Game over'}</p>
+          {:else}
+            {#each lines.slice(0, 2) as l, i (i)}
+              <button class="s-line" onclick={() => playLine(l)} title="Play this move">
+                <span class="s-ev num" class:dark={(l.mate ?? l.cp ?? 0) < 0}>{evalLabel(l)}</span>
+                <span class="s-text num">{pvText(l)}</span>
+              </button>
+            {:else}
+              <p class="s-wait">The engine is thinking…</p>
+            {/each}
+          {/if}
+        </div>
+      {/if}
       <PlayerBar {...top} />
       <div class="board-row">
-        {#if engineOn}
+        {#if engineOn && !narrow}
           <div class="evalbar" class:flipped={orientation === 'black'} aria-label={finalShown ? `Result ${outcome}` : `Evaluation ${info ? evalLabel(info) : 'pending'}`}>
             <div class="white-share" style="height: {whiteShare * 100}%"></div>
           </div>
@@ -623,16 +645,94 @@
     .board-col {
       flex: 1 1 100%;
     }
-    /* A phone: the board gets what the screen leaves after the bars, buttons, moves and analysis, so all of them are in view. */
+    /* A phone: the board takes the screen's whole width (owner's request, 2026-10-21: a small board between wide
+       cards looked out of place); the engine's lines are above it, the moves and the database below. */
     .stage {
       gap: 5px;
     }
-    .board-row,
-    .stage > :global(.bar),
-    .stage > .nav-card {
-      width: min(100%, max(240px, calc(100dvh - 500px)));
-      margin-left: auto;
-      margin-right: auto;
+    .analysis .elines {
+      display: none;
+    }
+    .eng-strip {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .h-bar {
+      position: relative;
+      height: 18px;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #2a2f3c;
+    }
+    .h-white {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      background: #f2f5fb;
+      transition: width 0.4s ease;
+    }
+    .h-text {
+      position: absolute;
+      left: 6px;
+      top: 0;
+      line-height: 18px;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #1b1f2a;
+    }
+    .h-text.right {
+      left: auto;
+      right: 6px;
+      color: #f2f5fb;
+    }
+    .s-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 3px 2px;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      color: var(--text);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .s-line:active {
+      background: var(--raised);
+    }
+    .s-ev {
+      flex: none;
+      min-width: 48px;
+      padding: 1px 4px;
+      border-radius: 5px;
+      background: #f2f2f2;
+      color: #111;
+      font-size: 12.5px;
+      font-weight: 800;
+      text-align: center;
+    }
+    .s-ev.dark {
+      background: #222;
+      color: #f2f2f2;
+      border: 1px solid #555;
+    }
+    .s-text {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+    .s-wait {
+      margin: 0;
+      padding: 3px 2px;
+      font-size: 13px;
+      color: var(--muted);
     }
     .nav-card :global(.nb) {
       height: 40px;

@@ -54,6 +54,14 @@
     }
   }
   const flag = (c?: string) => (c ? `/flags/${c}.svg` : undefined);
+  /**
+   * Play: the Play page's "A friend", filled in. A friend by their Lichess name, or their Chess Castles name (a Google
+   * account: they get a message with a Join button); anyone else only with a Lichess account (their name there).
+   */
+  const playHref = (p: Player, friend: boolean) => {
+    const name = lichessId(p.uid) ?? (friend ? p.username : undefined);
+    return name ? `/play?mode=online&friend=${encodeURIComponent(name)}` : undefined;
+  };
 </script>
 
 {#if loaded && (friends.length || others.length)}
@@ -80,6 +88,8 @@
               <a class="btn small primary" href="/watch/friend/{encodeURIComponent(r.player.uid)}">{$t('online.watch')}</a>
             {:else if r.lichess?.playingId}
               <a class="btn small primary" href="/watch/live/{r.lichess.playingId}">{$t('online.watch')}</a>
+            {:else if playHref(r.player, true)}
+              <a class="btn small primary" href={playHref(r.player, true)}>{$t('online.play')}</a>
             {/if}
           </li>
         {/each}
@@ -96,7 +106,7 @@
               <TitleBadge title={p.title} size={12} /><strong>{p.name}</strong>
               {#if p.kfide}<span class="num label">{p.kfide}</span>{/if}
             </a>
-            {#if p.playing}<span class="where label">{$t('online.playing')}</span>{/if}
+            {#if p.playing}<span class="where label">{$t('online.playing')}</span>{:else if playHref(p, false)}<a class="btn small" href={playHref(p, false)}>{$t('online.play')}</a>{/if}
             {#if p.relation === 'outgoing'}
               <span class="label sent">{$t('online.sent')}</span>
             {:else if p.relation === 'incoming'}
@@ -180,6 +190,15 @@
   .where {
     flex: none;
     font-size: 12.5px;
+  }
+  /* Small phones: "Playing on Lichess" on two short lines, so the name keeps its room. */
+  @media (max-width: 400px) {
+    .where {
+      max-width: 64px;
+      white-space: normal;
+      line-height: 1.15;
+      font-size: 11.5px;
+    }
   }
   .sent {
     flex: none;

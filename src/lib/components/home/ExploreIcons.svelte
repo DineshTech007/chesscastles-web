@@ -28,7 +28,7 @@
           <Icon name={it.icon} size={22} />
           {#if it.href === '/friends' && $socialBadge}<span class="badge">{$socialBadge}</span>{/if}
         </span>
-        <span class="lb">{$t(it.key)}</span>
+        <span class="lb">{#if it.href === '/more'}<span class="sr-only">All pages: </span>{/if}{$t(it.key)}</span>
       </a>
     {/each}
   </div>

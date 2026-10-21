@@ -41,7 +41,7 @@
 </script>
 
 <nav class="rail" class:collapsed aria-label="Main">
-  <a class="brand" href="/" aria-label="Chess Castles: Learn, Play, Conquer (home)">
+  <a class="brand" href="/" title="Chess Castles: Learn, Play, Conquer (home)" aria-label={collapsed ? `${betaOn() ? 'Beta: ' : ''}Chess Castles home` : undefined}>
     <img class="crest logo-dark" src="/brand/chesscastles-crest-dark.svg" alt="" width="40" height="45" />
     <img class="crest logo-light" src="/brand/chesscastles-crest-light.svg" alt="" width="40" height="45" />
     {#if betaOn()}<span class="beta" title="Beta: everything is free until 30 November 2026">BETA</span>{/if}
@@ -347,8 +347,14 @@
   .foot {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 10px;
+    gap: 2px 12px;
     padding: 2px 4px 0;
+  }
+  .foot a,
+  .foot .install {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
   }
   .foot a {
     color: var(--muted);
