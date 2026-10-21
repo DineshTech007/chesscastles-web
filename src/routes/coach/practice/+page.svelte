@@ -55,10 +55,6 @@
   /** While the opponent thinks, the board shows where the queued premoves put your pieces. */
   const preview = $derived(queued > 0 && pos.turn !== side && !pos.isEnd());
   const fen = $derived(preview ? `${makeBoardFen(queue.preview(pos.board))} ${pos.turn[0]} - - 0 1` : realFen);
-  const premoveShapes = $derived.by((): DrawShape[] => {
-    void queued;
-    return queue.moves.map((m) => ({ orig: keyOf(m.from), dest: keyOf(m.to), brush: 'blue' }));
-  });
   const queuedKeys = $derived.by((): Key[] => {
     void queued;
     return queue.moves.flatMap((m) => [keyOf(m.from), keyOf(m.to)]);
@@ -301,7 +297,7 @@
           dests={myTurn ? destsOf(pos) : new Map()}
           {lastMove}
           check={!preview && pos.isCheck()}
-          shapes={[...shapes, ...premoveShapes]}
+          {shapes}
           premovable={$premovesOn && !pos.isEnd()}
           queued={queuedKeys}
           label="Practice board"

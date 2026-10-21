@@ -16,13 +16,12 @@
   import Celebrations from '$lib/puzzles/Celebrations.svelte';
   import Medal from '$lib/puzzles/Medal.svelte';
   import { puzzleSounds } from '$lib/puzzles/puzzleSounds';
-  import { BADGES, recordRush, rewards, rushTitle } from '$lib/puzzles/rewards';
+  import { BADGES, nextRushTitle, recordRush, rewards, RUSH_TITLES, rushTitle } from '$lib/puzzles/rewards';
 
   const SECONDS = 180;
   const LIVES = 3;
   /** The difficulty after `solved` puzzles: easy at first, 60 points harder after each solve. */
   const levelAt = (solved: number) => Math.min(2600, 500 + solved * 60);
-  const RUSH_BADGES = BADGES.filter((b) => b.id.startsWith('rush'));
 
   let phase = $state<'ready' | 'run' | 'over'>('ready');
   let current = $state<BandPuzzle | undefined>();
@@ -126,6 +125,23 @@
   }
 </script>
 
+{#snippet titles(bestNow: number)}
+  {@const next = nextRushTitle(bestNow)}
+  <div class="titles">
+    <ol class="ladder" aria-label="Puzzle Rush titles">
+      {#each RUSH_TITLES as t (t.min)}
+        {@const got = bestNow >= t.min || $rewards.badges.includes(t.badge)}
+        <li class:got class:next={next?.min === t.min}>
+          <Medal badge={BADGES.find((b) => b.id === t.badge)!} {got} peek={next?.min === t.min} size={52} />
+          <span class="tname">{t.name}</span>
+          <span class="tmin num">{t.min}+</span>
+        </li>
+      {/each}
+    </ol>
+    <p class="chase">{#if next}Next title: <b>{next.name}</b>, {next.more} more than your best!{:else}You hold the highest title. Can you beat your best?{/if}</p>
+  </div>
+{/snippet}
+
 <svelte:head><title>Puzzle Rush · Chess Castles</title></svelte:head>
 
 <div class="page">
@@ -144,12 +160,7 @@
       </div>
       <button class="btn primary go" onclick={start} disabled={starting}>Start the rush 🚀</button>
       <p class="label small">One try a puzzle. Rush doesn't change your puzzle rating.</p>
-      <div class="rbadges">
-        {#each RUSH_BADGES as b (b.id)}
-          {@const got = $rewards.badges.includes(b.id)}
-          <span class="rb" class:got><Medal badge={b} {got} size={56} /><span><b>{b.name}</b><span class="label">{b.hint}</span></span></span>
-        {/each}
-      </div>
+      {@render titles($rewards.rushBest)}
     </section>
   {:else if phase === 'run'}
     <div class="hud" class:ok={flash === 'ok'} class:bad={flash === 'bad'}>
@@ -190,6 +201,7 @@
       {/if}
       {#if best && rushTitle(best.best)}<span class="rtitle">🚀 {rushTitle(best.best)}</span>{/if}
       {#if hardest}<span class="label">Hardest solved: <b class="num">{hardest}</b></span>{/if}
+      {#if best}{@render titles(best.best)}{/if}
       {#if log.length}
         <ol class="trail end">
           {#each log as x, i (i)}<li class:ok={x.ok}>{x.r}</li>{/each}
@@ -296,23 +308,61 @@
   .small {
     font-size: 12.5px;
   }
-  .rbadges {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px 18px;
-    margin-top: 4px;
-  }
-  .rb {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-align: left;
-  }
-  .rb > span {
+  /* The titles to chase: every medal, the ones won lit, the next one framed in gold. */
+  .titles {
+    width: 100%;
     display: flex;
     flex-direction: column;
-    font-size: 13.5px;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .ladder {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 440px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .ladder li {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 2px;
+    border-radius: 12px;
+  }
+  .ladder li.next {
+    background: color-mix(in srgb, var(--gold) 14%, transparent);
+    box-shadow: inset 0 0 0 1.5px var(--gold);
+  }
+  .tname {
+    font-size: 11.5px;
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+  }
+  .ladder li:not(.got) .tname {
+    color: var(--muted);
+  }
+  .ladder li.next .tname {
+    color: var(--gold);
+  }
+  .tmin {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .chase {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+  .chase b {
+    color: var(--gold);
   }
   .hud {
     display: grid;

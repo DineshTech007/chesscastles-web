@@ -58,6 +58,8 @@ export const BADGE_ART: Record<string, { medal: string; n?: string }> = {
   rush10: { medal: 'rocket', n: '10' },
   rush20: { medal: 'rocket', n: '20' },
   rush30: { medal: 'rocket', n: '30' },
+  rush40: { medal: 'titan', n: '40' },
+  rush50: { medal: 'immortal', n: '50' },
 };
 export const medalSrc = (medal: string) => `/puzzles/medal-${medal}.webp`;
 
@@ -82,14 +84,29 @@ export const BADGES: Badge[] = [
   { id: 'rush10', icon: '🚀', name: 'Speedster', hint: 'Score 10 in Puzzle Rush' },
   { id: 'rush20', icon: '⚡', name: 'Rush master', hint: 'Score 20 in Puzzle Rush' },
   { id: 'rush30', icon: '👑', name: 'Rush legend', hint: 'Score 30 in Puzzle Rush' },
+  { id: 'rush40', icon: '🌩️', name: 'Rush titan', hint: 'Score 40 in Puzzle Rush' },
+  { id: 'rush50', icon: '🔥', name: 'Rush immortal', hint: 'Score 50 in Puzzle Rush' },
 ];
 
 /**
- * A Puzzle Rush player's title from their best score (owner, 2026-10-21: shown on the Puzzle Rush leaderboard),
- * the same names as the Rush badges.
+ * Puzzle Rush titles from the best score (owner, 2026-10-21: shown on the Puzzle Rush leaderboard; Rush titan and
+ * Rush immortal added on top the same day, for children who had already reached Rush legend). The same names as the
+ * Rush badges.
  */
+export const RUSH_TITLES = [
+  { min: 10, name: 'Speedster', badge: 'rush10' },
+  { min: 20, name: 'Rush master', badge: 'rush20' },
+  { min: 30, name: 'Rush legend', badge: 'rush30' },
+  { min: 40, name: 'Rush titan', badge: 'rush40' },
+  { min: 50, name: 'Rush immortal', badge: 'rush50' },
+] as const;
 export function rushTitle(best: number): string | undefined {
-  return best >= 30 ? 'Rush legend' : best >= 20 ? 'Rush master' : best >= 10 ? 'Speedster' : undefined;
+  return [...RUSH_TITLES].reverse().find((t) => best >= t.min)?.name;
+}
+/** The next title to chase and how many more solves it needs; undefined at the top. */
+export function nextRushTitle(best: number): { min: number; name: string; badge: string; more: number } | undefined {
+  const t = RUSH_TITLES.find((x) => best < x.min);
+  return t ? { ...t, more: t.min - best } : undefined;
 }
 
 const KEY = 'cc.puzzleRewards';
@@ -210,6 +227,8 @@ export function recordRush(score: number, tried: number): { best: number; newBes
     ['rush10', score >= 10],
     ['rush20', score >= 20],
     ['rush30', score >= 30],
+    ['rush40', score >= 40],
+    ['rush50', score >= 50],
   ];
   const earned = want.filter(([id, ok]) => ok && !has.has(id)).map(([id]) => BADGES.find((b) => b.id === id)!);
   r.badges = [...r.badges, ...earned.map((b) => b.id)];

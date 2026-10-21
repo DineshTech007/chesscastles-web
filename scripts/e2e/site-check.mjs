@@ -464,6 +464,23 @@ async function run(name, options) {
       await page.locator('cg-board').first().waitFor({ timeout: 20000 });
       await page.waitForTimeout(1500);
       for (const sq of ['d1', 'd8', 'e1', 'e7']) {
+        // The premoved rook is drawn straight on e7, never sliding there (owner, 2026-10-22, as on chess.com): its
+        // place in every frame from here on, until the reply comes.
+        if (sq === 'e1')
+          await page.evaluate(() => {
+            const b = document.querySelector('cg-board').getBoundingClientRect();
+            const w = b.width / 8;
+            const t0 = performance.now();
+            window.__between = [];
+            const look = () => {
+              for (const el of document.querySelectorAll('cg-board piece.white.rook')) {
+                const r = (b.bottom - el.getBoundingClientRect().bottom) / w;
+                if ((el.getBoundingClientRect().left - b.left) / w > 3.5 && Math.abs(r - Math.round(r)) > 0.03) window.__between.push(r.toFixed(2));
+              }
+              if (performance.now() - t0 < 350) requestAnimationFrame(look);
+            };
+            requestAnimationFrame(look);
+          });
         const { x, y } = await square(page, sq);
         if (touch) await page.touchscreen.tap(x, y);
         else await page.mouse.click(x, y);
@@ -472,8 +489,63 @@ async function run(name, options) {
       await page.waitForFunction(() => document.querySelector('.hud .score')?.textContent?.trim() === '1', null, { timeout: 5000 }).catch(() => {});
       const score = (await page.locator('.hud .score').innerText()).trim();
       expect(score === '1', `the premoved second move did not solve the puzzle (score ${score})`);
+      const between = await page.evaluate(() => window.__between);
+      expect(!between.length, `the premoved rook slid to its square (seen on ranks ${between.slice(0, 5).join(', ')})`);
       await tap(page.getByRole('button', { name: /end the rush/i }));
       return `score ${score}`;
+    } finally {
+      await page.unroute(bands);
+    }
+  });
+
+  // 4i. A tap on a square the piece can't go to keeps it picked up (owner, 2026-10-22): the next tap plays the move.
+  await check(name, page, 'board: a wrong square keeps the piece picked up', async () => {
+    const one = Array.from({ length: 10 }, (_, i) => [`sc-held-${i}`, '6k1/5ppp/8/8/8/8/5PPP/3R2K1 b - - 0 1', 'h7h6 d1d8', 500 + i * 10, ['mateIn1']]);
+    const bands = /\/data\/puzzles\/bands\/\d+\.json/;
+    await page.route(bands, (r) => r.fulfill({ json: one }));
+    try {
+      await open(page, '/puzzles/rush');
+      await tap(page.getByRole('button', { name: /start the rush/i }));
+      await page.locator('cg-board').first().waitFor({ timeout: 20000 });
+      await page.waitForTimeout(1500);
+      for (const sq of ['d1', 'h4', 'd8']) {
+        const { x, y } = await square(page, sq);
+        if (touch) await page.touchscreen.tap(x, y);
+        else await page.mouse.click(x, y);
+        await page.waitForTimeout(150);
+      }
+      await page.waitForFunction(() => document.querySelector('.hud .score')?.textContent?.trim() === '1', null, { timeout: 5000 }).catch(() => {});
+      const score = (await page.locator('.hud .score').innerText()).trim();
+      expect(score === '1', `after a tap on h4 the rook was put down: the tap on d8 did not play Rd8# (score ${score})`);
+      await tap(page.getByRole('button', { name: /end the rush/i }));
+    } finally {
+      await page.unroute(bands);
+    }
+  });
+
+  // 4j. A premoved promotion gets its piece as a move would (owner, 2026-10-22: premoves always made a queen).
+  await check(name, page, 'puzzle rush: a premoved promotion can be a knight', async () => {
+    // Black ...Kg8; White Kf2, Black ...Kh8; White b8=N (the premove).
+    const knight = Array.from({ length: 10 }, (_, i) => [`sc-prn-${i}`, '7k/1P6/8/8/8/8/p7/6K1 b - - 0 1', 'h8g8 g1f2 g8h8 b7b8n', 500 + i * 10, ['promotion']]);
+    const bands = /\/data\/puzzles\/bands\/\d+\.json/;
+    await page.route(bands, (r) => r.fulfill({ json: knight }));
+    try {
+      await open(page, '/puzzles/rush');
+      await tap(page.getByRole('button', { name: /start the rush/i }));
+      await page.locator('cg-board').first().waitFor({ timeout: 20000 });
+      await page.waitForTimeout(1500);
+      for (const sq of ['g1', 'f2', 'b7', 'b8']) {
+        const { x, y } = await square(page, sq);
+        if (touch) await page.touchscreen.tap(x, y);
+        else await page.mouse.click(x, y);
+        await page.waitForTimeout(50);
+      }
+      await page.locator('.picker').waitFor({ timeout: TAP_MS });
+      await tap(page.getByRole('button', { name: 'knight', exact: true }));
+      await page.waitForFunction(() => document.querySelector('.hud .score')?.textContent?.trim() === '1', null, { timeout: 5000 }).catch(() => {});
+      const score = (await page.locator('.hud .score').innerText()).trim();
+      expect(score === '1', `the premoved b8=N did not solve the puzzle (score ${score})`);
+      await tap(page.getByRole('button', { name: /end the rush/i }));
     } finally {
       await page.unroute(bands);
     }

@@ -61,14 +61,15 @@ export function asksForPiece(pos: Chess, orig: string, dest: string, expected?: 
 
 /**
  * The piece for a move: undefined when it is not a promotion, the queen when no choice is needed, otherwise the
- * one the player picks, or null when they close the picker (the board should then put the pawn back).
+ * one the player picks, or null when they close the picker (the board should then put the pawn back). `color` is the
+ * pawn's, for a premove (made while the other side is to move).
  */
-export function promotionFor(pos: Chess, orig: string, dest: string, expected?: NormalMove): Promise<Role | undefined | null> {
+export function promotionFor(pos: Chess, orig: string, dest: string, expected?: NormalMove, color: Color = pos.turn): Promise<Role | undefined | null> {
   if (!isPromotion(pos, orig, dest)) return Promise.resolve(undefined);
   if (!asksForPiece(pos, orig, dest, expected)) return Promise.resolve('queen');
   return new Promise((resolve) =>
     promotionAsk.set({
-      color: pos.turn,
+      color,
       anchor: promotionAnchor(dest),
       answer: (role) => {
         promotionAsk.set(undefined);

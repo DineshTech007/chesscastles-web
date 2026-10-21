@@ -76,6 +76,7 @@
     // piece on the wrong square, so it jumps back. Measured afresh at the start of every touch (this runs before
     // chessground's own touchstart).
     cg?.state.dom.bounds.clear();
+    held = cg?.state.selected;
     if (!onswipe || e.pointerType !== 'touch') return;
     touch = { x: e.clientX, y: e.clientY, t: Date.now(), onPiece: nearPiece(e.clientX, e.clientY) || !!(e.target as HTMLElement).closest('piece') };
   }
@@ -89,9 +90,35 @@
     if (Date.now() - t < 600 && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) onswipe?.(dx < 0 ? 'forward' : 'back');
   }
 
+  /**
+   * The piece picked up when a touch began. A tap on a square it can't go to keeps it picked up, so the next tap can
+   * be the right square at once (owner, 2026-10-22: the illegal tap dropped it and it had to be picked up again).
+   * Tapping it again still puts it down, and tapping another piece of one's own still picks that one.
+   */
+  let held: Key | undefined;
+  function keepHeld(key: Key) {
+    const from = held;
+    held = undefined;
+    if (!cg || !from || key === from || cg.state.selected || cg.state.premovable.current) return;
+    // Not moved (a move or a premove leaves it elsewhere or queued), so the tap missed: picked up again.
+    const piece = cg.state.pieces.get(from);
+    if (piece && (cg.state.movable.color === piece.color || cg.state.movable.color === 'both')) cg.selectSquare(from);
+  }
+
   let wrap: HTMLDivElement;
   let el: HTMLDivElement;
-  let cg: Api | undefined = $state();
+  /**
+   * Raw, never a deep `$state`: Svelte would proxy chessground's own objects, keeping what is read from `cg.state` in
+   * its own copies and never writing back. `cg.state.pieces` stayed the first position, the bounds cleared on a touch
+   * were old ones, and turning the animation off for a premove did nothing (owner, 2026-10-22: premoved pieces slid).
+   */
+  let cg: Api | undefined = $state.raw();
+  /**
+   * Queued premoves at the last update. One more means a premove was just made: the board shows it at once, its piece
+   * straight on its square, as on chess.com (owner, 2026-10-21: with several premoves, pieces slid in from where they
+   * had stood). Premoves played or cancelled animate as usual.
+   */
+  let queuedBefore = 0;
 
   onMount(() => {
     const oncancel = () => (touch = undefined);
@@ -110,7 +137,12 @@
       movable: { free: false, showDests: true, events: { after: (o, d) => onmove?.(o, d) } },
       // Chessground selects the touched square as a touch begins (a tap or the start of a drag), empty or not: a
       // touch that begins on a piece is never a swipe, whatever the geometry says.
-      events: { select: (key) => void (touch && cg?.state.pieces.has(key) && (touch.onPiece = true)) },
+      events: {
+        select: (key) => {
+          if (touch && cg?.state.pieces.has(key)) touch.onPiece = true;
+          keepHeld(key);
+        },
+      },
       premovable: {
         enabled: premovable,
         showDests: true,
@@ -133,6 +165,10 @@
     if (!cg) return;
     const custom = new Map<Key, string>();
     for (const k of queued) custom.set(k, 'queued-premove');
+    // The position a premove just made: drawn at once, no animation (chessground decides that before applying a set).
+    const still = queued.length > queuedBefore;
+    queuedBefore = queued.length;
+    if (still) cg.state.animation.enabled = false;
     cg.set({
       fen,
       orientation,
@@ -145,6 +181,7 @@
       movable: { color: movable, dests: movable ? dests : new Map() },
       premovable: { enabled: premovable },
     });
+    if (still) cg.state.animation.enabled = true;
   });
   // The arrows on their own (an engine's arrow changes several times a second): redrawing the position, legal moves
   // and all for each one made dragging a piece jerky.

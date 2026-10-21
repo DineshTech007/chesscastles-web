@@ -405,7 +405,7 @@
       dests: game.myTurn ? destsOf(pos) : new Map(),
       movable: active ? game.me : undefined,
       queued: queue.moves.flatMap((m) => [keyOf(m.from), keyOf(m.to)]) as Key[],
-      shapes: queue.moves.map((m) => ({ orig: keyOf(m.from), dest: keyOf(m.to), brush: 'blue' })),
+      shapes: [],
       sans: game.plies.map((p) => p.san),
       theyOfferDraw: game.me === 'white' ? game.blackOffersDraw : game.whiteOffersDraw,
       iOfferDraw: game.me === 'white' ? game.whiteOffersDraw : game.blackOffersDraw,

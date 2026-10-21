@@ -531,9 +531,10 @@ nav a,
 .cg-wrap cg-board square.premove-dest.oc {
   background: radial-gradient(transparent 0%, transparent 78%, rgba(16, 26, 60, 0.45) 79%);
 }
+/* Premoves waiting: their squares tinted red, the pieces already on their squares (as on chess.com). */
 .cg-wrap cg-board square.current-premove,
 .cg-wrap cg-board square.queued-premove {
-  background-color: rgba(16, 26, 60, 0.55);
+  background-color: rgba(214, 72, 56, 0.55);
 }
 .cg-wrap cg-board square.check {
   background: radial-gradient(

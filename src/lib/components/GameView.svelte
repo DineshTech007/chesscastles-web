@@ -175,6 +175,8 @@
   }
 
   let urlSpent = false;
+  /** The bot has just moved and our first premove is played a moment later (below). */
+  let premoveDue = false;
   function onChange() {
     v++;
     const n = game.moves.length;
@@ -185,9 +187,12 @@
       // (The last move only knocks: the result has its own sound.)
       playMoveSound(n >= 2 ? game.moves[n - 2].after : game.start, last.move, false);
       seenMoves = n;
-      // The bot has moved: our first queued premove goes at once.
+      // The bot has moved: our first queued premove goes at once (meanwhile the board keeps the premoved pieces where
+      // they stand, so none slides back and out again).
       if (last.source && queue.length) {
+        premoveDue = true;
         queueMicrotask(() => {
+          premoveDue = false;
           const next = queue.takeNext(game.position);
           if (!next || !game.play(next)) {
             // The premove can't be played now: cancelled, with the piece it had picked up, so the player's next tap
@@ -399,8 +404,9 @@
     const pos = game.position;
     const last = game.moves[game.moves.length - 1];
     const active = !game.isOver;
-    // While the bot thinks, show where the queued premoves put our pieces.
-    const preview = active && !game.myTurn && queue.length > 0;
+    // While the bot thinks (and while our premove is being played after its move), show where the queued premoves put
+    // our pieces.
+    const preview = active && queue.length > 0 && (!game.myTurn || premoveDue);
     const fen = preview ? `${makeBoardFen(queue.preview(pos.board))} ${pos.turn[0]} - - 0 1` : fenOf(pos);
     return {
       pos,
@@ -411,7 +417,6 @@
       check: pos.isCheck(),
       queued: queue.moves.flatMap((m) => [keyOf(m.from), keyOf(m.to)]) as Key[],
       shapes: [
-        ...queue.moves.map((m) => ({ orig: keyOf(m.from), dest: keyOf(m.to), brush: 'blue' })),
         ...(hint && hint.at === game.moves.length && active ? [{ orig: hint.from, dest: hint.to, brush: 'green' }] : []),
         ...(game.isOver && last && badges[game.moves.length - 1] ? [{ orig: keyOf(last.move.to), customSvg: { html: boardBadge(badges[game.moves.length - 1]!) } }] : []),
       ],

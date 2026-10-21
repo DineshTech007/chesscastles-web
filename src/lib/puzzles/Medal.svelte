@@ -1,11 +1,14 @@
 <script lang="ts">
-  /** A badge's medal (rewards.ts BADGE_ART) with its number; grey with a lock until earned. */
+  /**
+   * A badge's medal (rewards.ts BADGE_ART) with its number; grey with a lock until earned. `peek`: the next one to
+   * chase, locked but in full colour with a soft glow, so a child sees the prize.
+   */
   import { BADGE_ART, medalSrc, type Badge } from './rewards';
-  let { badge, got = true, size = 72 }: { badge: Badge; got?: boolean; size?: number } = $props();
+  let { badge, got = true, size = 72, peek = false }: { badge: Badge; got?: boolean; size?: number; peek?: boolean } = $props();
   const art = $derived(BADGE_ART[badge.id]);
 </script>
 
-<span class="medal" class:locked={!got} style="--s: {size}px">
+<span class="medal" class:locked={!got} class:peek={!got && peek} style="--s: {size}px">
   {#if art}
     <img src={medalSrc(art.medal)} alt="" width={size} height={size} loading="lazy" />
     {#if art.n}<span class="n num">{art.n}</span>{/if}
@@ -57,6 +60,26 @@
   .locked .n {
     border-color: var(--border);
     color: var(--muted);
+  }
+  .peek img {
+    filter: drop-shadow(0 0 8px rgba(242, 193, 78, 0.55));
+    opacity: 1;
+    animation: tease 2.4s ease-in-out infinite;
+  }
+  .peek .n {
+    border-color: #f2c14e;
+    color: #f7d27a;
+  }
+  @keyframes tease {
+    50% {
+      filter: drop-shadow(0 0 14px rgba(242, 193, 78, 0.85));
+      transform: scale(1.05);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .peek img {
+      animation: none;
+    }
   }
   .lock {
     position: absolute;

@@ -137,12 +137,22 @@
   $effect(() => () => clearTimeout(replyTimer));
 
   const queue = new PremoveQueue();
-  /** A premove: from the position the queued ones lead to (the opponent's replies not known yet). */
-  function onpremove(orig: Key, dest: Key) {
+  /**
+   * A premove: from the position the queued ones lead to (the opponent's replies not known yet). A pawn premoved to
+   * the last rank gets its piece as a move made then would (owner, 2026-10-22: premoves always made a queen, and a
+   * puzzle can need a knight): the picker, when the setting asks or the answer is another piece.
+   */
+  async function onpremove(orig: Key, dest: Key) {
+    board?.cancelPremove();
     const shown = pos.clone();
     shown.board = queue.preview(shown.board);
-    queue.add(moveFromKeys(shown, orig, dest));
-    board?.cancelPremove();
+    // The solution move this premove stands for: the opponent's reply is line[step], then one more pair per queued premove.
+    const promotion = await promotionFor(shown, orig, dest, line[step + 1 + 2 * queue.length], side);
+    if (promotion === null || (status !== 'yours' && status !== 'wrong')) return;
+    const m = moveFromKeys(shown, orig, dest, promotion);
+    if (pos.turn !== side) queue.add(m);
+    // The reply came while the piece was being picked: played now, if it still can be.
+    else if (!queue.length && pos.isLegal(m)) attempt(m);
     v++;
   }
   function clearPremoves() {
@@ -174,7 +184,6 @@
       check: pos.isCheck(),
       turn: pos.turn,
       queued: queue.moves.flatMap((m) => [keyOf(m.from), keyOf(m.to)]) as Key[],
-      arrows: queue.moves.map((m) => ({ orig: keyOf(m.from), dest: keyOf(m.to), brush: 'blue' })),
     };
   });
   const hint = $derived((status === 'wrong' || (hinted && status === 'yours')) && line[step] && pos.turn === side ? [{ orig: keyOf(line[step].from), brush: 'yellow' }] : []);
@@ -191,7 +200,7 @@
     dests={view.dests}
     lastMove={last}
     check={view.check}
-    shapes={[...hint, ...view.arrows] as never}
+    shapes={hint as never}
     premovable={premoves && (status === 'yours' || status === 'wrong')}
     queued={view.queued}
     {onmove}
