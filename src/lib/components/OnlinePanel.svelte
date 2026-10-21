@@ -5,11 +5,14 @@
   import { goto } from '$app/navigation';
   import { onDestroy, onMount } from 'svelte';
   import Icon from './Icon.svelte';
+  import ChallengeSheet from './ChallengeSheet.svelte';
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
+  import { answerInvite, cancelSent, invitePlayer, markAnswered, myInvites, sentInvite } from '$lib/invites';
+  import { poll } from '$lib/poll';
   import * as api from '$lib/lichessBoard';
   import { lichessRatings } from '$lib/lichess';
   import { onLichessEvent, openWhenStarted, syncLichessEvents } from '$lib/lichessEvents';
-  import { friendsList, serverResting, lobbyLeave, lobbySeek, lobbyState, sendMessage, type LobbyRole, type LobbySeek, type LobbyState, type Player } from '$lib/social';
+  import { friendsList, getPlayer, onlinePlayers, serverResting, lobbyLeave, lobbySeek, lobbyState, sendMessage, type LobbyRole, type LobbySeek, type LobbyState, type OnlinePlayer, type Player } from '$lib/social';
 
   /** `onfide`: switches the Play page to the FIDE-level opponents (offered when no one is free). */
   let { onfide }: { onfide?: () => void } = $props();
@@ -128,6 +131,21 @@
 
   const token = $derived($session.status === 'in' ? lichessToken()?.token : undefined);
   const myId = $derived($session.status === 'in' ? $session.uid : '');
+  /**
+   * The lobby (owner, 2026-10-21: "like Lichess, our own lobby where they can see the players and send a request"):
+   * Chess Castles players on the site now who play online (a Lichess account), each with Challenge (an invite with a
+   * popup on their screen: src/lib/invites.ts), every 30 seconds while the lobby is open.
+   */
+  let here = $state<OnlinePlayer[] | undefined>();
+  let inviting = $state<{ uid: string; name: string } | undefined>();
+  $effect(() => {
+    if (kind !== 'lobby' || $session.status !== 'in') return;
+    return poll(async () => {
+      const me = myId;
+      here = (await onlinePlayers()).filter((p) => p.uid.startsWith('lichess:') && p.uid !== me);
+      return true;
+    }, 30_000);
+  });
   /** Players waiting at each time control (same rated/casual choice as yours). */
   const waitingAt = $derived.by(() => {
     const n: Record<string, number> = {};
@@ -226,6 +244,18 @@
         return;
       }
       if (mine.partner && mine.role && !pool.partner) await paired(mine.role, mine.partner);
+      // Paired to accept: the partner's game may come as a Chess Castles invite (their challenge was refused by Lichess).
+      if (pool.role === 'accept' && pool.partner) {
+        const from = pool.partner.uid;
+        const inv = (await myInvites().catch(() => [])).find((i) => i.from === from);
+        const t = lichessToken()?.token;
+        if (inv && t) {
+          markAnswered(inv.id);
+          void answerInvite(inv.id, 'accepted');
+          openWhenStarted(inv.id);
+          await api.acceptChallenge(t, inv.id).catch(() => {});
+        }
+      }
       else if (!mine.partner && pool.partner) unpaired();
       else if (pool.partner && pool.pairedAt && Date.now() - pool.pairedAt > 30_000) {
         // Paired, but no game: put both back to waiting.
@@ -269,7 +299,18 @@
     try {
       pool.challengeId = await api.challengeUser(t, partner.lichess, { minutes: pool.tc.m, increment: pool.tc.i, rated: pool.rated, color: 'random' });
     } catch (e) {
-      // Their Lichess settings refuse challenges, most likely: wait for someone else.
+      // Their Lichess settings refuse challenges (often "only established ratings", with a child's new rating): the
+      // game goes as a Chess Castles invite instead, which their site accepts by itself (refreshLobby).
+      if (api.refusedByLichess(e) && partner.uid) {
+        try {
+          await invitePlayer({ uid: partner.uid, name: partner.name }, pool.tc.m, pool.tc.i, pool.rated);
+          pool.challengeId = $sentInvite?.id;
+          return;
+        } catch {
+          /* below: someone else */
+        }
+      }
+      // Not reachable: wait for someone else.
       error = `${partner.name} isn’t available right now. Finding another opponent…`;
       await lobbyLeave().catch(() => {});
       unpaired();
@@ -344,6 +385,14 @@
   function bulletOnLichess() {
     const name = username.trim();
     const f = ccFriends.find((x) => x.username.toLowerCase() === name.toLowerCase());
+    if (f?.uid.startsWith('lichess:') && bullet) {
+      track('feature', 'invite_bullet_friend');
+      invitePlayer({ uid: f.uid, name: f.name }, bullet.m, bullet.i, rated).then(
+        () => (waiting = { text: `Your ${bullet!.m}+${bullet!.i} game opened on lichess.org in a new tab. ${f.name} got your invite on Chess Castles: it starts there when they accept.`, cancel: () => cancelSent() }),
+        (e) => (error = e instanceof Error ? e.message : 'The invite could not be sent.'),
+      );
+      return;
+    }
     const li = f ? (f.uid.startsWith('lichess:') ? f.uid.slice(8) : undefined) : name || undefined;
     track('feature', 'lichess_bullet_friend');
     window.open(li ? `https://lichess.org/?user=${encodeURIComponent(li)}#friend` : 'https://lichess.org/#friend', '_blank', 'noopener');
@@ -387,7 +436,16 @@
           };
         } catch (e) {
           if (friend && api.refusedByLichess(e)) await inviteFriend(t, friend, tc);
-          else if (e instanceof api.LichessError && /no such user/i.test(e.message)) throw new Error(`No Lichess player is called “${name}”. To play a Chess Castles friend, tap their name above; for anyone else, type their Lichess username.`);
+          else if (api.refusedByLichess(e)) {
+            // On Chess Castles: an invite with a popup on their screen instead (src/lib/invites.ts).
+            const member = await getPlayer(`lichess:${name.toLowerCase()}`).then((r) => r.player, () => undefined);
+            if (!member?.member) throw new Error(refusalText(name, e));
+            await invitePlayer({ uid: member.uid, name: member.name }, tc.m, tc.i, rated);
+            waiting = {
+              text: `Lichess wouldn't pass on a challenge (${member.name}'s settings there), so ${member.name} got your ${tc.m}+${tc.i} invite on Chess Castles. Waiting for them…`,
+              cancel: () => cancelSent(),
+            };
+          } else if (e instanceof api.LichessError && /no such user/i.test(e.message)) throw new Error(`No Lichess player is called “${name}”. To play a Chess Castles friend, tap their name above; for anyone else, type their Lichess username.`);
           else throw e;
         }
       }
@@ -395,6 +453,16 @@
       waiting = undefined;
       error = e instanceof Error ? e.message : 'The game could not start. Try again.';
     }
+  }
+
+  /** Lichess's refusal, in words a child understands, with what to do instead. */
+  function refusalText(name: string, e: unknown): string {
+    const m = e instanceof Error ? e.message : '';
+    if (/provisional/i.test(m))
+      return `Lichess didn't send it: ${name} only takes challenges from players with an established rating, and a new rating (with a “?”) isn't yet. Play a few more games on Lichess, or challenge a Chess Castles player from the Lobby.`;
+    if (/too far/i.test(m)) return `Lichess didn't send it: ${name} only takes challenges from players near their rating. Try someone closer to your rating, or a Chess Castles player from the Lobby.`;
+    if (/friends/i.test(m)) return `Lichess didn't send it: ${name} only takes challenges from their Lichess friends.`;
+    return `Lichess didn't send it: ${name} isn't taking challenges right now. Try a Chess Castles player from the Lobby.`;
   }
 
   /** The Chess Castles friend with this name (their Lichess or Chess Castles username), if any. */
@@ -496,6 +564,24 @@
   {/if}
 
   {#if kind === 'lobby'}
+    <div class="group">
+      <h3 class="title h">Players online now</h3>
+      {#if !here}
+        <div class="seek skel"></div>
+      {:else if !here.length}
+        <p class="label empty">No one else who plays online is on Chess Castles right now. Start a <button class="link" onclick={() => (kind = 'pair')}>quick pairing</button> and they will see you here.</p>
+      {:else}
+        <ul class="seeks">
+          {#each here as p (p.uid)}
+            <li class="seek here">
+              <span class="who"><a href="/players/{encodeURIComponent(p.uid)}"><TitleBadge title={p.title} size={11} />{p.name}</a>{#if p.kfide}<span class="label num">CC {p.kfide}</span>{/if}</span>
+              <span class="label">{p.playing ? 'Playing now' : 'Online'}</span>
+              <button class="btn primary sm" disabled={p.playing} onclick={() => (inviting = { uid: p.uid, name: p.name })}>Challenge</button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
     <div class="group">
       <h3 class="title h">Chess Castles players waiting</h3>
       {#if !lobby}
@@ -620,6 +706,8 @@
   {/if}
 {/if}
 
+{#if inviting}<ChallengeSheet player={inviting} onclose={() => (inviting = undefined)} />{/if}
+
 <style>
   @media (max-width: 480px) {
     .kinds button {
@@ -661,6 +749,9 @@
   }
   .seek.skel {
     display: block;
+  }
+  .seek.here {
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
   .who,
   .tc {

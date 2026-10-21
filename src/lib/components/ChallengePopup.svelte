@@ -8,6 +8,7 @@
   import { lichessToken } from '$lib/auth';
   import { acceptChallenge, declineChallenge } from '$lib/lichessBoard';
   import { incomingChallenges, openWhenStarted, type IncomingChallenge } from '$lib/lichessEvents';
+  import { answerInvite, markAnswered } from '$lib/invites';
   import { sounds } from '$lib/sound';
   import { track } from '$lib/analytics';
   import Icon from './Icon.svelte';
@@ -47,6 +48,18 @@
   async function accept(c: IncomingChallenge) {
     const t = lichessToken()?.token;
     if (!t) return;
+    // A Chess Castles invite (invites.ts): answered on Chess Castles too. Bullet: its game on lichess.org, opened
+    // from this tap (Lichess plays bullet only there).
+    if (c.cc) {
+      markAnswered(c.id);
+      void answerInvite(c.id, 'accepted');
+      if (c.cc.join) {
+        window.open(c.cc.join, '_blank', 'noopener');
+        track('feature', 'invite_accept_bullet');
+        incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
+        return;
+      }
+    }
     busy = c.id;
     error = '';
     try {
@@ -57,7 +70,7 @@
       // On Lichess the game has the challenge's id: open it now, the clocks start there.
       await goto(`/play/online/${c.id}${c.myColor ? `?c=${c.myColor}` : ''}`);
     } catch (e) {
-      error = e instanceof Error ? e.message : 'The challenge could not be accepted.';
+      error = c.cc ? `${c.from} took the invite back, or it ran out. Invite them yourself from Online now!` : e instanceof Error ? e.message : 'The challenge could not be accepted.';
       incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
     } finally {
       busy = '';
@@ -67,6 +80,10 @@
     const t = lichessToken()?.token;
     incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
     track('feature', 'challenge_decline');
+    if (c.cc) {
+      markAnswered(c.id);
+      return void answerInvite(c.id, 'declined');
+    }
     if (t) await declineChallenge(t, c.id).catch(() => {});
   }
 </script>
@@ -77,7 +94,7 @@
     <div class="top">
       <span class="sword" aria-hidden="true">⚔️</span>
       <div class="who">
-        <h2 id="cp-h" class="title">{#if shown.fromTitle}<span class="ttl">{shown.fromTitle}</span> {/if}{shown.from}{#if shown.fromRating} <span class="rt num">({shown.fromRating})</span>{/if}</h2>
+        <h2 id="cp-h" class="title">{#if shown.fromTitle}<span class="ttl">{shown.fromTitle}</span> {/if}{shown.from}{#if shown.fromRating}{' '}<span class="rt num">({shown.fromRating})</span>{/if}</h2>
         <p id="cp-d" class="label">challenges you to a game</p>
       </div>
       {#if more > 0}<span class="more">+{more}</span>{/if}
@@ -86,6 +103,7 @@
       <span class="fact"><Icon name="history" size={15} />{shown.minutes}+{shown.increment}</span>
       <span class="fact">{shown.rated ? 'Rated' : 'Casual'}</span>
       <span class="fact">{colourText(shown)}</span>
+      {#if shown.cc?.join}<span class="fact">Bullet · opens Lichess</span>{/if}
     </div>
     <div class="btns">
       <button class="btn primary big" disabled={busy === shown.id} onclick={() => accept(shown)}><Icon name="check" size={18} />{busy === shown.id ? 'Starting…' : 'Accept'}</button>

@@ -58,7 +58,7 @@ export async function loadBoard(kind: BoardKind, variant = ''): Promise<Row[]> {
     const l = await boardOf('rush');
     return l.map((p) => {
       const t = rushTitle(p.rating);
-      return { key: p.uid, uid: p.uid, name: p.name, country: p.country, ccTitle: p.title, value: p.rating, sub: [t ? `🚀 ${t}` : '', `${p.games} ${p.games === 1 ? 'rush' : 'rushes'}`].filter(Boolean).join(' · '), me: p.me, plan: p.plan };
+      return { key: p.uid, uid: p.uid, name: p.name, country: p.country, ccTitle: p.title, value: p.rating, sub: [t ? `🚀 ${t}` : '', p.games ? `${p.games} ${p.games === 1 ? 'rush' : 'rushes'}` : ''].filter(Boolean).join(' · '), me: p.me, plan: p.plan };
     });
   }
   if (kind === 'puzzles') {

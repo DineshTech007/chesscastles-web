@@ -103,6 +103,23 @@ export async function openChallenge(token: string, o: { white?: string; black?: 
   return (await res.json()).id;
 }
 
+/**
+ * A game only `white` and `black` may join, with each one's link to join it on lichess.org (for bullet, which Lichess
+ * plays only on its own site: each player's tap opens their link).
+ */
+export async function openGame(
+  token: string,
+  o: { white: string; black: string; minutes: number; increment: number; rated: boolean },
+): Promise<{ id: string; urlWhite: string; urlBlack: string }> {
+  const res = await call(
+    token,
+    '/api/challenge/open',
+    form({ rated: o.rated, 'clock.limit': o.minutes * 60, 'clock.increment': o.increment, users: `${o.white},${o.black}`, name: 'Chess Castles', expiresAt: Date.now() + 600_000 }),
+  );
+  const j = await res.json();
+  return { id: j.id, urlWhite: j.urlWhite ?? `https://lichess.org/${j.id}?color=white`, urlBlack: j.urlBlack ?? `https://lichess.org/${j.id}?color=black` };
+}
+
 /** Lichess refused a challenge because of the other player's settings (or a block): "You cannot challenge X", "X only accepts challenges from friends"… */
 export const refusedByLichess = (e: unknown) => e instanceof LichessError && /cannot challenge|does not accept|only accepts challenges|too far from|provisional/i.test(e.message);
 

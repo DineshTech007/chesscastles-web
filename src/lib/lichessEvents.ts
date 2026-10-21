@@ -22,6 +22,8 @@ export interface IncomingChallenge {
   myColor?: 'white' | 'black';
   speed?: string;
   at: number;
+  /** A Chess Castles invite (invites.ts), not a Lichess challenge: the inviter's account, and for bullet the link to join on lichess.org. */
+  cc?: { from: string; join?: string };
 }
 
 export const incomingChallenges = writable<IncomingChallenge[]>([]);

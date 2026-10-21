@@ -6,6 +6,7 @@
    */
   import { onMount } from 'svelte';
   import TitleBadge from './TitleBadge.svelte';
+  import ChallengeSheet from './ChallengeSheet.svelte';
   import { t } from '$lib/i18n';
   import { lichessStatus, type LichessStatus } from '$lib/lichess';
   import { poll } from '$lib/poll';
@@ -15,6 +16,8 @@
   let lichess = $state<Map<string, LichessStatus>>(new Map());
   let loaded = $state(false);
   let busy = $state<string | undefined>();
+  /** The player being invited to a game (the invite sheet). */
+  let inviting = $state<{ uid: string; name: string } | undefined>();
 
   const lichessId = (uid: string) => (uid.startsWith('lichess:') ? uid.slice(8) : undefined);
 
@@ -55,8 +58,8 @@
   }
   const flag = (c?: string) => (c ? `/flags/${c}.svg` : undefined);
   /**
-   * Play: the Play page's "A friend", filled in. A friend by their Lichess name, or their Chess Castles name (a Google
-   * account: they get a message with a Join button); anyone else only with a Lichess account (their name there).
+   * Play: anyone with a Lichess account gets an invite with a popup (ChallengeSheet, src/lib/invites.ts); a friend
+   * with a Google account, the Play page's "A friend" (a message with a Join button, after connecting Lichess).
    */
   const playHref = (p: Player, friend: boolean) => {
     const name = lichessId(p.uid) ?? (friend ? p.username : undefined);
@@ -88,6 +91,8 @@
               <a class="btn small primary" href="/watch/friend/{encodeURIComponent(r.player.uid)}">{$t('online.watch')}</a>
             {:else if r.lichess?.playingId}
               <a class="btn small primary" href="/watch/live/{r.lichess.playingId}">{$t('online.watch')}</a>
+            {:else if lichessId(r.player.uid)}
+              <button class="btn small primary" onclick={() => (inviting = r.player)}>{$t('online.play')}</button>
             {:else if playHref(r.player, true)}
               <a class="btn small primary" href={playHref(r.player, true)}>{$t('online.play')}</a>
             {/if}
@@ -106,7 +111,7 @@
               <TitleBadge title={p.title} size={12} /><strong>{p.name}</strong>
               {#if p.kfide}<span class="num label">{p.kfide}</span>{/if}
             </a>
-            {#if p.playing}<span class="where label">{$t('online.playing')}</span>{:else if playHref(p, false)}<a class="btn small" href={playHref(p, false)}>{$t('online.play')}</a>{/if}
+            {#if p.playing}<span class="where label">{$t('online.playing')}</span>{:else if lichessId(p.uid)}<button class="btn small" onclick={() => (inviting = p)}>{$t('online.play')}</button>{/if}
             {#if p.relation === 'outgoing'}
               <span class="label sent">{$t('online.sent')}</span>
             {:else if p.relation === 'incoming'}
@@ -121,6 +126,7 @@
     <a class="more" href="/friends?tab=find">{$t('online.more')} →</a>
   </section>
 {/if}
+{#if inviting}<ChallengeSheet player={inviting} onclose={() => (inviting = undefined)} />{/if}
 
 <style>
   .online {

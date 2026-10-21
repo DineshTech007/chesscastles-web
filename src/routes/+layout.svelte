@@ -13,6 +13,7 @@
   import { sharedPart, weekProgress } from '$lib/study/shareProgress';
   import { puzzleRating } from '$lib/puzzles/rating';
   import { rewards } from '$lib/puzzles/rewards';
+  import { lookForInvitesNow, stopInvites, watchInvites } from '$lib/invites';
   import { allProgress } from '$lib/books/books';
   import { watchSession } from '$lib/auth';
   import { setSound, soundOn } from '$lib/sound';
@@ -130,6 +131,7 @@
       }
       void updated.check().catch(() => {});
       if (hiddenAt && Date.now() - hiddenAt > 60_000) wakeLichessEvents();
+      lookForInvitesNow();
     };
     document.addEventListener('visibilitychange', onHide);
     const onLeave = () => flush(true);
@@ -155,7 +157,7 @@
         // What friends see of study progress: puzzles, streak, and the days studied this week.
         const sess = get(session);
         const rush = get(rewards);
-        const progress = { ...sharedPart(weekProgress(get(study), get(puzzleRating), sess.status === 'in' && sess.profile ? sess.profile.puzzles.solved : 0, now)), rushBest: rush.rushBest, rushRuns: rush.rushPlayed };
+        const progress = { ...sharedPart(weekProgress(get(study), get(puzzleRating), sess.status === 'in' && sess.profile ? sess.profile.puzzles.solved : 0, now)), rushBest: rush.rushBest, rushRuns: Math.max(rush.rushPlayed, rush.rushRuns.length) };
         const key = JSON.stringify([studyWeek, booksRead, progress]);
         if (key === lastBoards || (!studyWeek.points && !booksRead && !progress.puzzlesSolved && !progress.rushBest)) return;
         lastBoards = key;
@@ -203,11 +205,16 @@
       ratingsUid = '';
       if (s.status !== 'in') {
         consentNeeded.set(false);
-        if (s.status === 'out') stopLichessEvents();
+        if (s.status === 'out') {
+          stopLichessEvents();
+          stopInvites();
+        }
         return;
       }
-      // Challenges from other players reach every page (a popup), from Lichess's live stream.
+      // Challenges from other players reach every page (a popup), from Lichess's live stream; invites from Chess
+      // Castles players too (src/lib/invites.ts), except over a game.
       syncLichessEvents();
+      watchInvites(() => /^\/play\/(fide|computer|online\/|tournament\/game)/.test(location.pathname));
       // Agreed to the terms: sent to the account once. Signed in from before the consent form: asked once, over the page.
       const agreed = hasConsent() ? readConsent() : undefined;
       consentNeeded.set(!agreed);
