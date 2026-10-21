@@ -35,6 +35,8 @@ export class OnlineGame {
   plies: OnlinePly[] = [];
   wtime = 0;
   btime = 0;
+  /** The mover's clock after each move (ms), for the moves that arrived while this page had the game open. */
+  clocks: (number | undefined)[] = [];
   /** When the last clock reading arrived (ms since the epoch). */
   clockAt = 0;
   status = 'created';
@@ -108,12 +110,28 @@ export class OnlineGame {
     this.pending = undefined;
     this.wtime = s.wtime ?? this.wtime;
     this.btime = s.btime ?? this.btime;
+    // The last move's clock (Lichess sends both clocks after every move).
+    const n = this.plies.length;
+    if (this.clocks.length > n) this.clocks.length = n;
+    if (n && this.clocks[n - 1] === undefined && typeof s.wtime === 'number' && typeof s.btime === 'number') {
+      this.clocks[n - 1] = this.position.turn === 'white' ? s.btime : s.wtime;
+    }
     this.clockAt = now;
     this.status = s.status ?? this.status;
     this.winner = s.winner;
     this.whiteOffersDraw = !!s.wdraw;
     this.blackOffersDraw = !!s.bdraw;
     return changed;
+  }
+
+  /** Each move's thinking time (ms), where the clocks around it are known (a clock not started yet: 0). */
+  get times(): (number | undefined)[] {
+    return Array.from({ length: this.plies.length }, (_, i) => {
+      const after = this.clocks[i];
+      const before = i >= 2 ? this.clocks[i - 2] : this.initial;
+      if (after === undefined || before === undefined) return undefined;
+      return after === before ? 0 : Math.max(0, before - after + this.increment);
+    });
   }
 
   private uciAt(i: number): string {

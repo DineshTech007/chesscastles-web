@@ -36,7 +36,7 @@
   import ConsentNotice from '$lib/components/ConsentNotice.svelte';
   import FriendRequests from '$lib/components/FriendRequests.svelte';
   import ChallengePopup from '$lib/components/ChallengePopup.svelte';
-  import { stopLichessEvents, syncLichessEvents, wakeLichessEvents } from '$lib/lichessEvents';
+  import { ongoingGames, ongoingHref, stopLichessEvents, syncLichessEvents, wakeLichessEvents } from '$lib/lichessEvents';
   import { consentNeeded, consentSynced, hasConsent, markConsentSynced, readConsent } from '$lib/consent';
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import WelcomeSheet from '$lib/components/WelcomeSheet.svelte';
@@ -96,6 +96,8 @@
     pending = loadResume();
   });
   const onGamePage = $derived(!!pending && page.url.pathname === pending.route.split('?')[0]);
+  /** A Lichess game in progress, when its board isn't the page (lichessEvents.ts): a bar back to it, on every page. */
+  const liveGame = $derived($ongoingGames.find((g) => page.url.pathname !== `/play/online/${g.id}`));
 
   // Analytics: the page's route ("/players/[uid]", never the address with names in it).
   afterNavigate(() => pageView(page.route.id ?? page.url.pathname));
@@ -458,6 +460,13 @@
         <span class="go">Play →</span>
       </a>
     {/if}
+    {#if liveGame}
+      <a class="resume-bar live" href={ongoingHref(liveGame)} target={liveGame.board ? undefined : '_blank'} rel={liveGame.board ? undefined : 'noopener'}>
+        <span class="pulse"></span>
+        <span>Your game against <strong>{liveGame.opponent}</strong> is still on, and your clock keeps running.</span>
+        <span class="go">Back to the game →</span>
+      </a>
+    {/if}
     {#if pending && !onGamePage}
       <a class="resume-bar" href={resumeHref(pending)}>
         <span class="pulse"></span>
@@ -559,6 +568,14 @@
   }
   .resume-bar span:nth-child(2) {
     flex: 1;
+  }
+  /* A Lichess game in progress: always in sight, pinned while the page scrolls. */
+  .resume-bar.live {
+    position: sticky;
+    top: 8px;
+    z-index: 19;
+    border-width: 2px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   }
   .resume-bar .go {
     font-weight: 800;

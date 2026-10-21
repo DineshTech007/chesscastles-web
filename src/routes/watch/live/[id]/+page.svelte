@@ -118,6 +118,11 @@
     !finished ? undefined : info?.winner === 'white' ? ('1-0' as const) : info?.winner === 'black' ? ('0-1' as const) : info?.status === 'draw' || info?.status === 'stalemate' ? ('½-½' as const) : undefined,
   );
 
+  /** The time control ("3+2"), for each move's time beside the moves. */
+  const timeControl = $derived.by(() => {
+    const m = /^(\d+(?:\.\d+)?)\+(\d+)$/.exec(info?.clock ?? '');
+    return m ? { initial: Number(m[1]) * 60_000, increment: Number(m[2]) * 1000 } : undefined;
+  });
   function barFor(s: 'white' | 'black', ply: number, latest: boolean): BarInfo {
     const p = s === 'white' ? info?.white : info?.black;
     const after = !game ? undefined : ply === 0 ? game.start : game.plies[ply - 1].after;
@@ -157,6 +162,7 @@
     backHref="/friends"
     backLabel="Back to friends"
     {barFor}
+    clock={timeControl}
   />
   <LearnFromGame game={game} />
 {/if}

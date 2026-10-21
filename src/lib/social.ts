@@ -227,6 +227,8 @@ export interface LiveGame {
   myAfter?: number;
   /** An online game against another player: its Lichess id (it is watched there). */
   lichess?: string;
+  /** Each move's mover clock after it (ms): the clocks and each move's time for those stepping through the game. */
+  clocks?: number[];
 }
 export const shareLive = (g: LiveGame) => call<{ ok: true }>('PUT', 'live', { data: JSON.stringify(g) });
 export const endLive = () => call<{ ok: true }>('DELETE', 'live');

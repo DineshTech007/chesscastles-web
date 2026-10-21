@@ -163,9 +163,11 @@
   }
 
   /** Snaps the board back to its current `fen`: used after a promotion choice is cancelled,
-   * since chessground had already moved the pawn to the back rank on its own. */
+   * since chessground had already moved the pawn to the back rank on its own. Its turn and legal moves too: it
+   * had also passed the turn on and dropped the moves, so the pawn could not be moved again (owner, 2026-10-21). */
   export function resync() {
-    cg?.set({ fen });
+    cg?.selectSquare(null);
+    cg?.set({ fen, turnColor, lastMove, check: check ? turnColor : false, movable: { color: movable, dests: movable ? dests : new Map() } });
   }
 </script>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { goto } from '$app/navigation';
+  import { beforeNavigate, goto } from '$app/navigation';
   import { onDestroy, onMount } from 'svelte';
   import type { Key } from '@lichess-org/chessground/types';
   import { makeBoardFen } from 'chessops/fen';
@@ -104,6 +104,13 @@
       if (e.type === 'challengeDeclined' && e.challenge?.id === rematch.id) rematch = { state: 'declined' };
     }),
   );
+  // Leaving the board while the game is on (a stray tap, Back, closing the tab) asks first: on Lichess the clock keeps
+  // running, and a player who doesn't come back loses on time (owner, 2026-10-21).
+  beforeNavigate((nav) => {
+    if (!game.me || game.isOver || !wasLive || nav.to?.url.pathname === page.url.pathname) return;
+    if (nav.type === 'leave') return nav.cancel();
+    if (!confirm('Your game is still going and your clock keeps running. Leave the board anyway?\n\n(You can come back from the bar at the top of every page.)')) nav.cancel();
+  });
   const opponentPlayer = () => (game.me === 'white' ? game.black : game.white);
   const rematchLabel = $derived(!rematch ? 'Rematch' : rematch.state === 'sending' ? 'Sending…' : rematch.state === 'waiting' ? 'Waiting… tap to cancel' : 'Rematch again');
   async function sendRematch() {
@@ -363,6 +370,11 @@
     e.preventDefault();
   }
 
+  /** Each move's time beside the moves (those played while this page had the game open). */
+  const moveTimes = $derived.by(() => {
+    void v;
+    return game.times;
+  });
   const view = $derived.by(() => {
     void v;
     if (viewPly !== undefined) {
@@ -565,7 +577,7 @@
             <Icon name="flip" size={18} />
           </button>
         </div>
-        <MoveList sans={view.sans} current={viewPly ?? view.sans.length} onselect={go} />
+        <MoveList sans={view.sans} times={moveTimes} current={viewPly ?? view.sans.length} onselect={go} />
         <div class="wide-only"><MoveNav ply={viewPly ?? view.sans.length} max={view.sans.length} {go} /></div>
         {#if viewPly !== undefined && !controls.over}<div class="looking-row wide-only"><button class="btn primary back-live" onclick={() => go(view.sans.length)}>Back to the game</button></div>{/if}
       </div>

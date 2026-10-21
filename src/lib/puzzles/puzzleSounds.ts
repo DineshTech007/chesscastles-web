@@ -89,6 +89,24 @@ export const puzzleSounds = {
     [1568, 2093, 2637, 3136].forEach((f, i) => note(f, t + i * 0.07, 0.35, 0.08, 'sine'));
     note(1046.5, t, 0.6, 0.1, 'triangle');
   },
+  /** A firework's burst: a short, soft crackle (a little different each time). */
+  pop() {
+    const c = audio();
+    if (!c) return;
+    const len = Math.floor(c.sampleRate * 0.35);
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const f = c.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 500 + Math.random() * 900;
+    const g = c.createGain();
+    g.gain.value = 0.25;
+    src.connect(f).connect(g).connect(c.destination);
+    src.start(c.currentTime + 0.01);
+  },
   /** A puzzle's end: the solved chime and a ding for each star, or the soft miss. */
   result(solved: boolean, stars: number) {
     if (!solved) return this.missed();

@@ -13,7 +13,7 @@
   import { endWords, isDrawWords } from '$lib/game/endWords';
   import { session, startSignIn } from '$lib/auth';
   import { positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
-  import type { PgnGame, PgnPly } from '$lib/chess/pgn';
+  import { clocksAt, type PgnGame, type PgnPly } from '$lib/chess/pgn';
   import { getPlayer, watchLive, type LiveGame, type Player } from '$lib/social';
   import { poll as keepAsking } from '$lib/poll';
   import { playMoveSound } from '$lib/sound';
@@ -77,12 +77,12 @@
     const start = positionFromFen(game.start);
     const pos = start.clone();
     const plies: PgnPly[] = [];
-    for (const u of game.uci) {
+    for (const [i, u] of game.uci.entries()) {
       const m = uciToMove(u);
       if (!m || !pos.isLegal(m)) break;
       const san = sanOf(pos, m);
       pos.play(m);
-      plies.push({ move: m, san, after: pos.clone() });
+      plies.push({ move: m, san, after: pos.clone(), clock: game.clocks?.[i] });
     }
     return { headers: new Map(), start, plies };
   });
@@ -105,6 +105,9 @@
       // The clock of the side to move runs on since the friend's last move.
       const running = !game.result && after?.turn === s && game.uci.length >= 2;
       clockMs = Math.max(0, (s === 'white' ? game.white : game.black) - (running ? now - sharedAt : 0));
+    } else if (game?.minutes && game.clocks && pgn) {
+      // An earlier move: the clocks as they were then (before a side's first move, its full time).
+      clockMs = clocksAt(pgn, ply)[s] ?? game.minutes * 60_000;
     }
     return {
       name: isFriend ? friendName : opponent,
@@ -162,6 +165,7 @@
     backHref="/friends"
     backLabel="Back to friends"
     {barFor}
+    clock={game.minutes ? { initial: game.minutes * 60_000, increment: game.increment * 1000 } : undefined}
   />
   <LearnFromGame game={pgn} />
 {/if}

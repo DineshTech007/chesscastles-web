@@ -56,6 +56,8 @@ export interface PlayedMove {
   window: number;
   /** How long the mover thought (ms, by the game clock); 0 before the clocks start. Sent with the game for fair play. */
   ms?: number;
+  /** The mover's clock after the move (ms), in a timed game: those watching see the clocks at every move. */
+  left?: number;
 }
 
 /** Remembers the openings of recent games so the bot can vary its choices. */
@@ -431,7 +433,8 @@ export class FideGame {
     const san = sanOf(pos, move);
     const after = pos.clone();
     after.play(move);
-    this.moves.push({ move, san, after, source: choice?.source, engine: choice?.engine, games: choice?.games ?? 0, window: choice?.window ?? 0, ms: Math.max(0, Math.round(used)) });
+    const left = this.timed ? Math.max(0, Math.round(mover === 'white' ? this.white : this.black)) : undefined;
+    this.moves.push({ move, san, after, source: choice?.source, engine: choice?.engine, games: choice?.games ?? 0, window: choice?.window ?? 0, ms: Math.max(0, Math.round(used)), left });
     this.turnStart = now;
     const key = polyglotKey(after);
     this.seen.set(key, (this.seen.get(key) ?? 0) + 1);

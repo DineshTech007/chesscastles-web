@@ -228,6 +228,7 @@
       uci: game.moves.map((m) => moveToUci(m.move)),
       white: game.remaining('white'),
       black: game.remaining('black'),
+      clocks: game.timed ? game.moves.map((m) => m.left ?? game.timeControl.minutes * 60_000) : undefined,
       at: Date.now(),
       result: game.isOver ? game.result || 'aborted' : undefined,
       reason: game.isOver ? game.endReason : undefined,
@@ -490,6 +491,8 @@
     return {
       sans: game.moves.map((m) => m.san),
       sources: game.moves.map((m) => m.source),
+      /** Each move's thinking time, beside the moves (as on chess.com). */
+      times: game.timed ? game.moves.map((m) => m.ms) : [],
       isOver: game.isOver,
       canAbort: game.canAbort,
       result: game.result,
@@ -690,7 +693,7 @@
         </button>
       </div>
       {#if reviewing !== undefined}<p class="label reviewing">Marking every move (brilliant … blunder)… {Math.round(reviewing * 100)}%</p>{/if}
-      <MoveList sans={g.sans} sources={g.sources} current={viewPly ?? g.sans.length} onselect={go} {badges} />
+      <MoveList sans={g.sans} sources={g.sources} times={g.times} current={viewPly ?? g.sans.length} onselect={go} {badges} />
       <div class="nav-wrap wide-only"><MoveNav ply={viewPly ?? g.sans.length} max={g.sans.length} {go} /></div>
       <div class="wide-only">{@render lookingRow()}</div>
     </div>

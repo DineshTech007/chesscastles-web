@@ -55,6 +55,7 @@
     barFor,
     extra,
     side = 'white',
+    clock,
   }: {
     game: PgnGame;
     live: boolean;
@@ -71,6 +72,8 @@
     extra?: Snippet;
     /** The side at the bottom to start with. */
     side?: 'white' | 'black';
+    /** The time control (ms), when the moves carry their clocks: each move's time is shown beside it. */
+    clock?: { initial: number; increment: number };
   } = $props();
 
   /** Phones and narrow windows: the database opens under the board's buttons, not far below. */
@@ -138,6 +141,20 @@
     trial = trial.moves.length > 1 ? { base: trial.base, moves: trial.moves.slice(0, -1), sans: trial.sans.slice(0, -1) } : undefined;
   }
   const behind = $derived(!following ? game.plies.length - cursor : 0);
+  /** Each move's thinking time, from the clocks after the moves (a side's clock that hasn't started yet stays as it was). */
+  const times = $derived.by(() => {
+    const c = clock;
+    if (!c || !game.plies.some((p) => p.clock !== undefined)) return [];
+    const whiteFirst = game.start.turn === 'white';
+    const last = { white: c.initial, black: c.initial };
+    return game.plies.map((p, i) => {
+      if (p.clock === undefined) return undefined;
+      const s = (i % 2 === 0) === whiteFirst ? 'white' : 'black';
+      const before = last[s];
+      last[s] = p.clock;
+      return p.clock === before ? 0 : Math.max(0, before - p.clock + c.increment);
+    });
+  });
   const atLive = $derived(following && !trial);
   const shapes = $derived.by((): DrawShape[] => {
     const m = engineOn && info?.pv[0] ? uciToMove(info.pv[0]) : undefined;
@@ -219,7 +236,7 @@
 
 {#snippet movesCard()}
   <div class="card moves-card">
-    <MoveList sans={game.plies.map((p) => p.san)} current={cursor} onselect={go} />
+    <MoveList sans={game.plies.map((p) => p.san)} {times} current={cursor} onselect={go} />
   </div>
 {/snippet}
 

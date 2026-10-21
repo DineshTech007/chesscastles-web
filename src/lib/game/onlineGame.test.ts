@@ -78,4 +78,16 @@ describe('OnlineGame', () => {
     g.apply({ ...full(''), black: { aiLevel: 5 } });
     expect(g.opponent).toMatchObject({ name: 'Stockfish level 5', ai: 5 });
   });
+
+  it('keeps each move’s clock as it arrives, for its time beside the moves', () => {
+    const g = new OnlineGame('white');
+    g.apply(full(''));
+    g.apply({ type: 'gameState', moves: 'e2e4', wtime: 600000, btime: 600000, status: 'started' });
+    g.apply({ type: 'gameState', moves: 'e2e4 e7e5', wtime: 600000, btime: 600000, status: 'started' });
+    g.apply({ type: 'gameState', moves: 'e2e4 e7e5 g1f3', wtime: 595000, btime: 600000, status: 'started' });
+    g.apply({ type: 'gameState', moves: 'e2e4 e7e5 g1f3 b8c6', wtime: 595000, btime: 588000, status: 'started' });
+    expect(g.clocks).toEqual([600000, 600000, 595000, 588000]);
+    // The first two moves: no clock running yet.
+    expect(g.times).toEqual([0, 0, 5000, 12000]);
+  });
 });

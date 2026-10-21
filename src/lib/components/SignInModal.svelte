@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
-   * The sign-in chooser: Google (quickest, recommended for parents) or Lichess (recommended for players,
-   * and needed to play real opponents online). Opened by startSignIn(). Nobody signs in before agreeing to
+   * The sign-in chooser: Lichess first (recommended for players, and needed to play real opponents online), then
+   * Google (quickest, recommended for parents). Opened by startSignIn(). Nobody signs in before agreeing to
    * the terms and privacy policy (and saying whether they are an adult): the choice is saved in this
    * browser and sent to the account after sign-in.
    */
@@ -86,6 +86,15 @@
       <ConsentForm bind:age bind:agreed {showErrors} />
     {/if}
 
+    <!-- Lichess first (owner, 2026-10-21): it's the one for playing, and some don't read past the first button. -->
+    <button class="opt lichess" onclick={lichess} disabled={!!busy}>
+      <Icon name="knight" size={22} />
+      <span class="opt-text">
+        <span class="opt-main">{busy === 'lichess' ? $t('si.opening.l') : $t('si.lichess')}</span>
+        <span class="opt-sub">{$t('si.lichess.s')}</span>
+        <span class="rec">{$t('si.rec.players')}</span>
+      </span>
+    </button>
     <button class="opt google" onclick={google} disabled={!!busy}>
       <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
         <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
@@ -97,14 +106,6 @@
         <span class="opt-main">{busy === 'google' ? $t('si.opening.g') : $t('si.google')}</span>
         <span class="opt-sub">{$t('si.google.s')}</span>
         <span class="rec">{$t('si.rec.parents')}</span>
-      </span>
-    </button>
-    <button class="opt lichess" onclick={lichess} disabled={!!busy}>
-      <Icon name="knight" size={22} />
-      <span class="opt-text">
-        <span class="opt-main">{busy === 'lichess' ? $t('si.opening.l') : $t('si.lichess')}</span>
-        <span class="opt-sub">{$t('si.lichess.s')}</span>
-        <span class="rec">{$t('si.rec.players')}</span>
       </span>
     </button>
     {#if error}<p class="error" role="alert">{error}</p>{/if}
@@ -237,7 +238,7 @@
   .lichess {
     background: var(--raised);
     color: var(--text);
-    border: 1px solid var(--border);
+    border: 2px solid var(--gold);
   }
   .error {
     color: var(--loss);

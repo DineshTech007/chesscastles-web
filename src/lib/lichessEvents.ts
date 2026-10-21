@@ -26,6 +26,33 @@ export interface IncomingChallenge {
 
 export const incomingChallenges = writable<IncomingChallenge[]>([]);
 
+/** A Lichess game of the player's still being played (Lichess tells every game in progress when the stream opens). */
+export interface OngoingGame {
+  id: string;
+  color?: 'white' | 'black';
+  opponent: string;
+  /** Playable on a Chess Castles board (Lichess's Board API); bullet is played on lichess.org only. */
+  board: boolean;
+}
+/**
+ * The player's games in progress (owner, 2026-10-21: a game left by a stray tap was lost on time, with no way back):
+ * the layout shows a bar back to them on every other page.
+ */
+export const ongoingGames = writable<OngoingGame[]>([]);
+/** Where a game in progress is played: its Chess Castles board, or lichess.org for bullet. */
+export const ongoingHref = (g: OngoingGame) => (g.board ? `/play/online/${g.id}${g.color ? `?c=${g.color}` : ''}` : `https://lichess.org/${g.id}`);
+
+/** A game from Lichess's gameStart event, as the bar shows it; undefined for a correspondence game (no clock to lose). */
+export function readOngoing(g: any): OngoingGame | undefined {
+  if (!g?.gameId || g.speed === 'correspondence' || g.perf === 'correspondence') return undefined;
+  return {
+    id: g.gameId,
+    color: g.color === 'white' || g.color === 'black' ? g.color : undefined,
+    opponent: g.opponent?.ai ? `Lichess level ${g.opponent.ai}` : (g.opponent?.username ?? 'your opponent'),
+    board: g.compat?.board !== false,
+  };
+}
+
 type Listener = (e: any) => void;
 const listeners = new Set<Listener>();
 /** Games that should open by themselves when they start: challenges you sent or accepted here. */
@@ -81,9 +108,13 @@ function handle(e: any) {
     if (c) incomingChallenges.update((l) => (l.some((x) => x.id === c.id) ? l : [...l, c]));
   } else if (e?.type === 'challengeCanceled' || e?.type === 'challengeDeclined') {
     if (e.challenge?.id) drop(e.challenge.id);
+  } else if (e?.type === 'gameFinish' && e.game?.gameId) {
+    ongoingGames.update((l) => l.filter((g) => g.id !== e.game.gameId));
   } else if (e?.type === 'gameStart' && e.game?.gameId) {
     const id = e.game.gameId;
     drop(id);
+    const g = readOngoing(e.game);
+    if (g) ongoingGames.update((l) => [...l.filter((x) => x.id !== id), g]);
     if (arenaId && e.game.tournamentId === arenaId) {
       const path = `/play/online/${id}`;
       if (typeof location !== 'undefined' && location.pathname !== path) void goto(`${path}?c=${e.game.color ?? ''}&t=${arenaId}`);
@@ -123,6 +154,8 @@ export function syncLichessEvents(): void {
   void loadWaiting(token);
   const connect = async () => {
     const opened = Date.now();
+    // The stream tells every game still in progress again as it opens: the old list goes (games may have ended).
+    ongoingGames.set([]);
     try {
       await streamEvents(token, handle, ctl.signal);
     } catch {
@@ -146,6 +179,7 @@ export function stopLichessEvents(): void {
   running?.ctl.abort();
   running = undefined;
   incomingChallenges.set([]);
+  ongoingGames.set([]);
 }
 
 /** A phone woke up or the tab came back: the stream may have died while asleep. */

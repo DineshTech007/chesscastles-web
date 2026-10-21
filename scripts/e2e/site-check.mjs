@@ -415,6 +415,39 @@ async function run(name, options) {
     return clock.trim();
   });
 
+  // 4g. Promotion closed without a choice (owner, 2026-10-21: in Puzzle Rush the pawn got stuck): it can move again.
+  await check(name, page, 'promotion: closing the picker keeps the pawn movable', async () => {
+    const promo = Array.from({ length: 10 }, (_, i) => [`sc-promo-${i}`, '8/P7/8/8/8/8/k7/4K3 b - - 0 1', 'a2b2 a7a8q', 500 + i * 10, ['promotion']]);
+    const bands = /\/data\/puzzles\/bands\/\d+\.json/;
+    await page.route(bands, (r) => r.fulfill({ json: promo }));
+    try {
+      await page.evaluate(() => localStorage.removeItem('k24.autoQueen'));
+      await open(page, '/puzzles/rush');
+      await tap(page.getByRole('button', { name: /start the rush/i }));
+      await page.locator('cg-board').first().waitFor({ timeout: 20000 });
+      await page.waitForTimeout(1500);
+      const move = async () => {
+        for (const sq of ['a7', 'a8']) {
+          const { x, y } = await square(page, sq);
+          if (touch) await page.touchscreen.tap(x, y);
+          else await page.mouse.click(x, y);
+          await page.waitForTimeout(250);
+        }
+      };
+      await move();
+      await page.locator('.picker').waitFor({ timeout: TAP_MS });
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(400);
+      await move();
+      await page.locator('.picker').waitFor({ timeout: TAP_MS }).catch(() => {});
+      expect((await page.locator('.picker').count()) === 1, 'the pawn could not be moved again after closing the picker');
+      await page.keyboard.press('Escape');
+      await tap(page.getByRole('button', { name: /end the rush/i }));
+    } finally {
+      await page.unroute(bands);
+    }
+  });
+
   // 5. A game against the computer: play e4 by tapping, the computer answers.
   await check(name, page, 'play the computer: e4 and an answer', async () => {
     await open(page, '/play/computer?l=1350&c=white');

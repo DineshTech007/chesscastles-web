@@ -7,6 +7,7 @@
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
+  import Fireworks from './Fireworks.svelte';
 
   type Side = { name: string; initials: string; photo?: string; rating?: string };
   let {
@@ -91,6 +92,7 @@
   </div>
 {/snippet}
 
+{#if outcome === 'won'}<Fireworks />{/if}
 <div class="scrim" role="presentation" onclick={onclose}></div>
 <div class="sheet {outcome}" role="dialog" aria-modal="true" aria-labelledby="go-h" tabindex="-1" bind:this={box}>
   {#if confetti.length}

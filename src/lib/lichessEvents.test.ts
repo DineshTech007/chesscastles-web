@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readChallenge } from './lichessEvents';
+import { ongoingHref, readChallenge, readOngoing } from './lichessEvents';
 
 const base = {
   id: 'AbC123xy',
@@ -27,5 +27,21 @@ describe('incoming challenges', () => {
   it('leaves the colour open when the challenger asked for a random one and Lichess has not decided', () => {
     expect(readChallenge({ ...base, finalColor: undefined }, 'chesscastlestester')?.myColor).toBeUndefined();
     expect(readChallenge({ ...base, finalColor: undefined, color: 'black' }, 'chesscastlestester')?.myColor).toBe('white');
+  });
+});
+
+describe('a game in progress (the bar back to it)', () => {
+  const start = { gameId: 'GaMe1234', color: 'black', opponent: { username: 'Riya', rating: 1200 }, speed: 'blitz', compat: { bot: false, board: true } };
+  it('opens on its Chess Castles board, with the colour', () => {
+    const g = readOngoing(start)!;
+    expect(g).toEqual({ id: 'GaMe1234', color: 'black', opponent: 'Riya', board: true });
+    expect(ongoingHref(g)).toBe('/play/online/GaMe1234?c=black');
+  });
+  it('bullet (not playable through Lichess’s Board API) opens on lichess.org; Lichess’s computer is named by level', () => {
+    expect(ongoingHref(readOngoing({ ...start, speed: 'bullet', compat: { board: false } })!)).toBe('https://lichess.org/GaMe1234');
+    expect(readOngoing({ ...start, opponent: { ai: 3 } })!.opponent).toBe('Lichess level 3');
+  });
+  it('leaves out correspondence games (no clock to lose)', () => {
+    expect(readOngoing({ ...start, speed: 'correspondence' })).toBeUndefined();
   });
 });
