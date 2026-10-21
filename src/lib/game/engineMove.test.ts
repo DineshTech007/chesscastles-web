@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maxDrop, pickWeighted, slipChance } from './engineMove';
+import { instinctChance, instinctShare, maxDrop, pickWeighted, slipChance } from './engineMove';
 
 describe('how the FIDE-level opponent picks a move', () => {
   const cands = [
@@ -34,5 +34,23 @@ describe('how the FIDE-level opponent picks a move', () => {
     expect(slipChance(1200)).toBeCloseTo(0.02);
     expect(slipChance(1800)).toBe(0);
     expect(slipChance(2400)).toBe(0);
+  });
+
+  it('in bullet plays most moves on instinct below 1400, fewer as players get stronger, none from 2100', () => {
+    expect(instinctChance(900)).toBe(0.75);
+    expect(instinctChance(1150)).toBe(0.75);
+    expect(instinctChance(1400)).toBeCloseTo(0.6);
+    expect(instinctChance(1750)).toBeCloseTo(0.25);
+    expect(instinctChance(2200)).toBe(0);
+    for (let r = 900; r < 2300; r += 50) expect(instinctChance(r + 50)).toBeLessThanOrEqual(instinctChance(r));
+  });
+
+  it('plays on instinct in bullet, a little less in blitz, never in rapid or classical (calibrated on slow games)', () => {
+    expect(instinctShare({ minutes: 1, increment: 0, kind: 'Bullet' })).toBe(1);
+    expect(instinctShare({ minutes: 5, increment: 0, kind: 'Blitz' })).toBe(0.7);
+    expect(instinctShare({ minutes: 10, increment: 0, kind: 'Blitz' })).toBe(0.7);
+    expect(instinctShare({ minutes: 15, increment: 10, kind: 'Rapid' })).toBe(0);
+    expect(instinctShare({ minutes: 90, increment: 30, kind: 'Classical' })).toBe(0);
+    expect(instinctShare(undefined)).toBe(0);
   });
 });

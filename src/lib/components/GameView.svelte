@@ -15,9 +15,9 @@
   import PromotionPicker from './PromotionPicker.svelte';
   import { autoQueen, premovesOn } from '$lib/preferences';
   import { makeBoardFen } from 'chessops/fen';
-  import { opposite, tcLabel, type Color, type FideGame } from '$lib/game/fideGame';
+  import { opposite, tcLabel, TIME_CONTROLS, type Color, type FideGame } from '$lib/game/fideGame';
   import { PremoveQueue } from '$lib/game/premoves';
-  import { myGames, type GameKind } from '$lib/stores/myGames';
+  import { myGames, outcome, type GameKind } from '$lib/stores/myGames';
   import { POINTS, study } from '$lib/study/progress';
   import { thousands } from '$lib/format';
   import { kfideAll, myCountry, myPhoto, photoSrc } from '$lib/stores/me';
@@ -452,6 +452,27 @@
   const counts = $derived(g.counts);
   /** This game's speed: it counts for that CC Rating only. */
   const speed = $derived(speedOf(game.timed ? tcLabel(game.timeControl) : ''));
+  /**
+   * Three games in a row lost to the FIDE-level opponent at this level and speed (this one included): so a child
+   * doesn't give up, the result offers a slower game (more time to think: easier to win, and it teaches more) and,
+   * above 1400, a level 200 lower.
+   */
+  const toughRun = $derived.by(() => {
+    if (kind !== 'fide' || !g.isOver || !game.timed) return undefined;
+    const tc = tcLabel(game.timeControl);
+    const last = $myGames.filter((x) => x.kind === 'fide').slice(0, 3);
+    if (last.length < 3 || last[0].id !== id || !last.every((x) => outcome(x) === 'lost' && x.opponentRating === game.rating && x.timeControl === tc)) return undefined;
+    const total = game.timeControl.minutes + game.timeControl.increment * 0.67;
+    // Bullet: 10+0; blitz: 15+10; already slow: no slower suggestion.
+    const slower = total <= 3 ? 1 : total < 15 ? 2 : undefined;
+    const lower = game.rating > 1400 ? Math.max(1400, game.rating - 200) : undefined;
+    const c = `&c=${game.human}`;
+    return {
+      slower: slower === undefined ? undefined : { label: tcLabel(TIME_CONTROLS[slower]), href: `/play/fide?r=${game.rating}&tc=${slower}${c}` },
+      lower: lower === undefined ? undefined : { rating: lower, href: `/play/fide?r=${lower}&tc=${TIME_CONTROLS.findIndex((t) => tcLabel(t) === tc)}${c}` },
+      tc,
+    };
+  });
   /** This game's effect on the player's CC Rating (FIDE-bot games). */
   const kfideChange = $derived(kind === 'fide' && g.isOver ? $kfideAll[speed].history.find((h) => h.id === id) : undefined);
   // The new CC Rating is known a moment after the game ends: friends watching see it by your name.
@@ -575,6 +596,15 @@
             <span class="num" class:up={kfideChange.after > kfideChange.before} class:down={kfideChange.after < kfideChange.before}>({kfideChange.after >= kfideChange.before ? '+' : ''}{kfideChange.after - kfideChange.before})</span></a>
           <span class="label fine">Your Chess Castles rating from games against FIDE-level opponents{$kfideAll[speed].provisional ? `; (new) until ${KFIDE_PROVISIONAL} games` : ''}.</span>
         {/if}
+        {#if toughRun && (toughRun.slower || toughRun.lower)}
+          <div class="tough" role="note">
+            <p><strong>Three tough games in a row</strong> against FIDE {game.rating} at {toughRun.tc}. {toughRun.slower ? 'A slower game gives you time to think: easier to win, and you learn more from it.' : 'A step down helps you win again and learn from it.'}</p>
+            <div class="row">
+              {#if toughRun.slower}<a class="btn primary" href={toughRun.slower.href} data-sveltekit-reload>Play {toughRun.slower.label}</a>{/if}
+              {#if toughRun.lower}<a class="btn" href={toughRun.lower.href} data-sveltekit-reload>Play FIDE {toughRun.lower.rating}</a>{/if}
+            </div>
+          </div>
+        {/if}
         <div class="row">
           <button class="btn primary" onclick={onagain}><Icon name="replay" size={18} />{againLabel}</button>
           <a class="btn" href="/analysis?game={id}"><Icon name="analyse" size={18} />Analyse</a>
@@ -593,6 +623,19 @@
 </div>
 
 <style>
+  .tough {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  }
+  .tough p {
+    margin: 0;
+    font-size: 14px;
+  }
   .pledge-scrim {
     position: fixed;
     inset: 0;

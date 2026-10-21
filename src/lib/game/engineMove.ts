@@ -163,6 +163,38 @@ export function slipChance(rating: number): number {
 }
 
 /**
+ * In bullet, how often (per move) a player of rating `r` (time pressure already taken off) plays the move that
+ * comes to mind without checking it: most moves below 1400, fewer as players get stronger, rarely from 1900; in
+ * blitz a bit less often (instinctShare). Checked moves are the engine-scored ones (a blunder far below the rating
+ * is left out); unchecked ones are Maia's natural moves for the rating, with the misses and dropped pieces real
+ * players make in fast games. The bot's settings were calibrated on positions from slow games, where players check
+ * their moves; measured on 2026-10-21, always checking, the bot rated 1400 played bullet at 69 cp a move, like a
+ * 1900 bullet player, and took 63% of a 1500 player's mistakes.
+ */
+export function instinctChance(r: number): number {
+  const steps: [number, number][] = [
+    [1200, 0.75],
+    [1400, 0.6],
+    [1600, 0.4],
+    [1900, 0.1],
+    [2100, 0],
+  ];
+  if (r <= steps[0][0]) return steps[0][1];
+  const i = steps.findIndex(([x]) => x >= r);
+  if (i < 0) return 0;
+  const [r0, c0] = steps[i - 1];
+  const [r1, c1] = steps[i];
+  return c0 + ((c1 - c0) * (r - r0)) / (r1 - r0);
+}
+
+/** How much of instinctChance applies at a speed: all in bullet, most in blitz (up to 10 minutes), none in slower games (calibrated as they are). */
+export const instinctShare = (tc?: TimeControl) => {
+  if (!tc || tc.minutes === 0) return 0;
+  const total = tc.minutes + tc.increment * 0.67;
+  return total <= 3 ? 1 : total <= 10 ? 0.7 : 0;
+};
+
+/**
  * Picks among candidate moves: each weighted by `base` (how likely a human is
  * to play it) times exp(−drop / tau), where drop is the winning chance it
  * gives away against the best candidate. Moves over the rating's limit are
@@ -239,8 +271,13 @@ export async function maiaPick(pos: Chess, rating: number, opponent?: number, tc
   }
   const scoreMs = Math.min(fastGame(tc) ? 250 : strong ? 700 : 500, room - bestMs);
   const r = rating - TIME_PRESSURE(tc);
+  // Bullet and blitz: below about 1900 many moves are played on instinct, unchecked (see instinctChance).
+  const instinct = cands.length > 1 && random() < instinctChance(r) * instinctShare(tc);
   let pick = cands[0];
-  if (cands.length > 1 && scoreMs < 100) {
+  if (instinct) {
+    // The move that comes to mind, as often as players of the rating play it (Maia's own odds, not sharpened).
+    pick = pickWeighted(cands.map((c) => ({ item: c, base: c.p * unscored(c), wc: 0 })), 1, 1, false, random);
+  } else if (cands.length > 1 && scoreMs < 100) {
     // No time to check: the natural move, as a player short of time plays.
     pick = pickWeighted(cands.map((c) => ({ item: c, base: c.p * c.p * unscored(c), wc: 0 })), 1, 1, false, random);
   } else if (cands.length > 1) {
@@ -251,7 +288,7 @@ export async function maiaPick(pos: Chess, rating: number, opponent?: number, tc
     if (scores.size) {
       const scored = cands.map((c, i) => ({ item: c, base: c.p, wc: isDrawn(c.move) ? DRAW : scores.has(ucis[i]) ? winChance(scores.get(ucis[i])!) : 0 }));
       const won = convert(cands, (c) => scores.get(maiaUci(pos, c.move)), (c) => isDrawn(c.move), r, random);
-      pick = won ?? pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r), random);
+      pick = won ?? pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r) * (fastGame(tc) ? 2 : 1), random);
     } else pick = pickWeighted(cands.map((c) => ({ item: c, base: c.p * unscored(c), wc: 0 })), 1, 1, false, random);
   }
   return { move: pick.move, confidence: policy[0].p, engine: 'maia' };
