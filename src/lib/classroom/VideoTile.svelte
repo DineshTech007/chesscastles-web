@@ -1,6 +1,6 @@
 <script lang="ts">
   /** A video in the corner: the coach's camera or screen for students (tap to enlarge), the coach's own preview. */
-  let { stream, label, mirror = false }: { stream: MediaStream; label: string; mirror?: boolean } = $props();
+  let { stream, label, mirror = false, left = false, wide = false }: { stream: MediaStream; label: string; mirror?: boolean; left?: boolean; wide?: boolean } = $props();
   let big = $state(false);
   let video: HTMLVideoElement;
   $effect(() => {
@@ -11,7 +11,7 @@
   });
 </script>
 
-<button class="tile" class:big onclick={() => (big = !big)} title={big ? 'Smaller' : 'Bigger'} aria-label="{label}: {big ? 'make smaller' : 'make bigger'}">
+<button class="tile" class:big class:left class:wide onclick={() => (big = !big)} title={big ? 'Smaller' : 'Bigger'} aria-label="{label}: {big ? 'make smaller' : 'make bigger'}">
   <!-- svelte-ignore a11y_media_has_caption -->
   <video bind:this={video} autoplay playsinline muted class:mirror></video>
   <span class="lbl">{label}</span>
@@ -33,6 +33,14 @@
     box-shadow: var(--shadow);
     cursor: pointer;
     transition: width 0.2s ease;
+  }
+  .tile.left {
+    right: auto;
+    left: 14px;
+    width: 160px;
+  }
+  .tile.wide {
+    width: min(480px, calc(100vw - 28px));
   }
   .tile.big {
     width: min(720px, calc(100vw - 28px));

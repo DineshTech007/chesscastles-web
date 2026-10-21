@@ -1,6 +1,8 @@
 /**
  * Classroom voice and the coach's video, browser to browser (WebRTC, no paid service): everyone in the call is
- * connected to everyone else, audio both ways; the coach's camera (or shared screen) goes to each student. Fine for
+ * connected to everyone else, audio and cameras both ways, like a meeting (owner, 2026-10-22: every tile shows the
+ * camera or the name). A student's camera goes to the coach, and to the other students when the coach allows it
+ * (`sendTo`). Students' video is small, and smaller the more people there are. Fine for
  * a class of up to about fifteen; for bigger classes Cloudflare's video servers (1,000 GB a month free) would carry
  * it instead. The live room only passes the connection messages along. Without a microphone one can still listen
  * and watch.
@@ -15,9 +17,11 @@ interface Peer {
   meter?: () => number;
 }
 
-/** About 600 kbit/s for a camera, 1.2 Mbit/s for a screen (text must stay sharp). */
+/** About 600 kbit/s for the coach's camera, 1.2 Mbit/s for a screen (text must stay sharp); a student sends about
+ * 1.5 Mbit/s in all, shared out (100 to 300 kbit/s to each person). */
 const CAM_BITRATE = 600_000;
 const SCREEN_BITRATE = 1_200_000;
+const STUDENT_TOTAL = 1_500_000;
 
 export class Voice {
   private peers = new Map<string, Peer>();
@@ -30,6 +34,8 @@ export class Voice {
   private screen = false;
   /** Why there is no microphone ('' when there is one). */
   micError = '';
+  /** Whether my video goes to this person (a student's: to the coach always, to other students when allowed). */
+  sendTo: (uid: string) => boolean = () => true;
 
   constructor(
     private me: string,
@@ -53,7 +59,13 @@ export class Voice {
       this.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
       this.setMic(false);
     } catch (e) {
-      this.micError = (e as Error)?.name === 'NotAllowedError' ? 'The microphone is blocked for this site. You can still listen.' : 'No microphone found. You can still listen.';
+      const name = (e as Error)?.name;
+      this.micError =
+        name === 'NotAllowedError' || name === 'SecurityError'
+          ? 'The microphone is blocked: allow it in the address bar (and in Windows Settings > Privacy > Microphone). You can still listen.'
+          : name === 'NotReadableError' || name === 'AbortError'
+            ? 'Another app is using the microphone (Zoom, Meet, Teams). Close it and join again. You can still listen.'
+            : 'No microphone found. You can still listen.';
     }
     try {
       this.ctx = new AudioContext();
@@ -82,23 +94,28 @@ export class Voice {
     for (const t of this.local?.getAudioTracks() ?? []) t.enabled = on;
   }
 
-  /** The coach's video: a camera or a screen track, or none. Goes to every student at once (no reconnecting). */
+  /** My video: a camera or a screen track, or none. Goes to everyone at once (no reconnecting). */
   async setVideo(track: MediaStreamTrack | undefined, screen = false) {
     this.video = track;
     this.screen = screen;
-    for (const p of this.peers.values()) await this.sendVideo(p.pc);
+    await this.refreshVideo();
+  }
+  /** After `sendTo` changed (the coach's setting): who gets my video, again. */
+  async refreshVideo() {
+    for (const [uid, p] of this.peers) await this.sendVideo(p.pc, uid);
   }
   private videoSender(pc: RTCPeerConnection): RTCRtpSender | undefined {
     return pc.getTransceivers().find((t) => t.receiver.track?.kind === 'video')?.sender;
   }
-  private async sendVideo(pc: RTCPeerConnection) {
+  private async sendVideo(pc: RTCPeerConnection, uid: string) {
     const sender = this.videoSender(pc);
     if (!sender) return;
-    await sender.replaceTrack(this.video ?? null).catch(() => undefined);
+    await sender.replaceTrack(this.video && this.sendTo(uid) ? this.video : null).catch(() => undefined);
     try {
       const params = sender.getParameters();
       params.encodings = params.encodings?.length ? params.encodings : [{}];
-      params.encodings[0].maxBitrate = this.screen ? SCREEN_BITRATE : CAM_BITRATE;
+      const each = Math.max(100_000, Math.min(300_000, Math.round(STUDENT_TOTAL / Math.max(1, this.peers.size))));
+      params.encodings[0].maxBitrate = this.screen ? SCREEN_BITRATE : this.isCoach ? CAM_BITRATE : each;
       await sender.setParameters(params);
     } catch {
       /* the browser picks */
@@ -148,9 +165,9 @@ export class Voice {
 
   private async call(uid: string) {
     const { pc } = this.peer(uid);
-    // The coach's video channel, made at the start so the camera can come and go without a new connection.
-    if (this.isCoach || uid === this.coach) pc.addTransceiver('video', { direction: this.isCoach ? 'sendonly' : 'recvonly' });
-    if (this.isCoach) await this.sendVideo(pc);
+    // The video channel, both ways, made at the start so cameras can come and go without a new connection.
+    pc.addTransceiver('video', { direction: 'sendrecv' });
+    await this.sendVideo(pc, uid);
     try {
       await pc.setLocalDescription(await pc.createOffer());
       this.signal(uid, { sdp: pc.localDescription!.toJSON() });
@@ -165,13 +182,12 @@ export class Voice {
       if (d.sdp?.type === 'offer') {
         const p = this.peer(from);
         await p.pc.setRemoteDescription(d.sdp);
-        // A student calling the coach offers to receive video: the coach answers by sending.
-        if (this.isCoach)
-          for (const t of p.pc.getTransceivers())
-            if (t.receiver.track?.kind === 'video') {
-              t.direction = 'sendonly';
-              await this.sendVideo(p.pc);
-            }
+        // The video channel: both ways.
+        for (const t of p.pc.getTransceivers())
+          if (t.receiver.track?.kind === 'video') {
+            t.direction = 'sendrecv';
+            await this.sendVideo(p.pc, from);
+          }
         await p.pc.setLocalDescription(await p.pc.createAnswer());
         this.signal(from, { sdp: p.pc.localDescription!.toJSON() });
         for (const c of p.pending.splice(0)) await p.pc.addIceCandidate(c).catch(() => undefined);
@@ -222,7 +238,7 @@ export class Voice {
     p.pc.onconnectionstatechange = null;
     p.pc.close();
     p.audio.srcObject = null;
-    if (uid === this.coach) this.onvideo?.(uid, undefined);
+    this.onvideo?.(uid, undefined);
   }
 
   stop() {

@@ -22,6 +22,7 @@
   import EvalBar from './EvalBar.svelte';
   import Leaderboard from './Leaderboard.svelte';
   import VideoTile from './VideoTile.svelte';
+  import Gallery from './Gallery.svelte';
   import MoveList from '$lib/components/MoveList.svelte';
   import BoardEditor from '$lib/components/BoardEditor.svelte';
   import DbPanel from '$lib/components/DbPanel.svelte';
@@ -39,7 +40,8 @@
 
   const b = $derived(live.board);
   const at = $derived(lineAt(b.root, b.moves, b.ply));
-  let view = $state<'board' | 'students' | 'games'>('board');
+  let view = $state<'board' | 'students' | 'games' | 'cams'>('board');
+  const studentCams = $derived(live.people.filter((p) => !p.coach && p.cam).length);
   let tab = $state<'people' | 'chat' | 'moves' | 'db' | 'lb' | 'class'>('people');
   let paint = $state(false);
   const COLORS = ['green', 'red', 'blue', 'yellow', 'orange'] as const;
@@ -268,6 +270,7 @@
     <div class="voice">
       {#if !live.inVoice}
         <button class="btn" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>🎙️ {live.joiningVoice ? 'Joining…' : 'Start voice'}</button>
+        <button class="btn" onclick={() => live.setCam('camera')} disabled={live.joiningVoice} title="Starts the voice and your camera">📷 Camera</button>
       {:else}
         <button class="btn" class:on={live.micOn} onclick={() => live.setMic(!live.micOn)} title="Your microphone">{live.micOn ? '🎙️ Mic on' : '🔇 Mic off'}</button>
         <button class="btn" class:on={live.camOn === 'camera'} onclick={() => live.setCam(live.camOn === 'camera' ? '' : 'camera')} title="Your camera to every student">📷 {live.camOn === 'camera' ? 'Camera on' : 'Camera'}</button>
@@ -293,11 +296,14 @@
         <button role="tab" class:on={view === 'board'} onclick={() => (view = 'board')}>♟ Class board</button>
         {#if live.task}<button role="tab" class:on={view === 'students'} onclick={() => (view = 'students')}>👥 Students' boards{live.task.over ? '' : ' ●'}</button>{/if}
         {#if live.games.length}<button role="tab" class:on={view === 'games'} onclick={() => (view = 'games')}>🎮 Games ({live.games.length})</button>{/if}
+        <button role="tab" class:on={view === 'cams'} onclick={() => (view = 'cams')}>👥 Gallery{studentCams ? ` (${studentCams} 📷)` : ''}</button>
       </div>
       {#if view === 'students' && live.task}
         <StudentGrid {live} onspotlight={() => (view = 'board')} />
       {:else if view === 'games'}
         <GamesView {live} onspotlight={() => (view = 'board')} onnew={() => (gaming = true)} />
+      {:else if view === 'cams'}
+        <Gallery {live} big />
       {:else}
         <div class="board-head">
           {#if library.length}
@@ -375,6 +381,7 @@
     </section>
 
     <aside class="side">
+      {#if view !== 'cams'}<Gallery {live} />{/if}
       <div class="tabs" role="tablist">
         <button role="tab" class:on={tab === 'people'} onclick={() => (tab = 'people')}>People{hands ? ` ✋${hands}` : ''}</button>
         <button role="tab" class:on={tab === 'chat'} onclick={() => (tab = 'chat')}>Chat{live.unread ? ` (${live.unread})` : ''}</button>
@@ -426,6 +433,8 @@
             <label class="toggle"><input type="checkbox" checked={live.settings.engine} onchange={(e) => live.setSettings({ engine: e.currentTarget.checked })} /> Have the engine</label>
             <label class="toggle"><input type="checkbox" checked={!!live.settings.db} onchange={(e) => live.setSettings({ db: e.currentTarget.checked })} /> Have the games database</label>
             <label class="toggle"><input type="checkbox" checked={live.settings.talk} onchange={(e) => live.setSettings({ talk: e.currentTarget.checked })} /> Can switch their microphone on</label>
+            <label class="toggle"><input type="checkbox" checked={live.settings.cams !== false} onchange={(e) => live.setSettings({ cams: e.currentTarget.checked })} /> Can switch their camera on</label>
+            <label class="toggle"><input type="checkbox" checked={live.settings.peers !== false} onchange={(e) => live.setSettings({ peers: e.currentTarget.checked })} /> See each other's cameras (off: only you see them)</label>
             <h3>Cheer the class</h3>
             <div class="reacts">
               {#each REACTIONS as [e, text] (e)}<button class="btn" onclick={() => live.react(e, text)} title={text}>{e}</button>{/each}
@@ -437,7 +446,7 @@
   </div>
 </div>
 
-{#if live.localVideo}<VideoTile stream={live.localVideo} label={live.camOn === 'screen' ? 'Your screen (students see it)' : 'You (students see you)'} mirror={live.camOn === 'camera'} />{/if}
+{#if live.localVideo && live.camOn === 'screen'}<VideoTile stream={live.localVideo} label="Your screen (everyone sees it)" />{/if}
 
 {#if asking}
   <AskDialog fen={at.fen} {used} onask={ask} onclose={() => (asking = false)} />

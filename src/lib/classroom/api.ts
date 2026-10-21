@@ -158,8 +158,10 @@ export interface Person {
   voice: boolean;
   mic: boolean;
   allow: boolean;
-  /** The coach's camera (or shared screen) is on. */
+  /** The camera (or the coach's shared screen) is on. */
   cam: boolean;
+  /** The coach shares the screen. */
+  screen?: boolean;
 }
 export interface ChatMsg {
   id: number;
@@ -182,6 +184,10 @@ export interface Settings {
   chat: boolean;
   /** Students see the games database (the coach always does). */
   db?: boolean;
+  /** Students may switch their camera on. */
+  cams?: boolean;
+  /** Students see each other's cameras (else only the coach sees them). */
+  peers?: boolean;
 }
 
 /** A game in the class: the coach's simul, students paired in the game zone, or the coach against one student. */
@@ -276,18 +282,8 @@ export const iceServers = (): Promise<RTCIceServer[]> =>
 
 export const classLink = (id: string) => `https://chesscastles.com/classroom/${id}`;
 
-/** Students may use the Classroom (an admin's switch; closed during the beta except for a demo). */
-export const setClassroomOpen = (open: boolean) => call<{ open: boolean }>('PUT', '/open', { open });
-export const classroomOpen = () => call<{ open: boolean }>('GET', '/open').then((r) => r.open);
-/** The class list with the switch, or `closed` when the Classroom is not open to this player. */
-export async function classroomAccess(): Promise<{ classes: ClassSummary[]; open: boolean; closed?: boolean }> {
-  const t = await token();
-  const res = await fetch(`${API}/class`, { headers: { Authorization: `Bearer ${t}` } });
-  const j = await res.json().catch(() => ({}));
-  if (res.status === 403 && j.closed) return { classes: [], open: false, closed: true };
-  if (!res.ok) throw new Error(j.error ?? 'Something went wrong. Try again.');
-  return j;
-}
+/** My classes (a student sees the Classroom only once a coach enrols them in one), and whether I may make classes. */
+export const classroomAccess = () => call<{ classes: ClassSummary[]; admin?: boolean }>('GET', '');
 
 export const homeworkList = (id: string) => call<{ homework: HomeworkSummary[] }>('GET', `/${id}/homework`).then((r) => r.homework);
 export const setHomework = (id: string, hw: { kind: TaskKind; title: string; points: number; minus: number; tries: number; items: Item[]; due: number }) => call<{ id: string }>('POST', `/${id}/homework`, hw);

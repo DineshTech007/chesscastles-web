@@ -16,6 +16,7 @@
   import EnginePanel from './EnginePanel.svelte';
   import EvalBar from './EvalBar.svelte';
   import VideoTile from './VideoTile.svelte';
+  import Gallery from './Gallery.svelte';
   import MoveList from '$lib/components/MoveList.svelte';
   import DbPanel from '$lib/components/DbPanel.svelte';
   import { CloudBook } from '$lib/book/book';
@@ -71,6 +72,8 @@
   const me = $derived(live.people.find((p) => p.uid === live.me.uid));
   const canTalk = $derived(live.settings.talk || !!me?.allow);
   const coachCam = $derived(live.people.some((p) => p.coach && p.cam));
+  /** The coach's shared screen: big in the corner (the coach's camera is in the gallery). */
+  const coachScreen = $derived(live.people.some((p) => p.coach && p.screen));
 </script>
 
 <div class="student">
@@ -83,8 +86,12 @@
     <div class="acts">
       {#if !live.inVoice}
         <button class="btn primary" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>🎧 {live.joiningVoice ? 'Joining…' : 'Join voice'}</button>
+        {#if live.settings.cams !== false}<button class="btn" onclick={() => live.setCam('camera')} disabled={live.joiningVoice} title="Joins the voice and switches your camera on">📷 Camera</button>{/if}
       {:else}
         <button class="btn" class:on={live.micOn} onclick={() => live.setMic(!live.micOn)} disabled={!canTalk && !live.micOn} title={canTalk ? 'Your microphone' : 'Raise your hand to speak'}>{live.micOn ? '🎙️ Mic on' : '🔇 Mic off'}</button>
+        {#if live.settings.cams !== false || live.camOn}
+          <button class="btn" class:on={!!live.camOn} onclick={() => live.setCam(live.camOn ? '' : 'camera')} title={live.settings.peers === false ? 'Only your coach sees your camera' : 'Your class sees your camera'}>📷 {live.camOn ? 'Camera on' : 'Camera'}</button>
+        {/if}
       {/if}
       <button class="btn" class:hand={live.handUp} onclick={() => live.raiseHand(!live.handUp)}>{live.handUp ? '✋ Hand up' : '✋ Raise hand'}</button>
       <button class="btn ghost" onclick={onexit}>Leave</button>
@@ -139,6 +146,7 @@
     </section>
 
     <aside class="side">
+      <Gallery {live} />
       <div class="tabs" role="tablist">
         <button role="tab" class:on={tab === 'chat'} onclick={() => (tab = 'chat')}>Chat{live.unread ? ` (${live.unread})` : ''}</button>
         <button role="tab" class:on={tab === 'lb'} onclick={() => (tab = 'lb')}>Leaderboard</button>
@@ -170,7 +178,8 @@
     </aside>
   </div>
 </div>
-{#if live.coachVideo && coachCam}<VideoTile stream={live.coachVideo} label={live.info.coachName} />{/if}
+{#if live.coachVideo && coachScreen}<VideoTile stream={live.coachVideo} label="{live.info.coachName}'s screen" wide />{/if}
+
 
 <style>
   .student {

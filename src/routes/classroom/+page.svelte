@@ -1,13 +1,12 @@
 <script lang="ts">
   /**
    * Classroom: classes, sessions and homework. The coach (an admin, for now) makes a class, picks its students, plans
-   * its sessions, posts announcements, sets homework and starts the class; an admin decides whether students see the
-   * Classroom at all (owner, 2026-10-22: off during the beta except for a coach's demo). A student sees their classes,
-   * the next session, announcements, homework to do, and joins the live class.
+   * its sessions, posts announcements, sets homework and starts the class. A player sees the Classroom only once added
+   * to a class (owner, 2026-10-22: off by default): their classes, the next session, announcements, homework to do,
+   * and the live class to join.
    */
   import { goto } from '$app/navigation';
   import { session, startSignIn } from '$lib/auth';
-  import { adminMe } from '$lib/admin';
   import { myStudents } from '$lib/students';
   import { findPlayers } from '$lib/social';
   import {
@@ -20,7 +19,6 @@
     homeworkList,
     newClass,
     saveClass,
-    setClassroomOpen,
     setHomework,
     START_FEN,
     type ClassInfo,
@@ -31,14 +29,11 @@
     type Session,
     type TaskKind,
   } from '$lib/classroom/api';
-  import { forgetClassroom } from '$lib/classroom/visible';
   import { took } from '$lib/classroom/tasks';
   import Leaderboard from '$lib/classroom/Leaderboard.svelte';
   import AskDialog from '$lib/classroom/AskDialog.svelte';
 
   let classes = $state<ClassSummary[]>([]);
-  let open = $state(false);
-  let closed = $state(false);
   let loaded = $state(false);
   let error = $state('');
   let canCoach = $state(false);
@@ -52,8 +47,7 @@
     try {
       const r = await classroomAccess();
       classes = r.classes;
-      open = r.open;
-      closed = !!r.closed;
+      canCoach = !!r.admin;
       error = '';
       // Homework of each class (a few classes: one small request each).
       for (const c of r.classes) homeworkList(c.id).then((h) => (homework = { ...homework, [c.id]: h }), () => {});
@@ -68,18 +62,8 @@
     if (!signedIn || started) return;
     started = true;
     void load();
-    if (devPlayer()) canCoach = true;
-    else adminMe().then(() => (canCoach = true), () => (canCoach = false));
   });
 
-  async function toggleOpen() {
-    try {
-      open = (await setClassroomOpen(!open)).open;
-      forgetClassroom();
-    } catch (e) {
-      error = (e as Error).message;
-    }
-  }
   async function create(e: Event) {
     e.preventDefault();
     if (!name.trim()) return;
@@ -267,22 +251,11 @@
       <p>Sign in to see your classes.</p>
       <button class="btn primary" onclick={startSignIn}>Sign in</button>
     </div>
-  {:else if closed}
-    <div class="card pad">
-      <p>The Classroom is not open yet.</p>
-      <p class="muted">Your coach will tell you when your class starts here.</p>
-    </div>
   {:else}
     {#if error}<p class="err">{error}</p>{/if}
 
     {#if canCoach}
-      <div class="card pad switch">
-        <div>
-          <b>Students can see the Classroom: {open ? 'on' : 'off'}</b>
-          <span class="muted small">{open ? 'Students in a class see it in their menu and can join.' : 'Hidden from every student (only admins see it). Switch on for a demo or when classes begin.'}</span>
-        </div>
-        <button class="btn" class:primary={!open} onclick={toggleOpen}>{open ? 'Switch off' : 'Switch on'}</button>
-      </div>
+      <p class="muted small">Players see the Classroom only once you enrol them in a class (Manage, then Enrolled students).</p>
     {/if}
 
     {#if classes.length}
@@ -391,14 +364,14 @@
       <button class="btn ghost" onclick={() => (editing = undefined)} aria-label="Close">✕</button>
     </header>
     <div class="chips" role="tablist">
-      {#each [['students', `Students (${members.length})`], ['schedule', `Schedule (${sessions.length})`], ['notes', 'Announcements'], ['homework', 'Homework'], ['board', 'Leaderboard'], ['past', 'Past classes']] as [k, l] (k)}
+      {#each [['students', `Enrolled students (${members.length})`], ['schedule', `Schedule (${sessions.length})`], ['notes', 'Announcements'], ['homework', 'Homework'], ['board', 'Leaderboard'], ['past', 'Past classes']] as [k, l] (k)}
         <button class="chip" class:on={edTab === k} onclick={() => (edTab = k as typeof edTab)}>{l}</button>
       {/each}
     </div>
 
     {#if edTab === 'students'}
       <div class="chips">
-        {#each members as m (m.uid)}<button class="chip on" onclick={() => toggle(m)} title="Take off the class">{m.name} ✕</button>{:else}<span class="muted">No students yet: add them below.</span>{/each}
+        {#each members as m (m.uid)}<button class="chip on" onclick={() => toggle(m)} title="Take off the class">{m.name} ✕</button>{:else}<span class="muted">No students enrolled yet: enrol them below, then Save.</span>{/each}
       </div>
       {#if mine.length}
         <h3>My students</h3>
@@ -411,7 +384,7 @@
       <div class="chips">
         {#each found as m (m.uid)}<button class="chip" class:on={has(m.uid)} onclick={() => toggle(m)}>{has(m.uid) ? '✓ ' : '+ '}{m.name}</button>{/each}
       </div>
-      <p class="muted small">Students join with the class link, signed in with the account you add here.</p>
+      <p class="muted small">Only enrolled students see the Classroom (in their menu) and can join, signed in with the account you enrol here.</p>
     {:else if edTab === 'schedule'}
       <div class="grid2">
         <label class="f"><span>Date</span><input type="date" bind:value={sDate} /></label>
@@ -507,18 +480,6 @@
   }
   .pad {
     padding: 14px 16px;
-  }
-  .switch {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .switch > div {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
   }
   .sessions {
     display: flex;

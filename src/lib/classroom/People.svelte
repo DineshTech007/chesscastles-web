@@ -23,6 +23,7 @@
       {#if p.hand}<span class="hand" title="Hand raised">✋</span>{/if}
       {#if live.holder === p.uid}<span class="pill gold" title="Has the big board">♟ Board</span>{/if}
       {#if p.voice}<span class="mic" title={p.mic ? 'Microphone on' : 'Microphone off'}>{p.mic ? '🎙️' : '🔇'}</span>{/if}
+      {#if p.cam}<span title="Camera on">📷</span>{/if}
       {#if live.coach && !p.coach && p.online}
         <span class="acts">
           {#if p.hand}<button class="mini" onclick={() => live.lower(p.uid)} title="Lower the hand">Lower</button>{/if}

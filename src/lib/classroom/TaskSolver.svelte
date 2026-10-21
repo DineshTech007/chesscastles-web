@@ -40,6 +40,16 @@
   let holdReply = $state(0);
   let remount = $state(0);
   let party = $state(0);
+  let wrap = $state<HTMLDivElement>();
+  // Each new puzzle: its board fully in view (on a phone the page may have scrolled, hiding the top ranks).
+  let shownItem = -1;
+  $effect(() => {
+    const i = idx;
+    if (i === shownItem || !wrap) return;
+    shownItem = i;
+    const r = wrap.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > innerHeight) wrap.scrollIntoView({ block: r.height > innerHeight ? 'start' : 'nearest', behavior: 'smooth' });
+  });
   let seen = 0;
 
   $effect(() => {
@@ -186,7 +196,7 @@
       <button class="btn" onclick={() => (review = undefined)}>Close</button>
     </div>
   {:else if shown}
-    <div class="boardwrap">
+    <div class="boardwrap" bind:this={wrap}>
       {#key remount}
         <ClassBoard fen={shown.fen} lastMove={shown.last} check={shown.pos.isCheck()} orientation={side} movable={myTurn ? side : undefined} dests={myTurn ? destsOf(shown.pos) : new Map()} autoShapes={hint as never} label="Your question board" {onmove} />
       {/key}

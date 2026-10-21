@@ -1,10 +1,9 @@
 /**
- * Whether the menus show Classroom: always to admins (they make the classes); to a student only when an admin has
- * opened the Classroom and the student is in a class (owner, 2026-10-22: not shown to players during the beta, only
- * for a coach's demo). Asked once per sign-in and remembered on the device for ten minutes.
+ * Whether the menus show Classroom: always to admins (they make the classes); to a player only once a coach has added
+ * them to a class (owner, 2026-10-22: off by default). Asked once per sign-in; a yes is remembered on the device for
+ * ten minutes, a no for two (a student just added sees it soon).
  */
 import { writable } from 'svelte/store';
-import { adminMe } from '$lib/admin';
 import { classroomAccess } from './api';
 
 export const classroomShown = writable(false);
@@ -21,7 +20,7 @@ export function checkClassroom(uid: string | undefined) {
   asked = uid;
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-    if (saved?.uid === uid && Date.now() - saved.at < 600_000) return classroomShown.set(!!saved.show);
+    if (saved?.uid === uid && Date.now() - saved.at < (saved.show ? 600_000 : 120_000)) return classroomShown.set(!!saved.show);
   } catch {
     /* private mode */
   }
@@ -37,25 +36,11 @@ export function checkClassroom(uid: string | undefined) {
 
 async function decide(uid: string): Promise<boolean> {
   void uid;
-  const admin = await adminMe().then(
-    () => true,
-    () => false,
-  );
-  if (admin) return true;
   try {
     const r = await classroomAccess();
-    return !r.closed && r.classes.length > 0;
+    return !!r.admin || r.classes.length > 0;
   } catch {
     return false;
   }
 }
 
-/** After the switch changes or a class is joined: ask again next time. */
-export function forgetClassroom() {
-  asked = '';
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    /* private mode */
-  }
-}

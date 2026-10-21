@@ -24,6 +24,34 @@ export interface Reaction {
   at: number;
 }
 
+/** The camera at a size every webcam can give; some refuse the preferred one, so plain video is tried next. */
+async function camera(small = false): Promise<MediaStream> {
+  try {
+    const size = small ? { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } } : { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 20 } };
+    return await navigator.mediaDevices.getUserMedia({ video: size, audio: false });
+  } catch (e) {
+    const name = (e as DOMException)?.name;
+    if (name === 'NotAllowedError' || name === 'NotFoundError' || name === 'SecurityError') throw e;
+    return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+  }
+}
+
+/**
+ * Why the camera did not start, and what to do (owner, 2026-10-22: "The camera could not start" said too little).
+ * A page opened before an update still carries the old rule that blocked cameras: a reload fixes it.
+ */
+export function cameraTrouble(e: unknown): string {
+  const name = (e as DOMException)?.name ?? '';
+  const doc = document as unknown as { permissionsPolicy?: { allowsFeature(f: string): boolean }; featurePolicy?: { allowsFeature(f: string): boolean } };
+  const policy = doc.permissionsPolicy ?? doc.featurePolicy;
+  if (policy && !policy.allowsFeature('camera')) return 'This page is from before an update that allows cameras: reload it (Ctrl+R or F5), then try again.';
+  if (name === 'NotAllowedError' || name === 'SecurityError')
+    return 'The camera is blocked. Click the camera or lock icon in the address bar and allow the camera for chesscastles.com; on Windows also check Settings > Privacy > Camera (allow apps and the browser).';
+  if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'No camera was found on this computer. Plug one in, or share your screen instead.';
+  if (name === 'NotReadableError' || name === 'AbortError') return 'Another app is using the camera (Zoom, Meet, Teams, the Camera app). Close it, then try again.';
+  return `The camera could not start (${name || 'unknown reason'}). Reload the page and try again.`;
+}
+
 export class Live {
   status = $state<RoomStatus>('connecting');
   closed = $state<ClosedWhy | undefined>();
@@ -33,7 +61,7 @@ export class Live {
   holder = $state('');
   chat = $state<ChatMsg[]>([]);
   unread = $state(0);
-  settings = $state<Settings>({ engine: false, talk: true, lb: true, moves: true, chat: false, db: false });
+  settings = $state<Settings>({ engine: false, talk: true, lb: true, moves: true, chat: false, db: false, cams: true, peers: true });
   people = $state<Person[]>([]);
   task = $state<Task | undefined>();
   /** Everyone's progress (the coach); a student has only their own. */
@@ -50,6 +78,8 @@ export class Live {
   newHomework = $state<{ id: string; title: string; due: number } | undefined>();
   /** The coach's video (a student's view), and the coach's own camera or screen on. */
   coachVideo = $state<MediaStream | undefined>();
+  /** The students' cameras (the coach's view), by uid. */
+  videos = $state<Record<string, MediaStream>>({});
   camOn = $state<'' | 'camera' | 'screen'>('');
   localVideo = $state<MediaStream | undefined>();
   tried = $state<Tried | undefined>();
@@ -169,6 +199,7 @@ export class Live {
         return;
       case 'settings':
         this.settings = m.settings;
+        void this.voice?.refreshVideo();
         return;
       case 'chat':
         this.chat = [...this.chat, m.chat].slice(-80);
@@ -222,6 +253,10 @@ export class Live {
         this.voice?.setMic(false);
         this.micOn = false;
         this.say(m.by === 'locked' ? 'Only students the coach lets speak can talk now. Raise your hand.' : 'The coach muted your microphone.');
+        return;
+      case 'camoff':
+        void this.setCam('');
+        this.say('The coach turned students’ cameras off.');
         return;
       case 'allow':
         this.say(m.on ? 'The coach let you speak: switch your microphone on.' : 'You are muted again.', 5000);
@@ -350,8 +385,14 @@ export class Live {
         (l) => (this.levels = l),
         (uid, stream) => {
           if (uid === this.info.coach) this.coachVideo = stream;
+          else if (stream) this.videos = { ...this.videos, [uid]: stream };
+          else {
+            const { [uid]: _gone, ...rest } = this.videos;
+            this.videos = rest;
+          }
         },
       );
+      this.voice.sendTo = (uid) => this.coach || uid === this.info.coach || this.settings.peers !== false;
       await this.voice.start();
       this.micError = this.voice.micError;
       this.inVoice = true;
@@ -374,19 +415,17 @@ export class Live {
     this.sendVoice();
   }
   private sendVoice() {
-    this.room.send({ t: 'voice', on: this.inVoice, mic: this.micOn, cam: !!this.camOn });
+    this.room.send({ t: 'voice', on: this.inVoice, mic: this.micOn, cam: !!this.camOn, screen: this.camOn === 'screen' });
   }
-  /** The coach's camera or screen to every student (the coach must be in the call). */
+  /** My camera (or the coach's screen) to the class; joins the call first when needed. */
   async setCam(kind: '' | 'camera' | 'screen') {
+    if (kind && !this.voice) await this.joinVoice();
     if (!this.voice) return;
     for (const t of this.localVideo?.getTracks() ?? []) t.stop();
     this.localVideo = undefined;
     if (kind) {
       try {
-        const stream =
-          kind === 'screen'
-            ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 10 }, audio: false })
-            : await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 20 } }, audio: false });
+        const stream = kind === 'screen' ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 10 }, audio: false }) : await camera(!this.coach);
         const track = stream.getVideoTracks()[0];
         // Sharing stopped from the browser's own bar.
         track.onended = () => {
@@ -394,8 +433,8 @@ export class Live {
         };
         this.localVideo = stream;
         await this.voice.setVideo(track, kind === 'screen');
-      } catch {
-        this.say(kind === 'screen' ? 'The screen was not shared.' : 'The camera could not start: allow it for this site.');
+      } catch (e) {
+        this.say(kind === 'screen' ? 'The screen was not shared.' : cameraTrouble(e), 9000);
         kind = '';
         await this.voice.setVideo(undefined);
       }
@@ -412,6 +451,7 @@ export class Live {
     this.levels = {};
     this.camOn = '';
     this.coachVideo = undefined;
+    this.videos = {};
     for (const t of this.localVideo?.getTracks() ?? []) t.stop();
     this.localVideo = undefined;
     if (this.status === 'open') this.room.send({ t: 'voice', on: false, mic: false });
