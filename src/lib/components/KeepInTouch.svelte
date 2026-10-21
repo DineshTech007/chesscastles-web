@@ -6,6 +6,15 @@
   import { onMount } from 'svelte';
   import { myWhatsapp, stopWhatsapp, type MyWhatsapp } from '$lib/social';
   import { askKeepInTouch } from './WelcomeSheet.svelte';
+  import { remindersOn, reminderSupport, turnOnReminders } from '$lib/study/reminders';
+
+  const canPush = reminderSupport() === 'push';
+  let push = $state<'off' | 'on' | 'denied' | 'busy'>(canPush && remindersOn() ? 'on' : 'off');
+  async function pushOn() {
+    push = 'busy';
+    const r = await turnOnReminders();
+    push = r === 'on' ? 'on' : r === 'denied' ? 'denied' : 'off';
+  }
 
   let wa = $state<MyWhatsapp | undefined>();
   let busy = $state(false);
@@ -39,7 +48,17 @@
     <button class="btn" onclick={() => askKeepInTouch.set(true)}>Get reports on WhatsApp</button>
   {/if}
   {#if note}<p class="label" role="status">{note}</p>{/if}
-  <p class="label">Study-time and streak reminders on this phone: <a href="/learn#plan-h">turn them on or off in your study plan on Learn</a>.</p>
+  {#if canPush}
+    {#if push === 'on'}
+      <p>Notifications on this phone are on: study and streak reminders with Guru's focus for you, and Guru's weekly check of your new games. <a href="/learn#plan-h">Times and days on Learn</a>.</p>
+    {:else}
+      <p class="label">Free notifications on this phone: study and streak reminders with Guru's focus for you, and Guru's weekly check of your new games.</p>
+      <button class="btn primary" disabled={push === 'busy'} onclick={pushOn}>Turn on notifications</button>
+      {#if push === 'denied'}<p class="label">Notifications are blocked in this browser: allow them in its site settings (the lock next to the address), then try again.</p>{/if}
+    {/if}
+  {:else}
+    <p class="label">Notifications need Chess Castles installed as an app on this phone (iPhone) or Chrome on Android.</p>
+  {/if}
 </section>
 
 <style>

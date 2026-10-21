@@ -1,6 +1,8 @@
+import { get } from 'svelte/store';
 import { API } from '$lib/api';
-import { dayOf, streak, type Activity } from './progress';
-import type { StudyPlan } from './plan';
+import { lichessToken } from '$lib/auth';
+import { dayOf, streak, study, type Activity } from './progress';
+import { loadPlan, savePlan, type StudyPlan } from './plan';
 
 /**
  * Study reminders as browser notifications, also when Chess Castles is closed:
@@ -35,7 +37,30 @@ async function subscription(): Promise<PushSubscription | null> {
   return (await reg?.pushManager.getSubscription()) ?? null;
 }
 
-const planBody = (p: StudyPlan) => ({ days: p.days, time: p.time, minutes: p.minutes, streakTime: p.streakTime });
+// ---- Guru in the reminders (server/api-worker/src/push.ts): free, personal notifications. The study reminder says
+// what Guru found costs the most points; once a week "Guru has new games to check" opens Guru, starting at once.
+
+const GURU = 'cc.guru';
+export interface GuruNote {
+  site: 'lichess' | 'chesscom';
+  user: string;
+  /** The latest report's weakness costing the most points, and when it was made. */
+  weak?: string;
+  at?: number;
+}
+/** Whose games Guru checks (the latest report's, else the Lichess login), for the reminders. */
+function guruNote(): GuruNote | undefined {
+  try {
+    const g = JSON.parse(localStorage.getItem(GURU) ?? 'null');
+    if (g && (g.site === 'lichess' || g.site === 'chesscom') && typeof g.user === 'string') return g;
+  } catch {
+    /* none kept */
+  }
+  const l = lichessToken();
+  return l ? { site: 'lichess', user: l.username } : undefined;
+}
+
+const planBody = (p: StudyPlan) => ({ days: p.days, time: p.time, minutes: p.minutes, streakTime: p.streakTime, guru: guruNote() });
 
 /** Turns reminders on (asking for permission) or off, or sends a changed plan. */
 export async function setReminders(plan: StudyPlan, currentStreak: number, activities: Activity[] = []): Promise<ReminderResult> {
@@ -58,6 +83,27 @@ export async function setReminders(plan: StudyPlan, currentStreak: number, activ
   const last = activities.length ? dayOf(Math.max(...activities.map((a) => a.at))) : '';
   await post('/push/subscribe', { sub: sub.toJSON(), tz: -new Date().getTimezoneOffset(), plan: planBody(plan), streak: currentStreak, lastDay: last });
   return 'on';
+}
+
+/** Turns the reminders on with the study plan's times (asks for permission); the plan is saved when they are on. */
+export async function turnOnReminders(): Promise<ReminderResult> {
+  const plan = { ...loadPlan(), remind: true };
+  const activities = get(study);
+  const r = await setReminders(plan, streak(activities, Date.now()), activities).catch((): ReminderResult => 'unsupported');
+  if (r === 'on') savePlan(plan);
+  return r;
+}
+/** Reminders on, with permission given. */
+export const remindersOn = () => reminderSupport() === 'push' && loadPlan().remind && Notification.permission === 'granted';
+
+/** After a Guru report: kept for the reminders, and sent at once when they are on. */
+export function noteGuruReport(g: GuruNote) {
+  try {
+    localStorage.setItem(GURU, JSON.stringify(g));
+  } catch {
+    /* the reminders stay general */
+  }
+  if (remindersOn()) void turnOnReminders();
 }
 
 const REPORTED = 'k24.reminders.reported';

@@ -330,6 +330,7 @@ export const en = {
   'welcome.push.denied': 'Notifications are blocked in this browser. You can allow them in its site settings.',
   'welcome.wa.h': 'Get your game insights on WhatsApp',
   'welcome.wa.or.parent': "Or on a parent's WhatsApp",
+  'welcome.wa.or': 'Or on WhatsApp',
   'welcome.wa.p': 'Guru checks your games and tells you where you lose the most points, with a link to the right study plan. Free.',
   'welcome.wa.number': 'WhatsApp number',
   'welcome.wa.mine': 'My number',

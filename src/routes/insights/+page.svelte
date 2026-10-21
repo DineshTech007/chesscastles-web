@@ -23,6 +23,7 @@
   import { t } from '$lib/i18n';
   import { saveGuruSummary } from '$lib/social';
   import { guruSummary } from '$lib/whatsapp';
+  import { noteGuruReport } from '$lib/study/reminders';
 
   let site = $state<Site>('chesscom');
   let username = $state('');
@@ -87,8 +88,13 @@
       }
       if (data) {
         saveInsights(data);
-        // The short summary for the player's WhatsApp report (kept only if they gave a number).
-        if (data.games.length && $session.status === 'in') void saveGuruSummary(guruSummary(buildReport(data.games), data)).catch(() => {});
+        // The short summary for the player's WhatsApp report (kept only if they gave a number), and for the free
+        // personal reminders on this phone (Guru's focus; the weekly check of new games).
+        if (data.games.length) {
+          const report = buildReport(data.games);
+          if ($session.status === 'in') void saveGuruSummary(guruSummary(report, data)).catch(() => {});
+          noteGuruReport({ site: data.site, user: data.username, weak: report.weaknesses[0]?.title, at: Date.now() });
+        }
       }
     } catch (e) {
       if (!stop) error = e instanceof Error ? e.message : 'The games could not be analysed.';

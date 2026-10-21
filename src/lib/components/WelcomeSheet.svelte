@@ -8,8 +8,9 @@
   /**
    * Once after signing in (new players and those who joined before, on their next visit): the language for the whole
    * site (if not chosen yet; the language button at the top changes it any time), then how to keep in touch, both
-   * offered: notifications on this phone (study-time and streak reminders, no number needed: first for players under
-   * 18) and Guru's game insights on WhatsApp (their own number, or a parent's with consent: only a parent's under 18).
+   * offered: notifications on this phone first (free: study and streak reminders with Guru's focus, and Guru's weekly
+   * check of new games; no number needed), and Guru's insights on WhatsApp (their own number, or a parent's with
+   * consent: only a parent's under 18).
    * "Not now" asks again in a week. Never during a game, over the consent form or the install popup.
    */
   import { onMount } from 'svelte';
@@ -20,9 +21,7 @@
   import { t } from '$lib/i18n';
   import { installOpen } from '$lib/install';
   import { myWhatsapp, normalizePhone, saveWhatsapp } from '$lib/social';
-  import { loadPlan, savePlan } from '$lib/study/plan';
-  import { streak, study } from '$lib/study/progress';
-  import { reminderSupport, setReminders } from '$lib/study/reminders';
+  import { remindersOn, reminderSupport, turnOnReminders } from '$lib/study/reminders';
 
   const BUSY = /^\/(play|watch|analysis|puzzles)\/./;
   const WEEK = 7 * 86_400_000;
@@ -116,12 +115,10 @@
 
   // Notifications: the study reminders (src/lib/study/reminders.ts), turned on with the study plan's times.
   const canPush = reminderSupport() === 'push';
-  let push = $state<'off' | 'on' | 'denied' | 'busy'>(canPush && loadPlan().remind && typeof Notification !== 'undefined' && Notification.permission === 'granted' ? 'on' : 'off');
+  let push = $state<'off' | 'on' | 'denied' | 'busy'>(canPush && remindersOn() ? 'on' : 'off');
   async function pushOn() {
     push = 'busy';
-    const plan = { ...loadPlan(), remind: true };
-    const r = await setReminders(plan, streak($study, Date.now()), $study).catch(() => 'unsupported' as const);
-    if (r === 'on') savePlan(plan);
+    const r = await turnOnReminders();
     push = r === 'on' ? 'on' : r === 'denied' ? 'denied' : 'off';
   }
   /** Something was turned on: the sheet closes with "Done" and is not asked again. */
@@ -154,21 +151,21 @@
       <h2 id="welcome-h" class="title">{$t('welcome.stay.h')}</h2>
       {#snippet pushBox()}
         {#if canPush}
-          <section class="way" class:first={minor}>
+          <section class="way first">
             <h3><span aria-hidden="true">🔔</span> {$t('welcome.push.h')}</h3>
             <p class="label">{$t('welcome.push.p')}</p>
             {#if push === 'on'}
               <p class="ok" role="status">✓ {$t('welcome.push.done')}</p>
             {:else}
-              <button class="btn" class:primary={minor} disabled={push === 'busy'} onclick={pushOn}>{$t('welcome.push.on')}</button>
+              <button class="btn primary" disabled={push === 'busy'} onclick={pushOn}>{$t('welcome.push.on')}</button>
               {#if push === 'denied'}<p class="err">{$t('welcome.push.denied')}</p>{/if}
             {/if}
           </section>
         {/if}
       {/snippet}
-      {#if minor}{@render pushBox()}{/if}
-      <section class="way" class:first={!minor}>
-        <h3><span aria-hidden="true">💬</span> {minor && canPush ? $t('welcome.wa.or.parent') : $t('welcome.wa.h')}</h3>
+      {@render pushBox()}
+      <section class="way">
+        <h3><span aria-hidden="true">💬</span> {!canPush ? $t('welcome.wa.h') : minor ? $t('welcome.wa.or.parent') : $t('welcome.wa.or')}</h3>
         <p class="label">{$t('welcome.wa.p')}</p>
         {#if saved}
           <p class="ok" role="status">✓ {$t('welcome.wa.done')}</p>
@@ -188,12 +185,11 @@
             </label>
             <label class="consent"><input type="checkbox" bind:checked={agreed} required /> <span>{minor || whose === 'parent' ? $t('welcome.wa.consent.parent') : $t('welcome.wa.consent.self')}</span></label>
             {#if error}<p class="err" role="alert">{error}</p>{/if}
-            <button class="btn" class:primary={!minor} disabled={busy || !agreed || !phone.trim()}>{$t('welcome.wa.save')}</button>
+            <button class="btn" class:primary={!canPush} disabled={busy || !agreed || !phone.trim()}>{$t('welcome.wa.save')}</button>
             <p class="label small">{$t('welcome.wa.privacy')} <a href="/legal/privacy">{$t('more.privacy')}</a></p>
           </form>
         {/if}
       </section>
-      {#if !minor}{@render pushBox()}{/if}
       <div class="actions">
         <button class="btn" class:primary={anyOn} onclick={finish}>{anyOn ? $t('welcome.finish') : $t('welcome.wa.later')}</button>
       </div>

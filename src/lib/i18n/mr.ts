@@ -322,6 +322,7 @@ export const mr: Record<Key, string> = {
   'welcome.push.denied': 'या browser मध्ये notifications बंद आहेत. Site settings मध्ये ती allow करता येतील.',
   'welcome.wa.h': 'तुमच्या game insights WhatsApp वर मिळवा',
   'welcome.wa.or.parent': 'किंवा आई-वडिलांच्या WhatsApp वर',
+  'welcome.wa.or': 'किंवा WhatsApp वर',
   'welcome.wa.p': 'Guru तुमचे games तपासून तुमचे सर्वात जास्त points कुठे जातात ते सांगतो, आणि योग्य study plan ची link पाठवतो. Free.',
   'welcome.wa.number': 'WhatsApp नंबर',
   'welcome.wa.mine': 'माझा नंबर',
