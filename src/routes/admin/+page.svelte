@@ -46,6 +46,12 @@
     tab = t;
     history.replaceState(history.state, '', `#${t}`);
   };
+  // Phones: the tabs scroll sideways; the chosen one comes into view.
+  let tabRow = $state<HTMLElement | undefined>();
+  $effect(() => {
+    void tab;
+    tabRow?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  });
   const tabs = $derived(
     (
       [
@@ -79,7 +85,7 @@
     <h1 class="display">Admin</h1>
     <span class="pill">{role.role}</span>
   </header>
-  <div class="segmented tabs" role="group" aria-label="Admin">
+  <div class="segmented tabs" role="group" aria-label="Admin" bind:this={tabRow}>
     {#each tabs as [k, label] (k)}<button aria-pressed={tab === k} onclick={() => go(k)}>{label}</button>{/each}
   </div>
   <div class="body">
@@ -131,13 +137,29 @@
   .head h1 {
     margin: 0;
   }
+  /* Ten tabs: each as wide as its name (never squeezed over each other); on a phone the row scrolls sideways. */
   .tabs {
-    max-width: 720px;
+    max-width: 100%;
+    width: fit-content;
     margin-bottom: 16px;
+    grid-auto-columns: max-content;
     overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  /* Phones: the row fades at its right edge, so it shows there are more tabs to swipe to. */
+  @media (max-width: 720px) {
+    .tabs {
+      -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
+      mask-image: linear-gradient(to right, #000 82%, transparent);
+      padding-right: 40px;
+    }
   }
   .tabs button {
     white-space: nowrap;
-    padding: 0 10px;
+    padding: 0 14px;
   }
 </style>

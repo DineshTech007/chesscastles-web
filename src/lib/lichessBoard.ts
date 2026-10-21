@@ -91,11 +91,14 @@ export async function challengeUser(
  * settings can refuse it. Each player joins with acceptChallenge; the game
  * starts when both have.
  */
-export async function openChallenge(token: string, o: { white: string; black: string; minutes: number; increment: number; rated: boolean }): Promise<string> {
+export async function openChallenge(token: string, o: { white?: string; black?: string; minutes: number; increment: number; rated: boolean }): Promise<string> {
+  // Both names: only those two can join (white first). None: a friend whose Lichess name we don't know (a Google
+  // account on Chess Castles) joins from the private link in their message.
+  const users = o.white && o.black ? { users: `${o.white},${o.black}` } : {};
   const res = await call(
     token,
     '/api/challenge/open',
-    form({ rated: o.rated, 'clock.limit': o.minutes * 60, 'clock.increment': o.increment, users: `${o.white},${o.black}`, name: 'Chess Castles friends', expiresAt: Date.now() + 3600_000 }),
+    form({ rated: o.rated, 'clock.limit': o.minutes * 60, 'clock.increment': o.increment, ...users, name: 'Chess Castles friends', expiresAt: Date.now() + 3600_000 }),
   );
   return (await res.json()).id;
 }

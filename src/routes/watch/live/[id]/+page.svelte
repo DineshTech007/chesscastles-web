@@ -103,8 +103,19 @@
 
   // Lichess sends no status while the game is on, then one when it ends.
   const finished = $derived(ended || (!!info?.status && !['started', 'created'].includes(info.status)));
+  /** How a Lichess game ended, in words. */
+  const HOW: Record<string, string> = { mate: 'Checkmate', resign: 'Resignation', outoftime: 'On time', timeout: 'Left the game', stalemate: 'Stalemate', draw: 'Draw' };
   const resultText = $derived(
-    !finished ? '' : info?.winner ? `${info.winner === 'white' ? info.white.name : info.black.name} won` : info?.status === 'draw' || info?.status === 'stalemate' ? 'Draw' : 'Game over',
+    !finished
+      ? ''
+      : info?.winner
+        ? `${info.winner === 'white' ? info.white.name : info.black.name} won${info.status && HOW[info.status] ? ` · ${HOW[info.status]}` : ''}`
+        : info?.status === 'draw' || info?.status === 'stalemate'
+          ? HOW[info.status]
+          : 'Game over',
+  );
+  const outcome = $derived(
+    !finished ? undefined : info?.winner === 'white' ? ('1-0' as const) : info?.winner === 'black' ? ('0-1' as const) : info?.status === 'draw' || info?.status === 'stalemate' ? ('½-½' as const) : undefined,
   );
 
   function barFor(s: 'white' | 'black', ply: number, latest: boolean): BarInfo {
@@ -142,6 +153,7 @@
     heading={info ? `${info.white.name} – ${info.black.name}` : 'Live game'}
     subheading={info ? [info.speed && info.speed[0].toUpperCase() + info.speed.slice(1), info.clock, 'on Lichess'].filter(Boolean).join(' · ') : ''}
     result={resultText}
+    {outcome}
     backHref="/friends"
     backLabel="Back to friends"
     {barFor}

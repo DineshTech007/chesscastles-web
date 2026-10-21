@@ -291,6 +291,25 @@ nav a,
   color: var(--text);
 }
 
+/* A home page section's title, with its "See all" link on the right. */
+.sec-h {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-title);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.sec-h a {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
 /* Chips and segmented controls */
 .chip {
   height: 34px;

@@ -9,7 +9,7 @@
   import * as api from '$lib/lichessBoard';
   import { lichessRatings } from '$lib/lichess';
   import { onLichessEvent, openWhenStarted, syncLichessEvents } from '$lib/lichessEvents';
-  import { friendsList, serverResting, lobbyLeave, lobbySeek, lobbyState, sendMessage, type LobbyRole, type LobbySeek, type LobbyState } from '$lib/social';
+  import { friendsList, serverResting, lobbyLeave, lobbySeek, lobbyState, sendMessage, type LobbyRole, type LobbySeek, type LobbyState, type Player } from '$lib/social';
 
   /** `onfide`: switches the Play page to the FIDE-level opponents (offered when no one is free). */
   let { onfide }: { onfide?: () => void } = $props();
@@ -55,7 +55,7 @@
   let tcIdx = $state(4);
   let rated = $state(true);
   let username = $state(preset ?? '');
-  // Picking the friend: your Chess Castles friends (with Lichess) to tap, and Lichess names as you type.
+  // Picking the friend: your Chess Castles friends to tap (Lichess and Google accounts), and Lichess names as you type.
   let ccFriends = $state<{ username: string; name: string; playing?: boolean }[]>([]);
   let lichessSuggest = $state<{ id: string; name: string; title?: string; online?: boolean }[]>([]);
   let acOpen = $state(false);
@@ -67,7 +67,7 @@
     friendsList().then(
       (r) =>
         (ccFriends = r.friends
-          .filter((p) => p.uid.startsWith('lichess:'))
+          .filter((p) => p.member !== false && (p.username || p.uid.startsWith('lichess:')))
           .map((p) => ({ username: p.username || p.uid.slice(8), name: p.name, playing: (p as { playing?: boolean }).playing }))),
       () => {},
     );
@@ -351,8 +351,15 @@
           error = 'Type your friend’s Lichess username.';
           return;
         }
+        // A Chess Castles friend with a Google account: their Chess Castles name is not a Lichess name (it may even
+        // be someone else's there), so they get a message with a button to join instead of a Lichess challenge.
+        const friend = await friendNamed(name);
+        if (friend && !friend.uid.startsWith('lichess:')) {
+          await inviteFriend(t, friend, tc);
+          return;
+        }
         try {
-          const id = await api.challengeUser(t, name, { minutes: tc.m, increment: tc.i, rated, color });
+          const id = await api.challengeUser(t, friend ? friend.uid.slice(8) : name, { minutes: tc.m, increment: tc.i, rated, color });
           sentId = id;
           openWhenStarted(id);
           waiting = {
@@ -360,7 +367,9 @@
             cancel: () => void api.cancelChallenge(t, id).catch(() => {}),
           };
         } catch (e) {
-          if (!api.refusedByLichess(e) || !(await inviteFriend(t, name, tc))) throw e;
+          if (friend && api.refusedByLichess(e)) await inviteFriend(t, friend, tc);
+          else if (e instanceof api.LichessError && /no such user/i.test(e.message)) throw new Error(`No Lichess player is called “${name}”. To play a Chess Castles friend, tap their name above; for anyone else, type their Lichess username.`);
+          else throw e;
         }
       }
     } catch (e) {
@@ -369,24 +378,34 @@
     }
   }
 
+  /** The Chess Castles friend with this name (their Lichess or Chess Castles username), if any. */
+  async function friendNamed(name: string): Promise<Player | undefined> {
+    const n = name.toLowerCase();
+    const list = (await friendsList().catch(() => undefined))?.friends ?? [];
+    return list.find((p) => p.uid === `lichess:${n}`) ?? list.find((p) => p.username.toLowerCase() === n);
+  }
+
   /**
-   * A friend whose Lichess settings refuse challenges: a game only the two of you
-   * can join, and a Chess Castles message with its Join button. False when they
-   * aren't a Chess Castles friend (Lichess's own error is shown then).
+   * A friend Lichess can't challenge by name: a game only you two get the link to, and a Chess Castles message with
+   * its Join button. A Lichess friend whose settings refuse challenges: only the two names can join. A friend with a
+   * Google account (their Lichess name, if they have one, isn't known here): the link is theirs alone, and the join
+   * page connects their free Lichess account first.
    */
-  async function inviteFriend(t: string, name: string, tc: Tc): Promise<boolean> {
+  async function inviteFriend(t: string, friend: Player, tc: Tc) {
     const me = lichessToken()?.username;
-    const friend = me ? (await friendsList().catch(() => undefined))?.friends.find((p) => p.uid === `lichess:${name.toLowerCase()}` || p.username.toLowerCase() === name.toLowerCase()) : undefined;
-    if (!me || !friend) return false;
+    if (!me) throw new Error('Connect your Lichess account to play online.');
+    const theirs = friend.uid.startsWith('lichess:') ? friend.uid.slice(8) : undefined;
     const meWhite = color === 'white' || (color !== 'black' && Math.random() < 0.5);
-    const id = await api.openChallenge(t, { white: meWhite ? me : name, black: meWhite ? name : me, minutes: tc.m, increment: tc.i, rated });
+    const id = await api.openChallenge(t, theirs ? { white: meWhite ? me : theirs, black: meWhite ? theirs : me, minutes: tc.m, increment: tc.i, rated } : { minutes: tc.m, increment: tc.i, rated });
     await api.acceptChallenge(t, id);
+    openWhenStarted(id);
     await sendMessage(friend.uid, `⚔️ I challenge you to a ${tc.m}+${tc.i} ${rated ? 'rated' : 'casual'} game! Join: https://chesscastles.com/play/join/${id}?c=${meWhite ? 'black' : 'white'}`);
     waiting = {
-      text: `${friend.name}'s Lichess settings don't take challenges, so we sent them a message with a button to join your ${tc.m}+${tc.i} game. Waiting for them…`,
+      text: theirs
+        ? `${friend.name}'s Lichess settings don't take challenges, so we sent them a message with a button to join your ${tc.m}+${tc.i} game. Waiting for them…`
+        : `We sent ${friend.name} a message on Chess Castles with a button to join your ${tc.m}+${tc.i} game (online games use a free Lichess account; connecting theirs takes a minute). Waiting for them…`,
       cancel: () => void api.cancelChallenge(t, id).catch(() => {}),
     };
-    return true;
   }
 
   function cancel() {
@@ -483,7 +502,7 @@
   {:else}
     {#if kind === 'friend'}
       <div class="field">
-        <label class="title h" for="friend-name">Friend’s Lichess username</label>
+        <label class="title h" for="friend-name">Your friend</label>
         {#if ccFriends.length}
           <div class="fr-chips" role="group" aria-label="Your Chess Castles friends">
             {#each ccFriends as f (f.username)}

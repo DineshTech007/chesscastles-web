@@ -151,6 +151,7 @@
     heading="{friendName} vs {game.opponent}"
     subheading="{game.minutes ? `${game.minutes}+${game.increment}` : 'No clock'} · on Chess Castles"
     result={resultText ? `${resultText}${game.reason ? ` · ${game.reason}` : ''}` : ''}
+    outcome={game.result === '1-0' || game.result === '0-1' || game.result === '½-½' ? game.result : undefined}
     backHref="/friends"
     backLabel="Back to friends"
     {barFor}

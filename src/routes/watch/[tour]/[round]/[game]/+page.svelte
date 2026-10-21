@@ -85,6 +85,7 @@
     heading="{h('White')} – {h('Black')}"
     subheading={[h('Event').replace(/^Round [^:]+: .*$/, h('BroadcastName')) || h('BroadcastName'), h('Opening')].filter(Boolean).join(' · ')}
     result={h('Result').replace('1/2-1/2', '½-½')}
+    outcome={({ '1-0': '1-0', '0-1': '0-1', '1/2-1/2': '½-½' } as const)[h('Result') as '1-0' | '0-1' | '1/2-1/2']}
     backHref="/watch/{tour}?round={round}"
     backLabel="All boards of this round"
     {barFor}

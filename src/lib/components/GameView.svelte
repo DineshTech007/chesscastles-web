@@ -8,6 +8,7 @@
   import Board from './Board.svelte';
   import Icon from './Icon.svelte';
   import ShareGame from './ShareGame.svelte';
+  import GameOverSheet from './GameOverSheet.svelte';
   import MoveList from './MoveList.svelte';
   import MoveNav from '$lib/components/MoveNav.svelte';
   import PlayerBar from './PlayerBar.svelte';
@@ -18,7 +19,7 @@
   import { opposite, tcLabel, TIME_CONTROLS, type Color, type FideGame } from '$lib/game/fideGame';
   import { PremoveQueue } from '$lib/game/premoves';
   import { myGames, outcome, type GameKind } from '$lib/stores/myGames';
-  import { levelName, MIN_LEVEL } from '$lib/game/levels';
+  import { levelName, MAX_LEVEL, MIN_LEVEL } from '$lib/game/levels';
   import { POINTS, study } from '$lib/study/progress';
   import { thousands } from '$lib/format';
   import { kfideAll, myCountry, myPhoto, photoSrc } from '$lib/stores/me';
@@ -27,7 +28,7 @@
   import { analyseGame, type GameReview } from '$lib/coach/review';
   import ReviewSummary from '$lib/review/ReviewSummary.svelte';
   import { quota } from '$lib/plans';
-  import { lowTimeMs, playMoveSound, sounds } from '$lib/sound';
+  import { lowTimeMs, playMoveSound, playOutcome, sounds } from '$lib/sound';
   import { clearResume, saveResume } from '$lib/game/resume';
   import { friendsCache, shareLive, uploadGame } from '$lib/social';
   import { get } from 'svelte/store';
@@ -88,6 +89,8 @@
   let summary = $state<GameReview | undefined>();
   let reviewing = $state<number | undefined>();
   let gone = false;
+  /** The result over the board (You won! / Play again and ways to learn), a moment after the last move. */
+  let sheet = $state(false);
 
   async function reviewAfterGame() {
     const g = myGames.get(id);
@@ -110,7 +113,8 @@
     const n = game.moves.length;
     if (n > seenMoves) {
       const last = game.moves[n - 1];
-      playMoveSound(n >= 2 ? game.moves[n - 2].after : game.start, last.move);
+      // (The last move only knocks: the result has its own sound.)
+      playMoveSound(n >= 2 ? game.moves[n - 2].after : game.start, last.move, false);
       seenMoves = n;
       // The bot has moved: our first queued premove goes at once.
       if (last.source && queue.length) {
@@ -144,8 +148,11 @@
     }
     if (game.isOver) {
       queue.clear();
-      if (game.end !== 'aborted' && !saved && !game.position.isEnd()) sounds.end();
       if (game.end !== 'aborted' && !saved) {
+        // The result: its sound at once, then the result over the board once the last move has been seen.
+        const o = !game.winner ? 'draw' : game.winner === game.human ? 'won' : 'lost';
+        setTimeout(() => !gone && playOutcome(o), 200);
+        setTimeout(() => !gone && (sheet = true), 900);
         save(true);
         study.log('game', POINTS.gameFinished, `Game vs ${opponent}`);
         onfinish?.(game.result === '½-½' ? '1/2-1/2' : (game.result as '1-0' | '0-1'), id);
@@ -481,6 +488,14 @@
       tc,
     };
   });
+  /** After a win against a FIDE-level opponent: the next level up (100 stronger), same clock and colour. */
+  const harder = $derived.by(() => {
+    if (kind !== 'fide' || !g.isOver || game.winner !== game.human || game.rating >= MAX_LEVEL) return undefined;
+    const r = Math.min(MAX_LEVEL, game.rating + 100);
+    const tc = TIME_CONTROLS.findIndex((t) => tcLabel(t) === tcLabel(game.timeControl));
+    const mine = $kfideAll[speed];
+    return { label: levelName(r), href: `/play/fide?r=${r}&tc=${Math.max(0, tc)}&c=${game.human}${mine.games ? `&me=${mine.rating}` : ''}` };
+  });
   /** This game's effect on the player's CC Rating (FIDE-bot games). */
   const kfideChange = $derived(kind === 'fide' && g.isOver ? $kfideAll[speed].history.find((h) => h.id === id) : undefined);
   // The new CC Rating is known a moment after the game ends: friends watching see it by your name.
@@ -498,6 +513,37 @@
 
 {#if promoting}
   <PromotionPicker color={game.position.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
+{/if}
+
+{#snippet toughNote()}
+  {#if toughRun && (toughRun.slower || toughRun.lower)}
+    <div class="tough" role="note">
+      <p><strong>Three tough games in a row</strong> against {levelName(game.rating)} at {toughRun.tc}. {toughRun.slower ? 'A slower game gives you time to think: easier to win, and you learn more from it.' : 'A step down helps you win again and learn from it.'}</p>
+      <div class="row">
+        {#if toughRun.slower}<a class="btn primary" href={toughRun.slower.href} data-sveltekit-reload>Play {toughRun.slower.label}</a>{/if}
+        {#if toughRun.lower}<a class="btn" href={toughRun.lower.href} data-sveltekit-reload>Play {levelName(toughRun.lower.rating)}</a>{/if}
+      </div>
+    </div>
+  {/if}
+{/snippet}
+
+{#if sheet && g.isOver && game.end !== 'aborted'}
+  {@const mine = bar(game.human)}
+  {@const theirs = bar(opposite(game.human))}
+  <GameOverSheet
+    outcome={!game.winner ? 'draw' : game.winner === game.human ? 'won' : 'lost'}
+    reason={g.endReason}
+    me={{ name: mine.name, initials: mine.initials, photo: mine.photo, rating: mine.rating }}
+    opponent={{ name: theirs.name, initials: theirs.initials, rating: theirs.rating }}
+    ratingChange={kfideChange ? { label: 'CC', after: kfideChange.after, delta: kfideChange.after - kfideChange.before } : undefined}
+    {againLabel}
+    onagain={() => ((sheet = false), onagain())}
+    analyseHref={game.moves.length ? `/analysis?game=${id}` : undefined}
+    guruHref={game.moves.length >= 4 ? `/coach/review/${id}` : undefined}
+    {harder}
+    extra={toughRun && (toughRun.slower || toughRun.lower) ? toughNote : undefined}
+    onclose={() => (sheet = false)}
+  />
 {/if}
 
 {#snippet actionButtons()}
@@ -574,6 +620,14 @@
       <MoveNav ply={viewPly ?? g.sans.length} max={g.sans.length} {go} onflip={() => (orientation = opposite(orientation))} />
       {@render lookingRow()}
       {#if !g.isOver}<div class="actions">{@render actionButtons()}</div>{/if}
+      {#if g.isOver && game.end !== 'aborted'}
+        <div class="over-strip" style="--tone: {headline.tone}">
+          <button class="os-res" onclick={() => (sheet = true)} aria-label="Show the result">
+            <strong>{headline.text}</strong><span class="label">{g.endReason}</span>
+          </button>
+          <button class="btn primary" onclick={onagain}><Icon name="replay" size={18} />{againLabel}</button>
+        </div>
+      {/if}
     </div>
   </section>
 
@@ -603,15 +657,7 @@
             <span class="num" class:up={kfideChange.after > kfideChange.before} class:down={kfideChange.after < kfideChange.before}>({kfideChange.after >= kfideChange.before ? '+' : ''}{kfideChange.after - kfideChange.before})</span></a>
           <span class="label fine">Your Chess Castles rating from games against FIDE-level opponents{$kfideAll[speed].provisional ? `; (new) until ${KFIDE_PROVISIONAL} games` : ''}.</span>
         {/if}
-        {#if toughRun && (toughRun.slower || toughRun.lower)}
-          <div class="tough" role="note">
-            <p><strong>Three tough games in a row</strong> against {levelName(game.rating)} at {toughRun.tc}. {toughRun.slower ? 'A slower game gives you time to think: easier to win, and you learn more from it.' : 'A step down helps you win again and learn from it.'}</p>
-            <div class="row">
-              {#if toughRun.slower}<a class="btn primary" href={toughRun.slower.href} data-sveltekit-reload>Play {toughRun.slower.label}</a>{/if}
-              {#if toughRun.lower}<a class="btn" href={toughRun.lower.href} data-sveltekit-reload>Play {levelName(toughRun.lower.rating)}</a>{/if}
-            </div>
-          </div>
-        {/if}
+        {@render toughNote()}
         <div class="row">
           <button class="btn primary" onclick={onagain}><Icon name="replay" size={18} />{againLabel}</button>
           <a class="btn" href="/analysis?game={id}"><Icon name="analyse" size={18} />Analyse</a>
@@ -861,6 +907,41 @@
     .board-col {
       gap: 6px;
     }
+  }
+  .over-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .os-res {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--tone) 50%, var(--border));
+    background: color-mix(in srgb, var(--tone) 10%, var(--card));
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .os-res strong {
+    color: var(--tone);
+    font-size: 17px;
+  }
+  .os-res .label {
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .over-strip .btn {
+    flex: none;
+    gap: 6px;
   }
   .first-move {
     display: flex;

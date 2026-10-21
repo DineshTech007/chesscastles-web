@@ -7,6 +7,7 @@
   import Board from '$lib/components/Board.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import ShareGame from '$lib/components/ShareGame.svelte';
+  import GameOverSheet from '$lib/components/GameOverSheet.svelte';
   import MoveList from '$lib/components/MoveList.svelte';
   import MoveNav from '$lib/components/MoveNav.svelte';
   import PlayerBar from '$lib/components/PlayerBar.svelte';
@@ -20,7 +21,7 @@
   import { PremoveQueue } from '$lib/game/premoves';
   import * as api from '$lib/lichessBoard';
   import { myGames } from '$lib/stores/myGames';
-  import { lowTimeMs, playMoveSound, sounds } from '$lib/sound';
+  import { lowTimeMs, playMoveSound, playOutcome, sounds } from '$lib/sound';
   import { myCountry, myPhoto, photoSrc } from '$lib/stores/me';
   import { POINTS, study } from '$lib/study/progress';
   import { checkClubGame } from '$lib/tournament/club';
@@ -41,6 +42,9 @@
   let notice = $state('');
   let confirmResign = $state(false);
   let saved = false;
+  /** The result over the board, once, at the end of a game played here (not one opened after it ended). */
+  let sheet = $state(false);
+  let endShown = false;
   let ctl: AbortController | undefined;
   let stopped = false;
   let orientation = $state<'white' | 'black'>(game.me ?? 'white');
@@ -132,7 +136,7 @@
     if (game.plies.length === before + 1) {
       const last = game.plies[before];
       const mine = game.me && (before % 2 === 0 ? 'white' : 'black') === game.me;
-      if (!mine) playMoveSound(before ? game.plies[before - 1].after : game.start, last.move);
+      if (!mine) playMoveSound(before ? game.plies[before - 1].after : game.start, last.move, false);
     }
     if (o.type === 'opponentGone' && o.gone) notice = 'Your opponent left the game.';
     // Their move landed: our first queued premove goes at once.
@@ -189,6 +193,13 @@
 
   function onEnd() {
     queue.clear();
+    // A game played here has ended: its sound, then the result over the board.
+    if (wasLive && !endShown && game.status !== 'aborted' && game.status !== 'noStart' && game.me) {
+      endShown = true;
+      const o = !game.winner ? 'draw' : game.winner === game.me ? 'won' : 'lost';
+      setTimeout(() => !stopped && playOutcome(o), 200);
+      setTimeout(() => !stopped && (sheet = true), 900);
+    }
     // Lichess needs a moment to publish the result; the server reads it from there.
     if (clubId && wasLive) setTimeout(() => void checkClubGame(clubId).catch(() => setTimeout(() => void checkClubGame(clubId).catch(() => {}), 5000)), 2500);
     if (wasLive && game.me) backToArena();
@@ -394,6 +405,22 @@
 
 {#if promoting}
   <PromotionPicker color={game.position.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
+{/if}
+
+{#if sheet && controls.over && game.me}
+  {@const mine = bar(game.me)}
+  {@const theirs = bar(game.me === 'white' ? 'black' : 'white')}
+  <GameOverSheet
+    outcome={!game.winner ? 'draw' : game.winner === game.me ? 'won' : 'lost'}
+    reason={game.endReason}
+    me={{ name: mine.name, initials: mine.initials, photo: mine.photo, rating: mine.rating }}
+    opponent={{ name: theirs.name, initials: theirs.initials, rating: theirs.rating }}
+    againLabel={clubId || tournamentId ? 'Back to the tournament' : 'New game'}
+    againHref={clubId ? `/play/tournament/club/${clubId}?check=1` : tournamentId ? `/play/lichess-tournaments/${tournamentId}?joined=1` : '/play?mode=online'}
+    analyseHref={controls.plies ? `/analysis?game=lichess-${gameId}` : undefined}
+    guruHref={controls.plies >= 4 ? `/coach/review/lichess-${gameId}` : undefined}
+    onclose={() => (sheet = false)}
+  />
 {/if}
 
 {#if !token}

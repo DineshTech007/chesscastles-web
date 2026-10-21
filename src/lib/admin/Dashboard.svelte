@@ -286,6 +286,7 @@
     padding: 7px 8px;
     border-top: 1px solid var(--border);
     vertical-align: top;
+    text-align: left;
   }
   .errs .msg {
     font-family: ui-monospace, Consolas, monospace;
@@ -308,6 +309,50 @@
   @media (max-width: 900px) {
     .h-kpis {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  /* Phones: each error as a small card (kind, times, when; the message; where), not five squeezed columns. */
+  @media (max-width: 640px) {
+    .errs thead {
+      display: none;
+    }
+    .errs,
+    .errs tbody {
+      display: block;
+    }
+    .errs tr {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas: 'kind times last' 'msg msg msg' 'where where where';
+      gap: 4px 8px;
+      align-items: center;
+      padding: 10px 0;
+      border-top: 1px solid var(--border);
+    }
+    .errs td {
+      padding: 0;
+      border: 0;
+    }
+    .errs td:nth-child(1) {
+      grid-area: kind;
+    }
+    .errs td:nth-child(2) {
+      grid-area: msg;
+    }
+    .errs td:nth-child(3) {
+      grid-area: where;
+    }
+    .errs td:nth-child(4) {
+      grid-area: times;
+      font-weight: 800;
+    }
+    .errs td:nth-child(4)::before {
+      content: '× ';
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .errs td:nth-child(5) {
+      grid-area: last;
     }
   }
   .bar {

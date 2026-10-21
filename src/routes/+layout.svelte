@@ -719,6 +719,19 @@
       height: 40px;
     }
   }
+  /* Most phones (360 px): the name on two lines, as a logo, so the buttons beside it (How to use, board, language,
+     profile) never cover it. */
+  @media (max-width: 400px) {
+    .pb-name {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 14px;
+    }
+    .pb-text {
+      gap: 0;
+    }
+  }
   /* Small phones: the board and pieces button stays (children pick boards often); light/dark moves to Settings. */
   @media (max-width: 480px) {
     .top :global(.icon-btn.thm) {

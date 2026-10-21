@@ -511,7 +511,9 @@
     }
     return out;
   });
-  const chances = $derived(info ? whiteChances(info) : 0.5);
+  /** White's share of the bar: at checkmate all to the winner (not an even bar). */
+  const chances = $derived(pos.isCheckmate() ? (pos.turn === 'white' ? 0 : 1) : info ? whiteChances(info) : 0.5);
+  const evalText = $derived(pos.isCheckmate() ? (pos.turn === 'white' ? '0-1' : '1-0') : pos.isEnd() ? '½-½' : info ? evalLabel(info) : '');
 
   /** The whole tree as PGN movetext: the main line with variations in brackets. */
   function pgn(): string {
@@ -589,6 +591,27 @@
 {:else}
 <div class="analysis">
   <section class="board-col" aria-label="Board">
+    {#if engineOn}
+      <!-- Phones: the evaluation and the engine's two best lines above the board, in view with it (no scrolling). -->
+      <div class="eng-strip">
+        <div class="h-bar" role="img" aria-label="Evaluation {evalText || 'pending'}">
+          <span class="h-white" style="width: {chances * 100}%"></span>
+          <span class="h-text num" class:right={chances < 0.5}>{evalText}</span>
+        </div>
+        {#if pos.isEnd()}
+          <p class="s-wait">{pos.isCheckmate() ? 'Checkmate' : 'Game over'}</p>
+        {:else}
+          {#each lineTexts.slice(0, 2) as l, k (k)}
+            <button class="s-line" onclick={() => l.first && play(l.first)} title="Play {l.text.split(' ')[1] ?? ''}">
+              <span class="chip num" class:dark={!l.whiteAhead}>{evalLabel(l.info)}</span>
+              <span class="s-text num">{l.text}</span>
+            </button>
+          {:else}
+            <p class="s-wait">{pvSans.length ? pvSans.join(' ') : 'Thinking…'}</p>
+          {/each}
+        {/if}
+      </div>
+    {/if}
     <div class="board-row">
       {#if engineOn}
         <div class="evalbar" aria-label="Evaluation {info ? evalLabel(info) : 'pending'}" class:flipped={orientation === 'black'}>
@@ -661,6 +684,7 @@
             <span>Stockfish 19 lite {engine.error ? `· ${engine.error}` : ''}</span>
           </label>
           {#if engineOn}
+            <p class="label phone-only">The engine's best lines are above the board.</p>
             {#if pos.isCheckmate()}
               <p class="big-eval title">Checkmate</p>
             {:else if pos.isEnd()}
@@ -1165,9 +1189,102 @@
       flex-basis: 390px;
     }
   }
-  /* Phones and narrow windows: the engine and the database right under the board
-     (their own scroll), then the moves and their buttons. */
+  /* Phones and narrow windows: the engine strip above the board (as on chess.com), the moves right under the
+     board's buttons, then the panel (engine switch, database, Guru) with its own scroll. */
+  .eng-strip,
+  .phone-only {
+    display: none;
+  }
   @media (max-width: 899px) {
+    .eng-strip {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: -4px;
+    }
+    .h-bar {
+      position: relative;
+      height: 18px;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #2a2f3c;
+    }
+    .h-white {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      background: #f2f5fb;
+      transition: width 0.4s ease;
+    }
+    .h-text {
+      position: absolute;
+      left: 6px;
+      top: 0;
+      line-height: 18px;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #1b1f2a;
+    }
+    .h-text.right {
+      left: auto;
+      right: 6px;
+      color: #f2f5fb;
+    }
+    .s-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 3px 2px;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      color: var(--text);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .s-line:active {
+      background: var(--raised);
+    }
+    .s-line .chip {
+      height: auto;
+      min-width: 48px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      padding: 1px 4px;
+    }
+    .s-text {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+    .s-wait {
+      margin: 0;
+      padding: 3px 2px;
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .board-row .evalbar,
+    .engine .big-eval,
+    .engine .lines,
+    .engine .pv {
+      display: none;
+    }
+    .phone-only {
+      display: block;
+      margin: 0;
+    }
+    .side .moves-card {
+      order: -1;
+    }
     .side {
       max-width: none;
       flex-basis: 100%;

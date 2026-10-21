@@ -49,6 +49,7 @@
     heading,
     subheading = '',
     result = '',
+    outcome,
     backHref,
     backLabel,
     barFor,
@@ -59,8 +60,10 @@
     live: boolean;
     heading: string;
     subheading?: string;
-    /** The result, once the game is over ("1-0", "½-½"…). */
+    /** The result, once the game is over ("1-0", "½-½", or in words: "Riya won · Checkmate"). */
     result?: string;
+    /** The score of a finished game: the board shows who won in its middle, and the bar fills to the winner. */
+    outcome?: '1-0' | '0-1' | '½-½';
     backHref: string;
     backLabel: string;
     /** A side's bar at the position shown (`latest`: it is the game as it stands now). */
@@ -197,6 +200,17 @@
   }
 
   const latest = $derived(live && cursor === game.plies.length && !trial);
+  /** A finished game at its last move: who won, in the middle of the board (not an even engine bar). */
+  const finalShown = $derived(!live && !!outcome && cursor === game.plies.length && !trial);
+  const winner = $derived(outcome === '1-0' ? 'white' : outcome === '0-1' ? 'black' : undefined);
+  let resultHidden = $state(false);
+  // A friend's next game on the same page: its result shows again at its end.
+  $effect(() => {
+    if (!outcome) resultHidden = false;
+  });
+  const whiteShare = $derived(
+    finalShown ? (winner === 'white' ? 1 : winner === 'black' ? 0 : 0.5) : shown.isCheckmate() ? (shown.turn === 'white' ? 0 : 1) : info ? whiteChances(info) : 0.5,
+  );
   const top = $derived(barFor(orientation === 'white' ? 'black' : 'white', cursor, latest));
   const bottom = $derived(barFor(orientation, cursor, latest));
 </script>
@@ -247,11 +261,20 @@
       <PlayerBar {...top} />
       <div class="board-row">
         {#if engineOn}
-          <div class="evalbar" class:flipped={orientation === 'black'} aria-label="Evaluation {info ? evalLabel(info) : 'pending'}">
-            <div class="white-share" style="height: {(info ? whiteChances(info) : 0.5) * 100}%"></div>
+          <div class="evalbar" class:flipped={orientation === 'black'} aria-label={finalShown ? `Result ${outcome}` : `Evaluation ${info ? evalLabel(info) : 'pending'}`}>
+            <div class="white-share" style="height: {whiteShare * 100}%"></div>
           </div>
         {/if}
         <div class="board-box">
+          {#if finalShown && !resultHidden}
+            <!-- The game is over: who won, in the middle of the board. A tap hides it. -->
+            <button class="result-badge" onclick={() => (resultHidden = true)} aria-label="Hide the result">
+              <span class="rb-king {winner ?? 'draw'}" aria-hidden="true">{winner === 'black' ? '♚' : winner === 'white' ? '♔' : '½'}</span>
+              <strong class="rb-head">{winner === 'white' ? 'White won' : winner === 'black' ? 'Black won' : 'Draw'}</strong>
+              <span class="rb-score num">{outcome}</span>
+              {#if result && result !== outcome}<span class="rb-why">{result}</span>{/if}
+            </button>
+          {/if}
           <Board bind:this={board}
             {fen}
             {orientation}
@@ -426,8 +449,75 @@
     font-size: 12px;
   }
   .board-box {
+    position: relative;
     flex: 1;
     min-width: 0;
+  }
+  .result-badge {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 170px;
+    max-width: 82%;
+    padding: 14px 20px 12px;
+    border: 1px solid color-mix(in srgb, var(--gold) 60%, transparent);
+    border-radius: 16px;
+    background: color-mix(in srgb, #0b1426 88%, transparent);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+    color: #eef3ff;
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+    animation: rb-in 0.35s ease-out;
+  }
+  @keyframes rb-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -42%) scale(0.92);
+    }
+  }
+  .rb-king {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 30px;
+    line-height: 1;
+  }
+  .rb-king.white {
+    background: #f4f1ea;
+    color: #1a1a1a;
+  }
+  .rb-king.black {
+    background: #1a1a1a;
+    color: #f4f1ea;
+    border: 1px solid #555;
+  }
+  .rb-king.draw {
+    background: var(--gold);
+    color: #0b1426;
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .rb-head {
+    font-family: var(--font-display);
+    font-size: 26px;
+    line-height: 1.1;
+  }
+  .rb-score {
+    color: var(--gold);
+    font-weight: 800;
+  }
+  .rb-why {
+    font-size: 13px;
+    color: #b4c0dc;
   }
   .evalbar {
     width: 18px;
