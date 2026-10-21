@@ -12,6 +12,7 @@
   import { study, weekOf, weekPoints } from '$lib/study/progress';
   import { sharedPart, weekProgress } from '$lib/study/shareProgress';
   import { puzzleRating } from '$lib/puzzles/rating';
+  import { rewards } from '$lib/puzzles/rewards';
   import { allProgress } from '$lib/books/books';
   import { watchSession } from '$lib/auth';
   import { setSound, soundOn } from '$lib/sound';
@@ -153,9 +154,10 @@
         const booksRead = Object.values(allProgress()).reduce((n, b) => n + (b.read?.length ?? 0), 0);
         // What friends see of study progress: puzzles, streak, and the days studied this week.
         const sess = get(session);
-        const progress = sharedPart(weekProgress(get(study), get(puzzleRating), sess.status === 'in' && sess.profile ? sess.profile.puzzles.solved : 0, now));
+        const rush = get(rewards);
+        const progress = { ...sharedPart(weekProgress(get(study), get(puzzleRating), sess.status === 'in' && sess.profile ? sess.profile.puzzles.solved : 0, now)), rushBest: rush.rushBest, rushRuns: rush.rushPlayed };
         const key = JSON.stringify([studyWeek, booksRead, progress]);
-        if (key === lastBoards || (!studyWeek.points && !booksRead && !progress.puzzlesSolved)) return;
+        if (key === lastBoards || (!studyWeek.points && !booksRead && !progress.puzzlesSolved && !progress.rushBest)) return;
         lastBoards = key;
         // A dropped phone connection: one more try a few seconds later, unless a newer save took over. (The progress
         // itself stays on this device either way, and is sent again with the next change or sign-in.)
@@ -171,8 +173,9 @@
       void reportStudy(list);
       syncBoards();
     });
-    // A new puzzle rating reaches friends too.
+    // A new puzzle rating reaches friends too, and a new Puzzle Rush best the Rush leaderboard.
     const unPuzzle = puzzleRating.subscribe(() => syncBoards());
+    const unRush = rewards.subscribe(() => syncBoards());
     // Signed in: keep the friends badge fresh, and share the CC Rating with friends.
     let stopBadge: (() => void) | undefined;
     const unSession = session.subscribe((s) => {
@@ -246,6 +249,7 @@
       clearTimeout(ratingsTimer);
       unStudy();
       unPuzzle();
+      unRush();
       unSession();
       unResume();
       stopBadge?.();

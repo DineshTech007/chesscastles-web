@@ -16,7 +16,7 @@
   import Celebrations from '$lib/puzzles/Celebrations.svelte';
   import Medal from '$lib/puzzles/Medal.svelte';
   import { puzzleSounds } from '$lib/puzzles/puzzleSounds';
-  import { BADGES, recordRush, rewards } from '$lib/puzzles/rewards';
+  import { BADGES, recordRush, rewards, rushTitle } from '$lib/puzzles/rewards';
 
   const SECONDS = 180;
   const LIVES = 3;
@@ -138,7 +138,9 @@
       <p class="lead">Solve as many puzzles as you can in <b>3 minutes</b>. <b>3 mistakes</b> and it's over. They start easy and get harder with every solve!</p>
       <div class="facts">
         <span><Icon name="trophy" size={18} />Your best: <b class="num">{$rewards.rushBest}</b></span>
+        {#if rushTitle($rewards.rushBest)}<span class="rtitle">🚀 {rushTitle($rewards.rushBest)}</span>{/if}
         {#if $rewards.rushRuns.length}<span class="label">Last: {$rewards.rushRuns.slice(-5).join(', ')}</span>{/if}
+        <a class="board" href="/leaderboard#rush">Puzzle Rush leaderboard →</a>
       </div>
       <button class="btn primary go" onclick={start} disabled={starting}>Start the rush 🚀</button>
       <p class="label small">One try a puzzle. Rush doesn't change your puzzle rating.</p>
@@ -186,6 +188,7 @@
       {:else if best}
         <span class="label">Your best: <b class="num">{best.best}</b></span>
       {/if}
+      {#if best && rushTitle(best.best)}<span class="rtitle">🚀 {rushTitle(best.best)}</span>{/if}
       {#if hardest}<span class="label">Hardest solved: <b class="num">{hardest}</b></span>{/if}
       {#if log.length}
         <ol class="trail end">
@@ -196,6 +199,7 @@
         <button class="btn primary go" onclick={start} disabled={starting}>Play again</button>
         <a class="btn" href="/puzzles">Rated puzzles</a>
       </div>
+      <a class="board" href="/leaderboard#rush">See the Puzzle Rush leaderboard →</a>
     </section>
   {/if}
 </div>
@@ -269,6 +273,20 @@
     align-items: center;
     gap: 6px;
     font-weight: 700;
+  }
+  .rtitle {
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gold) 20%, transparent);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-weight: 800;
+    font-size: 14px;
+  }
+  .board {
+    font-weight: 700;
+    color: var(--gold);
+    text-decoration: none;
   }
   .go {
     min-height: 54px;

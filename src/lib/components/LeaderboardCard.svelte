@@ -31,6 +31,7 @@
     kfide: 'No CC Ratings yet: play a FIDE-level opponent to be first.',
     lichess: 'No Lichess ratings yet.',
     puzzles: 'No puzzle ratings yet.',
+    rush: 'No Puzzle Rush scores yet: be the first!',
     vision: 'No one here yet: try the Blindfold Gym.',
     study: 'No one has studied this week yet.',
     books: 'No chapters read yet.',

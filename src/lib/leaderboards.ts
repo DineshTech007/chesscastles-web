@@ -9,8 +9,9 @@ import { lichessRatings } from '$lib/lichess';
 import { leaders, type Board as VisionBoard } from '$lib/vision/api';
 import { weekOf } from '$lib/study/progress';
 import { SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
+import { rushTitle } from '$lib/puzzles/rewards';
 
-export type BoardKind = 'kfide' | 'lichess' | 'puzzles' | 'vision' | 'study' | 'books';
+export type BoardKind = 'kfide' | 'lichess' | 'puzzles' | 'rush' | 'vision' | 'study' | 'books';
 
 export interface Row {
   /** A Chess Castles title (CGM…), shown as a badge before the name. */
@@ -33,6 +34,7 @@ export const BOARDS: { id: BoardKind; label: string; signIn: boolean; variants: 
   { id: 'kfide', label: 'CC Rating', signIn: true, unit: 'CC Rating', variants: [{ id: 'main', label: 'Overall' }, ...(['standard', 'rapid', 'blitz', 'bullet'] as KfideSpeed[]).map((s) => ({ id: s, label: SPEED_LABEL[s] }))] },
   { id: 'lichess', label: 'Lichess', signIn: true, unit: 'rating', variants: ['blitz', 'rapid', 'classical', 'bullet'].map((s) => ({ id: s, label: s[0].toUpperCase() + s.slice(1) })) },
   { id: 'puzzles', label: 'Puzzles', signIn: true, unit: 'puzzle rating', variants: [{ id: 'rating', label: 'Puzzle rating' }, { id: 'solved', label: 'Most solved' }] },
+  { id: 'rush', label: 'Puzzle Rush', signIn: true, unit: 'best score', variants: [] },
   { id: 'vision', label: 'Blindfold Gym', signIn: false, unit: '', variants: [{ id: 'rating', label: 'Vision rating' }, { id: 'sprint', label: 'Best sprint' }, { id: 'today', label: 'Today' }] },
   { id: 'study', label: 'Study', signIn: true, unit: 'points this week', variants: [] },
   { id: 'books', label: 'Audio Books', signIn: true, unit: 'chapters read', variants: [] },
@@ -50,6 +52,14 @@ export async function loadBoard(kind: BoardKind, variant = ''): Promise<Row[]> {
   if (kind === 'study' || kind === 'books') {
     const l = await boardOf(kind, weekOf(Date.now()));
     return l.map((p) => ({ key: p.uid, uid: p.uid, name: p.name, country: p.country, ccTitle: p.title, value: p.rating, me: p.me, plan: p.plan }));
+  }
+  if (kind === 'rush') {
+    // Puzzle Rush: the best score, with the title it earns (Speedster, Rush master, Rush legend).
+    const l = await boardOf('rush');
+    return l.map((p) => {
+      const t = rushTitle(p.rating);
+      return { key: p.uid, uid: p.uid, name: p.name, country: p.country, ccTitle: p.title, value: p.rating, sub: [t ? `🚀 ${t}` : '', `${p.games} ${p.games === 1 ? 'rush' : 'rushes'}`].filter(Boolean).join(' · '), me: p.me, plan: p.plan };
+    });
   }
   if (kind === 'puzzles') {
     // Chess Castles puzzles: the puzzle rating here and how many each player solved here (not their Lichess numbers).

@@ -20,9 +20,10 @@ export interface Rewards {
   days: Record<string, DayLog>;
   goal: number;
   timer: boolean;
-  /** Puzzle Rush: the best score and the last scores, newest last. */
+  /** Puzzle Rush: the best score, the last scores (newest last) and how many rushes were played. */
   rushBest: number;
   rushRuns: number[];
+  rushPlayed: number;
 }
 
 export interface Badge {
@@ -56,6 +57,7 @@ export const BADGE_ART: Record<string, { medal: string; n?: string }> = {
   r2100: { medal: 'crown', n: '2100' },
   rush10: { medal: 'rocket', n: '10' },
   rush20: { medal: 'rocket', n: '20' },
+  rush30: { medal: 'rocket', n: '30' },
 };
 export const medalSrc = (medal: string) => `/puzzles/medal-${medal}.webp`;
 
@@ -79,10 +81,19 @@ export const BADGES: Badge[] = [
   { id: 'r2100', icon: '♛', name: 'Rating 2100', hint: 'Reach a puzzle rating of 2100' },
   { id: 'rush10', icon: '🚀', name: 'Speedster', hint: 'Score 10 in Puzzle Rush' },
   { id: 'rush20', icon: '⚡', name: 'Rush master', hint: 'Score 20 in Puzzle Rush' },
+  { id: 'rush30', icon: '👑', name: 'Rush legend', hint: 'Score 30 in Puzzle Rush' },
 ];
 
+/**
+ * A Puzzle Rush player's title from their best score (owner, 2026-10-21: shown on the Puzzle Rush leaderboard),
+ * the same names as the Rush badges.
+ */
+export function rushTitle(best: number): string | undefined {
+  return best >= 30 ? 'Rush legend' : best >= 20 ? 'Rush master' : best >= 10 ? 'Speedster' : undefined;
+}
+
 const KEY = 'cc.puzzleRewards';
-const EMPTY: Rewards = { stars: 0, three: 0, badges: [], days: {}, goal: 10, timer: true, rushBest: 0, rushRuns: [] };
+const EMPTY: Rewards = { stars: 0, three: 0, badges: [], days: {}, goal: 10, timer: true, rushBest: 0, rushRuns: [], rushPlayed: 0 };
 
 function read(): Rewards {
   try {
@@ -190,6 +201,7 @@ export function recordRush(score: number, tried: number): { best: number; newBes
   const newBest = score > r.rushBest;
   r.rushBest = Math.max(r.rushBest, score);
   r.rushRuns = [...r.rushRuns, score].slice(-20);
+  r.rushPlayed = Math.max(r.rushPlayed, r.rushRuns.length - 1) + 1;
   const has = new Set(r.badges);
   const want: [string, boolean][] = [
     ['goal', r.days[key].solved >= r.goal],
@@ -197,6 +209,7 @@ export function recordRush(score: number, tried: number): { best: number; newBes
     ['days7', daysInRow(r) >= 7],
     ['rush10', score >= 10],
     ['rush20', score >= 20],
+    ['rush30', score >= 30],
   ];
   const earned = want.filter(([id, ok]) => ok && !has.has(id)).map(([id]) => BADGES.find((b) => b.id === id)!);
   r.badges = [...r.badges, ...earned.map((b) => b.id)];
