@@ -116,6 +116,40 @@
     const best = info?.pv[0] ? uciToMove(info.pv[0]) : undefined;
     if (best && game.moves.length === at && !gone) hint = { from: keyOf(best.from), to: keyOf(best.to), at };
   }
+  /**
+   * Offering a draw (owner, 2026-10-21: "why we don't have a draw button"): the computer answers as a sensible player
+   * would, from the engine's view of the position: never in the first 10 moves; yes when it is clearly worse, or when
+   * the game is level from move 30; no when it is better. One offer every 10 moves. (The server takes an agreed draw
+   * from move 10 too: src/fairplay.ts.)
+   */
+  let drawNote = $state('');
+  let drawAt = $state(-99);
+  let drawing = $state(false);
+  let drawTimer: ReturnType<typeof setTimeout> | undefined;
+  async function offerDraw() {
+    if (game.isOver || drawing) return;
+    drawing = true;
+    drawAt = game.moves.length;
+    const moveNo = game.position.fullmoves;
+    let accept = false;
+    let why = '';
+    if (moveNo < 10) why = `${opponent}: “It's too early for a draw. Let's play on!”`;
+    else {
+      const info = await engine.evaluate(fenOf(game.position), 12, 1, 1500).catch(() => undefined);
+      // The computer's view: centipawns, more is better for it.
+      const white = info?.mate !== undefined ? (info.mate > 0 ? 10_000 : -10_000) : (info?.cp ?? 0);
+      const its = game.botSide === 'white' ? white : -white;
+      if (its <= -150 || (Math.abs(its) <= 30 && moveNo >= 30)) accept = true;
+      else why = its > 30 ? `${opponent} declined: they think they're better. Play on!` : `${opponent} declined the draw. Play on!`;
+    }
+    drawing = false;
+    if (game.isOver) return;
+    if (accept) return game.agreeDraw();
+    drawNote = why;
+    clearTimeout(drawTimer);
+    drawTimer = setTimeout(() => (drawNote = ''), 6000);
+  }
+
   function undo() {
     if (!game.takeback()) return;
     queue.clear();
@@ -318,6 +352,7 @@
   onDestroy(() => {
     gone = true;
     clearTimeout(shareTimer);
+    clearTimeout(drawTimer);
     if (!game.isOver) save(false);
     game.dispose();
     gameEnded.set(false);
@@ -491,6 +526,8 @@
     return {
       sans: game.moves.map((m) => m.san),
       sources: game.moves.map((m) => m.source),
+      /** A draw can be offered again 10 moves after the last offer. */
+      canOfferDraw: !game.isOver && !game.canAbort && game.moves.length - drawAt >= 20,
       /** Each move's thinking time, beside the moves (as on chess.com). */
       times: game.timed ? game.moves.map((m) => m.ms) : [],
       isOver: game.isOver,
@@ -600,7 +637,9 @@
     <button class="btn" onclick={() => (confirmResign = false)}>Keep playing</button>
   {:else}
     <button class="btn" onclick={() => (confirmResign = true)}><Icon name="flag" size={18} />Resign</button>
+    <button class="btn" onclick={offerDraw} disabled={!g.canOfferDraw || drawing} title="Offer a draw (once every 10 moves)">½ {drawing ? 'Asking…' : 'Draw'}</button>
   {/if}
+  {#if drawNote}<p class="draw-note" role="status">{drawNote}</p>{/if}
   {#if friendly}
     <button class="btn mini" onclick={undo} disabled={!g.canUndo}><Icon name="undo" size={18} />Undo</button>
     <button class="btn mini" onclick={askHint} disabled={!g.myTurn || hinting}><Icon name="bulb" size={18} />{hinting ? 'Thinking…' : 'Hint'}</button>
@@ -963,6 +1002,13 @@
     .board-col {
       gap: 6px;
     }
+  }
+  .draw-note {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--gold);
   }
   .abort-q {
     flex: 1 1 100%;

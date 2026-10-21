@@ -168,6 +168,19 @@ describe('FideGame', () => {
     g.dispose();
   });
 
+  it('a draw the computer agreed to ends the game ½-½, by agreement', async () => {
+    const { g } = game(new FakeBook({ e4: [e(72, 'e7e5', 10)] }), { tc: { minutes: 0, increment: 0, kind: 'Rapid' } });
+    g.begin();
+    expect(g.play(m('e2e4'))).toBe(true);
+    await flush();
+    g.agreeDraw();
+    expect(g.isOver).toBe(true);
+    expect(g.result).toBe('½-½');
+    expect(g.end).toBe('agreement');
+    expect(g.endReason).toBe('Draw by agreement');
+    g.dispose();
+  });
+
   it('the bot opens as White and answers the player', async () => {
     const { g } = game(new FakeBook({ '': [e(72, 'e2e4', 10)], 'e4 e5': [e(72, 'g1f3', 10)] }), { human: 'black' });
     g.begin();

@@ -39,6 +39,7 @@ export type GameEnd =
   | 'fiftyMoves'
   | 'timeout'
   | 'resignation'
+  | 'agreement'
   | 'aborted';
 
 export type Color = 'white' | 'black';
@@ -279,6 +280,11 @@ export class FideGame {
     if (!this.isOver) this.finish('resignation', this.botSide);
   }
 
+  /** The computer took the player's draw offer (the page decides when it does: GameView's offerDraw). */
+  agreeDraw(): void {
+    if (!this.isOver) this.finish('agreement', undefined);
+  }
+
   /** Whether the player's last move can be taken back now (see takeback). */
   get canTakeback(): boolean {
     return !this.isOver && !this.botThinking && this.moves.some((m, i) => i >= this.prelude.length && m.source === undefined);
@@ -506,6 +512,8 @@ export class FideGame {
           : `${this.winner === this.human ? 'Your opponent' : 'You'} ran out of time`;
       case 'resignation':
         return 'You resigned';
+      case 'agreement':
+        return 'Draw by agreement';
       case 'aborted':
         return 'Game aborted';
       default:
