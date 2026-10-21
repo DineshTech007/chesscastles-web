@@ -441,8 +441,39 @@ async function run(name, options) {
       await move();
       await page.locator('.picker').waitFor({ timeout: TAP_MS }).catch(() => {});
       expect((await page.locator('.picker').count()) === 1, 'the pawn could not be moved again after closing the picker');
+      // The picker opens on the promotion square (a8: the board's top-left square), not in the middle of the screen.
+      const col = await page.locator('.picker.column').boundingBox();
+      const cg = await page.locator('cg-board').first().boundingBox();
+      expect(!!col && !!cg && Math.abs(col.x - cg.x) < 3 && Math.abs(col.y - cg.y) < 3, 'the piece picker did not open on the promotion square');
       await page.keyboard.press('Escape');
       await tap(page.getByRole('button', { name: /end the rush/i }));
+    } finally {
+      await page.unroute(bands);
+    }
+  });
+
+  // 4h. Puzzle Rush premoves (owner, 2026-10-21): a move made while the opponent's reply comes plays by itself.
+  await check(name, page, 'puzzle rush: a premove plays when the reply comes', async () => {
+    // Black plays ...h6; White Rd8+, Black Kh7, White Re7.
+    const two = Array.from({ length: 10 }, (_, i) => [`sc-pre-${i}`, '6k1/5ppp/8/8/8/8/5PPP/3RR1K1 b - - 0 1', 'h7h6 d1d8 g8h7 e1e7', 500 + i * 10, ['mateIn2']]);
+    const bands = /\/data\/puzzles\/bands\/\d+\.json/;
+    await page.route(bands, (r) => r.fulfill({ json: two }));
+    try {
+      await open(page, '/puzzles/rush');
+      await tap(page.getByRole('button', { name: /start the rush/i }));
+      await page.locator('cg-board').first().waitFor({ timeout: 20000 });
+      await page.waitForTimeout(1500);
+      for (const sq of ['d1', 'd8', 'e1', 'e7']) {
+        const { x, y } = await square(page, sq);
+        if (touch) await page.touchscreen.tap(x, y);
+        else await page.mouse.click(x, y);
+        await page.waitForTimeout(60);
+      }
+      await page.waitForFunction(() => document.querySelector('.hud .score')?.textContent?.trim() === '1', null, { timeout: 5000 }).catch(() => {});
+      const score = (await page.locator('.hud .score').innerText()).trim();
+      expect(score === '1', `the premoved second move did not solve the puzzle (score ${score})`);
+      await tap(page.getByRole('button', { name: /end the rush/i }));
+      return `score ${score}`;
     } finally {
       await page.unroute(bands);
     }

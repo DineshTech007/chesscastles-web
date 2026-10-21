@@ -15,6 +15,7 @@
   import { destsOf, fenOf, isPromotion, keyOf, materialOf, moveFromKeys, moveToUci, uciToMove } from '$lib/chess/position';
   import { engine } from '$lib/engine/stockfish';
   import PromotionPicker from './PromotionPicker.svelte';
+  import { promotionAnchor } from '$lib/chess/promotion';
   import { autoQueen, premovesOn } from '$lib/preferences';
   import { makeBoardFen } from 'chessops/fen';
   import { opposite, tcLabel, TIME_CONTROLS, type Color, type FideGame } from '$lib/game/fideGame';
@@ -589,7 +590,7 @@
 <svelte:window onblur={onBlur} onkeydown={onkey} />
 
 {#if promoting}
-  <PromotionPicker color={game.position.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
+  <PromotionPicker color={game.position.turn} anchor={promotionAnchor(promoting.dest)} onpick={pickPromotion} oncancel={cancelPromotion} />
 {/if}
 
 {#snippet toughNote()}

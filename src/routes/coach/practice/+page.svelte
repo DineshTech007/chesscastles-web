@@ -12,6 +12,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import { destsOf, fenOf, isPromotion, keyOf, moveFromKeys, positionFromFen, sanOf, START_FEN, uciToMove } from '$lib/chess/position';
   import PromotionPicker from '$lib/components/PromotionPicker.svelte';
+  import { promotionAnchor } from '$lib/chess/promotion';
   import { autoQueen, premovesOn } from '$lib/preferences';
   import { engine, evalLabel, whiteChances, type EngineInfo } from '$lib/engine/stockfish';
   import { engineMove, maiaPick } from '$lib/game/engineMove';
@@ -278,7 +279,7 @@
 <svelte:head><title>Practice · Coach · Chess Castles</title></svelte:head>
 
 {#if promoting}
-  <PromotionPicker color={pos.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
+  <PromotionPicker color={pos.turn} anchor={promotionAnchor(promoting.dest)} onpick={pickPromotion} oncancel={cancelPromotion} />
 {/if}
 
 <div class="practice">

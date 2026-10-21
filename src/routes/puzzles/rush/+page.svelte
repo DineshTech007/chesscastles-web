@@ -162,7 +162,7 @@
     <div class="board">
       {#if current}
         {#key round}
-          <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} tries={1} {onresult} />
+          <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} tries={1} {onresult} premoves />
         {/key}
       {:else}
         <div class="card skel">Finding a puzzle…</div>

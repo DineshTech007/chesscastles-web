@@ -14,6 +14,7 @@
   import { lichessToken, session, startLichessSignIn } from '$lib/auth';
   import { destsOf, fenOf, isPromotion, keyOf, materialOf, moveFromKeys, moveToUci } from '$lib/chess/position';
   import PromotionPicker from '$lib/components/PromotionPicker.svelte';
+  import { promotionAnchor } from '$lib/chess/promotion';
   import { autoQueen, premovesOn } from '$lib/preferences';
   import type { Role } from 'chessops/types';
   import { OnlineGame } from '$lib/game/onlineGame';
@@ -508,7 +509,7 @@
 <svelte:window onkeydown={onkey} />
 
 {#if promoting}
-  <PromotionPicker color={game.position.turn} onpick={pickPromotion} oncancel={cancelPromotion} />
+  <PromotionPicker color={game.position.turn} anchor={promotionAnchor(promoting.dest)} onpick={pickPromotion} oncancel={cancelPromotion} />
 {/if}
 
 {#if sheet && controls.over && game.me}

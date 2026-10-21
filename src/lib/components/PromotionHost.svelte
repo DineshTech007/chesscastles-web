@@ -6,5 +6,5 @@
 
 {#if $promotionAsk}
   {@const ask = $promotionAsk}
-  <PromotionPicker color={ask.color} onpick={(role) => ask.answer(role)} oncancel={() => ask.answer(undefined)} />
+  <PromotionPicker color={ask.color} anchor={ask.anchor} onpick={(role) => ask.answer(role)} oncancel={() => ask.answer(undefined)} />
 {/if}

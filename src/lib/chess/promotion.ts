@@ -10,8 +10,47 @@ import { isPromotion, squareOfKey } from './position';
  * expect an answer (puzzles, trainers) always ask when the answer is another piece, so it can be found.
  */
 
-/** The picker on screen: its colour, and what to do with the choice (undefined: closed without one). */
-export const promotionAsk = writable<{ color: Color; answer: (role: Role | undefined) => void } | undefined>();
+/** Where the picker opens: the promotion square on screen, and which way its column of pieces runs. */
+export interface PromotionAnchor {
+  left: number;
+  top: number;
+  /** One square, in pixels. */
+  size: number;
+  /** The square is in the board's top half: the pieces run down from it (else up). */
+  down: boolean;
+}
+
+/** The board last touched: the one a promotion comes from. */
+let lastBoard: Element | undefined;
+if (typeof document !== 'undefined')
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      const wrap = (e.target as Element | null)?.closest?.('.cg-wrap');
+      if (wrap?.querySelector('cg-board')) lastBoard = wrap;
+    },
+    { capture: true, passive: true },
+  );
+
+/**
+ * The promotion square `dest` ("e8") on screen, on the board last touched, so the picker opens on the pawn as on
+ * Lichess and chess.com (owner, 2026-10-21: it opened in the middle of the screen). Undefined when it isn't known.
+ */
+export function promotionAnchor(dest: string): PromotionAnchor | undefined {
+  const wrap = lastBoard;
+  const r = wrap?.isConnected ? wrap.querySelector('cg-board')?.getBoundingClientRect() : undefined;
+  const file = dest.charCodeAt(0) - 97;
+  const rank = Number(dest[1]) - 1;
+  if (!wrap || !r || r.width < 80 || !(file >= 0 && file <= 7 && rank >= 0 && rank <= 7)) return undefined;
+  const size = r.width / 8;
+  const black = wrap.classList.contains('orientation-black');
+  const col = black ? 7 - file : file;
+  const row = black ? rank : 7 - rank;
+  return { left: r.left + col * size, top: r.top + row * size, size, down: row < 4 };
+}
+
+/** The picker on screen: its colour, where it opens, and what to do with the choice (undefined: closed without one). */
+export const promotionAsk = writable<{ color: Color; anchor?: PromotionAnchor; answer: (role: Role | undefined) => void } | undefined>();
 
 /** Whether this pawn move needs the picker: the setting is off, or the expected answer promotes to another piece. */
 export function asksForPiece(pos: Chess, orig: string, dest: string, expected?: NormalMove, always = get(autoQueen)): boolean {
@@ -30,6 +69,7 @@ export function promotionFor(pos: Chess, orig: string, dest: string, expected?: 
   return new Promise((resolve) =>
     promotionAsk.set({
       color: pos.turn,
+      anchor: promotionAnchor(dest),
       answer: (role) => {
         promotionAsk.set(undefined);
         resolve(role ?? null);
