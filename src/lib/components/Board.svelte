@@ -22,6 +22,10 @@
     coordinates = true,
     viewOnly = false,
     label = 'Chess board',
+    marks,
+    drawn,
+    ondraw,
+    onselect,
     onmove,
     onpremove,
     onswipe,
@@ -41,6 +45,13 @@
     coordinates?: boolean;
     viewOnly?: boolean;
     label?: string;
+    /** Coloured squares (a classroom coach's): square → colour, drawn with the class mark-<colour> (app.css). */
+    marks?: Record<string, string>;
+    /** Arrows and circles drawn by hand, kept by the page (a classroom: the coach's, shown to every student). */
+    drawn?: DrawShape[];
+    ondraw?: (shapes: DrawShape[]) => void;
+    /** Every square touched or clicked (a classroom coach colouring squares). */
+    onselect?: (key: Key) => void;
     onmove?: (orig: Key, dest: Key) => void;
     onpremove?: (orig: Key, dest: Key) => void;
     /** A finger swipe on an empty part of the board (not a piece): step through the move history, as Lichess and chess.com do on phones. */
@@ -141,6 +152,7 @@
         select: (key) => {
           if (touch && cg?.state.pieces.has(key)) touch.onPiece = true;
           keepHeld(key);
+          onselect?.(key);
         },
       },
       premovable: {
@@ -148,7 +160,13 @@
         showDests: true,
         events: { set: (o, d) => onpremove?.(o, d) },
       },
-      drawable: { enabled: true, visible: true },
+      drawable: {
+        enabled: true,
+        visible: true,
+        onChange: (shapes) => ondraw?.(shapes),
+        // Orange too, for a classroom coach's arrows (the other colours are chessground's own).
+        brushes: { orange: { key: 'o', color: '#e8820c', opacity: 1, lineWidth: 10 } } as never,
+      },
     });
     const ro = new ResizeObserver(() => cg?.redrawAll());
     ro.observe(el);
@@ -165,6 +183,7 @@
     if (!cg) return;
     const custom = new Map<Key, string>();
     for (const k of queued) custom.set(k, 'queued-premove');
+    for (const [k, c] of Object.entries(marks ?? {})) custom.set(k as Key, `${custom.get(k as Key) ?? ''} mark-${c}`.trim());
     // The position a premove just made: drawn at once, no animation (chessground decides that before applying a set).
     const still = queued.length > queuedBefore;
     queuedBefore = queued.length;
@@ -180,6 +199,7 @@
       highlight: { lastMove: true, check: true, custom },
       movable: { color: movable, dests: movable ? dests : new Map() },
       premovable: { enabled: premovable },
+      ...(drawn ? { drawable: { shapes: drawn } } : {}),
     });
     if (still) cg.state.animation.enabled = true;
   });

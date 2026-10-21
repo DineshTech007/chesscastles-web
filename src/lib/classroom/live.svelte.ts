@@ -1,0 +1,326 @@
+/**
+ * The live class as the page sees it: everything the room sends, kept in one place (Svelte state), and what the coach
+ * or a student can do. The room is the single source of truth: after a drop the page gets the whole state again.
+ */
+import { freshBoard, iceServers, Room, type BoardView, type ChatMsg, type ClosedWhy, type Person, type Progress, type Report, type RoomStatus, type Row, type ScoreRow, type Settings, type Task } from './api';
+import { Voice } from './voice';
+import { sounds } from '$lib/sound';
+
+export interface Tried {
+  task: string;
+  ok: boolean;
+  reply?: string;
+  ended?: 'solved' | 'failed';
+  again?: boolean;
+  late?: boolean;
+  p: Progress;
+  at: number;
+}
+export interface Reaction {
+  emoji: string;
+  text: string;
+  to: string;
+  name: string;
+  at: number;
+}
+
+export class Live {
+  status = $state<RoomStatus>('connecting');
+  closed = $state<ClosedWhy | undefined>();
+  me = $state<{ uid: string; name: string; coach: boolean }>({ uid: '', name: '', coach: false });
+  info = $state<{ id: string; name: string; coach: string; coachName: string; members: { uid: string; name: string }[] }>({ id: '', name: '', coach: '', coachName: '', members: [] });
+  board = $state<BoardView>(freshBoard());
+  holder = $state('');
+  chat = $state<ChatMsg[]>([]);
+  unread = $state(0);
+  settings = $state<Settings>({ engine: false, talk: true, lb: true, moves: true, chat: false });
+  people = $state<Person[]>([]);
+  task = $state<Task | undefined>();
+  /** Everyone's progress (the coach); a student has only their own. */
+  progress = $state<Record<string, Progress>>({});
+  lb = $state<Row[]>([]);
+  session = $state<{ started: number; scores: (ScoreRow & { uid: string })[]; tasks: Report['tasks'] }>({ started: 0, scores: [], tasks: [] });
+  ended = $state<Report | undefined>();
+  tried = $state<Tried | undefined>();
+  hint = $state<{ task: string; item: number; square: string } | undefined>();
+  reaction = $state<Reaction | undefined>();
+  notice = $state('');
+  error = $state('');
+  /** The room's clock, ticking (for timers). */
+  now = $state(Date.now());
+  // Voice
+  inVoice = $state(false);
+  micOn = $state(false);
+  micError = $state('');
+  levels = $state<Record<string, number>>({});
+  joiningVoice = $state(false);
+
+  readonly room: Room;
+  private voice?: Voice;
+  private tick?: ReturnType<typeof setInterval>;
+  private noticeTimer?: ReturnType<typeof setTimeout>;
+  chatOpen = false;
+
+  constructor(id: string) {
+    this.room = new Room(
+      id,
+      (m) => this.on(m),
+      (s, why) => {
+        this.status = s;
+        if (why) this.closed = why;
+        if (s === 'closed') this.leaveVoice();
+      },
+    );
+    this.tick = setInterval(() => (this.now = this.room.now()), 250);
+  }
+
+  get coach() {
+    return this.me.coach;
+  }
+  get coachOnline() {
+    return this.people.some((p) => p.coach && p.online);
+  }
+  get mine(): Progress | undefined {
+    return this.progress[this.me.uid];
+  }
+
+  private say(text: string, ms = 3500) {
+    this.notice = text;
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = setTimeout(() => (this.notice = ''), ms);
+  }
+
+  private on(m: any) {
+    switch (m.t) {
+      case 'state':
+        this.me = m.me;
+        // The More page shows Classroom from now on (src/routes/more).
+        try {
+          localStorage.setItem('cc.inClass', '1');
+        } catch {
+          /* private mode */
+        }
+        this.info = m.info;
+        this.board = m.board;
+        this.holder = m.holder ?? '';
+        this.chat = m.chat ?? [];
+        this.settings = m.settings;
+        this.people = m.people ?? [];
+        this.task = m.task ?? undefined;
+        this.progress = m.progress ?? {};
+        this.lb = m.lb ?? [];
+        this.session = m.session ?? { started: 0, scores: [], tasks: [] };
+        // Back after a drop: the room has us in the call again.
+        if (this.inVoice) this.room.send({ t: 'voice', on: true, mic: this.micOn });
+        this.syncVoice();
+        return;
+      case 'info':
+        this.info = m.info;
+        return;
+      case 'board':
+        this.board = m.board;
+        if (m.holder !== this.holder) {
+          if (m.holder === this.me.uid) this.say('Your turn on the big board! Make a move.', 5000);
+          else if (this.holder === this.me.uid) this.say('The coach has the board again.');
+        }
+        this.holder = m.holder ?? '';
+        return;
+      case 'people':
+        this.people = m.people;
+        this.syncVoice();
+        return;
+      case 'settings':
+        this.settings = m.settings;
+        return;
+      case 'chat':
+        this.chat = [...this.chat, m.chat].slice(-80);
+        if (!this.chatOpen && m.chat.uid !== this.me.uid) this.unread++;
+        return;
+      case 'task':
+        if (!m.task) {
+          this.task = undefined;
+          this.progress = {};
+          this.lb = [];
+          this.tried = undefined;
+          return;
+        }
+        if (this.task?.id !== m.task.id) {
+          this.tried = undefined;
+          this.hint = undefined;
+          if (!this.coach) sounds.start();
+        } else if (m.task.over && !this.task?.over && !this.coach) this.say("Time's up!");
+        this.task = m.task;
+        if (m.p) this.progress = { [m.p.uid]: m.p };
+        return;
+      case 'progress':
+        this.progress = m.progress;
+        return;
+      case 'prog':
+        this.progress = { ...this.progress, [m.p.uid]: m.p };
+        return;
+      case 'me':
+        this.progress = { ...this.progress, [m.p.uid]: m.p };
+        return;
+      case 'tried':
+        if (m.late) {
+          this.say("Time's up: that move came too late.");
+          return;
+        }
+        this.tried = { ...m, at: Date.now() };
+        if (m.p) this.progress = { ...this.progress, [m.p.uid]: m.p };
+        return;
+      case 'lb':
+        this.lb = m.rows;
+        return;
+      case 'hint':
+        this.hint = { task: m.task, item: m.item, square: m.square };
+        this.say('Your coach sent you a hint: the glowing piece.');
+        return;
+      case 'react':
+        if (m.to && m.to !== this.me.uid && !this.coach && !this.people.some((p) => p.uid === m.to)) return;
+        this.reaction = { emoji: m.emoji, text: m.text, to: m.to, name: m.name, at: Date.now() };
+        return;
+      case 'muted':
+        this.voice?.setMic(false);
+        this.micOn = false;
+        this.say(m.by === 'locked' ? 'Only students the coach lets speak can talk now. Raise your hand.' : 'The coach muted your microphone.');
+        return;
+      case 'allow':
+        this.say(m.on ? 'The coach let you speak: switch your microphone on.' : 'You are muted again.', 5000);
+        if (!m.on) {
+          this.voice?.setMic(false);
+          this.micOn = false;
+        }
+        return;
+      case 'rtc':
+        void this.voice?.receive(m.from, m.d);
+        return;
+      case 'ended':
+        this.ended = m.report;
+        this.leaveVoice();
+        return;
+      case 'error':
+        this.error = m.error;
+        return;
+    }
+  }
+
+  // ----- the coach
+
+  setBoard(b: BoardView) {
+    this.board = b;
+    this.room.send({ t: 'board', board: $state.snapshot(b) });
+  }
+  give(uid: string) {
+    this.room.send({ t: 'give', uid });
+  }
+  setSettings(change: Partial<Settings>) {
+    this.settings = { ...this.settings, ...change };
+    this.room.send({ t: 'settings', settings: change });
+  }
+  ask(task: unknown) {
+    this.room.send({ t: 'task', task });
+  }
+  endTask() {
+    this.room.send({ t: 'endtask' });
+  }
+  reveal() {
+    this.room.send({ t: 'reveal' });
+  }
+  closeTask() {
+    this.room.send({ t: 'closetask' });
+  }
+  endClass() {
+    this.room.send({ t: 'end' });
+  }
+  mute(uid: string) {
+    this.room.send({ t: 'mute', uid });
+  }
+  allow(uid: string, on: boolean) {
+    this.room.send({ t: 'allow', uid, on });
+  }
+  lower(uid: string) {
+    this.room.send({ t: 'hand', uid, up: false });
+  }
+  react(emoji: string, text = '', uid = '') {
+    this.room.send({ t: 'react', emoji, text, uid });
+  }
+  sendHint(uid: string) {
+    this.room.send({ t: 'hint', uid });
+  }
+
+  // ----- a student
+
+  move(uci: string) {
+    this.room.send({ t: 'move', uci });
+  }
+  tryMove(item: number, uci: string, cpu = false) {
+    if (!this.task) return;
+    this.room.send({ t: 'try', task: this.task.id, item, uci, cpu });
+  }
+  claim(item: number, result: 'win' | 'draw' | 'resign') {
+    if (!this.task) return;
+    this.room.send({ t: 'claim', task: this.task.id, item, result });
+  }
+  raiseHand(up: boolean) {
+    this.room.send({ t: 'hand', up });
+  }
+  get handUp() {
+    return !!this.people.find((p) => p.uid === this.me.uid)?.hand;
+  }
+
+  // ----- everyone
+
+  sendChat(text: string) {
+    const t = text.trim();
+    if (t) this.room.send({ t: 'chat', text: t });
+  }
+
+  async joinVoice() {
+    if (this.inVoice || this.joiningVoice) return;
+    this.joiningVoice = true;
+    try {
+      const ice = await iceServers();
+      this.voice = new Voice(this.me.uid, (to, d) => this.room.send({ t: 'rtc', to, d }), ice, (l) => (this.levels = l));
+      await this.voice.start();
+      this.micError = this.voice.micError;
+      this.inVoice = true;
+      this.micOn = false;
+      this.room.send({ t: 'voice', on: true, mic: false });
+      this.syncVoice();
+    } finally {
+      this.joiningVoice = false;
+    }
+  }
+  setMic(on: boolean) {
+    if (!this.voice?.hasMic) return;
+    const allowed = this.coach || this.settings.talk || this.people.find((p) => p.uid === this.me.uid)?.allow;
+    if (on && !allowed) {
+      this.say('Raise your hand: the coach will let you speak.');
+      return;
+    }
+    this.voice.setMic(on);
+    this.micOn = on;
+    this.room.send({ t: 'voice', on: true, mic: on });
+  }
+  leaveVoice() {
+    if (!this.voice) return;
+    this.voice.stop();
+    this.voice = undefined;
+    this.inVoice = false;
+    this.micOn = false;
+    this.levels = {};
+    if (this.status === 'open') this.room.send({ t: 'voice', on: false, mic: false });
+  }
+  private syncVoice() {
+    if (!this.voice || !this.inVoice) return;
+    this.voice.sync(this.people.filter((p) => p.online && p.voice).map((p) => p.uid));
+  }
+
+  close() {
+    this.leaveVoice();
+    clearInterval(this.tick);
+    clearTimeout(this.noticeTimer);
+    this.room.close();
+  }
+}

@@ -536,6 +536,25 @@ nav a,
 .cg-wrap cg-board square.queued-premove {
   background-color: rgba(214, 72, 56, 0.55);
 }
+/* A classroom coach's coloured squares (Board's `marks`). */
+.cg-wrap cg-board square.mark-green {
+  background-color: rgba(34, 140, 50, 0.72);
+}
+.cg-wrap cg-board square.mark-red {
+  background-color: rgba(214, 52, 40, 0.68);
+}
+.cg-wrap cg-board square.mark-blue {
+  background-color: rgba(40, 96, 220, 0.62);
+}
+.cg-wrap cg-board square.mark-yellow {
+  background-color: rgba(240, 200, 30, 0.7);
+}
+.cg-wrap cg-board square.mark-orange {
+  background-color: rgba(236, 130, 12, 0.78);
+}
+.cg-wrap cg-board square.mark-outline {
+  box-shadow: inset 0 0 0 4px #1f4fe0;
+}
 .cg-wrap cg-board square.check {
   background: radial-gradient(
     ellipse at center,

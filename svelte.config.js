@@ -33,6 +33,8 @@ const config = {
           'data:',
           'blob:',
           'https://api.chesscastles.com',
+          // The Classroom's live rooms (src/lib/classroom).
+          'wss://api.chesscastles.com',
           'https://auth.chesscastles.com',
           'https://book.chesscastles.com',
           'https://book2.chesscastles.com',
@@ -51,6 +53,8 @@ const config = {
           'https://www.googleapis.com',
           'https://apis.google.com',
           'https://cloudflareinsights.com',
+          // A local API for tests (VITE_API, never set for the live site).
+          ...(process.env.VITE_API ? [process.env.VITE_API, process.env.VITE_API.replace(/^http/, 'ws')] : []),
         ],
         'frame-src': ['https://knigh24-af271.firebaseapp.com', 'https://accounts.google.com'],
         'object-src': ['none'],
