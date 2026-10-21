@@ -62,6 +62,11 @@
     return !!k && !!cg?.state.pieces.has(k);
   };
   function onpointerdown(e: PointerEvent) {
+    // Chessground remembers where the board was; on a phone, anything appearing or going above the board (a
+    // clock, a banner, a dialog) moves it without a scroll or a resize, and a drag with the old place drops the
+    // piece on the wrong square, so it jumps back. Measured afresh at the start of every touch (this runs before
+    // chessground's own touchstart).
+    cg?.state.dom.bounds.clear();
     if (!onswipe || e.pointerType !== 'touch') return;
     touch = { x: e.clientX, y: e.clientY, t: Date.now(), onPiece: pieceAt(e.clientX, e.clientY) || !!(e.target as HTMLElement).closest('piece') };
   }
@@ -94,6 +99,9 @@
       highlight: { lastMove: true, check: true },
       draggable: { showGhost: true },
       movable: { free: false, showDests: true, events: { after: (o, d) => onmove?.(o, d) } },
+      // Chessground selects the touched square as a touch begins (a tap or the start of a drag), empty or not: a
+      // touch that begins on a piece is never a swipe, whatever the geometry says.
+      events: { select: (key) => void (touch && cg?.state.pieces.has(key) && (touch.onPiece = true)) },
       premovable: {
         enabled: premovable,
         showDests: true,

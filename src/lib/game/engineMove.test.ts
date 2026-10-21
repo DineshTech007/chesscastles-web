@@ -37,8 +37,9 @@ describe('how the FIDE-level opponent picks a move', () => {
   });
 
   it('in bullet plays most moves on instinct below 1400, fewer as players get stronger, none from 2100', () => {
-    expect(instinctChance(900)).toBe(0.75);
-    expect(instinctChance(1150)).toBe(0.75);
+    // Starter levels (below 1400): beginners, most of all.
+    expect(instinctChance(900)).toBe(0.85);
+    expect(instinctChance(1150)).toBeCloseTo(0.775);
     expect(instinctChance(1400)).toBeCloseTo(0.6);
     expect(instinctChance(1750)).toBeCloseTo(0.25);
     expect(instinctChance(2200)).toBe(0);
@@ -52,5 +53,13 @@ describe('how the FIDE-level opponent picks a move', () => {
     expect(instinctShare({ minutes: 15, increment: 10, kind: 'Rapid' })).toBe(0);
     expect(instinctShare({ minutes: 90, increment: 30, kind: 'Classical' })).toBe(0);
     expect(instinctShare(undefined)).toBe(0);
+  });
+
+  it('Starter levels (below 1400) give away more and slip more often, like beginners', () => {
+    expect(maxDrop(1000)).toBe(0.55);
+    expect(maxDrop(1100)).toBeCloseTo(0.5);
+    expect(slipChance(1000)).toBe(0.035);
+    expect(slipChance(1100)).toBeCloseTo(0.0275);
+    expect(slipChance(1200)).toBeCloseTo(0.02);
   });
 });

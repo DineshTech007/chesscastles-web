@@ -10,6 +10,7 @@
   import MaiaCard from '$lib/components/MaiaCard.svelte';
   import { START_FEN } from '$lib/chess/position';
   import { TIME_CONTROLS, TIME_CONTROL_ORDER, tcLabel } from '$lib/game/fideGame';
+  import { clampLevel, FIDE_FLOOR, FIRST_LEVEL, levelName, matchLevel, MAX_LEVEL, MIN_LEVEL } from '$lib/game/levels';
   import { LEVELS, OPENINGS } from '$lib/openings';
   import { kfideAll } from '$lib/stores/me';
   import { SPEED_LABEL, kfideText, speedOf } from '$lib/kfide';
@@ -19,8 +20,8 @@
   type ColorChoice = 'white' | 'random' | 'black';
 
   let mode = $state<Mode>('fide');
-  /** First visit: 1200, a friendly level for a child; then the last one chosen. */
-  let rating = $state(1400);
+  /** First visit: a friendly level for a child (or the player's matched level); then the last one chosen. */
+  let rating = $state(FIRST_LEVEL);
   /** The player's own FIDE rating (0: not given). */
   let tc = $state(2);
   let color = $state<ColorChoice>('random');
@@ -37,7 +38,12 @@
     try {
       const s = JSON.parse(localStorage.getItem(KEY) ?? '{}');
       if (s.mode) mode = s.mode;
-      if (s.rating) rating = Math.min(2800, Math.max(1400, s.rating));
+      if (s.rating) rating = clampLevel(s.rating);
+      else {
+        // No level chosen yet: matched to the player once their rating means something, else a friendly start.
+        const r = $kfideAll[speedOf(tcLabel(TIME_CONTROLS[tc]))];
+        rating = r.games >= 5 ? matchLevel(r.rating) : FIRST_LEVEL;
+      }
       if (Number.isInteger(s.tc)) tc = Math.min(TIME_CONTROLS.length - 1, Math.max(0, s.tc));
       if (s.color) color = s.color;
       if (Number.isInteger(s.level)) level = s.level;
@@ -50,6 +56,9 @@
     const m = page.url.searchParams.get('mode');
     if (m === 'computer' || m === 'fide' || m === 'online') mode = m;
   });
+
+  /** The player's CC Rating at the chosen speed ("Match my level" picks a level a little below it). */
+  const myCc = $derived($kfideAll[speedOf(tcLabel(TIME_CONTROLS[tc]))]);
 
   // While everything is free (PLANS_ON off) hasGate lets everyone choose it.
   const openingIncluded = $derived(!PLANS_ON || RANK[$currentPlan] >= RANK[$planSettings.config.gates.bot_opening]);
@@ -105,21 +114,28 @@
         <h2 class="title h">Opponent rating</h2>
         <div class="rating">
           <span class="display rating-num num">{rating}</span>
-          <span class="title fide">FIDE</span>
+          <span class="title fide">{rating < FIDE_FLOOR ? 'Starter' : 'FIDE'}</span>
           <span class="grow"></span>
-          <button class="icon-btn" aria-label="25 lower" disabled={rating <= 1400} onclick={() => (rating -= 25)}>−</button>
-          <button class="icon-btn" aria-label="25 higher" disabled={rating >= 2800} onclick={() => (rating += 25)}>+</button>
+          <button class="icon-btn" aria-label="25 lower" disabled={rating <= MIN_LEVEL} onclick={() => (rating -= 25)}>−</button>
+          <button class="icon-btn" aria-label="25 higher" disabled={rating >= MAX_LEVEL} onclick={() => (rating += 25)}>+</button>
         </div>
         <label class="slider">
           <span class="sr-only">Opponent rating</span>
-          <input type="range" min="1400" max="2800" step="25" bind:value={rating} />
+          <input type="range" min={MIN_LEVEL} max={MAX_LEVEL} step="25" bind:value={rating} />
         </label>
         <div class="chips">
-          {#each [1400, 1600, 1800, 2000, 2200, 2500] as r (r)}
+          {#each [1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500] as r (r)}
             <button class="chip" aria-pressed={rating === r} onclick={() => (rating = r)}>{r}</button>
           {/each}
         </div>
-        <p class="fide-note">A computer opponent in the style of a FIDE {rating} player. Not affiliated with FIDE.</p>
+        <button class="btn match" aria-pressed={rating === matchLevel(myCc.rating)} onclick={() => (rating = matchLevel(myCc.rating))}>
+          Match my level: {levelName(matchLevel(myCc.rating))}
+        </button>
+        <p class="fide-note">
+          {#if rating < FIDE_FLOOR}A friendly computer opponent for beginners, below FIDE's lowest rating (1400): it misses things and drops pieces, as players starting out do.
+          {:else}A computer opponent in the style of a FIDE {rating} player. Not affiliated with FIDE.{/if}
+          "Match my level" picks one a little below your CC Rating, so you win more games than you lose.
+        </p>
       </div>
       <MaiaCard ready="" quiet fallback="a simpler opponent" />
     {:else}
@@ -328,6 +344,14 @@
   .slider input {
     width: 100%;
     accent-color: var(--action);
+  }
+  .match {
+    align-self: flex-start;
+    margin-top: 8px;
+  }
+  .match[aria-pressed='true'] {
+    border-color: var(--accent);
+    color: var(--accent);
   }
   .chips {
     display: flex;

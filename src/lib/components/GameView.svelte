@@ -18,6 +18,7 @@
   import { opposite, tcLabel, TIME_CONTROLS, type Color, type FideGame } from '$lib/game/fideGame';
   import { PremoveQueue } from '$lib/game/premoves';
   import { myGames, outcome, type GameKind } from '$lib/stores/myGames';
+  import { levelName, MIN_LEVEL } from '$lib/game/levels';
   import { POINTS, study } from '$lib/study/progress';
   import { thousands } from '$lib/format';
   import { kfideAll, myCountry, myPhoto, photoSrc } from '$lib/stores/me';
@@ -394,7 +395,7 @@
       name: me ? ($session.status === 'in' ? $myName : 'You') : opponent,
       title: me && $session.status === 'in' ? $myTitle : undefined,
       // (The opponent's rating only when its name doesn't already say it: "FIDE 1800".)
-      rating: me ? `CC ${SPEED_LABEL[speed]} ${kfideText($kfideAll[speed])}` : kind === 'fide' && !opponent.includes(String(game.rating)) ? `FIDE ${game.rating}` : undefined,
+      rating: me ? `CC ${SPEED_LABEL[speed]} ${kfideText($kfideAll[speed])}` : kind === 'fide' && !opponent.includes(String(game.rating)) ? levelName(game.rating) : undefined,
       // After the game: the new rating is shown above, with how it moved.
       ratingChange: me && kfideChange ? kfideChange.after - kfideChange.before : undefined,
       country: me ? $myCountry || undefined : opponentCountry,
@@ -455,7 +456,7 @@
   /**
    * Three games in a row lost to the FIDE-level opponent at this level and speed (this one included): so a child
    * doesn't give up, the result offers a slower game (more time to think: easier to win, and it teaches more) and,
-   * above 1400, a level 200 lower.
+   * a level 200 lower (Starter levels go down to 1000).
    */
   const toughRun = $derived.by(() => {
     if (kind !== 'fide' || !g.isOver || !game.timed) return undefined;
@@ -465,7 +466,7 @@
     const total = game.timeControl.minutes + game.timeControl.increment * 0.67;
     // Bullet: 10+0; blitz: 15+10; already slow: no slower suggestion.
     const slower = total <= 3 ? 1 : total < 15 ? 2 : undefined;
-    const lower = game.rating > 1400 ? Math.max(1400, game.rating - 200) : undefined;
+    const lower = game.rating > MIN_LEVEL ? Math.max(MIN_LEVEL, game.rating - 200) : undefined;
     const c = `&c=${game.human}`;
     return {
       slower: slower === undefined ? undefined : { label: tcLabel(TIME_CONTROLS[slower]), href: `/play/fide?r=${game.rating}&tc=${slower}${c}` },
@@ -598,10 +599,10 @@
         {/if}
         {#if toughRun && (toughRun.slower || toughRun.lower)}
           <div class="tough" role="note">
-            <p><strong>Three tough games in a row</strong> against FIDE {game.rating} at {toughRun.tc}. {toughRun.slower ? 'A slower game gives you time to think: easier to win, and you learn more from it.' : 'A step down helps you win again and learn from it.'}</p>
+            <p><strong>Three tough games in a row</strong> against {levelName(game.rating)} at {toughRun.tc}. {toughRun.slower ? 'A slower game gives you time to think: easier to win, and you learn more from it.' : 'A step down helps you win again and learn from it.'}</p>
             <div class="row">
               {#if toughRun.slower}<a class="btn primary" href={toughRun.slower.href} data-sveltekit-reload>Play {toughRun.slower.label}</a>{/if}
-              {#if toughRun.lower}<a class="btn" href={toughRun.lower.href} data-sveltekit-reload>Play FIDE {toughRun.lower.rating}</a>{/if}
+              {#if toughRun.lower}<a class="btn" href={toughRun.lower.href} data-sveltekit-reload>Play {levelName(toughRun.lower.rating)}</a>{/if}
             </div>
           </div>
         {/if}

@@ -8,6 +8,7 @@
   import { page } from '$app/state';
   import Icon from '$lib/components/Icon.svelte';
   import LearnFromGame from '$lib/components/LearnFromGame.svelte';
+  import { levelName } from '$lib/game/levels';
   import WatchViewer, { type BarInfo } from '$lib/components/WatchViewer.svelte';
   import { session, startSignIn } from '$lib/auth';
   import { positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
@@ -96,7 +97,7 @@
     const isFriend = game?.human === s;
     const opponent = game?.opponent ?? '';
     // The opponent's rating, unless its name already says it ("FIDE 1200").
-    const oppRating = game?.opponentRating && !opponent.includes(String(game.opponentRating)) ? `FIDE ${game.opponentRating}` : undefined;
+    const oppRating = game?.opponentRating && !opponent.includes(String(game.opponentRating)) ? levelName(game.opponentRating) : undefined;
     const after = !pgn ? undefined : ply === 0 ? pgn.start : pgn.plies[ply - 1]?.after;
     let clockMs: number | undefined;
     if (latest && game?.minutes) {

@@ -4,6 +4,7 @@
   import { isAge, isWho, opponentBook, profileLabel } from '$lib/book/profiles';
   import { FideBot } from '$lib/bot/fideBot';
   import { browserOpeningMemory, FideGame, TIME_CONTROLS, type Color } from '$lib/game/fideGame';
+  import { clampLevel, levelName } from '$lib/game/levels';
   import { get } from 'svelte/store';
   import { opponentPace } from '$lib/preferences';
   import { bookGuard, humanMove } from '$lib/game/engineMove';
@@ -20,7 +21,7 @@
   import type { BookSource } from '$lib/book/book';
 
   const q = page.url.searchParams;
-  const rating = Math.min(2800, Math.max(1400, Number(q.get('r')) || 1800));
+  const rating = clampLevel(Number(q.get('r')) || 1800);
   // Who the opponent plays like (girls, boys, an age group), when chosen.
   const who = isWho(q.get('who')) ? (q.get('who') as 'any' | 'girl' | 'boy') : 'any';
   const age = isAge(q.get('age')) ? (q.get('age') as 'any' | 'u12' | 'u16') : 'any';
@@ -93,7 +94,7 @@
   <GameView
     game={newGame()}
     kind="fide"
-    opponent={profile ? `FIDE ${rating} · ${profile}` : `FIDE ${rating}`}
+    opponent={profile ? `${levelName(rating)} · ${profile}` : levelName(rating)}
     opponentInitials={String(Math.floor(rating / 100))}
     opponentSubtitle="Plays like {/^(8|11|18)/.test(String(rating)) ? 'an' : 'a'} {rating} player"
     openingName={opening?.name}

@@ -5,6 +5,7 @@ import { engine } from '$lib/engine/stockfish';
 import { maia, maiaUci } from '$lib/engine/maia';
 import { fenOf, uciToMove } from '$lib/chess/position';
 import type { TimeControl } from './fideGame';
+import { FIDE_FLOOR } from './levels';
 
 /**
  * Stockfish at about [rating] (it plays no weaker than 1320). Stockfish sees only the position, not the game,
@@ -102,6 +103,8 @@ function convert<T>(cands: T[], cp: (c: T) => number | undefined, drawn: (c: T) 
  * calibration's 1400 and 1800 players are rated 1640 and 1880 today.
  */
 export const STRENGTH: [fide: number, maiaElo: number, tau: number][] = [
+  // Starter levels (below FIDE's 1400): Maia at a beginner's rating, picking more freely.
+  [900, 700, 1.3],
   [1160, 1100, 1],
   [1400, 1600, 1],
   [1640, 2400, 1],
@@ -133,6 +136,7 @@ export function strengthFor(rating: number, tc?: TimeControl): { elo: number; ta
  */
 export function maxDrop(rating: number): number {
   const steps: [number, number][] = [
+    [1000, 0.55],
     [1200, 0.45],
     [1400, 0.35],
     [1600, 0.27],
@@ -158,7 +162,9 @@ export function maxDrop(rating: number): number {
  */
 export function slipChance(rating: number): number {
   if (rating >= 1800) return 0;
-  if (rating <= 1200) return 0.02;
+  // Starter levels: beginners drop pieces more often (3.5% of moves at 1000).
+  if (rating <= 1000) return 0.035;
+  if (rating <= 1200) return 0.035 - ((rating - 1000) / 200) * 0.015;
   return rating <= 1400 ? 0.02 - ((rating - 1200) / 200) * 0.01 : rating <= 1600 ? 0.01 - ((rating - 1400) / 200) * 0.005 : 0.005 * ((1800 - rating) / 200);
 }
 
@@ -173,6 +179,7 @@ export function slipChance(rating: number): number {
  */
 export function instinctChance(r: number): number {
   const steps: [number, number][] = [
+    [1000, 0.85],
     [1200, 0.75],
     [1400, 0.6],
     [1600, 0.4],
@@ -271,8 +278,10 @@ export async function maiaPick(pos: Chess, rating: number, opponent?: number, tc
   }
   const scoreMs = Math.min(fastGame(tc) ? 250 : strong ? 700 : 500, room - bestMs);
   const r = rating - TIME_PRESSURE(tc);
-  // Bullet and blitz: below about 1900 many moves are played on instinct, unchecked (see instinctChance).
-  const instinct = cands.length > 1 && random() < instinctChance(r) * instinctShare(tc);
+  // Bullet and blitz: below about 1900 many moves are played on instinct, unchecked (see instinctChance); Starter
+  // levels at every speed (beginners don't check their moves in slow games either).
+  const share = rating < FIDE_FLOOR ? Math.max(instinctShare(tc), 0.6) : instinctShare(tc);
+  const instinct = cands.length > 1 && random() < instinctChance(r) * share;
   let pick = cands[0];
   if (instinct) {
     // The move that comes to mind, as often as players of the rating play it (Maia's own odds, not sharpened).
