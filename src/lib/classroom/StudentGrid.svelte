@@ -88,6 +88,11 @@
   const topMax = $derived(Math.max(1, ...tops.map((t) => t.n)));
 
   const sel = $derived(picked ? live.progress[picked] : undefined);
+  /** After "find the move": the same position played to the end against the computer, to win (coach's request). */
+  function playOn() {
+    const it = task.items[0];
+    live.ask({ kind: 'play', title: 'Now play it out and win', seconds: Math.max(600, task.seconds), points: task.points * 2, minus: 0, tries: 1, items: [{ ...it, line: [], goal: 'win', elo: 1500 }] });
+  }
   function spotlight(p: Progress, item: number, moves: string[]) {
     const it = task.items[item];
     live.setBoard({ ...live.board, root: it.fen, moves, ply: moves.length, orient: sideOf(it.fen), shapes: [], marks: {}, title: `${p.name}'s answer`, game: -1 });
@@ -106,6 +111,7 @@
       <span class="pill">{counts.done}/{students.length} finished</span>
       {#if !task.over}<button class="btn" onclick={() => live.endTask()}>End now</button>{/if}
       {#if !task.reveal}<button class="btn" onclick={() => live.reveal()}>Show answers</button>{/if}
+      {#if task.kind === 'best' && task.items.length === 1}<button class="btn primary" onclick={playOn} title="Every student plays this position to the end against the computer: scored and on the leaderboard">▶ Now play it out from here</button>{/if}
       <button class="btn ghost" onclick={() => live.closeTask()} title="Back to the class board">Close question</button>
     </div>
   </header>
@@ -161,6 +167,7 @@
             <span>{p.points} pts</span>
           </span>
           <span class="info small">
+            {#if p.away}<span class="away" title="Left the class tab during this question (another tab or app)">👀 {p.away}× · {took(p.awayMs ?? 0)}</span>{/if}
             {#if p.wrong}<span class="bad">✗ {p.wrong}</span>{/if}
             <span>{p.done ? took(p.results.reduce((n, r) => n + r.ms, 0)) : took(live.now - p.itemStart)}</span>
           </span>
@@ -352,6 +359,10 @@
     display: flex;
     justify-content: space-between;
     gap: 4px;
+  }
+  .away {
+    color: var(--engine);
+    font-weight: 700;
   }
   .detail {
     padding: 12px;

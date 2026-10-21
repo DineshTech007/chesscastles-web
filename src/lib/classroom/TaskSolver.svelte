@@ -12,7 +12,7 @@
   import ClassBoard from './ClassBoard.svelte';
   import Leaderboard from './Leaderboard.svelte';
   import { clock, sanLine, sideOf, took } from './tasks';
-  import type { Live } from './live.svelte';
+  import type { SolverHost } from './solver';
   import { destsOf, keyOf, moveFromKeys, positionFromFen } from '$lib/chess/position';
   import { promotionFor } from '$lib/chess/promotion';
   import { engine } from '$lib/engine/stockfish';
@@ -20,7 +20,8 @@
   import { puzzleSounds } from '$lib/puzzles/puzzleSounds';
   import Fireworks from '$lib/components/Fireworks.svelte';
 
-  let { live }: { live: Live } = $props();
+  // The live class or homework at home: the same board (solver.ts).
+  let { host: live }: { host: SolverHost } = $props();
 
   const task = $derived(live.task!);
   const p = $derived(live.mine);
@@ -34,7 +35,7 @@
   /** A move sent, waiting for the room's answer. */
   let pending = $state<string | undefined>();
   /** A moment to see what happened: the solved position, or the wrong move. */
-  let flash = $state<{ fen: string; moves: string[]; kind: 'solved' | 'wrong' | 'failed'; text: string; until: number } | undefined>();
+  let flash = $state<{ fen: string; moves: string[]; kind: 'solved' | 'wrong' | 'failed'; text: string; until: number; item: number } | undefined>();
   /** The opponent's reply is shown a moment after the student's move. */
   let holdReply = $state(0);
   let remount = $state(0);
@@ -50,17 +51,17 @@
     const r = t.ended ? t.p.results[t.p.results.length - 1] : undefined;
     if (t.ended === 'solved') {
       puzzleSounds.solved();
-      flash = { fen: it.fen, moves: r?.moves ?? [], kind: 'solved', text: `Solved! +${task.points}`, until: Date.now() + 1300 };
+      flash = { fen: it.fen, moves: r?.moves ?? [], kind: 'solved', text: `Solved! +${task.points}`, until: Date.now() + 1300, item: t.p.item - 1 };
       if (t.p.done) party++;
     } else if (t.ended === 'failed') {
       sounds.error();
       const last = r?.tried[r.tried.length - 1] ?? [];
-      flash = { fen: it.fen, moves: last, kind: 'failed', text: task.kind === 'play' ? 'Lost this one.' : 'Missed this one.', until: Date.now() + 1500 };
+      flash = { fen: it.fen, moves: last, kind: 'failed', text: task.kind === 'play' ? 'Lost this one.' : 'Missed this one.', until: Date.now() + 1500, item: t.p.item - 1 };
     } else if (t.again) {
       sounds.error();
       const last = t.p.tried[t.p.tried.length - 1] ?? [];
       const tries = task.tries - t.p.wrong;
-      flash = { fen: it.fen, moves: last, kind: 'wrong', text: `Not that one. ${tries} ${tries === 1 ? 'try' : 'tries'} left${task.minus ? ` (−${task.minus})` : ''}.`, until: Date.now() + 1200 };
+      flash = { fen: it.fen, moves: last, kind: 'wrong', text: `Not that one. ${tries} ${tries === 1 ? 'try' : 'tries'} left${task.minus ? ` (−${task.minus})` : ''}.`, until: Date.now() + 1200, item: t.p.item };
     } else if (t.reply) holdReply = Date.now() + 380;
   });
   // The flash and the held reply end by themselves.
@@ -93,14 +94,15 @@
   const myTurn = $derived(!!shown && !flash && !pending && !frozen && !done && shown.pos.turn === side && !shown.pos.isEnd());
 
   async function onmove(orig: Key, dest: Key) {
-    if (!shown || !myTurn || !p) return;
+    // No progress yet (homework before the first answer): the first puzzle.
+    if (!shown || !myTurn) return;
     const pos = shown.pos;
     const role = await promotionFor(pos, orig, dest);
     if (role === null) return void remount++;
     const m = moveFromKeys(pos, orig, dest, role ?? undefined);
     playMoveSound(pos, m, false);
     pending = makeUci(m);
-    live.tryMove(p.item, pending);
+    live.tryMove(p?.item ?? 0, pending);
   }
 
   // Against the computer: the engine on this device plays the other side (and gives up a lost position).
@@ -116,11 +118,12 @@
     const it = item;
     void (async () => {
       if (it.goal === 'draw' && p.moves.length >= 40) return live.claim(p.item, 'draw');
-      if (it.goal === 'win' && p.moves.length >= 2) {
-        const e = await engine.evaluate(fen, 10);
+      // A clearly won position after the student's eighth move: the computer gives up (the room checks the count).
+      if (it.goal === 'win' && p.moves.length >= 15) {
+        const e = await engine.evaluate(fen, 12);
         if (thinking !== key) return;
         const mine = side === 'white' ? 1 : -1;
-        if (e && ((e.mate !== undefined && e.mate * mine > 0) || (e.cp !== undefined && e.cp * mine >= 600))) {
+        if (e && ((e.mate !== undefined && e.mate * mine > 0) || (e.cp !== undefined && e.cp * mine >= 700))) {
           live.notice = 'The computer gives up!';
           return live.claim(p.item, 'win');
         }
@@ -162,7 +165,7 @@
     <div class="q">
       <b>{item.title || task.title}</b>
       <span class="muted"
-        >{task.items.length > 1 ? `Puzzle ${Math.min(idx + 1, task.items.length)} of ${task.items.length} · ` : ''}{side === 'white' ? 'White' : 'Black'} to play{task.kind === 'play'
+        >{task.items.length > 1 ? `Puzzle ${Math.min((flash?.item ?? idx) + 1, task.items.length)} of ${task.items.length} · ` : ''}{side === 'white' ? 'White' : 'Black'} to play{task.kind === 'play'
           ? ` · ${item.goal === 'draw' ? 'hold the draw' : item.goal === 'win' ? 'win' : 'checkmate'} against the computer`
           : ''}</span
       >
@@ -199,7 +202,7 @@
     <div class="result card">
       <b>{task.ends && task.ends <= live.now && solved < task.items.length ? "Time's up!" : 'Finished!'}</b>
       <span>{solved}/{task.items.length} solved · {p?.points ?? 0} points · {took(results.filter((r) => r.solved).reduce((n, r) => n + r.ms, 0))}</span>
-      {#if !task.over}<span class="muted">Waiting for the others…</span>{/if}
+      {#if !task.over && !live.homework}<span class="muted">Waiting for the others…</span>{/if}
     </div>
     {#if task.reveal}
       <div class="answers">

@@ -10,17 +10,11 @@
   import { installOpen, installWay } from '$lib/install';
   import { boardThemeOpen } from '$lib/boardTheme';
   import SocialLinks from '$lib/components/SocialLinks.svelte';
+  import { checkClassroom, classroomShown } from '$lib/classroom/visible';
 
   let isAdmin = $state(false);
-  /** Classroom (live classes) is shown to admins and to students who have been in a class on this device. */
-  let inClass = $state(false);
-  $effect(() => {
-    try {
-      inClass = localStorage.getItem('cc.inClass') === '1';
-    } catch {
-      /* private mode */
-    }
-  });
+  // Classroom: admins, and students once an admin opens it (src/lib/classroom/visible.ts).
+  $effect(() => checkClassroom($session.status === 'in' ? $session.uid : undefined));
   $effect(() => {
     if ($session.status === 'in')
       adminMe().then(
@@ -33,7 +27,7 @@
   const links = $derived<{ href: string; label: string; icon: IconName }[]>([
     { href: '/profile', label: $t('more.profile'), icon: 'users' },
     ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
-    ...(isAdmin || inClass ? [{ href: '/classroom', label: 'Classroom: live classes with your coach', icon: 'coach' as IconName }] : []),
+    ...($classroomShown ? [{ href: '/classroom', label: 'Classroom: live classes with your coach', icon: 'coach' as IconName }] : []),
     { href: '/students', label: $t('more.students'), icon: 'coach' },
     ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.badge ? `${$t('nav.new')} · ` : ''}${$t(navKey(n.href))}: ${$t(navBlurbKey(n.href))}`, icon: n.icon })),
     { href: '/parents', label: $t('more.parents'), icon: 'shield' },

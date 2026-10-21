@@ -1,21 +1,28 @@
 <script lang="ts">
   /**
    * A student in the class (a phone or a laptop): the coach's board as it is now, their own board when the coach asks
-   * a question, the big board in their hands when the coach gives it, a raised hand, the class voice (listen, and talk
-   * when the coach allows), messages to the coach, the leaderboard and (when the coach shows them) the moves.
+   * a question, their game when the coach starts games, the big board in their hands when the coach gives it, the
+   * coach's camera or screen, a raised hand, the class voice (listen, and talk when the coach allows), messages to the
+   * coach, the leaderboards, and (when the coach allows) the moves, the engine and the games database.
    */
   import type { Key } from '@lichess-org/chessground/types';
   import { makeUci } from 'chessops/util';
   import ClassBoard from './ClassBoard.svelte';
   import TaskSolver from './TaskSolver.svelte';
+  import GameBoard from './GameBoard.svelte';
   import Chat from './Chat.svelte';
   import People from './People.svelte';
   import Leaderboard from './Leaderboard.svelte';
   import EnginePanel from './EnginePanel.svelte';
+  import EvalBar from './EvalBar.svelte';
+  import VideoTile from './VideoTile.svelte';
   import MoveList from '$lib/components/MoveList.svelte';
+  import DbPanel from '$lib/components/DbPanel.svelte';
+  import { CloudBook } from '$lib/book/book';
   import { destsOf, moveFromKeys } from '$lib/chess/position';
   import { promotionFor } from '$lib/chess/promotion';
   import { sounds } from '$lib/sound';
+  import type { EngineInfo } from '$lib/engine/stockfish';
   import { lineAt } from './tasks';
   import type { Live } from './live.svelte';
 
@@ -26,11 +33,24 @@
   const holding = $derived(live.holder === live.me.uid);
   let flipped = $state(false);
   const orient = $derived(flipped ? (b.orient === 'white' ? 'black' : 'white') : b.orient);
-  let tab = $state<'chat' | 'scores' | 'moves' | 'people'>('chat');
+  let tab = $state<'chat' | 'lb' | 'moves' | 'db' | 'people'>('chat');
   let remount = $state(0);
-  /** Back to the coach's board during a question (to look), or the question. */
+  let engInfo = $state<EngineInfo | undefined>();
+  const book = new CloudBook();
+  /** Back to the coach's board during a question or a game (to look), or the question/game. */
   let peek = $state(false);
-  const asking = $derived(!!live.task && !peek);
+  const myGame = $derived(live.games.find((g) => !g.result && (g.white === live.me.uid || g.black === live.me.uid)) ?? live.games.find((g) => g.white === live.me.uid || g.black === live.me.uid));
+  const showing = $derived<'task' | 'game' | 'board'>(peek ? 'board' : live.task ? 'task' : myGame ? 'game' : 'board');
+  // A new question or game: shown at once.
+  let seenTask = '';
+  let seenGame = '';
+  $effect(() => {
+    const t = live.task?.id ?? '';
+    const g = myGame?.id ?? '';
+    if ((t && t !== seenTask) || (g && g !== seenGame)) peek = false;
+    seenTask = t;
+    seenGame = g;
+  });
 
   // A move sound when the coach's board moves on.
   let lastPly = -1;
@@ -50,6 +70,7 @@
   }
   const me = $derived(live.people.find((p) => p.uid === live.me.uid));
   const canTalk = $derived(live.settings.talk || !!me?.allow);
+  const coachCam = $derived(live.people.some((p) => p.coach && p.cam));
 </script>
 
 <div class="student">
@@ -69,71 +90,87 @@
       <button class="btn ghost" onclick={onexit}>Leave</button>
     </div>
   </header>
+  {#if !live.inVoice && live.coachOnline}
+    <button class="join" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>🎧 Tap to hear{coachCam ? ' and see' : ''} your coach</button>
+  {/if}
   {#if live.micError && live.inVoice}<p class="note">{live.micError}</p>{/if}
 
   <div class="main">
     <section class="stage">
-      {#if asking}
-        <TaskSolver {live} />
+      {#if showing === 'task'}
+        <TaskSolver host={live} />
+        <button class="btn ghost small" onclick={() => (peek = true)}>See the coach's board</button>
+      {:else if showing === 'game' && myGame}
+        <GameBoard {live} game={myGame} />
         <button class="btn ghost small" onclick={() => (peek = true)}>See the coach's board</button>
       {:else}
-        {#if live.task}<button class="btn primary" onclick={() => (peek = false)}>Back to the question</button>{/if}
+        {#if live.task}<button class="btn primary" onclick={() => (peek = false)}>Back to the question</button>{:else if myGame}<button class="btn primary" onclick={() => (peek = false)}>Back to my game</button>{/if}
         <div class="banner" class:mine={holding}>
           {#if holding}<b>Your turn on the big board!</b> Everyone sees your move.{:else if b.title}<b>{b.title}</b>{:else if !live.coachOnline}Waiting for the coach…{:else}Watching the coach's board{/if}
         </div>
-        <div class="boardbox">
-          {#key remount}
-            <ClassBoard
-              fen={at.fen}
-              orientation={orient}
-              lastMove={at.last as Key[] | undefined}
-              check={at.check}
-              movable={holding && at.pos ? at.turn : undefined}
-              dests={holding && at.pos ? destsOf(at.pos) : new Map()}
-              shapes={b.shapes}
-              marks={b.marks}
-              squares={b.squares}
-              blind={b.blind}
-              pawns={b.pawns}
-              label="The coach's board"
-              {onmove}
-            />
-          {/key}
+        <div class="board-row">
+          {#if live.settings.engine}<EvalBar info={engInfo} orientation={orient} />{/if}
+          <div class="boardbox">
+            {#key remount}
+              <ClassBoard
+                fen={at.fen}
+                orientation={orient}
+                lastMove={at.last as Key[] | undefined}
+                check={at.check}
+                movable={holding && at.pos ? at.turn : undefined}
+                dests={holding && at.pos ? destsOf(at.pos) : new Map()}
+                shapes={b.shapes}
+                marks={b.marks}
+                squares={b.squares}
+                blind={b.blind}
+                pawns={b.pawns}
+                label="The coach's board"
+                {onmove}
+              />
+            {/key}
+          </div>
         </div>
         <div class="row">
           <button class="btn ghost small" onclick={() => (flipped = !flipped)}>⇅ Flip</button>
           {#if live.settings.moves && b.moves.length}<span class="muted small">Move {Math.ceil(b.ply / 2)}{b.ply % 2 ? '' : b.ply ? '…' : ''}</span>{/if}
         </div>
-        {#if live.settings.engine}<EnginePanel fen={at.fen} />{/if}
+        {#if live.settings.engine}<EnginePanel fen={at.fen} bind:info={engInfo} />{/if}
       {/if}
     </section>
 
     <aside class="side">
       <div class="tabs" role="tablist">
         <button role="tab" class:on={tab === 'chat'} onclick={() => (tab = 'chat')}>Chat{live.unread ? ` (${live.unread})` : ''}</button>
-        <button role="tab" class:on={tab === 'scores'} onclick={() => (tab = 'scores')}>Scores</button>
+        <button role="tab" class:on={tab === 'lb'} onclick={() => (tab = 'lb')}>Leaderboard</button>
         {#if live.settings.moves}<button role="tab" class:on={tab === 'moves'} onclick={() => (tab = 'moves')}>Moves</button>{/if}
+        {#if live.settings.db}<button role="tab" class:on={tab === 'db'} onclick={() => (tab = 'db')}>Database</button>{/if}
         <button role="tab" class:on={tab === 'people'} onclick={() => (tab = 'people')}>Class</button>
       </div>
       <div class="panel">
         {#if tab === 'chat'}
           <Chat {live} />
-        {:else if tab === 'scores'}
+        {:else if tab === 'lb'}
           {#if live.task && live.lb.length}
             <h3>This question</h3>
             <Leaderboard rows={live.lb} me={live.me.uid} total={live.task.items.length} />
           {/if}
           <h3>Today's class</h3>
           <Leaderboard rows={live.session.scores} me={live.me.uid} empty="Scores show here after the first question." />
+          <h3>All classes</h3>
+          <Leaderboard rows={live.allTime} me={live.me.uid} empty="Your class's leaderboard over every class shows here." />
         {:else if tab === 'moves' && live.settings.moves}
           {#if at.sans.length}<MoveList sans={at.sans} current={b.ply} />{:else}<p class="muted">No moves yet.</p>{/if}
+        {:else if tab === 'db' && live.settings.db}
+          {#if at.pos}<DbPanel pos={at.pos} {book} onplay={() => {}} />{:else}<p class="muted">No position to look up.</p>{/if}
         {:else}
+          {#each live.info.notes ?? [] as n (n.id)}<p class="note-row">📢 {n.text}</p>{/each}
           <People {live} />
         {/if}
       </div>
     </aside>
   </div>
 </div>
+{#if live.coachVideo && coachCam}<VideoTile stream={live.coachVideo} label={live.info.coachName} />{/if}
 
 <style>
   .student {
@@ -199,10 +236,26 @@
     color: var(--gold);
     background: var(--gold-soft);
   }
+  .join {
+    margin: 8px 12px 0;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--gold);
+    background: var(--gold-soft);
+    color: var(--text);
+    font: 700 15px var(--font-body);
+    cursor: pointer;
+  }
   .note {
     margin: 4px 12px 0;
     color: var(--muted);
     font-size: 13px;
+  }
+  .note-row {
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--gold-soft);
   }
   .main {
     flex: 1;
@@ -253,6 +306,14 @@
       box-shadow: 0 0 18px rgba(237, 176, 64, 0.5);
     }
   }
+  .board-row {
+    display: flex;
+    gap: 6px;
+  }
+  .boardbox {
+    flex: 1;
+    min-width: 0;
+  }
   .row {
     display: flex;
     justify-content: space-between;
@@ -273,6 +334,7 @@
   .tabs {
     display: flex;
     border-bottom: 1px solid var(--border);
+    overflow-x: auto;
   }
   .tabs button {
     flex: 1;
@@ -283,6 +345,7 @@
     padding: 10px 6px;
     font: 700 14px var(--font-body);
     cursor: pointer;
+    white-space: nowrap;
   }
   .tabs button.on {
     color: var(--text);

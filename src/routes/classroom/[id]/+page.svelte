@@ -44,6 +44,22 @@
     }, 3200);
     return () => clearTimeout(t);
   });
+  // An announcement or new homework during the class: on top for a while.
+  let banner = $state('');
+  $effect(() => {
+    const n = live?.note;
+    if (!n) return;
+    banner = `📢 ${n.text}`;
+    const t = setTimeout(() => (banner = ''), 9000);
+    return () => clearTimeout(t);
+  });
+  $effect(() => {
+    const h = live?.newHomework;
+    if (!h || live?.coach) return;
+    banner = `📝 New homework: ${h.title} (due ${new Date(h.due).toLocaleDateString([], { day: 'numeric', month: 'short' })}). Find it in My classes.`;
+    const t = setTimeout(() => (banner = ''), 9000);
+    return () => clearTimeout(t);
+  });
   const myRank = $derived(live?.ended ? live.ended.scores.findIndex((s) => s.uid === live!.me.uid) : -1);
   let copied = $state(false);
   function reportText() {
@@ -115,6 +131,7 @@
   {/if}
 
   {#if live?.notice}<div class="toast" role="status">{live.notice}</div>{/if}
+  {#if banner}<button class="banner" onclick={() => (banner = '')}>{banner}</button>{/if}
   {#if live?.error}
     <div class="toast err" role="alert">{live.error} <button class="x" onclick={() => live && (live.error = '')}>✕</button></div>
   {/if}
@@ -196,6 +213,22 @@
   .toast.err {
     border-color: var(--loss);
     bottom: 76px;
+  }
+  .banner {
+    position: fixed;
+    left: 50%;
+    top: 64px;
+    transform: translateX(-50%);
+    z-index: 91;
+    background: var(--card);
+    border: 2px solid var(--gold);
+    border-radius: 14px;
+    padding: 12px 18px;
+    box-shadow: var(--shadow);
+    font: 700 16px var(--font-body);
+    color: var(--text);
+    max-width: calc(100vw - 32px);
+    cursor: pointer;
   }
   .x {
     background: none;

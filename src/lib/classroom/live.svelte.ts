@@ -2,7 +2,7 @@
  * The live class as the page sees it: everything the room sends, kept in one place (Svelte state), and what the coach
  * or a student can do. The room is the single source of truth: after a drop the page gets the whole state again.
  */
-import { freshBoard, iceServers, Room, type BoardView, type ChatMsg, type ClosedWhy, type Person, type Progress, type Report, type RoomStatus, type Row, type ScoreRow, type Settings, type Task } from './api';
+import { freshBoard, iceServers, Room, type BoardView, type ChatMsg, type ClosedWhy, type Game, type Note, type Person, type Progress, type Report, type RoomStatus, type Row, type ScoreRow, type Session, type Settings, type Task } from './api';
 import { Voice } from './voice';
 import { sounds } from '$lib/sound';
 
@@ -28,12 +28,12 @@ export class Live {
   status = $state<RoomStatus>('connecting');
   closed = $state<ClosedWhy | undefined>();
   me = $state<{ uid: string; name: string; coach: boolean }>({ uid: '', name: '', coach: false });
-  info = $state<{ id: string; name: string; coach: string; coachName: string; members: { uid: string; name: string }[] }>({ id: '', name: '', coach: '', coachName: '', members: [] });
+  info = $state<{ id: string; name: string; coach: string; coachName: string; members: { uid: string; name: string }[]; notes?: Note[]; sessions?: Session[] }>({ id: '', name: '', coach: '', coachName: '', members: [] });
   board = $state<BoardView>(freshBoard());
   holder = $state('');
   chat = $state<ChatMsg[]>([]);
   unread = $state(0);
-  settings = $state<Settings>({ engine: false, talk: true, lb: true, moves: true, chat: false });
+  settings = $state<Settings>({ engine: false, talk: true, lb: true, moves: true, chat: false, db: false });
   people = $state<Person[]>([]);
   task = $state<Task | undefined>();
   /** Everyone's progress (the coach); a student has only their own. */
@@ -41,6 +41,17 @@ export class Live {
   lb = $state<Row[]>([]);
   session = $state<{ started: number; scores: (ScoreRow & { uid: string })[]; tasks: Report['tasks'] }>({ started: 0, scores: [], tasks: [] });
   ended = $state<Report | undefined>();
+  /** The class's all-time leaderboard (every class so far, today's included). */
+  allTime = $state<(ScoreRow & { uid: string })[]>([]);
+  games = $state<Game[]>([]);
+  /** A new announcement from the coach, shown on top for a while. */
+  note = $state<Note | undefined>();
+  /** Homework just set (a student is told). */
+  newHomework = $state<{ id: string; title: string; due: number } | undefined>();
+  /** The coach's video (a student's view), and the coach's own camera or screen on. */
+  coachVideo = $state<MediaStream | undefined>();
+  camOn = $state<'' | 'camera' | 'screen'>('');
+  localVideo = $state<MediaStream | undefined>();
   tried = $state<Tried | undefined>();
   hint = $state<{ task: string; item: number; square: string } | undefined>();
   reaction = $state<Reaction | undefined>();
@@ -72,7 +83,23 @@ export class Live {
       },
     );
     this.tick = setInterval(() => (this.now = this.room.now()), 250);
+    document.addEventListener('visibilitychange', this.onAway);
+    window.addEventListener('blur', this.onAway);
+    window.addEventListener('focus', this.onAway);
   }
+
+  /**
+   * Fair play without a camera: during a question or a game, a student's page going to the background (another tab
+   * or app) is told to the room, and the coach sees it beside the student's answer or game.
+   */
+  private wasAway = false;
+  private onAway = () => {
+    const away = document.visibilityState === 'hidden' || !document.hasFocus();
+    if (away === this.wasAway || this.coach) return;
+    this.wasAway = away;
+    const busy = (this.task && !this.task.over) || this.games.some((g) => !g.result && (g.white === this.me.uid || g.black === this.me.uid));
+    if (busy || !away) this.room.send({ t: 'away', away });
+  };
 
   get coach() {
     return this.me.coach;
@@ -94,12 +121,6 @@ export class Live {
     switch (m.t) {
       case 'state':
         this.me = m.me;
-        // The More page shows Classroom from now on (src/routes/more).
-        try {
-          localStorage.setItem('cc.inClass', '1');
-        } catch {
-          /* private mode */
-        }
         this.info = m.info;
         this.board = m.board;
         this.holder = m.holder ?? '';
@@ -110,13 +131,30 @@ export class Live {
         this.progress = m.progress ?? {};
         this.lb = m.lb ?? [];
         this.session = m.session ?? { started: 0, scores: [], tasks: [] };
+        this.allTime = m.allTime ?? [];
+        this.games = m.games ?? [];
         // Back after a drop: the room has us in the call again.
-        if (this.inVoice) this.room.send({ t: 'voice', on: true, mic: this.micOn });
+        if (this.inVoice) this.sendVoice();
         this.syncVoice();
         return;
       case 'info':
         this.info = m.info;
         return;
+      case 'note':
+        this.note = m.note;
+        if (!this.coach) sounds.start();
+        return;
+      case 'homework':
+        this.newHomework = { id: m.id, title: m.title, due: m.due };
+        return;
+      case 'games':
+        this.games = m.games;
+        return;
+      case 'game': {
+        const i = this.games.findIndex((g) => g.id === m.game.id);
+        this.games = i < 0 ? [...this.games, m.game] : this.games.map((g) => (g.id === m.game.id ? m.game : g));
+        return;
+      }
       case 'board':
         this.board = m.board;
         if (m.holder !== this.holder) {
@@ -249,6 +287,17 @@ export class Live {
     this.room.send({ t: 'hint', uid });
   }
 
+  /** Games: a simul, the game zone (students in pairs), or the coach against one student; minutes 0: no clocks. */
+  startGames(o: { mode: 'simul' | 'pair' | 'coach'; color?: 'white' | 'black' | 'random'; root?: string; uid?: string; minutes?: number; inc?: number }) {
+    this.room.send({ t: 'games', ...o });
+  }
+  endGame(game: string, result?: string) {
+    this.room.send({ t: 'gend', game, result });
+  }
+  clearGames() {
+    this.room.send({ t: 'gend', all: true });
+  }
+
   // ----- a student
 
   move(uci: string) {
@@ -261,6 +310,18 @@ export class Live {
   claim(item: number, result: 'win' | 'draw' | 'resign') {
     if (!this.task) return;
     this.room.send({ t: 'claim', task: this.task.id, item, result });
+  }
+  gameMove(game: string, uci: string) {
+    this.room.send({ t: 'gmove', game, uci });
+  }
+  resign(game: string) {
+    this.room.send({ t: 'gresign', game });
+  }
+  offerDraw(game: string) {
+    this.room.send({ t: 'gdraw', game });
+  }
+  flag(game: string) {
+    this.room.send({ t: 'gflag', game });
   }
   raiseHand(up: boolean) {
     this.room.send({ t: 'hand', up });
@@ -281,7 +342,16 @@ export class Live {
     this.joiningVoice = true;
     try {
       const ice = await iceServers();
-      this.voice = new Voice(this.me.uid, (to, d) => this.room.send({ t: 'rtc', to, d }), ice, (l) => (this.levels = l));
+      this.voice = new Voice(
+        this.me.uid,
+        this.info.coach,
+        (to, d) => this.room.send({ t: 'rtc', to, d }),
+        ice,
+        (l) => (this.levels = l),
+        (uid, stream) => {
+          if (uid === this.info.coach) this.coachVideo = stream;
+        },
+      );
       await this.voice.start();
       this.micError = this.voice.micError;
       this.inVoice = true;
@@ -301,7 +371,37 @@ export class Live {
     }
     this.voice.setMic(on);
     this.micOn = on;
-    this.room.send({ t: 'voice', on: true, mic: on });
+    this.sendVoice();
+  }
+  private sendVoice() {
+    this.room.send({ t: 'voice', on: this.inVoice, mic: this.micOn, cam: !!this.camOn });
+  }
+  /** The coach's camera or screen to every student (the coach must be in the call). */
+  async setCam(kind: '' | 'camera' | 'screen') {
+    if (!this.voice) return;
+    for (const t of this.localVideo?.getTracks() ?? []) t.stop();
+    this.localVideo = undefined;
+    if (kind) {
+      try {
+        const stream =
+          kind === 'screen'
+            ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 10 }, audio: false })
+            : await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 20 } }, audio: false });
+        const track = stream.getVideoTracks()[0];
+        // Sharing stopped from the browser's own bar.
+        track.onended = () => {
+          if (this.localVideo === stream) void this.setCam('');
+        };
+        this.localVideo = stream;
+        await this.voice.setVideo(track, kind === 'screen');
+      } catch {
+        this.say(kind === 'screen' ? 'The screen was not shared.' : 'The camera could not start: allow it for this site.');
+        kind = '';
+        await this.voice.setVideo(undefined);
+      }
+    } else await this.voice.setVideo(undefined);
+    this.camOn = kind;
+    this.sendVoice();
   }
   leaveVoice() {
     if (!this.voice) return;
@@ -310,6 +410,10 @@ export class Live {
     this.inVoice = false;
     this.micOn = false;
     this.levels = {};
+    this.camOn = '';
+    this.coachVideo = undefined;
+    for (const t of this.localVideo?.getTracks() ?? []) t.stop();
+    this.localVideo = undefined;
     if (this.status === 'open') this.room.send({ t: 'voice', on: false, mic: false });
   }
   private syncVoice() {
@@ -318,6 +422,9 @@ export class Live {
   }
 
   close() {
+    document.removeEventListener('visibilitychange', this.onAway);
+    window.removeEventListener('blur', this.onAway);
+    window.removeEventListener('focus', this.onAway);
     this.leaveVoice();
     clearInterval(this.tick);
     clearTimeout(this.noticeTimer);

@@ -16,6 +16,28 @@ export interface ClassSummary {
   live: number;
   /** I teach it. */
   mine: boolean;
+  /** Coming sessions, soonest first. */
+  sessions: Session[];
+  /** The coach's announcements, newest first. */
+  notes: Note[];
+  /** Past classes (the coach only). */
+  past: Past[];
+}
+export interface Session {
+  at: number;
+  minutes: number;
+  title: string;
+}
+export interface Note {
+  id: string;
+  text: string;
+  at: number;
+}
+export interface Past {
+  started: number;
+  ended: number;
+  people: number;
+  top: string;
 }
 export interface Member {
   uid: string;
@@ -37,6 +59,11 @@ export interface ClassInfo {
   role?: 'coach' | 'student';
   online?: string[];
   reports?: Report[];
+  sessions?: Session[];
+  notes?: Note[];
+  past?: Past[];
+  /** The class's all-time leaderboard. */
+  leaderboard?: (ScoreRow & { uid: string })[];
 }
 export interface Shape {
   orig: string;
@@ -101,6 +128,9 @@ export interface Progress {
   points: number;
   done: boolean;
   at: number;
+  /** Times and ms the student left the class tab during the question (fair play without a camera). */
+  away?: number;
+  awayMs?: number;
 }
 export interface Row {
   uid: string;
@@ -128,6 +158,8 @@ export interface Person {
   voice: boolean;
   mic: boolean;
   allow: boolean;
+  /** The coach's camera (or shared screen) is on. */
+  cam: boolean;
 }
 export interface ChatMsg {
   id: number;
@@ -148,6 +180,58 @@ export interface Settings {
   moves: boolean;
   /** Students see each other's messages. */
   chat: boolean;
+  /** Students see the games database (the coach always does). */
+  db?: boolean;
+}
+
+/** A game in the class: the coach's simul, students paired in the game zone, or the coach against one student. */
+export interface Game {
+  id: string;
+  kind: 'simul' | 'pair' | 'coach';
+  white: string;
+  black: string;
+  whiteName: string;
+  blackName: string;
+  root: string;
+  moves: string[];
+  result: '' | '1-0' | '0-1' | '1/2-1/2';
+  reason: string;
+  clock?: { white: number; black: number; inc: number; at: number };
+  draw: string;
+  started: number;
+  awayW?: number;
+  awayB?: number;
+}
+
+/** Homework: a summary in the list. */
+export interface HomeworkSummary {
+  id: string;
+  title: string;
+  kind: TaskKind;
+  items: number;
+  due: number;
+  created: number;
+  points: number;
+  mine?: { solved: number; done: boolean; points: number; tried: number };
+  done: number;
+  started: number;
+  top: { name: string; points: number; solved: number }[];
+}
+export interface HomeworkView {
+  task: Task;
+  due: number;
+  progress: Record<string, Progress>;
+  ranking: Row[];
+  now: number;
+}
+export interface HomeworkReply {
+  ok: boolean;
+  reply?: string;
+  ended?: 'solved' | 'failed';
+  again?: boolean;
+  ignored?: boolean;
+  p: Progress;
+  ranking?: Row[];
 }
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -183,7 +267,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 export const myClasses = () => call<{ classes: ClassSummary[] }>('GET', '').then((r) => r.classes);
 export const newClass = (name: string) => call<{ id: string }>('POST', '', { name });
 export const getClass = (id: string) => call<ClassInfo>('GET', `/${id}`);
-export const saveClass = (id: string, change: { name?: string; members?: Member[] }) => call<{ ok: true; info: ClassInfo }>('PUT', `/${id}`, change);
+export const saveClass = (id: string, change: { name?: string; members?: Member[]; sessions?: Session[]; announce?: string; unannounce?: string }) => call<{ ok: true; info: ClassInfo }>('PUT', `/${id}`, change);
 export const deleteClass = (id: string) => call<{ ok: true }>('DELETE', `/${id}`);
 export const iceServers = (): Promise<RTCIceServer[]> =>
   call<{ iceServers: RTCIceServer[] }>('GET', '/ice')
@@ -191,6 +275,26 @@ export const iceServers = (): Promise<RTCIceServer[]> =>
     .catch(() => [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }]);
 
 export const classLink = (id: string) => `https://chesscastles.com/classroom/${id}`;
+
+/** Students may use the Classroom (an admin's switch; closed during the beta except for a demo). */
+export const setClassroomOpen = (open: boolean) => call<{ open: boolean }>('PUT', '/open', { open });
+export const classroomOpen = () => call<{ open: boolean }>('GET', '/open').then((r) => r.open);
+/** The class list with the switch, or `closed` when the Classroom is not open to this player. */
+export async function classroomAccess(): Promise<{ classes: ClassSummary[]; open: boolean; closed?: boolean }> {
+  const t = await token();
+  const res = await fetch(`${API}/class`, { headers: { Authorization: `Bearer ${t}` } });
+  const j = await res.json().catch(() => ({}));
+  if (res.status === 403 && j.closed) return { classes: [], open: false, closed: true };
+  if (!res.ok) throw new Error(j.error ?? 'Something went wrong. Try again.');
+  return j;
+}
+
+export const homeworkList = (id: string) => call<{ homework: HomeworkSummary[] }>('GET', `/${id}/homework`).then((r) => r.homework);
+export const setHomework = (id: string, hw: { kind: TaskKind; title: string; points: number; minus: number; tries: number; items: Item[]; due: number }) => call<{ id: string }>('POST', `/${id}/homework`, hw);
+export const getHomework = (id: string, hid: string) => call<HomeworkView>('GET', `/${id}/homework/${hid}`);
+export const homeworkTry = (id: string, hid: string, body: { item: number; uci?: string; cpu?: boolean }) => call<HomeworkReply>('POST', `/${id}/homework/${hid}/try`, body);
+export const homeworkClaim = (id: string, hid: string, body: { item: number; result: 'win' | 'draw' | 'resign' }) => call<HomeworkReply>('POST', `/${id}/homework/${hid}/claim`, body);
+export const deleteHomework = (id: string, hid: string) => call<{ ok: true }>('DELETE', `/${id}/homework/${hid}`);
 
 export type RoomStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
 /** Why the room closed for good: the class ended, I was taken off it, it was removed, or I may not come in. */

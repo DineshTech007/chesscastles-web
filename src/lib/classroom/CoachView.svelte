@@ -1,27 +1,37 @@
 <script lang="ts">
   /**
-   * The coach's classroom, made for a laptop: the big board everyone sees, with the tools on keys coaches already
-   * know (A arrows colour, S colour squares, P only pawns, B blindfold, C square names, H hide moves, E engine, F flip,
-   * N new board, Q ask a question, Esc clear, ← → the moves), the class beside it (people, chat, moves, engine,
-   * scores), and while a question runs, every student's board live.
+   * The coach's classroom, made for a laptop: the big board everyone sees (the engine's bar on its left), with the
+   * tools on keys coaches already know (A arrows colour, S colour squares, P only pawns, B blindfold, C square names,
+   * H hide moves, E engine, F flip, N new board, Q ask a question, G games, Esc clear, ← → the moves), the class beside
+   * it (people, chat, moves, the games database, leaderboards, settings), every student's board while a question runs,
+   * and the class's games.
    */
   import { onMount } from 'svelte';
   import type { Key } from '@lichess-org/chessground/types';
+  import type { NormalMove } from 'chessops/types';
   import { makeUci } from 'chessops/util';
   import { makeFen, parseFen } from 'chessops/fen';
   import ClassBoard from './ClassBoard.svelte';
   import AskDialog from './AskDialog.svelte';
   import StudentGrid from './StudentGrid.svelte';
+  import GamesView from './GamesView.svelte';
+  import GamesDialog from './GamesDialog.svelte';
   import People from './People.svelte';
   import Chat from './Chat.svelte';
   import EnginePanel from './EnginePanel.svelte';
+  import EvalBar from './EvalBar.svelte';
   import Leaderboard from './Leaderboard.svelte';
+  import VideoTile from './VideoTile.svelte';
   import MoveList from '$lib/components/MoveList.svelte';
   import BoardEditor from '$lib/components/BoardEditor.svelte';
+  import DbPanel from '$lib/components/DbPanel.svelte';
+  import { CloudBook } from '$lib/book/book';
+  import { gamesDb } from '$lib/games/gamesDb';
   import { destsOf, moveFromKeys } from '$lib/chess/position';
   import { promotionFor } from '$lib/chess/promotion';
   import { readPgn } from '$lib/chess/pgn';
-  import { classLink, START_FEN, type BoardView, type Item } from './api';
+  import type { EngineInfo } from '$lib/engine/stockfish';
+  import { classLink, saveClass, setHomework, START_FEN, type BoardView, type Item, type TaskKind } from './api';
   import { lineAt, toPgn, took } from './tasks';
   import type { Live } from './live.svelte';
 
@@ -29,13 +39,14 @@
 
   const b = $derived(live.board);
   const at = $derived(lineAt(b.root, b.moves, b.ply));
-  let view = $state<'board' | 'students'>('board');
-  let tab = $state<'people' | 'chat' | 'moves' | 'engine' | 'scores' | 'class'>('people');
+  let view = $state<'board' | 'students' | 'games'>('board');
+  let tab = $state<'people' | 'chat' | 'moves' | 'db' | 'lb' | 'class'>('people');
   let paint = $state(false);
   const COLORS = ['green', 'red', 'blue', 'yellow', 'orange'] as const;
   let brush = $state<(typeof COLORS)[number]>('green');
   let markColor = $state<string>('green');
   let asking = $state(false);
+  let gaming = $state(false);
   let editing = $state(false);
   let pasting = $state(false);
   let pasteText = $state('');
@@ -43,12 +54,15 @@
   let helpOpen = $state(false);
   let ending = $state(false);
   let engineOn = $state(true);
+  let engInfo = $state<EngineInfo | undefined>();
   let remount = $state(0);
   let copied = $state('');
+  let note = $state('');
+  const book = new CloudBook();
 
   // The coach's list of games and positions for the class (pasted PGN), kept on this device per class.
-  type Game = { title: string; root: string; moves: string[] };
-  let library = $state<Game[]>([]);
+  type LibGame = { title: string; root: string; moves: string[] };
+  let library = $state<LibGame[]>([]);
   const libKey = $derived(`cc.class.lib.${live.info.id}`);
   onMount(() => {
     try {
@@ -57,7 +71,7 @@
       library = [];
     }
   });
-  function saveLibrary(games: Game[]) {
+  function saveLibrary(games: LibGame[]) {
     library = games;
     try {
       localStorage.setItem(libKey, JSON.stringify(games.slice(0, 200)));
@@ -66,26 +80,35 @@
     }
   }
 
-  // A new question: the students' boards; when it is closed, the big board again.
+  // A new question: the students' boards; when it is closed, the big board again. New games: the games.
   let lastTask = '';
   $effect(() => {
     const id = live.task?.id ?? '';
     if (id && id !== lastTask) view = 'students';
-    if (!id && lastTask) view = 'board';
+    if (!id && lastTask && view === 'students') view = 'board';
     lastTask = id;
+  });
+  let lastGames = 0;
+  $effect(() => {
+    const n = live.games.length;
+    if (n > lastGames) view = 'games';
+    if (!n && view === 'games') view = 'board';
+    lastGames = n;
   });
 
   function set(change: Partial<BoardView>) {
     live.setBoard({ ...live.board, ...change });
   }
+  function playUci(uci: string) {
+    // The same move as the line's next: just step on (the rest of the line stays).
+    if (b.moves[b.ply] === uci) return set({ ply: b.ply + 1, shapes: [], marks: {} });
+    set({ moves: [...b.moves.slice(0, b.ply), uci], ply: b.ply + 1, shapes: [], marks: {} });
+  }
   async function onmove(orig: Key, dest: Key) {
     if (paint || !at.pos) return;
     const role = await promotionFor(at.pos, orig, dest);
     if (role === null) return void remount++;
-    const uci = makeUci(moveFromKeys(at.pos, orig, dest, role ?? undefined));
-    // The same move as the line's next: just step on (the rest of the line stays).
-    if (b.moves[b.ply] === uci) return set({ ply: b.ply + 1, shapes: [], marks: {} });
-    set({ moves: [...b.moves.slice(0, b.ply), uci], ply: b.ply + 1, shapes: [], marks: {} });
+    playUci(makeUci(moveFromKeys(at.pos, orig, dest, role ?? undefined)));
   }
   const go = (ply: number) => set({ ply: Math.max(0, Math.min(b.moves.length, ply)), shapes: [], marks: {} });
   function onselect(key: Key) {
@@ -103,11 +126,27 @@
     if (!g) return;
     set({ root: g.root, moves: g.moves, ply: 0, shapes: [], marks: {}, title: g.title, game: i });
   }
+  /** A master game from the database on the class board, at the position it was found from. */
+  async function openDbGame(id: number) {
+    const g = await gamesDb.game(id).catch(() => undefined);
+    if (!g) return;
+    const moves = g.moves.map((m) => makeUci(m));
+    const here = at.fen.split(' ')[0];
+    let ply = 0;
+    const pos = g.start.clone();
+    for (let i = 0; i < g.moves.length; i++) {
+      pos.play(g.moves[i]);
+      if (makeFen(pos.toSetup()).split(' ')[0] === here) {
+        ply = i + 1;
+        break;
+      }
+    }
+    set({ root: makeFen(g.start.toSetup()), moves, ply, shapes: [], marks: {}, title: `${g.white} – ${g.black}${g.year ? ` (${g.year})` : ''}`, game: -1 });
+  }
   function paste() {
     pasteError = '';
     const text = pasteText.trim();
     if (!text) return;
-    // A FEN: that position.
     if (/^[pnbrqkPNBRQK1-8/]+ [wb] /.test(text) && parseFen(text).isOk) {
       set({ root: text, moves: [], ply: 0, shapes: [], marks: {}, title: '', game: -1 });
       pasting = false;
@@ -116,7 +155,7 @@
     }
     const games = readPgn(text).filter((g) => g.plies.length || g.headers.get('FEN'));
     if (!games.length) return void (pasteError = 'No games or position found. Paste PGN or a FEN.');
-    const list: Game[] = games.map((g, i) => {
+    const list: LibGame[] = games.map((g, i) => {
       const w = g.headers.get('White'), bl = g.headers.get('Black');
       const title = w && bl && w !== '?' ? `${w} – ${bl}` : g.headers.get('Event') && g.headers.get('Event') !== '?' ? g.headers.get('Event')! : `Position ${i + 1}`;
       return { title, root: makeFen(g.start.toSetup()), moves: g.plies.map((p) => makeUci(p.move)) };
@@ -126,36 +165,47 @@
     pasting = false;
     pasteText = '';
   }
-  async function copyPgn() {
+  async function copyText(text: string, done: string) {
     try {
-      await navigator.clipboard.writeText(toPgn(b.root, b.moves, b.title || live.info.name));
-      copied = 'PGN copied';
+      await navigator.clipboard.writeText(text);
+      copied = done;
     } catch {
       copied = 'Could not copy';
     }
-    setTimeout(() => (copied = ''), 2000);
-  }
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(classLink(live.info.id));
-      copied = 'Class link copied';
-    } catch {
-      copied = classLink(live.info.id);
-    }
-    setTimeout(() => (copied = ''), 3000);
+    setTimeout(() => (copied = ''), 2500);
   }
 
   /** Bank puzzles this class had today, not given again. */
   let used = new Set<string>();
-  function ask(task: { items: Item[] }) {
+  async function ask(task: { kind: TaskKind; title: string; seconds: number; points: number; minus: number; tries: number; items: Item[]; homework?: number }) {
     for (const i of task.items) if (i.ref) used.add(i.ref);
-    live.ask(task);
     asking = false;
+    if (task.homework) {
+      try {
+        await setHomework(live.info.id, { kind: task.kind, title: task.title, points: task.points, minus: task.minus, tries: task.tries, items: task.items, due: task.homework });
+        live.notice = 'Homework set: students see it in their class.';
+      } catch (e) {
+        live.error = (e as Error).message;
+      }
+      return;
+    }
+    live.ask(task);
+  }
+  async function announce() {
+    const text = note.trim();
+    if (!text) return;
+    try {
+      await saveClass(live.info.id, { announce: text });
+      note = '';
+      live.notice = 'Announced to the class.';
+    } catch (e) {
+      live.error = (e as Error).message;
+    }
   }
 
   function onkey(e: KeyboardEvent) {
     const t = e.target as HTMLElement | null;
-    if (e.ctrlKey || e.metaKey || e.altKey || asking || editing || pasting || ending) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || asking || editing || pasting || ending || gaming) return;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
     const k = e.key;
     const act: Record<string, () => void> = {
@@ -173,10 +223,12 @@
       e: () => (engineOn = !engineOn),
       n: () => newBoard(),
       q: () => (asking = true),
+      g: () => (gaming = true),
       Escape: () => clearDrawings(),
       x: () => clearDrawings(),
       '?': () => (helpOpen = !helpOpen),
     };
+    if (view !== 'board' && k.startsWith('Arrow')) return;
     const f = act[k] ?? act[k.toLowerCase()];
     if (f) {
       e.preventDefault();
@@ -184,7 +236,7 @@
     }
   }
 
-  const live_ = $derived(live.session.started ? took(live.now - live.session.started) : '');
+  const liveFor = $derived(live.session.started ? took(live.now - live.session.started) : '');
   const hands = $derived(live.people.filter((p) => p.hand).length);
   const holderName = $derived(live.people.find((p) => p.uid === live.holder)?.name);
   const REACTIONS: [string, string][] = [
@@ -199,6 +251,9 @@
     if (document.fullscreenElement) void document.exitFullscreen();
     else void document.documentElement.requestFullscreen?.().catch(() => undefined);
   }
+  function playDb(m: NormalMove) {
+    if (at.pos?.isLegal(m)) playUci(makeUci(m));
+  }
 </script>
 
 <svelte:window onkeydown={onkey} />
@@ -207,7 +262,7 @@
   <header class="top">
     <div class="name">
       <b>{live.info.name}</b>
-      <span class="pill live">● LIVE {live_}</span>
+      <span class="pill live">● LIVE {liveFor}</span>
       {#if live.status !== 'open'}<span class="pill warn">Reconnecting…</span>{/if}
     </div>
     <div class="voice">
@@ -215,14 +270,16 @@
         <button class="btn" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>🎙️ {live.joiningVoice ? 'Joining…' : 'Start voice'}</button>
       {:else}
         <button class="btn" class:on={live.micOn} onclick={() => live.setMic(!live.micOn)} title="Your microphone">{live.micOn ? '🎙️ Mic on' : '🔇 Mic off'}</button>
+        <button class="btn" class:on={live.camOn === 'camera'} onclick={() => live.setCam(live.camOn === 'camera' ? '' : 'camera')} title="Your camera to every student">📷 {live.camOn === 'camera' ? 'Camera on' : 'Camera'}</button>
+        <button class="btn" class:on={live.camOn === 'screen'} onclick={() => live.setCam(live.camOn === 'screen' ? '' : 'screen')} title="Share your screen with every student">🖥 {live.camOn === 'screen' ? 'Sharing' : 'Screen'}</button>
         <button class="btn ghost" onclick={() => live.mute('*')} title="Mute every student">Mute all</button>
-        <label class="toggle" title="Students may switch their microphone on (else only those you let speak)"><input type="checkbox" checked={live.settings.talk} onchange={(e) => live.setSettings({ talk: e.currentTarget.checked })} /> Students can talk</label>
         <button class="btn ghost" onclick={() => live.leaveVoice()}>Leave voice</button>
       {/if}
     </div>
     <div class="acts">
       <button class="btn primary" onclick={() => (asking = true)} title="Q">❓ Ask a question</button>
-      {#if live.task}<button class="btn" onclick={() => (view = view === 'board' ? 'students' : 'board')}>{view === 'board' ? '👥 Students’ boards' : '♟ Big board'}</button>{/if}
+      <button class="btn" onclick={() => (gaming = true)} title="G">🎮 Games</button>
+      <button class="btn" onclick={() => (tab = 'lb')}>🏆 Leaderboard</button>
       <button class="btn ghost" onclick={fullscreen} title="Full screen">⛶</button>
       <button class="btn ghost" onclick={() => (ending = true)}>End class</button>
       <button class="btn ghost" onclick={onexit} title="Leave the room (the class stays open)">Exit</button>
@@ -232,8 +289,15 @@
 
   <div class="main">
     <section class="stage">
+      <div class="views" role="tablist" aria-label="View">
+        <button role="tab" class:on={view === 'board'} onclick={() => (view = 'board')}>♟ Class board</button>
+        {#if live.task}<button role="tab" class:on={view === 'students'} onclick={() => (view = 'students')}>👥 Students' boards{live.task.over ? '' : ' ●'}</button>{/if}
+        {#if live.games.length}<button role="tab" class:on={view === 'games'} onclick={() => (view = 'games')}>🎮 Games ({live.games.length})</button>{/if}
+      </div>
       {#if view === 'students' && live.task}
         <StudentGrid {live} onspotlight={() => (view = 'board')} />
+      {:else if view === 'games'}
+        <GamesView {live} onspotlight={() => (view = 'board')} onnew={() => (gaming = true)} />
       {:else}
         <div class="board-head">
           {#if library.length}
@@ -249,28 +313,31 @@
           <span class="title">{b.title || (holderName ? `${holderName} is moving` : '')}</span>
           {#if holderName}<button class="btn ghost" onclick={() => live.give('')}>Take the board back from {holderName}</button>{/if}
         </div>
-        <div class="boardbox" class:paint>
-          {#key remount}
-            <ClassBoard
-              fen={at.fen}
-              orientation={b.orient}
-              lastMove={at.last as Key[] | undefined}
-              check={at.check}
-              movable={paint || !at.pos ? undefined : at.turn}
-              dests={paint || !at.pos ? new Map() : destsOf(at.pos)}
-              shapes={b.shapes}
-              marks={b.marks}
-              squares={b.squares}
-              blind={b.blind}
-              pawns={b.pawns}
-              coach
-              {brush}
-              label="The class board"
-              {onmove}
-              ondraw={(shapes) => set({ shapes })}
-              {onselect}
-            />
-          {/key}
+        <div class="board-row">
+          {#if engineOn}<EvalBar info={engInfo} orientation={b.orient} />{/if}
+          <div class="boardbox" class:paint>
+            {#key remount}
+              <ClassBoard
+                fen={at.fen}
+                orientation={b.orient}
+                lastMove={at.last as Key[] | undefined}
+                check={at.check}
+                movable={paint || !at.pos ? undefined : at.turn}
+                dests={paint || !at.pos ? new Map() : destsOf(at.pos)}
+                shapes={b.shapes}
+                marks={b.marks}
+                squares={b.squares}
+                blind={b.blind}
+                pawns={b.pawns}
+                coach
+                {brush}
+                label="The class board"
+                {onmove}
+                ondraw={(shapes) => set({ shapes })}
+                {onselect}
+              />
+            {/key}
+          </div>
         </div>
         <div class="tools" role="toolbar" aria-label="Board tools">
           <button class="tool" onclick={() => go(0)} disabled={b.ply === 0} title="Start (Home)">⏮</button>
@@ -282,7 +349,7 @@
           <button class="tool" onclick={newBoard} title="New board (N)">⟲</button>
           <button class="tool" onclick={() => (editing = true)} title="Set up a position">✎</button>
           <button class="tool" onclick={() => (pasting = true)} title="Paste PGN or FEN">📋</button>
-          <button class="tool" onclick={copyPgn} title="Copy the moves as PGN">💾</button>
+          <button class="tool" onclick={() => copyText(toPgn(b.root, b.moves, b.title || live.info.name), 'PGN copied')} title="Copy the moves as PGN">💾</button>
           <span class="sep"></span>
           <span class="swatches" title="Arrow colour (A); hold Shift, Ctrl or Alt for others">
             {#each COLORS as c (c)}<button class="sw {c}" class:on={brush === c} onclick={() => (brush = c)} aria-label="{c} arrows"></button>{/each}
@@ -303,7 +370,7 @@
           <button class="tool" onclick={() => (helpOpen = !helpOpen)} title="Keys (?)">?</button>
           {#if copied}<span class="copied">{copied}</span>{/if}
         </div>
-        {#if engineOn}<div class="engine"><EnginePanel fen={at.fen} /></div>{/if}
+        {#if engineOn}<div class="engine"><EnginePanel fen={at.fen} bind:info={engInfo} /></div>{/if}
       {/if}
     </section>
 
@@ -312,7 +379,8 @@
         <button role="tab" class:on={tab === 'people'} onclick={() => (tab = 'people')}>People{hands ? ` ✋${hands}` : ''}</button>
         <button role="tab" class:on={tab === 'chat'} onclick={() => (tab = 'chat')}>Chat{live.unread ? ` (${live.unread})` : ''}</button>
         <button role="tab" class:on={tab === 'moves'} onclick={() => (tab = 'moves')}>Moves</button>
-        <button role="tab" class:on={tab === 'scores'} onclick={() => (tab = 'scores')}>Scores</button>
+        <button role="tab" class:on={tab === 'db'} onclick={() => (tab = 'db')}>Database</button>
+        <button role="tab" class:on={tab === 'lb'} onclick={() => (tab = 'lb')}>Leaderboard</button>
         <button role="tab" class:on={tab === 'class'} onclick={() => (tab = 'class')}>Class</button>
       </div>
       <div class="panel">
@@ -323,7 +391,14 @@
         {:else if tab === 'moves'}
           {#if at.sans.length}<MoveList sans={at.sans} current={b.ply} onselect={go} />{:else}<p class="muted">No moves yet. Move on the board, or paste a game.</p>{/if}
           <p class="muted small">{live.settings.moves ? 'Students see the moves.' : 'The moves are hidden from students (H).'}</p>
-        {:else if tab === 'scores'}
+        {:else if tab === 'db'}
+          {#if at.pos}
+            <DbPanel pos={at.pos} {book} onplay={playDb} onopen={openDbGame} />
+          {:else}
+            <p class="muted">The database needs a position that can be played.</p>
+          {/if}
+          <label class="toggle"><input type="checkbox" checked={!!live.settings.db} onchange={(e) => live.setSettings({ db: e.currentTarget.checked })} /> Students see the database too</label>
+        {:else if tab === 'lb'}
           {#if live.task}
             <h3>This question</h3>
             <Leaderboard rows={live.lb} total={live.task.items.length} />
@@ -333,15 +408,24 @@
           {#each live.session.tasks as t, i (i)}
             <p class="muted small">{i + 1}. {t.title}: {t.top.map((r) => `${r.name} ${r.points}`).join(', ') || 'no answers'}</p>
           {/each}
+          <h3>All classes</h3>
+          <Leaderboard rows={live.allTime} empty="The class's leaderboard over every class shows here." />
         {:else}
           <div class="settings">
-            <button class="btn" onclick={copyLink}>🔗 Copy the class link</button>
-            <span class="muted small">Students open it to join (signed in).</span>
-            <label class="toggle"><input type="checkbox" checked={live.settings.lb} onchange={(e) => live.setSettings({ lb: e.currentTarget.checked })} /> Students see the leaderboard during a question</label>
-            <label class="toggle"><input type="checkbox" checked={live.settings.moves} onchange={(e) => live.setSettings({ moves: e.currentTarget.checked })} /> Students see the moves</label>
-            <label class="toggle"><input type="checkbox" checked={live.settings.chat} onchange={(e) => live.setSettings({ chat: e.currentTarget.checked })} /> Students see each other's messages</label>
-            <label class="toggle"><input type="checkbox" checked={live.settings.engine} onchange={(e) => live.setSettings({ engine: e.currentTarget.checked })} /> Engine on the students' boards</label>
-            <label class="toggle"><input type="checkbox" checked={live.settings.talk} onchange={(e) => live.setSettings({ talk: e.currentTarget.checked })} /> Students can switch their microphone on</label>
+            <button class="btn" onclick={() => copyText(classLink(live.info.id), 'Class link copied')}>🔗 Copy the class link</button>
+            <h3>Announce</h3>
+            <div class="announce">
+              <input bind:value={note} maxlength="400" placeholder="e.g. Tournament on Sunday at 3 pm" aria-label="Announcement" onkeydown={(e) => e.key === 'Enter' && announce()} />
+              <button class="btn primary" onclick={announce} disabled={!note.trim()}>📢</button>
+            </div>
+            {#each live.info.notes ?? [] as n (n.id)}<p class="small">📢 {n.text}</p>{/each}
+            <h3>Students</h3>
+            <label class="toggle"><input type="checkbox" checked={live.settings.lb} onchange={(e) => live.setSettings({ lb: e.currentTarget.checked })} /> See the leaderboard during a question</label>
+            <label class="toggle"><input type="checkbox" checked={live.settings.moves} onchange={(e) => live.setSettings({ moves: e.currentTarget.checked })} /> See the moves</label>
+            <label class="toggle"><input type="checkbox" checked={live.settings.chat} onchange={(e) => live.setSettings({ chat: e.currentTarget.checked })} /> See each other's messages</label>
+            <label class="toggle"><input type="checkbox" checked={live.settings.engine} onchange={(e) => live.setSettings({ engine: e.currentTarget.checked })} /> Have the engine</label>
+            <label class="toggle"><input type="checkbox" checked={!!live.settings.db} onchange={(e) => live.setSettings({ db: e.currentTarget.checked })} /> Have the games database</label>
+            <label class="toggle"><input type="checkbox" checked={live.settings.talk} onchange={(e) => live.setSettings({ talk: e.currentTarget.checked })} /> Can switch their microphone on</label>
             <h3>Cheer the class</h3>
             <div class="reacts">
               {#each REACTIONS as [e, text] (e)}<button class="btn" onclick={() => live.react(e, text)} title={text}>{e}</button>{/each}
@@ -353,14 +437,20 @@
   </div>
 </div>
 
+{#if live.localVideo}<VideoTile stream={live.localVideo} label={live.camOn === 'screen' ? 'Your screen (students see it)' : 'You (students see you)'} mirror={live.camOn === 'camera'} />{/if}
+
 {#if asking}
   <AskDialog fen={at.fen} {used} onask={ask} onclose={() => (asking = false)} />
+{/if}
+{#if gaming}
+  <GamesDialog {live} fen={at.fen} onclose={() => (gaming = false)} />
 {/if}
 {#if editing}
   <div class="scrim" role="presentation" onclick={() => (editing = false)}></div>
   <div class="dialog wide" role="dialog" aria-modal="true" aria-label="Set up a position">
     <BoardEditor
       fen={at.fen}
+      applyLabel="Put on the class board"
       onapply={(fen) => {
         set({ root: fen, moves: [], ply: 0, shapes: [], marks: {}, title: '', game: -1 });
         editing = false;
@@ -391,7 +481,7 @@
       <li>Right-drag: arrows and circles; <kbd>A</kbd> changes the colour (Shift, Ctrl, Alt give others)</li>
       <li><kbd>S</kbd> colour squares (then click squares)</li>
       <li><kbd>Esc</kbd> or <kbd>X</kbd> clear arrows and squares</li>
-      <li><kbd>F</kbd> flip · <kbd>N</kbd> new board · <kbd>Q</kbd> ask a question</li>
+      <li><kbd>F</kbd> flip · <kbd>N</kbd> new board · <kbd>Q</kbd> ask a question · <kbd>G</kbd> games</li>
       <li><kbd>C</kbd> square names · <kbd>P</kbd> only pawns · <kbd>B</kbd> blindfold · <kbd>H</kbd> hide moves · <kbd>E</kbd> engine</li>
     </ul>
     <button class="btn" onclick={() => (helpOpen = false)}>Close</button>
@@ -461,6 +551,7 @@
     gap: 6px;
     font-size: 14px;
     cursor: pointer;
+    margin-top: 8px;
   }
   .note {
     margin: 4px 12px 0;
@@ -487,17 +578,38 @@
     min-width: 0;
     min-height: 0;
     overflow: auto;
-    padding: 10px 14px;
+    padding: 8px 14px 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
   }
-  .stage > :global(.grid-view) {
+  .stage > :global(.grid-view),
+  .stage > :global(.games) {
     width: 100%;
   }
+  .views {
+    align-self: stretch;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .views button {
+    border: 1px solid var(--border);
+    background: var(--raised);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font: 700 13px var(--font-body);
+    cursor: pointer;
+  }
+  .views button.on {
+    color: var(--on-action);
+    background: var(--action);
+    border-color: var(--action);
+  }
   .board-head {
-    width: min(100%, calc(100vh - 220px));
+    width: min(100%, calc(100vh - 250px));
     display: flex;
     align-items: center;
     gap: 8px;
@@ -521,15 +633,21 @@
     font-weight: 700;
     flex: 1;
   }
-  .boardbox {
-    width: min(100%, calc(100vh - 220px));
+  .board-row {
+    display: flex;
+    gap: 8px;
+    width: min(100%, calc(100vh - 250px));
     min-width: 280px;
+  }
+  .boardbox {
+    flex: 1;
+    min-width: 0;
   }
   .boardbox.paint {
     cursor: crosshair;
   }
   .tools {
-    width: min(100%, calc(100vh - 220px));
+    width: min(100%, calc(100vh - 250px));
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
@@ -605,7 +723,7 @@
     font-weight: 600;
   }
   .engine {
-    width: min(100%, calc(100vh - 220px));
+    width: min(100%, calc(100vh - 250px));
   }
   .side {
     border-left: 1px solid var(--border);
@@ -625,7 +743,7 @@
     border-bottom: 3px solid transparent;
     color: var(--muted);
     padding: 10px 6px;
-    font: 700 14px var(--font-body);
+    font: 700 13px var(--font-body);
     cursor: pointer;
     white-space: nowrap;
   }
@@ -648,11 +766,26 @@
   }
   .small {
     font-size: 13px;
+    margin: 2px 0;
   }
   .settings {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
+  }
+  .announce {
+    display: flex;
+    gap: 6px;
+  }
+  .announce input {
+    flex: 1;
+    min-width: 0;
+    background: var(--raised);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font: 500 14px var(--font-body);
   }
   .reacts {
     display: flex;

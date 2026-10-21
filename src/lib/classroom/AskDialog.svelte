@@ -21,15 +21,30 @@
     used,
     onask,
     onclose,
+    homeworkOnly = false,
   }: {
     fen: string;
     /** Bank puzzles this class has had (not given again). */
     used: Set<string>;
-    onask: (task: { kind: TaskKind; title: string; seconds: number; points: number; minus: number; tries: number; items: Item[] }) => void;
+    /** `homework`: the due time, when it is set as homework instead of asked now. */
+    onask: (task: { kind: TaskKind; title: string; seconds: number; points: number; minus: number; tries: number; items: Item[]; homework?: number }) => void;
     onclose: () => void;
+    /** Outside a live class: only homework (and no question from the board). */
+    homeworkOnly?: boolean;
   } = $props();
+  // svelte-ignore state_referenced_locally
+  let when = $state<'now' | 'homework'>(homeworkOnly ? 'homework' : 'now');
+  /** Due by default in a week, at 8 pm. */
+  const inAWeek = () => {
+    const d = new Date(Date.now() + 7 * 86_400_000);
+    d.setHours(20, 0, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  let due = $state(inAWeek());
 
-  let mode = $state<TaskKind>('best');
+  // svelte-ignore state_referenced_locally
+  let mode = $state<TaskKind>(homeworkOnly ? 'set' : 'best');
   let title = $state('');
   let seconds = $state(120);
   let points = $state(5);
@@ -52,6 +67,10 @@
   let count = $state(5);
   let busy = $state(false);
   let error = $state('');
+  // A puzzle PDF read on this computer (PdfImport, loaded only when used).
+  let pdf = $state(false);
+  let importing = $state(false);
+  let pdfItems = $state<Item[]>([]);
 
   const TIMES: [number, string][] = [
     [30, '30 s'],
@@ -74,7 +93,7 @@
   const side = $derived(sideOf(fen));
 
   onMount(() => {
-    if (!legal) return;
+    if (!legal || homeworkOnly) return;
     thinking = true;
     void engine.evaluate(fen, 18, 1, 4000).then((info) => {
       thinking = false;
@@ -108,12 +127,15 @@
   }
 
   const answer = $derived(source === 'engine' ? pv.slice(0, plies) : mine);
-  const defaultTitle = $derived(mode === 'play' ? (goal === 'draw' ? 'Hold the draw against the computer' : goal === 'mate' ? 'Checkmate the computer' : 'Win this position against the computer') : mode === 'set' ? `${count} puzzles: ${THEMES.find((t) => t.id === theme)?.label ?? ''}` : 'What is the best move?');
+  const defaultTitle = $derived(pdf ? `${pdfItems.length || ''} puzzles from the PDF`.trim() : mode === 'play' ? (goal === 'draw' ? 'Hold the draw against the computer' : goal === 'mate' ? 'Checkmate the computer' : 'Win this position against the computer') : mode === 'set' ? `${count} puzzles: ${THEMES.find((t) => t.id === theme)?.label ?? ''}` : 'What is the best move?');
 
   async function ask() {
     error = '';
     let items: Item[] = [];
-    if (mode === 'set') {
+    if (pdf) {
+      if (!pdfItems.length) return void (error = 'Choose a PDF first.');
+      items = pdfItems;
+    } else if (mode === 'set') {
       busy = true;
       try {
         items = await puzzleSet(theme, Math.min(from, to), Math.max(from, to), count, used);
@@ -131,11 +153,28 @@
       if (mode === 'best' && !answer.length) return void (error = source === 'engine' ? 'The engine is still thinking. A moment…' : 'Play the answer on the small board first.');
       items = [{ fen, line: mode === 'best' ? answer : [], goal: mode === 'play' ? goal : '', elo, title: '', ref: '', rating: 0 }];
     }
-    onask({ kind: mode, title: title.trim() || defaultTitle, seconds, points, minus, tries, items });
+    const dueAt = new Date(due).getTime();
+    if (when === 'homework' && !(dueAt > Date.now())) return void (error = 'Pick a due date in the future.');
+    onask({ kind: mode, title: title.trim() || defaultTitle, seconds: when === 'homework' ? 0 : seconds, points, minus, tries, items, homework: when === 'homework' ? dueAt : undefined });
   }
 </script>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && onclose()} />
+<svelte:window onkeydown={(e) => e.key === 'Escape' && !importing && onclose()} />
+{#if importing}
+  {#await import('./PdfImport.svelte') then m}
+    <m.default
+      onitems={(items: Item[]) => {
+        pdfItems = items;
+        importing = false;
+        if (!items.length) pdf = false;
+      }}
+      onclose={() => {
+        importing = false;
+        if (!pdfItems.length) pdf = false;
+      }}
+    />
+  {/await}
+{/if}
 <div class="scrim" role="presentation" onclick={onclose}></div>
 <div class="dialog" role="dialog" aria-modal="true" aria-label="Ask a question">
   <header>
@@ -143,13 +182,16 @@
     <button class="btn ghost" onclick={onclose} aria-label="Close">✕</button>
   </header>
   <div class="chips" role="group" aria-label="Kind">
-    <button class="chip" class:on={mode === 'best'} onclick={() => (mode = 'best')}>Best move</button>
-    <button class="chip" class:on={mode === 'play'} onclick={() => (mode = 'play')}>Play it out vs computer</button>
-    <button class="chip" class:on={mode === 'set'} onclick={() => (mode = 'set')}>Puzzle set</button>
+    {#if !homeworkOnly}
+      <button class="chip" class:on={mode === 'best'} onclick={() => ((mode = 'best'), (pdf = false))}>Best move</button>
+      <button class="chip" class:on={mode === 'play'} onclick={() => ((mode = 'play'), (pdf = false))}>Play it out vs computer</button>
+    {/if}
+    <button class="chip" class:on={mode === 'set' && !pdf} onclick={() => ((mode = 'set'), (pdf = false))}>Puzzle set</button>
+    <button class="chip" class:on={pdf} onclick={() => ((mode = 'set'), (pdf = true), !pdfItems.length && (importing = true))}>📄 From a PDF</button>
   </div>
 
   <div class="body">
-    {#if mode !== 'set'}
+    {#if mode !== 'set' && !pdf}
       <div class="left">
         {#if mode === 'best' && source === 'mine' && rec}
           <Board fen={rec.fen} orientation={side} turnColor={rec.pos.turn} movable={rec.pos.turn} dests={destsOf(rec.pos)} lastMove={rec.last} onmove={recMove} label="Play the answer" />
@@ -204,6 +246,17 @@
             {#each [[800, 'Beginner (800)'], [1200, 'Club (1200)'], [1500, 'Strong club (1500)'], [1800, 'Expert (1800)'], [2200, 'Master (2200)'], [2800, 'Full strength']] as [v, l] (v)}<option value={v}>{l}</option>{/each}
           </select>
         </label>
+      {:else if pdf}
+        <div class="field">
+          <span>From your PDF</span>
+          {#if pdfItems.length}
+            <b class="line">{pdfItems.length} {pdfItems.length === 1 ? 'position' : 'positions'} ready, answers found by the engine</b>
+            <div class="chips"><button class="btn" onclick={() => (importing = true)}>Choose another PDF</button></div>
+          {:else}
+            <div class="chips"><button class="btn primary" onclick={() => (importing = true)}>📄 Choose a puzzle PDF</button></div>
+          {/if}
+        </div>
+        <p class="muted small">The PDF is read on this computer (never uploaded). You check the pieces once, fix any diagram, and the engine finds each answer.</p>
       {:else}
         <label class="field inline">
           <span>Theme</span>
@@ -226,12 +279,25 @@
 
       <hr />
       <label class="field inline"><span>Title</span><input type="text" maxlength="80" placeholder={defaultTitle} bind:value={title} /></label>
+      {#if !homeworkOnly}
+        <div class="field" role="group" aria-label="When">
+          <span>When</span>
+          <div class="chips">
+            <button class="chip" class:on={when === 'now'} onclick={() => (when = 'now')}>Now, in class</button>
+            <button class="chip" class:on={when === 'homework'} onclick={() => (when = 'homework')}>Homework</button>
+          </div>
+        </div>
+      {/if}
+      {#if when === 'homework'}
+        <label class="field inline"><span>Due</span><input type="datetime-local" bind:value={due} /></label>
+      {:else}
       <div class="field" role="group" aria-label="Time">
         <span>Time {mode === 'set' ? 'for the whole set' : ''}</span>
         <div class="chips">
           {#each TIMES as [v, l] (v)}<button class="chip" class:on={seconds === v} onclick={() => (seconds = v)}>{l}</button>{/each}
         </div>
       </div>
+      {/if}
       <div class="three">
         <label class="field inline"><span>Points</span><input type="number" min="0" max="100" bind:value={points} /></label>
         <label class="field inline"><span>Minus a miss</span><input type="number" min="0" max="100" bind:value={minus} /></label>
@@ -240,7 +306,7 @@
       {#if error}<p class="err">{error}</p>{/if}
       <div class="go">
         <button class="btn ghost" onclick={onclose}>Cancel</button>
-        <button class="btn primary big" onclick={ask} disabled={busy || (mode !== 'set' && !legal)}>{busy ? 'Loading…' : 'Ask the class'}</button>
+        <button class="btn primary big" onclick={ask} disabled={busy || (mode !== 'set' && !legal)}>{busy ? 'Loading…' : when === 'homework' ? 'Set the homework' : 'Ask the class'}</button>
       </div>
     </div>
   </div>

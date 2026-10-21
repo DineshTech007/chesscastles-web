@@ -15,6 +15,7 @@
   import { t, type Key } from '$lib/i18n';
   import { adminMe } from '$lib/admin';
   import { installOpen, installWay } from '$lib/install';
+  import { checkClassroom, classroomShown } from '$lib/classroom/visible';
 
   /** Admins see a link to the admin page (asked once per sign-in). */
   let isAdmin = $state(false);
@@ -27,6 +28,9 @@
   });
 
   let { collapsed = false }: { collapsed?: boolean } = $props();
+  // Classroom: admins, and students once an admin opens it (src/lib/classroom/visible.ts).
+  $effect(() => checkClassroom($session.status === 'in' ? $session.uid : undefined));
+  const classroom = { href: '/classroom', label: 'Classroom', icon: 'coach' as IconName, match: ['/classroom'] };
 
   type Item = { href: string; label: string; icon: IconName; match: string[]; not?: string[]; badge?: string; key?: Key };
   /** Home, then the five features only Chess Castles has (in gold), then the everyday pages (src/lib/nav.ts). */
@@ -65,6 +69,7 @@
         </a>
       {/each}
     </div>
+    {#if $classroomShown}{@render link(classroom)}{/if}
     {#each groups as group, gi (gi)}
       {#if gi}<hr class="sep" />{/if}
       {#each group as item (item.href)}

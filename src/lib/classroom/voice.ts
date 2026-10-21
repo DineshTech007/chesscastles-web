@@ -1,8 +1,9 @@
 /**
- * Classroom voice, browser to browser (WebRTC, no paid service): everyone in the call is connected to everyone else,
- * audio only (a class talks; cameras were off in every class the owner showed us). Fine for a class of up to about
- * fifteen. The live room only passes the connection messages along. Without a microphone (refused or none) one can
- * still listen.
+ * Classroom voice and the coach's video, browser to browser (WebRTC, no paid service): everyone in the call is
+ * connected to everyone else, audio both ways; the coach's camera (or shared screen) goes to each student. Fine for
+ * a class of up to about fifteen; for bigger classes Cloudflare's video servers (1,000 GB a month free) would carry
+ * it instead. The live room only passes the connection messages along. Without a microphone one can still listen
+ * and watch.
  */
 type Signal = { sdp?: RTCSessionDescriptionInit; ice?: RTCIceCandidateInit };
 
@@ -14,22 +15,37 @@ interface Peer {
   meter?: () => number;
 }
 
+/** About 600 kbit/s for a camera, 1.2 Mbit/s for a screen (text must stay sharp). */
+const CAM_BITRATE = 600_000;
+const SCREEN_BITRATE = 1_200_000;
+
 export class Voice {
   private peers = new Map<string, Peer>();
   private local?: MediaStream;
   private ctx?: AudioContext;
   private loop?: ReturnType<typeof setInterval>;
   private localMeter?: () => number;
+  /** The coach's video going out (camera or screen), if any. */
+  private video?: MediaStreamTrack;
+  private screen = false;
   /** Why there is no microphone ('' when there is one). */
   micError = '';
 
   constructor(
     private me: string,
+    /** The coach's id: video flows between the coach and each student. */
+    private coach: string,
     private signal: (to: string, d: Signal) => void,
     private ice: RTCIceServer[],
     /** How loud each person is now (0 to 1), a few times a second: who is speaking. */
     private onlevels?: (levels: Record<string, number>) => void,
+    /** The coach's video arriving (or gone). */
+    private onvideo?: (uid: string, stream: MediaStream | undefined) => void,
   ) {}
+
+  private get isCoach() {
+    return this.me === this.coach;
+  }
 
   /** Joins the call: asks for the microphone (muted to start with). */
   async start(): Promise<boolean> {
@@ -66,6 +82,29 @@ export class Voice {
     for (const t of this.local?.getAudioTracks() ?? []) t.enabled = on;
   }
 
+  /** The coach's video: a camera or a screen track, or none. Goes to every student at once (no reconnecting). */
+  async setVideo(track: MediaStreamTrack | undefined, screen = false) {
+    this.video = track;
+    this.screen = screen;
+    for (const p of this.peers.values()) await this.sendVideo(p.pc);
+  }
+  private videoSender(pc: RTCPeerConnection): RTCRtpSender | undefined {
+    return pc.getTransceivers().find((t) => t.receiver.track?.kind === 'video')?.sender;
+  }
+  private async sendVideo(pc: RTCPeerConnection) {
+    const sender = this.videoSender(pc);
+    if (!sender) return;
+    await sender.replaceTrack(this.video ?? null).catch(() => undefined);
+    try {
+      const params = sender.getParameters();
+      params.encodings = params.encodings?.length ? params.encodings : [{}];
+      params.encodings[0].maxBitrate = this.screen ? SCREEN_BITRATE : CAM_BITRATE;
+      await sender.setParameters(params);
+    } catch {
+      /* the browser picks */
+    }
+  }
+
   /** Everyone in the call now: connect to the new ones (the one with the smaller id calls), drop those who left. */
   sync(uids: string[]) {
     const want = new Set(uids.filter((u) => u !== this.me));
@@ -82,7 +121,13 @@ export class Voice {
     audio.autoplay = true;
     const p: Peer = { pc, audio, pending: [] };
     pc.ontrack = (e) => {
-      const stream = e.streams[0] ?? new MediaStream([e.track]);
+      if (e.track.kind === 'video') {
+        const stream = new MediaStream([e.track]);
+        this.onvideo?.(uid, stream);
+        e.track.onended = () => this.onvideo?.(uid, undefined);
+        return;
+      }
+      const stream = new MediaStream([e.track]);
       audio.srcObject = stream;
       void audio.play().catch(() => undefined);
       if (this.ctx) p.meter = this.meter(stream);
@@ -103,6 +148,9 @@ export class Voice {
 
   private async call(uid: string) {
     const { pc } = this.peer(uid);
+    // The coach's video channel, made at the start so the camera can come and go without a new connection.
+    if (this.isCoach || uid === this.coach) pc.addTransceiver('video', { direction: this.isCoach ? 'sendonly' : 'recvonly' });
+    if (this.isCoach) await this.sendVideo(pc);
     try {
       await pc.setLocalDescription(await pc.createOffer());
       this.signal(uid, { sdp: pc.localDescription!.toJSON() });
@@ -117,6 +165,13 @@ export class Voice {
       if (d.sdp?.type === 'offer') {
         const p = this.peer(from);
         await p.pc.setRemoteDescription(d.sdp);
+        // A student calling the coach offers to receive video: the coach answers by sending.
+        if (this.isCoach)
+          for (const t of p.pc.getTransceivers())
+            if (t.receiver.track?.kind === 'video') {
+              t.direction = 'sendonly';
+              await this.sendVideo(p.pc);
+            }
         await p.pc.setLocalDescription(await p.pc.createAnswer());
         this.signal(from, { sdp: p.pc.localDescription!.toJSON() });
         for (const c of p.pending.splice(0)) await p.pc.addIceCandidate(c).catch(() => undefined);
@@ -167,11 +222,14 @@ export class Voice {
     p.pc.onconnectionstatechange = null;
     p.pc.close();
     p.audio.srcObject = null;
+    if (uid === this.coach) this.onvideo?.(uid, undefined);
   }
 
   stop() {
     for (const uid of [...this.peers.keys()]) this.drop(uid);
     for (const t of this.local?.getTracks() ?? []) t.stop();
+    this.video?.stop();
+    this.video = undefined;
     this.local = undefined;
     clearInterval(this.loop);
     void this.ctx?.close().catch(() => undefined);

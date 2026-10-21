@@ -551,6 +551,15 @@ async function run(name, options) {
     }
   });
 
+  // 4k. Classroom: the coach's camera and everyone's microphone are allowed on our own pages (owner, 2026-10-22: the
+  // headers blocked the camera); local servers without the live headers pass.
+  await check(name, page, 'classroom: camera and microphone allowed', async () => {
+    const res = await page.request.get(BASE + '/classroom');
+    const policy = res.headers()['permissions-policy'] ?? '';
+    expect(!policy || (/camera=\(self\)/.test(policy) && /microphone=\(self\)/.test(policy)), `Permissions-Policy blocks the classroom: ${policy}`);
+    return policy ? 'camera=(self), microphone=(self)' : 'no policy header here';
+  });
+
   // 5. A game against the computer: play e4 by tapping, the computer answers.
   await check(name, page, 'play the computer: e4 and an answer', async () => {
     await open(page, '/play/computer?l=1350&c=white');

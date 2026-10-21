@@ -8,7 +8,12 @@
   import '@lichess-org/chessground/assets/chessground.base.css';
   import '@lichess-org/chessground/assets/chessground.cburnett.css';
 
-  let { fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', onapply, oncancel }: { fen?: string; onapply: (fen: string) => void; oncancel: () => void } = $props();
+  let {
+    fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    onapply,
+    oncancel,
+    applyLabel = 'Analyse this position',
+  }: { fen?: string; onapply: (fen: string) => void; oncancel: () => void; /** The confirm button (a class board: "Put on the class board"). */ applyLabel?: string } = $props();
 
   const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
   const ROLE: Record<string, string> = { k: 'king', q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' };
@@ -92,7 +97,7 @@
     <code class="fen">{full}</code>
     {#if problem}<p class="err">{problem}</p>{/if}
     <div class="row">
-      <button class="btn primary" disabled={!!problem} onclick={() => onapply(full)}>Analyse this position</button>
+      <button class="btn primary" disabled={!!problem} onclick={() => onapply(full)}>{applyLabel}</button>
       <button class="btn ghost" onclick={oncancel}>Cancel</button>
     </div>
   </div>
