@@ -8,7 +8,7 @@
   import TitleBadge from './TitleBadge.svelte';
   import { KFIDE_SPEEDS, SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
   import { call, kfideLeaders, type KfideLeader } from '$lib/social';
-  import { leaderboard } from '$lib/leaderboard';
+  import { puzzleLeaders } from '$lib/leaderboard';
   import { fedName } from '$lib/fideFeds';
   import Icon from './Icon.svelte';
 
@@ -26,8 +26,13 @@
     me: boolean;
   }
 
-  let { me, rowsFor }: { me?: string; /** Where the rows come from (by default the leaderboards). */ rowsFor?: (b: BoardId) => Promise<Row[]> } = $props();
-  let board = $state<BoardId>('main');
+  let {
+    me,
+    rowsFor,
+    start = 'main',
+  }: { me?: string; /** Where the rows come from (by default the leaderboards). */ rowsFor?: (b: BoardId) => Promise<Row[]>; /** The board shown first. */ start?: BoardId } = $props();
+  // svelte-ignore state_referenced_locally
+  let board = $state<BoardId>(start);
   let rows = $state<Row[] | undefined>();
   let error = $state('');
 
@@ -46,7 +51,7 @@
     const load: Promise<Row[]> = rowsFor
       ? rowsFor(b)
       : b === 'puzzle'
-        ? Promise.all([leaderboard('puzzle', 50), memberInfo()]).then(([list, m]) => list.map((p) => ({ uid: p.uid, name: p.name, title: m.get(p.uid)?.title, country: m.get(p.uid)?.country ?? '', rating: p.ratings.puzzle, count: p.puzzles.solved, me: p.uid === me })))
+        ? Promise.all([puzzleLeaders(50), memberInfo()]).then(([list, m]) => list.map((p) => ({ uid: p.uid, name: p.name, title: m.get(p.uid)?.title, country: m.get(p.uid)?.country ?? '', rating: p.ratings.puzzle, count: p.puzzles.solved, me: p.uid === me })))
         : kfideLeaders(b).then((list) => list.map((p) => ({ uid: p.uid, name: p.name, title: p.title, country: p.country, rating: p.rating, count: p.games, me: !!p.me })));
     load.then(
       (r) => {

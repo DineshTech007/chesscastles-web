@@ -111,13 +111,15 @@
     setTimeout(() => line[step] && play(line[step]), 450);
   }
 
-  /** Plays the rest of the solution on the board. */
+  /** Plays the rest of the solution on the board (not after the board is gone: a page may move on at once). */
+  let revealing: ReturnType<typeof setInterval> | undefined;
   function reveal() {
-    const timer = setInterval(() => {
-      if (step >= line.length) return clearInterval(timer);
+    revealing = setInterval(() => {
+      if (step >= line.length) return clearInterval(revealing);
       play(line[step]);
     }, 800);
   }
+  $effect(() => () => clearInterval(revealing));
 
   const view = $derived.by(() => {
     void v;

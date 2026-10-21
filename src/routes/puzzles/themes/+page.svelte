@@ -2,7 +2,8 @@
   /**
    * Themed puzzles at the player's level (forks, pins, endgames…), from the
    * Lichess puzzle database (CC0). Each solved one counts for Guru's plan
-   * ("Theme puzzle: <theme>").
+   * ("Theme puzzle: <theme>"). The difficulty, the result card, the stars, the
+   * badges and the sounds are the rated puzzles' (the same rating and ladder).
    */
   import { page } from '$app/state';
   import Icon from '$lib/components/Icon.svelte';
@@ -11,8 +12,13 @@
   import { THEME_NAMES } from '$lib/insights/plan';
   import LimitReached from '$lib/components/LimitReached.svelte';
   import { PLAN_INFO, PLANS_ON, RANK, currentPlan, planSettings, requireGate, useFeature } from '$lib/plans';
-  import { puzzleRating, ratePuzzle } from '$lib/puzzles/rating';
-  import { markSeen, seenPuzzles } from '$lib/puzzles/bank';
+  import { PLACEMENT, puzzlePlaced, puzzleProvisional, puzzleRating, puzzleStats, ratePuzzle } from '$lib/puzzles/rating';
+  import { ladderLevel, markSeen, moveLadder, seenPuzzles } from '$lib/puzzles/bank';
+  import PuzzleResult from '$lib/puzzles/PuzzleResult.svelte';
+  import Celebrations from '$lib/puzzles/Celebrations.svelte';
+  import { finishPuzzle } from '$lib/puzzles/finish';
+  import { puzzleSounds } from '$lib/puzzles/puzzleSounds';
+  import { timerFor } from '$lib/puzzles/rewards';
 
   type P = [string, string, string, number];
   const THEMES = ['fork', 'pin', 'skewer', 'hangingPiece', 'discoveredAttack', 'mateIn1', 'mateIn2', 'backRankMate', 'sacrifice', 'defensiveMove', 'opening', 'middlegame', 'endgame', 'rookEndgame', 'pawnEndgame', 'crushing', 'short'];
@@ -32,6 +38,16 @@
   let solvedNow = $state(0);
   let result = $state<boolean | undefined>();
   let error = $state('');
+  // This puzzle: the rating and rated puzzles before it, its difficulty target, when it started, its first result.
+  let before = $state(0);
+  let count = 0;
+  let placing = $state(false);
+  let level = 0;
+  let startedAt = 0;
+  let firstClean = false;
+  let rated: Promise<void> = Promise.resolve();
+  let stars = $state(0);
+  let celebrations: Celebrations;
 
   $effect(() => {
     const t = theme;
@@ -48,10 +64,12 @@
   });
 
   async function next() {
-    // Never one seen before (rated or themed), near the player's rating when there is one.
+    // Never one seen before (rated or themed), near the player's level: the rated puzzles' ladder (a new player's
+    // placement, then a little under the rating).
     const seen = seenPuzzles();
     const fresh = bank.filter((p) => !seen.has(p[0]));
-    const near = fresh.filter((p) => Math.abs(p[3] - $puzzleRating) <= 150);
+    level = ladderLevel($puzzleRating, $puzzlePlaced);
+    const near = fresh.filter((p) => Math.abs(p[3] - level) <= 150);
     const pool = near.length ? near : fresh.length ? fresh : bank;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     // Each puzzle counts towards the plan's puzzles a day.
@@ -60,6 +78,13 @@
     current = pick;
     result = undefined;
     change = undefined;
+    stars = 0;
+    firstClean = false;
+    rated = Promise.resolve();
+    before = $puzzleRating;
+    count = $puzzlePlaced;
+    placing = count < PLACEMENT;
+    startedAt = Date.now() + 600;
     round++;
   }
   function pickTheme(t: string) {
@@ -68,18 +93,32 @@
   }
 
   /** The puzzle rating counts the first result only (a wrong move or a hint: missed). */
-  async function rate(clean: boolean) {
+  function rate(clean: boolean) {
     if (!current) return;
-    change = await ratePuzzle(current[0], current[3], clean, theme);
+    firstClean = clean;
+    const p = current;
+    rated = ratePuzzle(p[0], p[3], clean, theme).then((c) => {
+      if (current === p) change = c;
+    });
   }
 
-  function done(ok: boolean) {
+  async function done(ok: boolean) {
     if (!current) return;
+    const p = current;
+    // No clock on screen here: the speed star for a solve within the rated puzzles' time.
+    const inTime = (Date.now() - startedAt) / 1000 <= timerFor(p[3]);
     result = ok;
     if (ok) {
       solvedNow++;
       study.log('puzzle', POINTS.puzzleSolved, `Theme puzzle: ${theme}`);
     }
+    await rated;
+    if (current !== p) return;
+    moveLadder(level, ok ? (firstClean ? 'clean' : 'solved') : 'missed', count, $puzzleRating);
+    const r = finishPuzzle({ solved: ok, clean: firstClean, inTime, before, placing, rated: change !== undefined });
+    stars = r.stars;
+    puzzleSounds.result(ok, stars);
+    celebrations.add(r.moments, ok ? 1500 : 400);
   }
   /** "Hanging piece", "Mate in 2": the theme as a label. */
   const nameOf = (t: string) => {
@@ -97,7 +136,7 @@
       <h1 class="display">Puzzles by theme</h1>
       <p class="label">Practise one pattern until it is automatic. Puzzles from the Lichess puzzle database, at your level.</p>
     </div>
-    <div class="stat card"><span class="label">Your puzzle rating</span><strong class="display num">{$puzzleRating}{#if change}<span class="chg" class:up={change > 0}>{change > 0 ? '+' : ''}{change}</span>{/if}</strong>{#if goal}<span class="label">{Math.min(solvedNow, goal)} of {goal} for your plan</span>{/if}</div>
+    <div class="stat card"><span class="label">Your puzzle rating</span><strong class="display num">{$puzzleProvisional ? '?' : $puzzleRating}{#if change && !placing}<span class="chg" class:up={change > 0}>{change > 0 ? '+' : ''}{change}</span>{/if}</strong>{#if $puzzleProvisional}<span class="label">Finding your level: {$puzzlePlaced} of {PLACEMENT}</span>{/if}{#if goal}<span class="label">{Math.min(solvedNow, goal)} of {goal} for your plan</span>{/if}</div>
   </header>
 
   <div class="chips" role="group" aria-label="Theme">
@@ -118,14 +157,28 @@
           <!-- One retry after a wrong move, as a coach would allow. -->
           <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} tries={2} onresult={done} onfirst={rate} hintButton />
         {/key}
+        {#if result !== undefined}
+          {#key round}
+            <PuzzleResult
+              solved={result}
+              {stars}
+              puzzleRating={current[3]}
+              {before}
+              {change}
+              placement={placing ? $puzzlePlaced : undefined}
+              themes={nameOf(theme)}
+              onnext={next}
+            />
+          {/key}
+        {/if}
       </section>
       <section class="card side">
         <span class="pill">Puzzle {current[3]}</span>
         {#if result === undefined}
           <p class="label">Theme: {nameOf(theme)}. The opponent has just moved; your turn.</p>
+          <p class="label">⭐ solve it · ⭐ first try, no hint · ⭐ quickly</p>
         {:else}
           <p class:ok={result} class:bad={!result}>{result ? 'Well done!' : 'This one was tricky. Watch the answer, then try the next.'}</p>
-          <button class="btn primary" onclick={next}>Next puzzle</button>
         {/if}
         {#if goal && solvedNow >= goal}<p class="goal">Plan task done: {goal} {nameOf(theme)} puzzles! <a href="/learn">Back to your plan</a></p>{/if}
       </section>
@@ -134,6 +187,8 @@
     <div class="card skel"></div>
   {/if}
 </div>
+
+<Celebrations bind:this={celebrations} />
 
 <style>
   .page {
@@ -206,6 +261,9 @@
     flex: 1 1 420px;
     max-width: 640px;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
   .side {
     flex: 1 1 260px;

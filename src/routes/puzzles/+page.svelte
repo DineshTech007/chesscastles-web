@@ -28,6 +28,7 @@
       <button aria-pressed={tab === 'daily'} onclick={() => show('daily')}>Puzzle of the day</button>
     </div>
     <div class="more">
+      <a class="btn rush" href="/puzzles/rush"><Icon name="flame" size={16} />Puzzle Rush</a>
       <a class="btn" href="/puzzles/themes"><Icon name="puzzle" size={16} />By theme</a>
       <a class="btn" href="/insights/mistakes"><Icon name="history" size={16} />Your own mistakes</a>
       <a class="btn" href="/vision/blind"><Icon name="eye" size={16} />Blindfold</a>
@@ -62,6 +63,11 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+  }
+  .more .rush {
+    border-color: color-mix(in srgb, var(--gold) 65%, var(--border));
+    color: var(--gold);
+    font-weight: 800;
   }
   /* Phones: the shortcuts in one short row, so the board and the puzzle card fit on the screen. */
   @media (max-width: 600px) {

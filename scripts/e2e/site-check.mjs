@@ -30,7 +30,7 @@ const DEVICES = {
   tablet: devices['iPad Mini'],
 };
 /** Pages every player can open without signing in. */
-const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision'];
+const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision'];
 /** A tap must open its page within this long. */
 const TAP_MS = 6000;
 /** A phone should never download more than this in one file by itself. */
@@ -376,6 +376,43 @@ async function run(name, options) {
       await tap(page.getByRole('button', { name: /next puzzle/i }));
     }
     expect(ids.size === 12, `only ${ids.size} different puzzles in 12`);
+  });
+
+  // 4e. Puzzle ratings (owner, 2026-10-21: "their rating goes very fast down"): a new player's rating is a "?" until
+  // placement is done; a placed player gets puzzles a little under the rating, not the easy ones an old ladder left
+  // (a 1200 player on 600 puzzles gained nothing for a solve and lost up to 40 for a miss).
+  await check(name, page, 'puzzle rating: "?" in placement, puzzles near the rating after', async () => {
+    await open(page, '/');
+    await page.evaluate(() => ['k24.puzzleRating', 'k24.ratedPuzzles', 'cc.puzzleLadder', 'cc.puzzlePlacement'].forEach((k) => localStorage.removeItem(k)));
+    await open(page, '/puzzles');
+    await page.locator('cg-board').first().waitFor({ timeout: 20000 });
+    const hero = await page.locator('.phero').innerText();
+    expect(/\?/.test(hero) && /Finding your level/.test(hero), `a new player's rating card: ${hero.replace(/\s+/g, ' ').slice(0, 80)}`);
+    await page.evaluate(() => {
+      localStorage.setItem('k24.puzzleRating', JSON.stringify({ rating: 1200, attempted: 40, solved: 25, streak: 0, best: 5 }));
+      localStorage.setItem('cc.puzzleLadder', '600');
+    });
+    await open(page, '/puzzles');
+    await page.locator('cg-board').first().waitFor({ timeout: 20000 });
+    const pill = await page.locator('.pnow .pill').first().innerText();
+    const r = Number(pill.replace(/\D/g, ''));
+    expect(r >= 800 && r <= 1250, `a 1200 player got a ${r} puzzle`);
+    await page.evaluate(() => ['k24.puzzleRating', 'cc.puzzleLadder'].forEach((k) => localStorage.removeItem(k)));
+    return `puzzle ${r}`;
+  });
+
+  // 4f. Puzzle Rush: it starts, the clock runs, and ending it shows the score.
+  await check(name, page, 'puzzle rush: start, clock, end', async () => {
+    await open(page, '/puzzles/rush');
+    await tap(page.getByRole('button', { name: /start the rush/i }));
+    await page.locator('cg-board').first().waitFor({ timeout: 20000 });
+    // The clock starts at 3:00 (with a moment for the opponent's first move) and must be running.
+    await page.waitForFunction(() => /2:5\d/.test(document.querySelector('.hud .time')?.textContent ?? ''), null, { timeout: 8000 }).catch(() => {});
+    const clock = await page.locator('.hud .time').innerText();
+    expect(/2:5\d/.test(clock), `the clock shows ${clock}`);
+    await tap(page.getByRole('button', { name: /end the rush/i }));
+    await page.locator('section.over').waitFor({ timeout: TAP_MS });
+    return clock.trim();
   });
 
   // 5. A game against the computer: play e4 by tapping, the computer answers.

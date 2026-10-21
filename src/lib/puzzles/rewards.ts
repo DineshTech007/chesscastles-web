@@ -20,6 +20,9 @@ export interface Rewards {
   days: Record<string, DayLog>;
   goal: number;
   timer: boolean;
+  /** Puzzle Rush: the best score and the last scores, newest last. */
+  rushBest: number;
+  rushRuns: number[];
 }
 
 export interface Badge {
@@ -28,6 +31,33 @@ export interface Badge {
   name: string;
   hint: string;
 }
+
+/**
+ * Each badge's medal (static/puzzles/medal-*.webp, made with Runway for the owner, 2026-10-21) and the number shown
+ * on it (3 in a row, 50 solved…). A badge without one shows its icon.
+ */
+export const BADGE_ART: Record<string, { medal: string; n?: string }> = {
+  first: { medal: 'sprout' },
+  streak3: { medal: 'flame', n: '3' },
+  streak5: { medal: 'flame', n: '5' },
+  streak10: { medal: 'flame', n: '10' },
+  goal: { medal: 'target' },
+  three5: { medal: 'star', n: '5' },
+  three25: { medal: 'star', n: '25' },
+  solved10: { medal: 'puzzle', n: '10' },
+  solved50: { medal: 'puzzle', n: '50' },
+  solved100: { medal: 'puzzle', n: '100' },
+  solved500: { medal: 'puzzle', n: '500' },
+  days3: { medal: 'calendar', n: '3' },
+  days7: { medal: 'calendar', n: '7' },
+  r1200: { medal: 'crown', n: '1200' },
+  r1500: { medal: 'crown', n: '1500' },
+  r1800: { medal: 'crown', n: '1800' },
+  r2100: { medal: 'crown', n: '2100' },
+  rush10: { medal: 'rocket', n: '10' },
+  rush20: { medal: 'rocket', n: '20' },
+};
+export const medalSrc = (medal: string) => `/puzzles/medal-${medal}.webp`;
 
 export const BADGES: Badge[] = [
   { id: 'first', icon: '🌱', name: 'First solve', hint: 'Solve your first puzzle' },
@@ -47,10 +77,12 @@ export const BADGES: Badge[] = [
   { id: 'r1500', icon: '♝', name: 'Rating 1500', hint: 'Reach a puzzle rating of 1500' },
   { id: 'r1800', icon: '♜', name: 'Rating 1800', hint: 'Reach a puzzle rating of 1800' },
   { id: 'r2100', icon: '♛', name: 'Rating 2100', hint: 'Reach a puzzle rating of 2100' },
+  { id: 'rush10', icon: '🚀', name: 'Speedster', hint: 'Score 10 in Puzzle Rush' },
+  { id: 'rush20', icon: '⚡', name: 'Rush master', hint: 'Score 20 in Puzzle Rush' },
 ];
 
 const KEY = 'cc.puzzleRewards';
-const EMPTY: Rewards = { stars: 0, three: 0, badges: [], days: {}, goal: 10, timer: true };
+const EMPTY: Rewards = { stars: 0, three: 0, badges: [], days: {}, goal: 10, timer: true, rushBest: 0, rushRuns: [] };
 
 function read(): Rewards {
   try {
@@ -106,9 +138,10 @@ export const starsFor = (solved: boolean, clean: boolean, inTime: boolean) => (s
 
 /**
  * Records one finished puzzle; returns its stars and any badges earned with it.
- * `streak`, `solvedTotal` and `rating` are the account's numbers after this puzzle.
+ * `streak`, `solvedTotal` and `rating` are the account's numbers after this puzzle; `placed`, whether the rating is
+ * past placement (a provisional rating earns no rating badge: every account starts at 1500).
  */
-export function recordPuzzle(o: { solved: boolean; clean: boolean; inTime: boolean; streak: number; solvedTotal: number; rating: number }): { stars: number; earned: Badge[] } {
+export function recordPuzzle(o: { solved: boolean; clean: boolean; inTime: boolean; streak: number; solvedTotal: number; rating: number; placed: boolean }): { stars: number; earned: Badge[] } {
   const r = structuredClone(get(rewards));
   const stars = starsFor(o.solved, o.clean, o.inTime);
   const key = dayKey();
@@ -134,15 +167,41 @@ export function recordPuzzle(o: { solved: boolean; clean: boolean; inTime: boole
     ['solved500', o.solvedTotal >= 500],
     ['days3', daysInRow(r) >= 3],
     ['days7', daysInRow(r) >= 7],
-    ['r1200', o.rating >= 1200],
-    ['r1500', o.rating >= 1500],
-    ['r1800', o.rating >= 1800],
-    ['r2100', o.rating >= 2100],
+    ['r1200', o.placed && o.rating >= 1200],
+    ['r1500', o.placed && o.rating >= 1500],
+    ['r1800', o.placed && o.rating >= 1800],
+    ['r2100', o.placed && o.rating >= 2100],
   ];
   const earned = want.filter(([id, ok]) => ok && !has.has(id)).map(([id]) => BADGES.find((b) => b.id === id)!);
   r.badges = [...r.badges, ...earned.map((b) => b.id)];
   save(r);
   return { stars, earned };
+}
+
+/**
+ * Records a finished Puzzle Rush: its solved puzzles count for the day (the daily goal, days in a row; no stars,
+ * which are for rated puzzles), the best score, and the badges it earns.
+ */
+export function recordRush(score: number, tried: number): { best: number; newBest: boolean; earned: Badge[] } {
+  const r = structuredClone(get(rewards));
+  const key = dayKey();
+  const day = r.days[key] ?? { tried: 0, solved: 0, stars: 0 };
+  r.days[key] = { ...day, tried: day.tried + tried, solved: day.solved + score };
+  const newBest = score > r.rushBest;
+  r.rushBest = Math.max(r.rushBest, score);
+  r.rushRuns = [...r.rushRuns, score].slice(-20);
+  const has = new Set(r.badges);
+  const want: [string, boolean][] = [
+    ['goal', r.days[key].solved >= r.goal],
+    ['days3', daysInRow(r) >= 3],
+    ['days7', daysInRow(r) >= 7],
+    ['rush10', score >= 10],
+    ['rush20', score >= 20],
+  ];
+  const earned = want.filter(([id, ok]) => ok && !has.has(id)).map(([id]) => BADGES.find((b) => b.id === id)!);
+  r.badges = [...r.badges, ...earned.map((b) => b.id)];
+  save(r);
+  return { best: r.rushBest, newBest, earned };
 }
 
 export function setGoal(goal: number) {

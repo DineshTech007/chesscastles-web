@@ -7,7 +7,7 @@
   import { t } from '$lib/i18n';
   import { KFIDE_SPEEDS, SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
   import { kfideAll } from '$lib/stores/me';
-  import { puzzleRating } from '$lib/puzzles/rating';
+  import { puzzleProvisional, puzzleRating } from '$lib/puzzles/rating';
 
   const ICON: Record<KfideSpeed, IconName> = { bullet: 'flame', blitz: 'puzzle', rapid: 'history', standard: 'crown' };
   /** Fastest first, the speeds played before the others. */
@@ -27,7 +27,7 @@
     {/each}
     <a class="tile" href="/puzzles">
       <span class="ic puz"><Icon name="puzzle" size={18} /></span>
-      <strong class="num">{$puzzleRating}</strong>
+      <strong class="num">{$puzzleRating}{$puzzleProvisional ? '?' : ''}</strong>
       <span class="lb">{$t('rs.puzzles')}</span>
     </a>
   </div>

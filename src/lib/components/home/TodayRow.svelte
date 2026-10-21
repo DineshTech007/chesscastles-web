@@ -10,7 +10,7 @@
   import { t } from '$lib/i18n';
   import { fenOf, keyOf } from '$lib/chess/position';
   import { dailyPuzzle, type DailyPuzzle } from '$lib/lichess';
-  import { puzzleRating } from '$lib/puzzles/rating';
+  import { puzzleProvisional, puzzleRating } from '$lib/puzzles/rating';
   import { dayOf, streak, study } from '$lib/study/progress';
   import { hasPlan, loadPlan, nextStep, topicOn, TOPICS } from '$lib/study/plan';
 
@@ -50,7 +50,7 @@
       <img src="/art/puzzles-256.webp" alt="" width="256" height="245" loading="lazy" />
       <div class="txt">
         <strong>{$t('home.puzzles.h')}</strong>
-        <span class="big num">{$puzzleRating}</span>
+        <span class="big num">{$puzzleRating}{$puzzleProvisional ? '?' : ''}</span>
         <span class="sub">{$t('home.puzzles.rating')}</span>
         <span class="cta">{$t('home.solve')}</span>
       </div>

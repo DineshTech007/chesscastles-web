@@ -3,7 +3,8 @@ import { soundOn } from '$lib/sound';
 
 /**
  * Puzzle sounds, made in the browser (nothing to download): a bright chime when a puzzle is solved, a ding for
- * each star, a soft low tone after a miss, ticks in the last seconds of the timer and a fanfare for a new badge.
+ * each star, a soft low tone after a miss, ticks in the last seconds of the timer, a sparkle for a new badge and a
+ * bigger fanfare for a new level.
  * They follow the site's sound switch.
  */
 let ctx: AudioContext | undefined;
@@ -71,11 +72,27 @@ export const puzzleSounds = {
     if (!c) return;
     note(1760, c.currentTime + 0.01, 0.06, 0.06, 'square');
   },
-  /** A new badge or level: a short fanfare. */
-  fanfare() {
+  /** A new level: a bigger fanfare, rising to a held chord with a sparkle on top. */
+  levelUp() {
     const c = audio();
     if (!c) return;
     const t = c.currentTime + 0.02;
-    [[523.25, 0], [659.25, 0.12], [783.99, 0.24], [1046.5, 0.36], [783.99, 0.52], [1046.5, 0.64]].forEach(([f, d]) => note(f, t + d, 0.4, 0.14, 'triangle'));
+    [[392, 0], [523.25, 0.1], [659.25, 0.2], [783.99, 0.3], [1046.5, 0.42]].forEach(([f, d]) => note(f, t + d, 0.35, 0.15, 'triangle'));
+    [523.25, 659.25, 783.99, 1046.5].forEach((f) => note(f, t + 0.6, 1.2, 0.09, 'sine'));
+    [2093, 2637, 3136].forEach((f, i) => note(f, t + 0.7 + i * 0.08, 0.3, 0.05, 'sine'));
+  },
+  /** A new badge: a quick sparkle. */
+  badge() {
+    const c = audio();
+    if (!c) return;
+    const t = c.currentTime + 0.02;
+    [1568, 2093, 2637, 3136].forEach((f, i) => note(f, t + i * 0.07, 0.35, 0.08, 'sine'));
+    note(1046.5, t, 0.6, 0.1, 'triangle');
+  },
+  /** A puzzle's end: the solved chime and a ding for each star, or the soft miss. */
+  result(solved: boolean, stars: number) {
+    if (!solved) return this.missed();
+    this.solved();
+    for (let i = 1; i <= stars; i++) setTimeout(() => this.star(i), 450 + i * 230);
   },
 };

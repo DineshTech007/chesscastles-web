@@ -10,7 +10,7 @@
   import { destsOf, fenOf, keyOf, moveFromKeys, moveToUci, uciToMove } from '$lib/chess/position';
   import { dailyPuzzle, type DailyPuzzle } from '$lib/lichess';
   import { POINTS, study } from '$lib/study/progress';
-  import { puzzleRating, ratePuzzle, wasRated } from '$lib/puzzles/rating';
+  import { puzzleProvisional, puzzleRating, ratePuzzle, wasRated } from '$lib/puzzles/rating';
 
   let puzzle = $state<DailyPuzzle | undefined>();
   let error = $state('');
@@ -153,7 +153,7 @@
       {#if puzzle}
         <div class="meta">
           <span class="pill gold">Puzzle {puzzle.rating}</span>
-          <span class="pill mine">Your rating {$puzzleRating}{#if change}<span class="chg" class:up={change > 0}> {change > 0 ? '+' : ''}{change}</span>{/if}</span>
+          <span class="pill mine">Your rating {$puzzleRating}{#if $puzzleProvisional}?{:else if change}<span class="chg" class:up={change > 0}> {change > 0 ? '+' : ''}{change}</span>{/if}</span>
           {#each puzzle.themes.slice(0, 3) as t (t)}
             <span class="pill theme">{t.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>
           {/each}

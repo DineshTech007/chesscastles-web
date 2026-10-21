@@ -20,6 +20,9 @@
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
 
+  /** ?board=puzzle: the puzzle leaderboard first (the puzzles page links to it). */
+  const startBoard = page.url.searchParams.get('board') === 'puzzle' ? 'puzzle' : 'main';
+
   onMount(() => {
     const t = page.url.searchParams.get('tab');
     if (t === 'search' || t === 'chesscastles') tab = t;
@@ -113,7 +116,7 @@
           <button class="btn primary" onclick={() => startSignIn()}>Sign in to see them</button>
         </div>
       {:else}
-        <CastlePlayers {me} />
+        <CastlePlayers {me} start={startBoard} />
       {/if}
     </section>
   {/if}

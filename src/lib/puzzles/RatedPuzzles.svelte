@@ -13,10 +13,15 @@
   import { THEME_NAMES } from '$lib/insights/plan';
   import { useFeature } from '$lib/plans';
   import { POINTS, study } from '$lib/study/progress';
-  import { PUZZLE_LEVELS, STAGES, ladderLevel, levelOf, markSeen, moveLadder, nextRated, stageOf, type BandPuzzle, type LadderOutcome } from './bank';
-  import { newRating, puzzleHistory, puzzleRating, puzzleStats, ratePuzzle } from './rating';
+  import { PLACEMENT, PUZZLE_LEVELS, STAGES, ladderLevel, levelOf, markSeen, moveLadder, nextRated, stageOf, type BandPuzzle, type LadderOutcome } from './bank';
+  import PuzzleResult from './PuzzleResult.svelte';
+  import Celebrations from './Celebrations.svelte';
+  import { finishPuzzle } from './finish';
+  import Medal from './Medal.svelte';
+  import PuzzleLadder from './PuzzleLadder.svelte';
+  import { newRating, puzzleHistory, puzzlePlaced, puzzleProvisional, puzzleRating, puzzleStats, ratePuzzle } from './rating';
   import { puzzleSounds } from './puzzleSounds';
-  import { BADGES, daysInRow, lastWeek, recordPuzzle, rewards, setGoal, setTimer, timerFor, type Badge } from './rewards';
+  import { BADGES, daysInRow, lastWeek, rewards, setGoal, setTimer, timerFor } from './rewards';
 
   let current = $state<BandPuzzle | undefined>();
   /** The learning ladder: how hard the next puzzle is (bank.ts). */
@@ -28,8 +33,12 @@
   let error = $state('');
   let loading = $state(false);
 
-  // This puzzle: the rating before it, the clock, its first result and its stars.
+  // This puzzle: the rating before it, whether it is one of placement's (rating.ts), the clock, its first result and
+  // its stars.
   let before = $state(0);
+  /** Rated puzzles before this one. */
+  let count = 0;
+  let placing = $state(false);
   let startedAt = $state(0);
   let stoppedAt = $state(0);
   let now = $state(Date.now());
@@ -40,11 +49,9 @@
   let tried = $state(0);
   let solvedNow = $state(0);
   let visitStart = $state<number | undefined>();
-  // Celebrations.
+  // Confetti on the board, and the celebrations over the page.
   let party = $state(0);
-  let toast = $state<Badge | undefined>();
-  const queue: Badge[] = [];
-  let toastTimer: ReturnType<typeof setTimeout> | undefined;
+  let celebrations: Celebrations;
 
   const shownRating = Tween.of(() => $puzzleRating, { duration: 900, easing: cubicOut });
   const lv = $derived(levelOf($puzzleRating));
@@ -81,10 +88,7 @@
   });
 
   const tick = setInterval(() => (now = Date.now()), 250);
-  onDestroy(() => {
-    clearInterval(tick);
-    clearTimeout(toastTimer);
-  });
+  onDestroy(() => clearInterval(tick));
   onMount(() => void next());
 
   async function next() {
@@ -93,11 +97,11 @@
     error = '';
     try {
       if (!ladderReady) {
-        ladder = ladderLevel($puzzleRating, $puzzleStats.attempted);
+        ladder = ladderLevel($puzzleRating, $puzzlePlaced);
         ladderReady = true;
       } else if (current && result === undefined) {
         // Skipped: a little easier next time.
-        ladder = moveLadder(ladder, 'skipped', $puzzleStats.attempted);
+        ladder = moveLadder(ladder, 'skipped', $puzzlePlaced);
       }
       const p = await nextRated(ladder);
       if (!p) {
@@ -116,7 +120,10 @@
       stars = 0;
       firstClean = undefined;
       before = $puzzleRating;
-      visitStart ??= before;
+      count = $puzzlePlaced;
+      placing = count < PLACEMENT;
+      // This visit's rating change counts from the first puzzle after placement.
+      if (!placing) visitStart ??= before;
       // The clock starts once the opponent's move is on the board.
       startedAt = Date.now() + 600;
       stoppedAt = 0;
@@ -138,6 +145,7 @@
   }
 
   async function done(ok: boolean) {
+    const beforeRating = before;
     stoppedAt = Date.now();
     result = ok;
     tried++;
@@ -145,32 +153,16 @@
     if (ok && current) study.log('puzzle', POINTS.puzzleSolved, `Rated puzzle ${current[0]}`);
     const inTime = timerOn && elapsed <= limit;
     await rated;
-    // The ladder: up after a first-try solve, a little up after a later solve, down after a miss.
+    // The ladder: up after a first-try solve, a little up after a later solve, down after a miss; after placement it
+    // stays near the rating (bank.ts).
     const outcome: LadderOutcome = ok ? (firstClean ? 'clean' : 'solved') : 'missed';
-    const before = stageOf(ladder);
-    ladder = moveLadder(ladder, outcome, $puzzleStats.attempted);
-    const after = stageOf(ladder);
-    if (after.from > before.from) queue.push({ id: `stage-${after.name}`, icon: '🎓', name: `${after.name} puzzles unlocked!`, hint: '' });
-    const s = $puzzleStats;
-    const r = recordPuzzle({ solved: ok, clean: !!firstClean, inTime, streak: s.streak, solvedTotal: s.solved, rating: $puzzleRating });
+    ladder = moveLadder(ladder, outcome, count, $puzzleRating);
+    // Stars, badges, a new level (or, after placement's last puzzle, the level found).
+    const r = finishPuzzle({ solved: ok, clean: !!firstClean, inTime, before: beforeRating, placing, rated: change !== undefined });
     stars = r.stars;
-    if (ok) {
-      party++;
-      puzzleSounds.solved();
-      for (let i = 1; i <= stars; i++) setTimeout(() => puzzleSounds.star(i), 450 + i * 230);
-    } else puzzleSounds.missed();
-    for (const b of r.earned) queue.push(b);
-    if (!toast) setTimeout(showToast, ok ? 1200 : 300);
-  }
-
-  function showToast() {
-    toast = queue.shift();
-    if (!toast) return;
-    puzzleSounds.fanfare();
-    toastTimer = setTimeout(() => {
-      toast = undefined;
-      setTimeout(showToast, 300);
-    }, 3800);
+    if (ok) party++;
+    puzzleSounds.result(ok, stars);
+    celebrations.add(r.moments, ok ? 1500 : 400);
   }
 
   const nameOf = (t: string) => {
@@ -188,9 +180,11 @@
   <section class="board-col" aria-label="Puzzle board">
     <!-- On phones: the numbers that matter, right above the board. -->
     <div class="hud" aria-hidden="true">
-      <span class="hud-r"><img class="hud-piece" src={lv.level.image} alt="" width="30" height="30" /><strong class="num">{Math.round(shownRating.current)}</strong></span>
-      {#if change !== undefined}<span class="delta num" class:up={change > 0} class:down={change < 0}>{change > 0 ? '▲' : change < 0 ? '▼' : '='}{Math.abs(change) || ''}</span>
+      <span class="hud-r">{#if !$puzzleProvisional}<img class="hud-piece" src={lv.level.image} alt="" width="30" height="30" />{/if}<strong class="num">{$puzzleProvisional ? '?' : Math.round(shownRating.current)}</strong></span>
+      {#if change !== undefined && !placing}<span class="delta num" class:up={change > 0} class:down={change < 0}>{change > 0 ? '▲' : change < 0 ? '▼' : '='}{Math.abs(change) || ''}</span>
+      {:else if result === undefined && $puzzlePlaced < PLACEMENT}<span class="hud-place">Finding your level {$puzzlePlaced + 1}/{PLACEMENT}</span>
       {:else if result === undefined && stakes}<span class="hud-stakes num" title="Rating if solved first try / if missed"><b class="up">+{stakes.win}</b> / <b class="down">{stakes.lose}</b></span>{/if}
+      {#if current && result === undefined}<span class="hud-puz num" title="This puzzle's rating">♟ {current[3]}</span>{/if}
       <span class="grow"></span>
       {#if $puzzleStats.streak > 0}<span class="hud-streak">🔥{$puzzleStats.streak}</span>{/if}
       {#if timerOn && current && result === undefined}<span class="hud-time num" class:low={left <= 10}>⏱ {left}s</span>{/if}
@@ -203,9 +197,9 @@
       {:else}
         <div class="placeholder">{error || 'Finding a puzzle at your level…'}</div>
       {/if}
-      {#if change !== undefined && result !== undefined}
+      {#if change && result !== undefined && !placing}
         {#key round}
-          <div class="pop" class:up={change > 0} class:down={change < 0} aria-hidden="true">{change > 0 ? `+${change}` : change}<span class="pop-label">{change > 0 ? 'rating up!' : change < 0 ? 'rating' : ''}</span></div>
+          <div class="pop" class:up={change > 0} class:down={change < 0} aria-hidden="true">{change > 0 ? `+${change}` : change}<span class="pop-label">{change > 0 ? 'rating up!' : 'rating'}</span></div>
         {/key}
       {/if}
       {#key party}
@@ -216,35 +210,61 @@
         {/if}
       {/key}
     </div>
+    <!-- After the puzzle: how it went, the rating moving, this puzzle's rating, the way to the next level. -->
+    {#if current && result !== undefined}
+      {#key round}
+        <PuzzleResult
+          solved={result}
+          {stars}
+          puzzleRating={current[3]}
+          {before}
+          {change}
+          placement={placing ? $puzzlePlaced : undefined}
+          themes={current[4].filter((t) => !SKIP.has(t)).slice(0, 3).map(nameOf).join(', ')}
+          onnext={next}
+          busy={loading}
+        />
+      {/key}
+    {/if}
   </section>
 
   <aside class="side">
     <!-- The rating: before → after, the level and the way to the next -->
     <section class="card phero">
       <div class="hero-top">
-        <span class="big-glyph" aria-hidden="true"><img src={lv.level.image} alt="" width="72" height="72" /></span>
+        <span class="big-glyph" class:mystery={$puzzleProvisional} aria-hidden="true"><img src={lv.level.image} alt="" width="72" height="72" /></span>
         <div class="hero-num">
           <span class="label">Puzzle rating</span>
-          <strong class="display num rating">{Math.round(shownRating.current)}</strong>
-          <span class="lvl">{lv.level.name} level</span>
+          {#if $puzzleProvisional}
+            <strong class="display num rating">?</strong>
+            <span class="lvl">Finding your level</span>
+          {:else}
+            <strong class="display num rating">{Math.round(shownRating.current)}</strong>
+            <span class="lvl">{lv.level.name} level</span>
+          {/if}
         </div>
-        {#if change !== undefined}
+        {#if change !== undefined && !placing}
           <div class="ba" aria-live="polite">
             <span class="num">{before}</span>
             <span class="arrow">→</span>
             <span class="num strong">{before + change}</span>
             <span class="delta num" class:up={change > 0} class:down={change < 0}>{change > 0 ? '▲' : change < 0 ? '▼' : '='} {Math.abs(change) || ''}</span>
           </div>
-        {:else if current}
+        {:else if current && !$puzzleProvisional}
           <div class="ba wait"><span class="label">Solve it on the first try to go up</span></div>
         {/if}
       </div>
       <ol class="levels" aria-label="Levels">
         {#each PUZZLE_LEVELS as l (l.name)}
-          <li class:reached={$puzzleRating >= l.from} class:here={l === lv.level} title="{l.name}{l.from ? ` from ${l.from}` : ''}"><img src={l.image} alt={l.name} width="30" height="30" loading="lazy" /></li>
+          <li class:reached={!$puzzleProvisional && $puzzleRating >= l.from} class:here={!$puzzleProvisional && l === lv.level} title="{l.name}{l.from ? ` from ${l.from}` : ''}"><img src={l.image} alt={l.name} width="30" height="30" loading="lazy" /></li>
         {/each}
       </ol>
-      {#if lv.next}
+      {#if $puzzleProvisional}
+        <div class="pmeter" role="progressbar" aria-valuenow={$puzzlePlaced} aria-valuemin="0" aria-valuemax={PLACEMENT} aria-label="Finding your level">
+          <span style="width: {Math.round(($puzzlePlaced / PLACEMENT) * 100)}%"></span>
+        </div>
+        <span class="label next-lv">Your rating appears after {PLACEMENT} puzzles: {$puzzlePlaced} done</span>
+      {:else if lv.next}
         <div class="pmeter" role="progressbar" aria-valuenow={Math.round(lv.progress * 100)} aria-valuemin="0" aria-valuemax="100" aria-label="Progress to {lv.next.name}">
           <span style="width: {Math.round(lv.progress * 100)}%"></span>
         </div>
@@ -253,6 +273,8 @@
         <span class="label">The top level. Keep your crown!</span>
       {/if}
     </section>
+
+    <PuzzleLadder />
 
     <!-- This puzzle: the clock, the stars, what next (and Professor Hoot, thinking with you or cheering) -->
     <section class="card pnow">
@@ -283,20 +305,19 @@
             {#each STAGES as x (x.name)}<li class:done={ladder >= x.from} class:at={x === stageOf(ladder)} style="--c: {x.color}" title={x.name}></li>{/each}
           </ol>
         </div>
-        {#if result === undefined && stakes}
+        {#if result === undefined && $puzzlePlaced < PLACEMENT}
+          <p class="stakes">Finding your level: puzzle <b class="num">{$puzzlePlaced + 1}</b> of {PLACEMENT}. Solve first try to climb to harder ones.</p>
+        {:else if result === undefined && stakes}
           <p class="stakes">Solve it first try: <b class="up num">+{stakes.win}</b> <span class="sep">·</span> Miss: <b class="down num">{stakes.lose}</b></p>
-        {:else if change !== undefined}
-          <p class="moved"><span class="num">{before}</span> → <strong class="num">{before + change}</strong> <span class="delta num" class:up={change > 0} class:down={change < 0}>{change > 0 ? '▲' : change < 0 ? '▼' : '='} {Math.abs(change) || ''}</span></p>
         {/if}
         {#if result === undefined}
           <p class="msg">{timerOn ? (left > 0 ? 'Find the best move before the clock runs out for a speed star!' : "Time's up, but keep going: you can still solve it!") : 'Find the best move, then keep finding them.'}</p>
           <p class="label small">⭐ solve it · ⭐ first try, no hint{timerOn ? ' · ⭐ before the clock ends' : ''}</p>
+          <button class="btn primary big" onclick={next} disabled={loading}>Skip to the next puzzle</button>
+          <p class="label small">Skipping doesn't change your rating.</p>
         {:else}
           <p class="msg" class:ok={result} class:bad={!result}>{result ? cheer(stars) : 'This one was tricky: watch the answer, then try the next.'}</p>
-          {#if current[4].some((t) => !SKIP.has(t))}<p class="label">Theme: {current[4].filter((t) => !SKIP.has(t)).slice(0, 3).map(nameOf).join(', ')}</p>{/if}
         {/if}
-        <button class="btn primary big" onclick={next} disabled={loading}>{result === undefined ? 'Skip to the next puzzle' : 'Next puzzle →'}</button>
-        {#if result === undefined}<p class="label small">Skipping doesn't change your rating.</p>{/if}
       {:else if error}
         <button class="btn primary" onclick={next}>Try again</button>
       {/if}
@@ -333,7 +354,7 @@
     <!-- Progress: the rating line and the last 7 days -->
     <section class="card charts">
       <h3 class="title h">Your progress</h3>
-      {#if chart}
+      {#if chart && !$puzzleProvisional}
         <div class="line-wrap">
           <svg class="line" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Your puzzle rating over the last {chart.pts.length} puzzles">
             <path d="{chart.path} L100,100 L0,100 Z" class="area" />
@@ -344,7 +365,7 @@
         </div>
         <p class="label small">Your rating over the last {chart.pts.length} puzzles: green dots solved, red missed.</p>
       {:else}
-        <p class="label">Solve a few puzzles to see your rating line here.</p>
+        <p class="label">{$puzzleProvisional ? 'Your rating line starts when your level is found.' : 'Solve a few puzzles to see your rating line here.'}</p>
       {/if}
       <div class="week" role="img" aria-label="Puzzles solved each day this week">
         {#each week as d (d.key)}
@@ -364,7 +385,7 @@
         {#each BADGES as b (b.id)}
           {@const got = $rewards.badges.includes(b.id)}
           <li class:got title={got ? b.name : `${b.name}: ${b.hint}`}>
-            <span class="b-icon" aria-hidden="true">{b.icon}</span>
+            <Medal badge={b} {got} size={64} />
             <span class="b-name">{b.name}</span>
             {#if !got}<span class="b-hint">{b.hint}</span>{/if}
           </li>
@@ -374,12 +395,7 @@
   </aside>
 </div>
 
-{#if toast}
-  <div class="toast" role="status">
-    <span class="t-icon" aria-hidden="true">{toast.icon}</span>
-    <span><span class="label">New badge!</span><strong>{toast.name}</strong></span>
-  </div>
-{/if}
+<Celebrations bind:this={celebrations} />
 
 <style>
   .rated {
@@ -420,11 +436,31 @@
     border: 1px solid var(--border);
     font-weight: 800;
   }
+  /* The level isn't known yet: its trophy in shadow. */
+  .big-glyph.mystery img {
+    filter: grayscale(1) brightness(0.45);
+  }
   .hud-r {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     font-size: 22px;
+  }
+  .hud-place {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--gold);
+  }
+  .hud-puz,
+  .hud-time {
+    white-space: nowrap;
+  }
+  .hud-puz {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--raised);
+    font-size: 13px;
+    color: var(--text-2);
   }
   .hud-stakes {
     font-size: 15px;
@@ -607,8 +643,7 @@
     position: relative;
     overflow: visible;
   }
-  .stakes,
-  .moved {
+  .stakes {
     margin: 0;
     padding: 8px 12px;
     border-radius: 10px;
@@ -616,12 +651,8 @@
     font-size: 15px;
     font-weight: 600;
   }
-  .stakes b,
-  .moved strong {
+  .stakes b {
     font-size: 18px;
-  }
-  .moved strong {
-    font-size: 22px;
   }
   .up {
     color: var(--win);
@@ -1028,9 +1059,6 @@
     background: color-mix(in srgb, var(--gold) 14%, var(--raised));
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 45%, transparent);
   }
-  .b-icon {
-    font-size: 26px;
-  }
   .b-name {
     font-size: 12px;
     font-weight: 800;
@@ -1070,41 +1098,6 @@
       transform: translateY(260px) rotate(calc(var(--r) * 3));
     }
   }
-  .toast {
-    position: fixed;
-    z-index: 90;
-    left: 50%;
-    top: 18px;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 18px;
-    border-radius: 16px;
-    background: var(--card);
-    border: 2px solid var(--gold);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-    animation: toast 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.3);
-  }
-  .toast > span:last-child {
-    display: flex;
-    flex-direction: column;
-  }
-  .t-icon {
-    font-size: 36px;
-    animation: spin-in 0.8s ease-out;
-  }
-  @keyframes toast {
-    from {
-      transform: translate(-50%, -40px);
-      opacity: 0;
-    }
-  }
-  @keyframes spin-in {
-    from {
-      transform: rotate(-200deg) scale(0.3);
-    }
-  }
   @media (max-width: 900px) {
     .side .pnow {
       order: -1;
@@ -1139,27 +1132,13 @@
       font-size: 36px;
     }
   }
-  @media (max-width: 767px) {
-    .toast {
-      top: auto;
-      bottom: 92px;
-    }
-    @keyframes toast {
-      from {
-        transform: translate(-50%, 40px);
-        opacity: 0;
-      }
-    }
-  }
   @media (prefers-reduced-motion: reduce) {
     .confetti,
     .star.on,
     .buddy,
     .pop,
     .pclock.low,
-    .ba,
-    .toast,
-    .t-icon {
+    .ba {
       animation: none;
     }
     .confetti {

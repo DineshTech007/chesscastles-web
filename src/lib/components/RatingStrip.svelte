@@ -10,7 +10,7 @@
   import { outcome } from '$lib/stores/myGames';
   import { KFIDE_SPEEDS, SPEED_LABEL, kfideText } from '$lib/kfide';
   import { LICHESS_LABEL, lichessRatings, type LichessRating } from '$lib/lichessRatings';
-  import { puzzleRating } from '$lib/puzzles/rating';
+  import { puzzleProvisional, puzzleRating } from '$lib/puzzles/rating';
   import { t } from '$lib/i18n';
   import Icon from './Icon.svelte';
 
@@ -41,7 +41,7 @@
       <span class="label">{$t('rs.cc', { speed: SPEED_LABEL[$kfideAll.main] })}</span>
       {#if main.games}<strong class="num">{kfideText(main)}</strong>{:else}<strong class="none">{$t('rs.playget')}</strong>{/if}
     </a>
-    <a class="small" href="/puzzles" title="Your puzzle rating: a solved puzzle raises it, a missed one (or a hint) lowers it"><span class="label">{$t('rs.puzzles')}</span><strong class="num">{$puzzleRating}</strong></a>
+    <a class="small" href="/puzzles" title="Your puzzle rating: a solved puzzle raises it, a missed one (or a hint) lowers it"><span class="label">{$t('rs.puzzles')}</span><strong class="num">{$puzzleRating}{$puzzleProvisional ? '?' : ''}</strong></a>
     <a class="small" href="/games" title="Finished games you played on Chess Castles: won {stats.won}, drawn {stats.drawn}, lost {stats.lost}"><span class="label">{$t('rs.games')}</span><strong class="num">{stats.played}</strong></a>
     <button class="all" aria-expanded={open} aria-controls="all-ratings" onclick={() => (open = !open)}>
       {$t('rs.all')} <span class="chev" class:open><Icon name="chevron" size={14} /></span>
