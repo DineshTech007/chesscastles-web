@@ -6,6 +6,8 @@
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import HeroLanding from '$lib/components/landing/HeroLanding.svelte';
   import KindWordsStrip from '$lib/components/KindWordsStrip.svelte';
+  import MyInsightsCard from '$lib/components/MyInsightsCard.svelte';
+  import LiveOnCC from '$lib/components/LiveOnCC.svelte';
   import { HERO_FEATURES } from '$lib/heroFeatures';
   import { t, type Key } from '$lib/i18n';
   import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
@@ -92,6 +94,14 @@
       </span>
       <span class="btn primary">{$t('home.start')}</span>
     </a>
+  {/if}
+
+  {#if $session.status === 'in'}
+    <!-- The player's own games, analysed by Guru, and the top game on Chess Castles now (or today), moving. -->
+    <div class="duo">
+      <MyInsightsCard />
+      <LiveOnCC />
+    </div>
   {/if}
 
   {#if !showLanding}
@@ -202,6 +212,17 @@
 </div>
 
 <style>
+  .duo {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .duo {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   .only-strip {
     display: flex;
     flex-direction: column;

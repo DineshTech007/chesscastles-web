@@ -17,8 +17,9 @@
   import Feedback from '$lib/admin/Feedback.svelte';
   import Registrations from '$lib/admin/Registrations.svelte';
   import Wishes from '$lib/admin/Wishes.svelte';
+  import WhatsApp from '$lib/admin/WhatsApp.svelte';
 
-  type Tab = 'dashboard' | 'registrations' | 'players' | 'fairplay' | 'plans' | 'reports' | 'feedback' | 'wishes' | 'team';
+  type Tab = 'dashboard' | 'registrations' | 'players' | 'fairplay' | 'plans' | 'reports' | 'feedback' | 'wishes' | 'whatsapp' | 'team';
   let tab = $state<Tab>('dashboard');
   let role = $state<{ role: Role; can: Can[] } | undefined>();
   let denied = $state(false);
@@ -34,7 +35,7 @@
   onMount(() => {
     const fromHash = () => {
       const h = location.hash.slice(1) as Tab;
-      if (['dashboard', 'registrations', 'players', 'fairplay', 'plans', 'reports', 'feedback', 'wishes', 'team'].includes(h)) tab = h;
+      if (['dashboard', 'registrations', 'players', 'fairplay', 'plans', 'reports', 'feedback', 'wishes', 'whatsapp', 'team'].includes(h)) tab = h;
     };
     fromHash();
     // The dashboard's tiles link to #reports and #feedback.
@@ -56,6 +57,7 @@
         ['reports', 'Reports', 'reports'],
         ['feedback', 'Feedback', 'reports'],
         ['wishes', 'Kind words', 'owner'],
+        ['whatsapp', 'WhatsApp', 'owner'],
         ['team', 'Team & log', 'owner'],
       ] as [Tab, string, Can][]
     ).filter(([, , c]) => role?.can.includes(c)),
@@ -97,6 +99,8 @@
       <Feedback onopen={(uid) => ((openUid = uid), go('players'))} />
     {:else if tab === 'wishes'}
       <Wishes />
+    {:else if tab === 'whatsapp'}
+      <WhatsApp />
     {:else if tab === 'team'}
       <Team />
     {/if}

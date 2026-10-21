@@ -21,6 +21,8 @@
   import { PLANS, PLANS_ON, PLAN_INFO, planSettings, currentPlan, useFeature } from '$lib/plans';
   import InsightsHeader from '$lib/components/InsightsHeader.svelte';
   import { t } from '$lib/i18n';
+  import { saveGuruSummary } from '$lib/social';
+  import { guruSummary } from '$lib/whatsapp';
 
   let site = $state<Site>('chesscom');
   let username = $state('');
@@ -40,6 +42,17 @@
     if (data) {
       site = data.site;
       username = data.username;
+    }
+    // From the home page's Guru card or a WhatsApp message: whose games (?site=…&user=…), and with &auto=1 Guru starts
+    // at once (games analysed before are kept; only new ones go to the engine).
+    const q = new URLSearchParams(location.search);
+    const qs = q.get('site');
+    const qu = q.get('user')?.trim();
+    if ((qs === 'lichess' || qs === 'chesscom') && qu) {
+      site = qs;
+      username = qu;
+      history.replaceState(history.state, '', location.pathname);
+      if (q.get('auto') === '1') void run();
     }
   });
   onDestroy(() => (stop = true));
@@ -72,7 +85,11 @@
         progress = { done: progress.done + 1, total: fetched.length };
         data = { site, username: username.trim(), at: Date.now(), games: out };
       }
-      if (data) saveInsights(data);
+      if (data) {
+        saveInsights(data);
+        // The short summary for the player's WhatsApp report (kept only if they gave a number).
+        if (data.games.length && $session.status === 'in') void saveGuruSummary(guruSummary(buildReport(data.games), data)).catch(() => {});
+      }
     } catch (e) {
       if (!stop) error = e instanceof Error ? e.message : 'The games could not be analysed.';
     } finally {

@@ -39,6 +39,7 @@
   import { stopLichessEvents, syncLichessEvents, wakeLichessEvents } from '$lib/lichessEvents';
   import { consentNeeded, consentSynced, hasConsent, markConsentSynced, readConsent } from '$lib/consent';
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
+  import WelcomeSheet from '$lib/components/WelcomeSheet.svelte';
   import FeatureVideo from '$lib/components/FeatureVideo.svelte';
   import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
   import { boardThemeOpen } from '$lib/boardTheme';
@@ -479,6 +480,7 @@
   {#await import('$lib/festive/Dasara.svelte') then m}<m.default onclose={() => (dasara = false)} />{/await}
 {/if}
 <InstallPrompt />
+<WelcomeSheet />
 <BoardThemeModal bind:open={$boardThemeOpen} />
 
 {#if phone && !focusGame}

@@ -2,7 +2,7 @@
   import LegalPage from '$lib/components/LegalPage.svelte';
 </script>
 
-<LegalPage title="Privacy policy" updated="20 October 2026">
+<LegalPage title="Privacy policy" updated="21 October 2026">
   <p class="box">
     In short: we keep only what Chess Castles needs to work, we never sell your data or show ads, messages and photos are for
     friends only, and you can ask us to delete your account and data at any time.
@@ -27,6 +27,7 @@
     <li><strong>Coach tools</strong>: if you join a coach, the link between you and the work they set you. Your coach sees your ratings, your games on Chess Castles and your study this week, until you leave.</li>
     <li><strong>Anonymous usage counts</strong>: which pages are opened and features used, the kind of device, the country (from the connection, not stored with you) and the site a visit came from, counted per day. A random id in your browser lets us count visitors once a day; it is not linked to your account, no cookies are used, and nothing is sent when your browser asks not to be tracked.</li>
     <li><strong>Reminders</strong>: if you turn on study reminders, a push-notification address for your browser.</li>
+    <li><strong>WhatsApp number</strong>, only if you choose to give one after signing in (for a player under 18, only a parent's or guardian's number, given with their agreement): to send Guru's game reports and study reminders on WhatsApp. We keep the number, whether it is yours or a parent's, when you agreed and to which wording, and your latest Guru summary (games checked, score, accuracy, the mistakes that cost the most points, a strong point) to write the message. Only Chess Castles sees it; it is never shown to other players, shared or sold. Stop any time in Settings (the number is deleted) or by replying STOP.</li>
     <li><strong>On your device only</strong>: settings, games played while signed out, your study plan and reading progress are kept in your browser's storage and are not sent to us unless stated above.</li>
   </ul>
   <p>We do not collect payment details, we do not use advertising or tracking cookies, and we do not sell or rent personal data.</p>
@@ -45,7 +46,8 @@
   <p>
     Many Chess Castles players are children. A child under 18 may use Chess Castles only with the consent of a parent or legal
     guardian. We do not track children's behaviour or show them advertising aimed at them, messaging and photos are
-    limited to friends who both agreed, and any player can be blocked and reported. A parent or guardian can ask to see,
+    limited to friends who both agreed, and any player can be blocked and reported. A WhatsApp number for a player
+    under 18 can only be a parent's or guardian's, given with their agreement. A parent or guardian can ask to see,
     correct or delete their child's data through <a href="/help">Help &amp; support</a>.
   </p>
 

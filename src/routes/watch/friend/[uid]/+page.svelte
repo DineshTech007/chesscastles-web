@@ -7,6 +7,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { page } from '$app/state';
   import Icon from '$lib/components/Icon.svelte';
+  import LearnFromGame from '$lib/components/LearnFromGame.svelte';
   import WatchViewer, { type BarInfo } from '$lib/components/WatchViewer.svelte';
   import { session, startSignIn } from '$lib/auth';
   import { positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
@@ -153,6 +154,7 @@
     backLabel="Back to friends"
     {barFor}
   />
+  <LearnFromGame game={pgn} />
 {/if}
 
 <style>

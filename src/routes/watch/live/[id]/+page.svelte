@@ -10,6 +10,7 @@
   import { normalizeMove } from 'chessops/chess';
   import { parseUci } from 'chessops/util';
   import type { NormalMove } from 'chessops/types';
+  import LearnFromGame from '$lib/components/LearnFromGame.svelte';
   import WatchViewer, { type BarInfo } from '$lib/components/WatchViewer.svelte';
   import { followGame, type LiveFrame, type LiveGameInfo } from '$lib/lichess';
   import { fenOf, positionFromFen, sanOf } from '$lib/chess/position';
@@ -145,6 +146,7 @@
     backLabel="Back to friends"
     {barFor}
   />
+  <LearnFromGame game={game} />
 {/if}
 
 <style>

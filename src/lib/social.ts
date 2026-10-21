@@ -252,7 +252,8 @@ export interface PlayingGame {
   updated: number;
 }
 /** Every game being played on Chess Castles right now (signed in). */
-export const playingNow = () => call<{ games: PlayingGame[]; now: number }>('GET', 'playing');
+/** Games being played on Chess Castles; `recent`: also the last 24 hours' games (the home page's game of the day). */
+export const playingNow = (recent = false) => call<{ games: PlayingGame[]; now: number }>('GET', recent ? 'playing?recent=1' : 'playing');
 /** Where a game being played is watched (with the engine and the games database): on Lichess's stream, or shared. */
 export const watchHref = (g: Pick<PlayingGame, 'uid' | 'lichess'>) => (g.lichess ? `/watch/live/${g.lichess}` : `/watch/friend/${encodeURIComponent(g.uid)}`);
 /** A friend's game in progress. */
@@ -300,3 +301,37 @@ export const lobbySeek = (o: { tc: string; rated: boolean; rating: number; join?
   call<{ paired?: { role: LobbyRole; partner: LobbySeek; tc: string; rated: boolean }; waiting?: { tc: string; rated: boolean } }>('POST', 'lobby', o);
 /** Leaves the lobby (`started`: the game began, so the partner's seek goes too). */
 export const lobbyLeave = (started = false) => call<{ ok: true }>('DELETE', `lobby${started ? '?started=1' : ''}`);
+
+// ---- WhatsApp reports (server/api-worker/src/whatsapp.ts): a number given with consent after signing in, for the
+// player's Guru report with the link to their study plan.
+
+/** The words agreed to by the box (the server checks this version). */
+export const WA_CONSENT = 'wa-1';
+export interface MyWhatsapp {
+  phone?: string;
+  whose?: 'self' | 'parent';
+  consentAt?: number;
+}
+/** The short Guru summary a WhatsApp message is written from (made in the browser by Insights). */
+export interface GuruSummary {
+  site: 'lichess' | 'chesscom';
+  user: string;
+  games: number;
+  score: number;
+  accuracy: number;
+  blunders: number;
+  weak: { title: string; evidence: string }[];
+  strong: string;
+}
+export const myWhatsapp = () => call<MyWhatsapp>('GET', 'whatsapp');
+export const saveWhatsapp = (phone: string, whose: 'self' | 'parent') => call<MyWhatsapp>('PUT', 'whatsapp', { phone, whose, consent: WA_CONSENT });
+export const stopWhatsapp = () => call<{ ok: true }>('DELETE', 'whatsapp');
+/** Saved only for a player who gave a number (else `saved: false`). */
+export const saveGuruSummary = (report: GuruSummary) => call<{ saved: boolean }>('PUT', 'whatsapp/report', { report });
+
+/** A number as typed ("98765 43210", "+91-98765-43210", "0 98765 43210") as +91…; undefined if it can't be one. */
+export function normalizePhone(typed: string, country = '91'): string | undefined {
+  const digits = typed.replace(/[^\d+]/g, '');
+  const n = digits.startsWith('+') ? digits : digits.startsWith('00') ? `+${digits.slice(2)}` : `+${country}${digits.replace(/^0+/, '')}`;
+  return /^\+[1-9]\d{9,14}$/.test(n) && !(n.startsWith(`+${country}`) && country === '91' && n.length !== 13) ? n : undefined;
+}

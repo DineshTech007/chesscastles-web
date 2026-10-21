@@ -1,4 +1,5 @@
 <script lang="ts">
+  import KeepInTouch from '$lib/components/KeepInTouch.svelte';
   /** Game, sound and appearance settings, plus quick links to membership and help (like chess.com's Settings menu). */
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -86,6 +87,8 @@
     <a class="btn row-btn" href="/feedback"><Icon name="send" size={18} />Send feedback<Icon name="chevron" size={16} color="var(--muted)" /></a>
     <a class="btn row-btn" href="/parents"><Icon name="shield" size={18} />For parents<Icon name="chevron" size={16} color="var(--muted)" /></a>
   </section>
+
+  {#if $session.status === 'in'}<KeepInTouch />{/if}
 
   <section class="card block" aria-labelledby="acct-h">
     <h2 id="acct-h" class="title">Account</h2>
