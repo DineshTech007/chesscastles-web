@@ -8,6 +8,7 @@
   import KindWordsStrip from '$lib/components/KindWordsStrip.svelte';
   import MyInsightsCard from '$lib/components/MyInsightsCard.svelte';
   import LiveOnCC from '$lib/components/LiveOnCC.svelte';
+  import OnlineNow from '$lib/components/OnlineNow.svelte';
   import { HERO_FEATURES } from '$lib/heroFeatures';
   import { t, type Key } from '$lib/i18n';
   import { PLAN_INFO, PLANS_ON, currentPlan } from '$lib/plans';
@@ -62,7 +63,7 @@
   const greetingKey = hour < 12 ? 'home.morning' : hour < 17 ? 'home.afternoon' : 'home.evening';
 </script>
 
-<svelte:head><title>Chess Castles · Learn, Play, Conquer</title></svelte:head>
+<svelte:head><title>Chess Castles · Learn chess free in Marathi, Hindi & English</title></svelte:head>
 
 <div class="home">
   {#if showLanding}
@@ -102,6 +103,8 @@
       <MyInsightsCard />
       <LiveOnCC />
     </div>
+    <!-- Friends online (here or on Lichess) and the players here now, to add as friends. -->
+    <OnlineNow />
   {/if}
 
   {#if !showLanding}

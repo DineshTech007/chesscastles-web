@@ -116,7 +116,13 @@
       if (last.source && queue.length) {
         queueMicrotask(() => {
           const next = queue.takeNext(game.position);
-          if (!next || !game.play(next)) queue.clear();
+          if (!next || !game.play(next)) {
+            // The premove can't be played now: cancelled, with the piece it had picked up, so the player's next tap
+            // (a piece, or straight to a square) works at once.
+            queue.clear();
+            board?.cancelPremove();
+            board?.unselect();
+          }
           v++;
         });
       }
@@ -383,6 +389,7 @@
   function cancelPremoves() {
     queue.clear();
     board?.cancelPremove();
+    board?.unselect();
     v++;
   }
 
@@ -556,11 +563,10 @@
       />
     </div>
     <PlayerBar {...bottom} />
-    {#if game.timed && !g.isOver && g.sans.length < 2}
+    {#if game.timed && !g.isOver && g.sans.length === 0}
       <p class="first-move" role="status">
         <Icon name="history" size={16} />
-        {g.sans.length === 0 && game.human === 'white' ? 'Play your first move.' : g.sans.length === 1 && game.human === 'black' ? 'Your move.' : 'Waiting for the first move.'}
-        The clocks start once each side has made a move, as on Lichess and chess.com.
+        {game.human === 'white' ? 'Play your first move: the clocks start with it, as on chess.com.' : 'White moves first: your clock starts with that move, as on chess.com.'}
       </p>
     {/if}
     <!-- Phones: the move buttons and Resign right under the board, no scrolling. -->

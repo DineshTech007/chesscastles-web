@@ -254,6 +254,9 @@ export interface PlayingGame {
 /** Every game being played on Chess Castles right now (signed in). */
 /** Games being played on Chess Castles; `recent`: also the last 24 hours' games (the home page's game of the day). */
 export const playingNow = (recent = false) => call<{ games: PlayingGame[]; now: number }>('GET', recent ? 'playing?recent=1' : 'playing');
+/** A player signed in on Chess Castles in the last minutes (the home page's "Online now"). */
+export type OnlinePlayer = Player & { relation: Relation; playing: boolean };
+export const onlinePlayers = () => call<{ players: OnlinePlayer[] }>('GET', 'online').then((r) => r.players);
 /** Where a game being played is watched (with the engine and the games database): on Lichess's stream, or shared. */
 export const watchHref = (g: Pick<PlayingGame, 'uid' | 'lichess'>) => (g.lichess ? `/watch/live/${g.lichess}` : `/watch/friend/${encodeURIComponent(g.uid)}`);
 /** A friend's game in progress. */

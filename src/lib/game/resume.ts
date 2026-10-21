@@ -56,9 +56,11 @@ export function routeOf(url: URL): string {
   const s = q.toString();
   return url.pathname + (s ? `?${s}` : '');
 }
-/** The saved game for this page, if the page was opened to resume it. */
+/**
+ * The saved game for this page: the unfinished game played at this same address (opened again with Back, the menu
+ * or a resume link) goes on, instead of a new one starting and the game in progress being lost.
+ */
 export function resumeFor(url: URL): ResumeState | undefined {
-  if (!url.searchParams.has('resume')) return undefined;
   const s = loadResume();
   return s && s.route === routeOf(url) ? s : undefined;
 }

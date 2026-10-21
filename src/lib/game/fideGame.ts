@@ -193,8 +193,9 @@ export class FideGame {
   get timed(): boolean {
     return this.timeControl.minutes > 0;
   }
+  /** The clocks run from White's first move, as on chess.com (owner's request: a game's clock should start at once). */
   private get clockRunning(): boolean {
-    return this.timed && this.moves.length - this.prelude.length >= 2 && !this.isOver;
+    return this.timed && this.moves.length - this.prelude.length >= 1 && !this.isOver;
   }
   get canAbort(): boolean {
     return !this.isOver && !this.moves.some((m) => m.source === undefined);

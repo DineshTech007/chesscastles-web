@@ -157,6 +157,11 @@
     cg?.cancelPremove();
   }
 
+  /** Drops the piece the board has picked up (after a premove that could not be played: the next tap starts afresh). */
+  export function unselect() {
+    cg?.selectSquare(null);
+  }
+
   /** Snaps the board back to its current `fen`: used after a promotion choice is cancelled,
    * since chessground had already moved the pawn to the back rank on its own. */
   export function resync() {

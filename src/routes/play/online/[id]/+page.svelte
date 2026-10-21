@@ -139,7 +139,12 @@
     if (game.plies.length > before && game.myTurn && queue.length) {
       const next = queue.takeNext(game.position);
       if (next) send(next);
-      else queue.clear();
+      else {
+        // The premove can't be played now: cancelled, with the piece it had picked up (the next tap starts afresh).
+        queue.clear();
+        board?.cancelPremove();
+        board?.unselect();
+      }
     }
     shareOnline();
     if (game.isOver) onEnd();
@@ -380,7 +385,7 @@
     </button>
   {/if}
   {#if queue.length}
-    <button class="btn" onclick={() => (queue.clear(), board?.cancelPremove(), v++)}>Cancel premoves ({queue.length})</button>
+    <button class="btn" onclick={() => (queue.clear(), board?.cancelPremove(), board?.unselect(), v++)}>Cancel premoves ({queue.length})</button>
   {/if}
 </div>
 {/snippet}

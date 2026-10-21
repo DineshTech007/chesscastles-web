@@ -107,6 +107,8 @@
   onMount(() => {
     // The app is up: the first screen from app.html goes.
     document.getElementById('boot')?.remove();
+    // A page's text for search engines (scripts/seo-pages.mjs): the app draws the page itself now.
+    document.getElementById('seo')?.remove();
     myGames.load();
     keepReferral(page.url);
     void loadPlanSettings();

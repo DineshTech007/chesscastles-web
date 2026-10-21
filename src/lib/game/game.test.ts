@@ -183,13 +183,17 @@ describe('FideGame', () => {
     g.dispose();
   });
 
-  it('clocks start after both first moves and add the increment', async () => {
+  it("clocks start with White's first move (as on chess.com) and add the increment", async () => {
     const { g, clock } = game(new FakeBook({ e4: [e(72, 'e7e5', 10)], 'e4 e5 Nf3': [e(72, 'b8c6', 10)] }));
     g.begin();
+    // White's first move is not timed…
     clock.t += 20_000;
     g.play(m('e2e4'));
-    await flush();
     expect(g.remaining('white')).toBe(300_000);
+    // …Black's clock runs from it (4 s to answer, plus the increment).
+    clock.t += 4_000;
+    await flush();
+    expect(g.remaining('black')).toBe(299_000);
     clock.t += 10_000;
     g.play(m('g1f3'));
     await flush();
