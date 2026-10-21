@@ -52,9 +52,18 @@
   // own handlers on the board underneath and stops them bubbling, so a plain bubble-phase
   // listener up here would never see a touch that started on the board at all.
   let touch: { x: number; y: number; t: number; onPiece: boolean } | undefined;
+  /**
+   * Whether a touch at (x, y) is on a piece. Asked of the board itself: chessground's pieces don't take pointer
+   * events (the touch's target is the board, never the piece), so looking for a piece element found none, and a
+   * quick sideways drag of a piece also counted as a swipe, stepping the game back while it was being played.
+   */
+  const pieceAt = (x: number, y: number) => {
+    const k = cg?.getKeyAtDomPos([x, y]);
+    return !!k && !!cg?.state.pieces.has(k);
+  };
   function onpointerdown(e: PointerEvent) {
     if (!onswipe || e.pointerType !== 'touch') return;
-    touch = { x: e.clientX, y: e.clientY, t: Date.now(), onPiece: !!(e.target as HTMLElement).closest('piece') };
+    touch = { x: e.clientX, y: e.clientY, t: Date.now(), onPiece: pieceAt(e.clientX, e.clientY) || !!(e.target as HTMLElement).closest('piece') };
   }
   function onpointerup(e: PointerEvent) {
     if (!touch) return;
