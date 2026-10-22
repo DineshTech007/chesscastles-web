@@ -4,6 +4,8 @@
    * Lichess's Puzzle Storm are the most played puzzle modes there): as many puzzles as you can in 3 minutes, 3
    * mistakes and it's over, easy at first and a little harder after every solve. One try a puzzle; it doesn't change
    * the rating. The solved ones count for the day's goal, and a best score and two badges are kept (rewards.ts).
+   * Afterwards (owner, 2026-10-22): every puzzle opens again (RushReview: the wrong move and the answer), and the
+   * player's place on the Puzzle Rush board shows at once (RushStanding).
    */
   import { onDestroy } from 'svelte';
   import { Tween } from 'svelte/motion';
@@ -17,6 +19,8 @@
   import Medal from '$lib/puzzles/Medal.svelte';
   import { puzzleSounds } from '$lib/puzzles/puzzleSounds';
   import { BADGES, nextRushTitle, recordRush, rewards, RUSH_TITLES, rushTitle } from '$lib/puzzles/rewards';
+  import RushReview, { type RushPuzzle } from '$lib/puzzles/RushReview.svelte';
+  import RushStanding from '$lib/puzzles/RushStanding.svelte';
 
   const SECONDS = 180;
   const LIVES = 3;
@@ -28,7 +32,9 @@
   let round = $state(0);
   let score = $state(0);
   let misses = $state(0);
-  let log = $state<{ id: string; r: number; ok: boolean }[]>([]);
+  let log = $state<RushPuzzle[]>([]);
+  /** The puzzle open again after the rush (its place in the log). */
+  let reviewing = $state<number | undefined>();
   let deadline = $state(0);
   let now = $state(Date.now());
   let ended = $state<'time' | 'lives' | 'stop'>('time');
@@ -68,6 +74,7 @@
       score = 0;
       misses = 0;
       log = [];
+      reviewing = undefined;
       best = undefined;
       shownScore.set(0, { duration: 0 });
       lastTick = 0;
@@ -90,9 +97,9 @@
     round++;
   }
 
-  function onresult(ok: boolean) {
+  function onresult(ok: boolean, _wrong: number, miss?: { ply: number; uci: string }) {
     if (phase !== 'run' || !current) return;
-    log = [...log, { id: current[0], r: current[3], ok }];
+    log = [...log, { id: current[0], fen: current[1], moves: current[2].split(' '), r: current[3], ok, miss }];
     flash = ok ? 'ok' : 'bad';
     setTimeout(() => (flash = undefined), 450);
     if (ok) {
@@ -203,18 +210,23 @@
       {#if hardest}<span class="label">Hardest solved: <b class="num">{hardest}</b></span>{/if}
       {#if best}{@render titles(best.best)}{/if}
       {#if log.length}
+        <p class="label small tap">Tap a puzzle to see it again{log.some((x) => !x.ok) ? ' (the red ones: your move and the answer)' : ''}</p>
         <ol class="trail end">
-          {#each log as x, i (i)}<li class:ok={x.ok}>{x.r}</li>{/each}
+          {#each log as x, i (i)}<li class:ok={x.ok}><button onclick={() => (reviewing = i)} title={x.ok ? `Puzzle ${x.r}: solved` : `Puzzle ${x.r}: see why`}>{x.r}</button></li>{/each}
         </ol>
       {/if}
+      {#if best}<RushStanding best={best.best} />{/if}
       <div class="actions">
         <button class="btn primary go" onclick={start} disabled={starting}>Play again</button>
         <a class="btn" href="/puzzles">Rated puzzles</a>
       </div>
-      <a class="board" href="/leaderboard#rush">See the Puzzle Rush leaderboard →</a>
     </section>
   {/if}
 </div>
+
+{#if reviewing !== undefined && log[reviewing]}
+  <RushReview list={log} bind:at={reviewing} onclose={() => (reviewing = undefined)} />
+{/if}
 
 <Celebrations bind:this={celebrations} />
 
@@ -452,6 +464,28 @@
   }
   .trail.end {
     justify-content: center;
+  }
+  /* After the rush every puzzle is a button: it opens again (RushReview). */
+  .trail.end li {
+    padding: 0;
+    height: 28px;
+  }
+  .trail.end button {
+    height: 100%;
+    padding: 0 8px;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .trail.end li:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px color-mix(in srgb, #fff 45%, transparent);
+  }
+  .tap {
+    margin: 4px 0 0;
   }
   .stop {
     align-self: center;

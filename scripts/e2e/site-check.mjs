@@ -567,6 +567,37 @@ async function run(name, options) {
     return new URL(page.url()).pathname;
   });
 
+  // 4n. After a rush every puzzle opens again (owner, 2026-10-22: "see why his move was wrong"): three wrong moves
+  // (Rd2 instead of Rd8+), then the first puzzle shows the move played and the answer; the standing box is there.
+  await check(name, page, 'rush: a missed puzzle shows your move and the answer', async () => {
+    const one = Array.from({ length: 10 }, (_, i) => [`sc-rev-${i}`, '6k1/5ppp/8/8/8/8/5PPP/3R2K1 b - - 0 1', 'h7h6 d1d8', 500 + i * 10, ['mateIn1']]);
+    const bands = /\/data\/puzzles\/bands\/\d+\.json/;
+    await page.route(bands, (r) => r.fulfill({ json: one }));
+    try {
+      await open(page, '/puzzles/rush');
+      await tap(page.getByRole('button', { name: /start the rush/i }));
+      for (let n = 0; n < 3; n++) {
+        // The next puzzle comes a second after a miss: wait until it is the player's move.
+        await page.getByText(/to move: find the best move/).waitFor({ timeout: 20000 });
+        for (const sq of ['d1', 'd2']) {
+          const { x, y } = await square(page, sq);
+          if (touch) await page.touchscreen.tap(x, y);
+          else await page.mouse.click(x, y);
+          await page.waitForTimeout(200);
+        }
+      }
+      await page.getByText(/Tap a puzzle to see it again/).waitFor({ timeout: 10000 });
+      expect(await page.getByRole('heading', { name: 'Where you stand' }).isVisible(), 'no "Where you stand" box');
+      await tap(page.locator('.trail.end button').first());
+      const say = (await page.locator('[role=dialog] .say').innerText()).trim();
+      expect(/You played Rd2\. The answer was Rd8\+\./.test(say), `the review says "${say}"`);
+      await tap(page.getByRole('button', { name: 'Close' }));
+      return say;
+    } finally {
+      await page.unroute(bands);
+    }
+  });
+
   // 4m. My awards (owner, 2026-10-22): the profile's trophy cabinet shows, every medal held to its box (a tall trophy
   // picture once ran over its name).
   await check(name, page, 'profile: My awards', async () => {

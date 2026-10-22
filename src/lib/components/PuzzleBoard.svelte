@@ -12,7 +12,7 @@
   import type { Key } from '@lichess-org/chessground/types';
   import type { NormalMove } from 'chessops/types';
   import { makeBoardFen } from 'chessops/fen';
-  import { parseUci } from 'chessops/util';
+  import { makeUci, parseUci } from 'chessops/util';
   import { PremoveQueue } from '$lib/game/premoves';
   import Board from './Board.svelte';
   import { promotionFor } from '$lib/chess/promotion';
@@ -35,7 +35,8 @@
     moves: string[];
     opponentFirst?: boolean;
     tries?: number;
-    onresult?: (solved: boolean, wrongTries: number) => void;
+    /** `miss`: the last wrong move and where in the line it was played (Puzzle Rush shows it after the rush). */
+    onresult?: (solved: boolean, wrongTries: number, miss?: { ply: number; uci: string }) => void;
     onfirst?: (clean: boolean) => void;
     /** A Hint button: it shows the piece to move, and the puzzle no longer counts as solved cleanly. */
     hintButton?: boolean;
@@ -107,7 +108,7 @@
       v++;
       if (wrong >= tries) {
         status = 'failed';
-        onresult?.(false, wrong);
+        onresult?.(false, wrong, { ply: step, uci: makeUci(m) });
         reveal();
       } else status = 'wrong';
       return;
