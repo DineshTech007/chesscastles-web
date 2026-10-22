@@ -35,6 +35,8 @@ export interface Player {
   booksRead?: number;
   /** Study progress friends can see (friends and the player only). */
   progress?: FriendProgress;
+  /** Awards won, for everyone signed in: the ids, and the puzzle rating and Rush best their top badges show. */
+  awards?: { ids: string[]; puzzleRating: number; rushBest: number };
   joined: number;
   /** False for a Lichess player who was sent a request but has not joined Chess Castles yet. */
   member?: boolean;

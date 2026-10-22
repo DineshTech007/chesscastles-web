@@ -183,9 +183,9 @@
       <div class="card tile"><span class="label">FIDE rating</span><strong class="display num">{player.fideRating ?? '—'}</strong>{#if player.fideId}<a class="label" href="/ratings/player/{player.fideId}">FIDE profile</a>{/if}</div>
     </section>
 
-    <!-- The awards they won (friends and the player only: the server sends progress to them alone). -->
-    {#if player.progress?.awards?.length}
-      <AwardsCabinet earned={new Set(player.progress.awards)} name={player.name} rating={player.progress.puzzleRating} rushBest={player.progress.rushBest ?? 0} />
+    <!-- The awards they won (everyone signed in sees them). -->
+    {#if player.awards?.ids.length}
+      <AwardsCabinet earned={new Set(player.awards.ids)} name={player.name} rating={player.awards.puzzleRating} rushBest={player.awards.rushBest} />
     {/if}
 
     {#if player.about}

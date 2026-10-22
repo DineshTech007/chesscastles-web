@@ -180,6 +180,8 @@
     // A new puzzle rating reaches friends too, and a new Puzzle Rush best the Rush leaderboard.
     const unPuzzle = puzzleRating.subscribe(() => syncBoards());
     const unRush = rewards.subscribe(() => syncBoards());
+    // A finished game can win an award (first win, CC Rating…): sent too.
+    const unGamesAwards = myGames.subscribe(() => syncBoards());
     // Signed in: keep the friends badge fresh, and share the CC Rating with friends.
     let stopBadge: (() => void) | undefined;
     const unSession = session.subscribe((s) => {
@@ -259,6 +261,7 @@
       unStudy();
       unPuzzle();
       unRush();
+      unGamesAwards();
       unSession();
       unResume();
       stopBadge?.();

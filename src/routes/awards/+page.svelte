@@ -38,7 +38,7 @@
 <div class="page">
   <h1 class="display">My awards</h1>
   <p class="muted">Every badge you can win on Chess Castles: games, CC Rating, puzzles, Puzzle Rush, lessons and tournaments. The glowing one in each group is the next to win.</p>
-  <AwardsCabinet earned={won} mine rating={$puzzleRating} rushBest={Math.max($rewards.rushBest, keptBest)} stars={$rewards.stars} {trophies} />
+  <AwardsCabinet earned={won} mine full rating={$puzzleRating} rushBest={Math.max($rewards.rushBest, keptBest)} stars={$rewards.stars} {trophies} />
   {#if $session.status === 'out'}<p class="muted small">Sign in to keep your awards on every device.</p>{/if}
 </div>
 
