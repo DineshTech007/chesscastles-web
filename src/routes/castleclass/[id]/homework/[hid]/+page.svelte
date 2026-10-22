@@ -11,6 +11,7 @@
   import TaskSolver from '$lib/classroom/TaskSolver.svelte';
   import Leaderboard from '$lib/classroom/Leaderboard.svelte';
   import { sanLine, took } from '$lib/classroom/tasks';
+  import { t } from '$lib/i18n';
 
   const id = $derived(page.params.id ?? '');
   const hid = $derived(page.params.hid ?? '');
@@ -41,20 +42,20 @@
 <svelte:head><title>Homework · CastlesClass · Chess Castles</title></svelte:head>
 
 <div class="page">
-  <a class="back" href="/castleclass">← My classes</a>
+  <a class="back" href="/castleclass">← {$t('kidsclass.room.myClasses')}</a>
   {#if !uid}
-    <p>Sign in to do your homework.</p>
+    <p>{$t('kidsclass.hw.signIn')}</p>
     <button class="btn primary" onclick={startSignIn}>Sign in</button>
   {:else if error}
     <p class="err">{error}</p>
   {:else if role === 'student' && hw}
     {#if hw.error}<p class="err">{hw.error}</p>{/if}
     {#if hw.task}
-      <p class="muted">Homework · due {dueText(hw.due)}{hw.task.over ? ' (passed: the answers are below)' : ''}</p>
+      <p class="muted">{$t('kidsclass.hw.due', { date: dueText(hw.due) })}{hw.task.over ? $t('kidsclass.hw.passed') : ''}</p>
       <div class="solve"><TaskSolver host={hw} /></div>
       {#if hw.notice}<p class="note">{hw.notice}</p>{/if}
     {:else}
-      <p>Loading…</p>
+      <p>{$t('kidsclass.room.loading')}</p>
     {/if}
   {:else if role === 'coach' && view}
     <h1>{view.task.title}</h1>
@@ -76,7 +77,7 @@
       <p class="muted">No answers yet.</p>
     {/each}
   {:else}
-    <p>Loading…</p>
+    <p>{$t('kidsclass.room.loading')}</p>
   {/if}
 </div>
 

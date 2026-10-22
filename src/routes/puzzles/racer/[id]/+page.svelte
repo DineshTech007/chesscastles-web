@@ -30,6 +30,8 @@
   import ComboBar from '$lib/racer/ComboBar.svelte';
   import ChatDock from '$lib/chat/ChatDock.svelte';
   import EmojiBurst from '$lib/chat/EmojiBurst.svelte';
+  import { t } from '$lib/i18n';
+  import { RACER_ERRORS } from '$lib/i18n/features/racer';
 
   const id = $derived(page.params.id ?? '');
   const signedIn = $derived($session.status === 'in' || !!devPlayer());
@@ -139,10 +141,10 @@
       copied = true;
       setTimeout(() => (copied = false), 2000);
     } catch {
-      prompt('The race link', raceLink(id));
+      prompt($t('racer.room.linkPrompt'), raceLink(id));
     }
   }
-  const waText = $derived(info?.duel ? `I challenge you to a Puzzle Battle on Chess Castles! 🏁 ${raceLink(id)}` : `Race me in Puzzle Racer on Chess Castles! 🏎️ ${raceLink(id)}`);
+  const waText = $derived($t(info?.duel ? 'racer.room.waBattle' : 'racer.room.waRace', { link: raceLink(id) }));
   let friends = $state<Player[]>([]);
   /** Invites sent (when): after 15 seconds an invite can go again (the friend missed or lost the popup). */
   let invited = $state<Record<string, { state: 'sent' | 'error'; at: number }>>({});
@@ -178,12 +180,13 @@
         await goto(`/puzzles/racer/${r.id}`);
       }
     } catch (e) {
-      alert((e as Error).message);
+      const m = (e as Error).message;
+      alert(RACER_ERRORS[m] ? $t(RACER_ERRORS[m]) : m);
     } finally {
       going = false;
     }
   }
-  const ordinal = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`;
+  const ordinal = (n: number) => (n === 1 ? $t('racer.place.1') : n === 2 ? $t('racer.place.2') : n === 3 ? $t('racer.place.3') : $t('racer.place.n', { n }));
   const podium = $derived(final ? [final[1], final[0], final[2]] : []);
   const title = $derived(info?.duel ? 'Puzzle Battle' : 'Puzzle Racer');
 </script>
@@ -191,7 +194,7 @@
 <svelte:head><title>{title} · Chess Castles</title></svelte:head>
 
 {#snippet who(c: CarView)}
-  <span class="who-name">{c.uid === race?.me ? 'You' : c.name}{c.bot ? ' 🤖' : ''}</span>
+  <span class="who-name">{c.uid === race?.me ? $t('racer.you') : c.name}{c.bot ? ' 🤖' : ''}</span>
 {/snippet}
 
 <div class="page">
@@ -202,16 +205,16 @@
 
   {#if !signedIn}
     <div class="card pad center">
-      <p>Sign in to race. Your score goes on the Puzzle Racer leaderboard.</p>
-      <button class="btn primary" onclick={() => startSignIn()}>Sign in</button>
+      <p>{$t('racer.room.signIn')}</p>
+      <button class="btn primary" onclick={() => startSignIn()}>{$t('racer.room.signInBtn')}</button>
     </div>
   {:else if race?.error}
     <div class="card pad center">
-      <p class="big-msg">🏁 {race.error}</p>
-      <button class="btn primary" onclick={nextRace} disabled={going}>Join a quick race</button>
+      <p class="big-msg">🏁 {RACER_ERRORS[race.error] ? $t(RACER_ERRORS[race.error]) : race.error}</p>
+      <button class="btn primary" onclick={nextRace} disabled={going}>{$t('racer.room.joinQuick')}</button>
     </div>
   {:else if !info}
-    <div class="card pad center"><p class="muted">Getting to the starting line…</p></div>
+    <div class="card pad center"><p class="muted">{$t('racer.room.loading')}</p></div>
   {:else}
     <div class="arena" class:over={phase === 'over'} style="--lanes: {Math.max(2, race?.cars.length ?? 2)}">
       <div class="boardwrap" class:ok={flash === 'ok'} class:bad={flash === 'bad'}>
@@ -220,7 +223,7 @@
             <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} tries={1} {onresult} premoves />
           {/key}
         {:else if current}
-          <Board fen={current[1]} viewOnly coordinates={false} label="The first puzzle" />
+          <Board fen={current[1]} viewOnly coordinates={false} label={$t('racer.room.firstPuzzle')} />
         {:else}
           <div class="skel"></div>
         {/if}
@@ -229,7 +232,7 @@
           <div class="veil">
             {#if me}
               <Car car={me.car} size={150} />
-              <p class="drive">You drive the <b>{CARS[me.car % CARS.length].name}</b>!</p>
+              <p class="drive">{$t('racer.room.drive')} <b>{CARS[me.car % CARS.length].name}</b>{$t('racer.room.driveEnd')}</p>
             {/if}
           </div>
         {/if}
@@ -241,59 +244,59 @@
       <aside class="panel card">
         {#if phase === 'lobby'}
           {#if info.open}
-            <h2>Racers are joining…</h2>
+            <h2>{$t('racer.room.joining')}</h2>
             <p class="lcd num">{lobbyLeft}</p>
-            <p class="muted">The lights come on in {lobbyLeft} s. Alone? Computer racers join you.</p>
+            <p class="muted">{$t('racer.room.lightsIn', { n: lobbyLeft })}</p>
           {:else if info.duel}
-            <h2>Waiting for your friend…</h2>
-            <p class="muted">The battle starts the moment they join: the same puzzles, {info.seconds} seconds, who solves more wins.</p>
+            <h2>{$t('racer.room.waitFriend')}</h2>
+            <p class="muted">{$t('racer.room.battleStarts', { n: info.seconds })}</p>
           {:else}
-            <h2>Race with friends</h2>
-            <p class="muted">{humans.length} {humans.length === 1 ? 'racer' : 'racers'} in. {info.owner === race?.me ? 'Start when everyone is here (alone, computer racers join).' : 'The race starts when its maker says go.'}</p>
-            {#if info.owner === race?.me}<button class="btn primary big go" onclick={() => race?.start()}>🚦 Start the race</button>{/if}
+            <h2>{$t('racer.withFriends')}</h2>
+            <p class="muted">{$t(humans.length === 1 ? 'racer.room.in1' : 'racer.room.inN', { n: humans.length })} {info.owner === race?.me ? $t('racer.room.ownerHint') : $t('racer.room.guestHint')}</p>
+            {#if info.owner === race?.me}<button class="btn primary big go" onclick={() => race?.start()}>{$t('racer.room.start')}</button>{/if}
           {/if}
           {#if !info.open}
             <div class="share">
-              <button class="btn" onclick={copyLink}><Icon name="copy" size={16} />{copied ? 'Link copied ✓' : 'Copy the link'}</button>
+              <button class="btn" onclick={copyLink}><Icon name="copy" size={16} />{copied ? $t('racer.room.copied') : $t('racer.room.copy')}</button>
               <a class="btn wa" href="https://wa.me/?text={encodeURIComponent(waText)}" target="_blank" rel="noopener">WhatsApp</a>
             </div>
             {#if friends.length}
-              <h3>Challenge a friend</h3>
+              <h3>{$t('racer.challengeFriend')}</h3>
               <div class="friends">
                 {#each friends as f (f.uid)}
                   {@const inv = invited[f.uid]}
                   {@const again = !inv || now - inv.at > 15_000}
                   <button class="friend" onclick={() => challenge(f)} disabled={!again}>
                     <span class="dot" class:on={f.online}></span>{f.name}
-                    <span class="state">{!inv ? (f.online ? 'Online' : '') : inv.state === 'error' ? (again ? 'Try again' : 'Could not invite') : again ? 'Invited · invite again' : 'Invited ✓'}</span>
+                    <span class="state">{!inv ? (f.online ? $t('racer.room.online') : '') : inv.state === 'error' ? (again ? $t('racer.room.tryAgain') : $t('racer.room.couldNot')) : again ? $t('racer.room.inviteAgain') : $t('racer.room.invited')}</span>
                   </button>
                 {/each}
               </div>
             {/if}
           {/if}
         {:else if phase === 'lights'}
-          <h2>Get ready!</h2>
-          <p class="muted">Solve as many puzzles as you can in {info.seconds} seconds. A wrong move goes straight to the next one.</p>
+          <h2>{$t('racer.room.getReady')}</h2>
+          <p class="muted">{$t('racer.room.solveMany', { n: info.seconds })}</p>
         {:else if phase === 'racing'}
           <div class="hud">
             <div class="scorebox"><span class="flagmini">🏁</span><span class="lcd num">{me?.score ?? 0}</span></div>
             <div class="side">
               <span class="clock num" class:low={left <= 10}>⏱ {clock}</span>
-              <span class="place">{ordinal(race?.rank ?? 1)} <span class="muted">of {race?.cars.length}</span></span>
+              <span class="place">{ordinal(race?.rank ?? 1)} <span class="muted">{$t('racer.room.of', { n: race?.cars.length ?? 0 })}</span></span>
             </div>
           </div>
           <ComboBar combo={me?.combo ?? 0} />
-          {#if current}<p class="muted small">Puzzle {idx + 1} · rating {current[3]}</p>{/if}
+          {#if current}<p class="muted small">{$t('racer.room.puzzleInfo', { n: idx + 1, r: current[3] })}</p>{/if}
         {:else if final && myFinal}
           <div class="result">
             {#if myPlace === 1 && final.length > 1}<Fireworks rockets={5} />{/if}
-            <p class="done">{info.duel ? (myPlace === 1 ? 'You won the battle! ⚔️' : 'Battle over') : 'Race complete!'}</p>
-            <p class="placebig">{['🥇', '🥈', '🥉'][myPlace - 1] ?? '🏅'} {ordinal(myPlace)} <span class="muted">of {final.length}</span></p>
+            <p class="done">{info.duel ? (myPlace === 1 ? $t('racer.room.wonBattle') : $t('racer.room.battleOver')) : $t('racer.room.raceDone')}</p>
+            <p class="placebig">{['🥇', '🥈', '🥉'][myPlace - 1] ?? '🏅'} {ordinal(myPlace)} <span class="muted">{$t('racer.room.of', { n: final.length })}</span></p>
             <p class="lcd num">{myFinal.score}</p>
-            <p class="muted">{myFinal.solved} solved · {myFinal.tried - myFinal.solved} missed</p>
-            {#if newBest}<p class="best">New best! 🎉</p>{:else}<p class="muted small">Your best: {$racerStats.best}</p>{/if}
+            <p class="muted">{$t('racer.room.solvedMissed', { solved: myFinal.solved, missed: myFinal.tried - myFinal.solved })}</p>
+            {#if newBest}<p class="best">{$t('racer.room.newBest')}</p>{:else}<p class="muted small">{$t('racer.room.yourBest', { n: $racerStats.best })}</p>{/if}
             {#if racerTitle($racerStats.best)}<span class="rtitle">🏎️ {racerTitle($racerStats.best)}</span>{/if}
-            <div class="podium" aria-label="The podium">
+            <div class="podium" aria-label={$t('racer.room.podium')}>
               {#each podium as c, i (c?.uid ?? i)}
                 {#if c}
                   <div class="step s{i === 1 ? 1 : i === 0 ? 2 : 3}" class:mine={c.uid === race?.me}>
@@ -306,8 +309,8 @@
               {/each}
             </div>
             <TitleLadder best={$racerStats.best} size={34} />
-            <button class="btn primary big go" onclick={nextRace} disabled={going}>{info.open ? '🏎️ Next race' : info.duel ? '⚔️ Rematch' : '🏁 Race again'}</button>
-            <a class="lb" href="/leaderboard#racer">Puzzle Racer leaderboard →</a>
+            <button class="btn primary big go" onclick={nextRace} disabled={going}>{info.open ? $t('racer.room.next') : info.duel ? $t('racer.room.rematch') : $t('racer.room.again')}</button>
+            <a class="lb" href="/leaderboard#racer">{$t('racer.room.lb')}</a>
           </div>
         {/if}
       </aside>
@@ -319,14 +322,14 @@
     </div>
     {#if race}
       <div class="chatrow">
-        <ChatDock lines={race.chat} me={race.me} guard={race.guard} onsend={(k, v) => race?.say(k, v)} note={phase === 'lobby' ? 'Say hi while the racers come in!' : ''} />
+        <ChatDock lines={race.chat} me={race.me} guard={race.guard} onsend={(k, v) => race?.say(k, v)} note={phase === 'lobby' ? $t('racer.room.sayHi') : ''} />
       </div>
     {/if}
 
     {#if phase === 'over' && log.length}
       <section class="card pad review">
-        <h3>Your puzzles</h3>
-        <p class="muted small">Tap one to see it again: the red ones show your move and the answer.</p>
+        <h3>{$t('racer.room.yourPuzzles')}</h3>
+        <p class="muted small">{$t('racer.room.tapOne')}</p>
         <ol class="chips">
           {#each log as x, i (i)}<li class:ok={x.ok}><button onclick={() => (reviewing = i)}>{x.r}</button></li>{/each}
         </ol>

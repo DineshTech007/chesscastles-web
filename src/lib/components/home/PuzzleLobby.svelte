@@ -13,6 +13,8 @@
   import Car from '$lib/racer/Car.svelte';
   import { quickRace, seekBattle, type Lobby } from '$lib/racer/api';
   import { racerTitle } from '$lib/racer/stats';
+  import { t } from '$lib/i18n';
+  import { RACER_ERRORS } from '$lib/i18n/features/racer';
 
   let lobby = $state<Lobby | undefined>();
   let room: Room | undefined;
@@ -66,13 +68,13 @@
 
 <section class="lobby" aria-labelledby="lobby-h">
   <header class="lh">
-    <h2 id="lobby-h" class="display">🏁 Puzzle Lobby <span class="new">NEW</span></h2>
-    {#if lobby?.racing}<span class="livepill"><span class="dot"></span>{lobby.racers} racing now</span>{/if}
+    <h2 id="lobby-h" class="display">🏁 Puzzle Lobby <span class="new">{$t('racer.new')}</span></h2>
+    {#if lobby?.racing}<span class="livepill"><span class="dot"></span>{$t('racer.lobby.racingNow', { n: lobby.racers })}</span>{/if}
   </header>
 
   <div class="cards">
     <div class="card race" class:hot={!!open}>
-      <span class="kicker">Next race</span>
+      <span class="kicker">{$t('racer.lobby.next')}</span>
       {#if open}
         <div class="count">
           <svg viewBox="0 0 44 44" class="ring" aria-hidden="true">
@@ -81,41 +83,41 @@
           </svg>
           <b class="num">{left}</b>
         </div>
-        <p class="what">Starts in {left} s · {open.cars} {open.cars === 1 ? 'racer' : 'racers'} waiting</p>
+        <p class="what">{$t(open.cars === 1 ? 'racer.lobby.startsIn1' : 'racer.lobby.startsInN', { s: left, n: open.cars })}</p>
         <div class="cars" aria-hidden="true">
           {#each Array.from({ length: Math.min(open.cars, 6) }) as _, i (i)}<Car car={i} size={40} moving />{/each}
         </div>
-        <button class="btn go" onclick={joinRace} disabled={!!busy}>{busy === 'race' ? 'Joining…' : '🏎️ Join the race'}</button>
+        <button class="btn go" onclick={joinRace} disabled={!!busy}>{busy === 'race' ? $t('racer.lobby.joining') : $t('racer.lobby.join')}</button>
       {:else}
-        <p class="what">No race is filling up. Start one: others join you, or computer racers will!</p>
+        <p class="what">{$t('racer.lobby.none')}</p>
         <div class="cars" aria-hidden="true"><Car car={0} size={40} /><Car car={4} size={40} /><Car car={7} size={40} /></div>
-        <button class="btn go" onclick={joinRace} disabled={!!busy}>{busy === 'race' ? 'Starting…' : '🏁 Start a race'}</button>
+        <button class="btn go" onclick={joinRace} disabled={!!busy}>{busy === 'race' ? $t('racer.lobby.starting') : $t('racer.lobby.start')}</button>
       {/if}
     </div>
 
     <div class="card battle">
-      <span class="kicker">⚔️ Battle challenges</span>
+      <span class="kicker">{$t('racer.lobby.battles')}</span>
       {#each seeks.slice(0, 4) as s (s.id)}
         <div class="seek" class:mine={s.uid === me}>
           <span class="av">{s.name.trim()[0]?.toUpperCase() ?? '?'}</span>
           <span class="who">
-            <b>{s.uid === me ? 'Your challenge' : s.name}</b>
-            <small>{racerTitle(s.best) ? `🏎️ ${racerTitle(s.best)} · ` : ''}waiting {waited(s.at)}</small>
+            <b>{s.uid === me ? $t('racer.lobby.yours') : s.name}</b>
+            <small>{racerTitle(s.best) ? `🏎️ ${racerTitle(s.best)} · ` : ''}{$t('racer.lobby.waiting', { t: waited(s.at) })}</small>
           </span>
           {#if s.uid === me}
-            <button class="btn small" onclick={() => takeBattle(s.id)}>Open</button>
+            <button class="btn small" onclick={() => takeBattle(s.id)}>{$t('racer.lobby.open')}</button>
           {:else}
-            <button class="btn small fight" onclick={() => takeBattle(s.id)} disabled={!!busy}>Battle!</button>
+            <button class="btn small fight" onclick={() => takeBattle(s.id)} disabled={!!busy}>{$t('racer.lobby.fight')}</button>
           {/if}
         </div>
       {:else}
-        <p class="what">No challenges yet. Post one and the first to take it races you!</p>
+        <p class="what">{$t('racer.lobby.noChallenges')}</p>
       {/each}
-      {#if !mine}<button class="btn post" onclick={postBattle} disabled={!!busy}>{busy === 'post' ? 'Posting…' : '⚔️ Post a challenge'}</button>{/if}
+      {#if !mine}<button class="btn post" onclick={postBattle} disabled={!!busy}>{busy === 'post' ? $t('racer.lobby.posting') : $t('racer.lobby.post')}</button>{/if}
     </div>
   </div>
-  {#if error}<p class="err">{error}</p>{/if}
-  <div class="links"><a href="/puzzles/racer">Race with friends →</a><a href="/leaderboard#racer">Top racers →</a></div>
+  {#if error}<p class="err">{RACER_ERRORS[error] ? $t(RACER_ERRORS[error]) : error}</p>{/if}
+  <div class="links"><a href="/puzzles/racer">{$t('racer.lobby.linkFriends')}</a><a href="/leaderboard#racer">{$t('racer.lobby.linkTop')}</a></div>
 </section>
 
 <style>

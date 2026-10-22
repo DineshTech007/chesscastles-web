@@ -7,6 +7,7 @@
   import Car from './Car.svelte';
   import type { CarView, Phase } from './api';
   import { hiddenChat, chatOff, type ChatLine } from '$lib/chat/chat';
+  import { t } from '$lib/i18n';
 
   let {
     cars,
@@ -34,7 +35,7 @@
   const rankOf = $derived(new Map([...cars].sort((a, b) => b.score - a.score || b.solved - a.solved).map((c, i) => [c.uid, i + 1])));
 </script>
 
-<div class="track" class:racing={phase === 'racing'} aria-label="The race">
+<div class="track" class:racing={phase === 'racing'} aria-label={$t('racer.track.aria')}>
   <div class="kerb"></div>
   <div class="lanes">
     <div class="start" aria-hidden="true"></div>
@@ -52,13 +53,13 @@
       <div class="lane" class:me={c.uid === me} class:off={!c.online && !c.bot}>
         <div class="road">
           <div class="rider" style="--p: {pct}">
-            <span class="tag">{c.uid === me ? 'You' : c.name}{c.bot ? ' 🤖' : ''}</span>
+            <span class="tag">{c.uid === me ? $t('racer.you') : c.name}{c.bot ? ' 🤖' : ''}</span>
             {#if bubbles.get(c.uid)}
               {@const b = bubbles.get(c.uid)!}
               {#key b.id}<span class="say" class:emoji={b.kind === 'emoji'}>{b.text}</span>{/key}
             {/if}
             <Car car={c.car} size={58} moving={phase === 'racing'} boost={phase === 'racing' && c.combo >= 5} />
-            {#if phase === 'over' && rank === 1 && top > 0}<span class="cup" aria-label="Winner">🏆</span>{/if}
+            {#if phase === 'over' && rank === 1 && top > 0}<span class="cup" aria-label={$t('racer.track.winner')}>🏆</span>{/if}
           </div>
         </div>
         <span class="score num" class:lead={rank === 1 && top > 0}>{c.score}</span>

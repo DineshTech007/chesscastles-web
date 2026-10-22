@@ -2,6 +2,7 @@
   /** The class chat. A student's message goes to the coach only (unless the coach lets the class see them all). */
   import { onDestroy, onMount, tick } from 'svelte';
   import type { Live } from './live.svelte';
+  import { t } from '$lib/i18n';
 
   let { live }: { live: Live } = $props();
   let text = $state('');
@@ -29,22 +30,22 @@
   <div class="msgs" bind:this={box}>
     {#each live.chat as c (c.id)}
       <div class="msg" class:mine={c.uid === live.me.uid} class:coach={c.uid === live.info.coach}>
-        <span class="who">{c.uid === live.me.uid ? 'You' : c.name}{c.coachOnly && live.coach ? ' · to you' : ''} <small>{time(c.at)}</small></span>
+        <span class="who">{c.uid === live.me.uid ? $t('kidsclass.cc.you') : c.name}{c.coachOnly && live.coach ? ' · to you' : ''} <small>{time(c.at)}</small></span>
         <span class="text">{c.text}</span>
       </div>
     {:else}
-      <p class="muted">{live.coach ? 'Students’ answers and questions show here.' : 'Ask your coach a question or type your answer.'}</p>
+      <p class="muted">{live.coach ? 'Students’ answers and questions show here.' : $t('kidsclass.cc.empty')}</p>
     {/each}
   </div>
   {#if live.watching}
     <p class="muted small">You are watching: the class does not see you, so you cannot write here.</p>
   {:else}
     <form onsubmit={send}>
-      <input bind:value={text} maxlength="300" placeholder={live.coach ? 'Message the class' : live.settings.chat ? 'Message the class' : 'Message your coach'} aria-label="Message" />
-      <button class="btn primary" disabled={!text.trim()}>Send</button>
+      <input bind:value={text} maxlength="300" placeholder={live.coach ? 'Message the class' : live.settings.chat ? $t('kidsclass.cc.toClass') : $t('kidsclass.cc.toCoach')} aria-label="Message" />
+      <button class="btn primary" disabled={!text.trim()}>{$t('kidsclass.chat.send')}</button>
     </form>
   {/if}
-  {#if !live.coach && !live.settings.chat}<p class="muted small">Only your coach sees your messages.</p>{/if}
+  {#if !live.coach && !live.settings.chat}<p class="muted small">{$t('kidsclass.cc.onlyCoach')}</p>{/if}
 </div>
 
 <style>

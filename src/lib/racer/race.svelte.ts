@@ -47,7 +47,7 @@ export class Race {
         this.chat = [...this.chat, m.line].slice(-30);
         return;
       case 'guard':
-        this.guard = { text: m.text, until: m.until ?? 0, at: Date.now() };
+        this.guard = { text: m.text, until: m.until ?? 0, at: Date.now(), code: m.code, minutes: m.minutes };
         return;
       case 'cars':
         this.cars = m.cars;

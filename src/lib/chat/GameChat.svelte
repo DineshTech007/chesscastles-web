@@ -8,6 +8,7 @@
   import ChatDock from './ChatDock.svelte';
   import { GameChatRoom } from './room.svelte';
   import type { ChatLine } from './chat';
+  import { t } from '$lib/i18n';
 
   let { gameId, opponent, lines = $bindable([]), me = $bindable('') }: { gameId: string; opponent: string; lines?: ChatLine[]; me?: string } = $props();
 
@@ -22,5 +23,5 @@
 </script>
 
 {#if !room.gone && room.me}
-  <ChatDock lines={room.lines} me={room.me} guard={room.guard} onsend={(k, v) => room.send(k, v)} note={theyAreHere ? '' : `${opponent} hasn't opened the chat yet: say hi!`} />
+  <ChatDock lines={room.lines} me={room.me} guard={room.guard} onsend={(k, v) => room.send(k, v)} note={theyAreHere ? '' : $t('kidsclass.chat.notOpened', { name: opponent })} />
 {/if}

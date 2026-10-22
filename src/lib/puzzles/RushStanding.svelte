@@ -10,6 +10,7 @@
   import { rushTitle } from './rewards';
   import { placeOf } from './rushPlace';
   import type { KfideLeader } from '$lib/social';
+  import { t } from '$lib/i18n';
 
   let { best }: { best: number } = $props();
 
@@ -24,7 +25,7 @@
     );
   });
 
-  const place = $derived(rows && $session.status === 'in' && best > 0 ? placeOf(rows, best, { uid: $session.uid, name: $myName || 'You' }) : undefined);
+  const place = $derived(rows && $session.status === 'in' && best > 0 ? placeOf(rows, best, { uid: $session.uid, name: $myName || $t('awards.stand.you') }) : undefined);
   /** The top three, then the two above me and the two below (with a gap between). */
   const shown = $derived.by(() => {
     if (!place) return [];
@@ -35,27 +36,31 @@
   const above = $derived(place && place.rank > 1 ? place.list[place.rank - 2] : undefined);
   /** The board holds the top 100: past it, the 100th is the one to pass. */
   const outside = $derived(!!place && place.rank > 100);
+  /** A sentence with *bold* parts (features/awards.ts): its parts in order, the odd ones bold, values filled in after. */
+  const rich = (s: string, vars: Record<string, string | number> = {}) => s.split('*').map((part) => part.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? '')));
 </script>
 
+{#snippet bold(parts: string[])}{#each parts as part, i (i)}{#if i % 2}<b>{part}</b>{:else}{part}{/if}{/each}{/snippet}
+
 <section class="stand" aria-labelledby="stand-h">
-  <h3 id="stand-h">Where you stand</h3>
+  <h3 id="stand-h">{$t('awards.stand.h')}</h3>
   {#if !signedIn}
-    <p class="muted">Sign in to put your best ({best}) on the Puzzle Rush leaderboard and see your place.</p>
+    <p class="muted">{$t('awards.stand.signin', { n: best })}</p>
     <button class="btn" onclick={() => startSignIn()}>Sign in</button>
   {:else if failed}
-    <p class="muted">The leaderboard is not reachable right now.</p>
+    <p class="muted">{$t('awards.stand.failed')}</p>
   {:else if !rows}
-    <p class="muted">Finding your place…</p>
+    <p class="muted">{$t('awards.stand.finding')}</p>
   {:else if !place}
-    <p class="muted">Solve a puzzle in a rush to get on the leaderboard.</p>
+    <p class="muted">{$t('awards.stand.none')}</p>
   {:else}
     <p class="rank">
       {#if outside}
-        Outside the top 100: <b>{place.list[99].rating - best + 1}</b> more to get in.
+        {@render bold(rich($t('awards.stand.outside'), { n: place.list[99].rating - best + 1 }))}
       {:else if place.rank === 1}
-        <b>You are #1</b> on the Puzzle Rush leaderboard! 👑
+        {@render bold(rich($t('awards.stand.first')))}
       {:else}
-        <b>You are #{place.rank}</b> {place.list.length <= 100 ? `of ${place.list.length}` : 'in the top 100'}{#if above}: <b>{above.rating - best + 1}</b> more to pass {above.name}{/if}.
+        {@render bold(rich(place.list.length <= 100 ? $t('awards.stand.rank.of') : $t('awards.stand.rank.top'), { rank: place.rank, n: place.list.length }))}{#if above}{@render bold(rich($t('awards.stand.pass'), { n: above.rating - best + 1, name: above.name }))}{/if}.
       {/if}
     </p>
     {#if !outside}
@@ -65,7 +70,7 @@
           {#if j > 0 && k > shown[j - 1] + 1}<li class="gap" aria-hidden="true">⋯</li>{/if}
           <li class:me={r.me}>
             <span class="pos num">{['🥇', '🥈', '🥉'][k] ?? `#${k + 1}`}</span>
-            <span class="who">{r.me ? `${r.name} (you)` : r.name}</span>
+            <span class="who">{r.me ? $t('awards.stand.me', { name: r.name }) : r.name}</span>
             {#if rushTitle(r.rating)}<span class="t">{rushTitle(r.rating)}</span>{/if}
             <b class="num">{r.rating}</b>
           </li>
@@ -73,7 +78,7 @@
       </ol>
     {/if}
   {/if}
-  <a class="all" href="/leaderboard#rush">See the whole leaderboard →</a>
+  <a class="all" href="/leaderboard#rush">{$t('awards.stand.all')}</a>
 </section>
 
 <style>

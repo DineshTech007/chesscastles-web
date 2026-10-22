@@ -21,6 +21,7 @@
   import { BADGES, nextRushTitle, recordRush, rewards, RUSH_TITLES, rushTitle } from '$lib/puzzles/rewards';
   import RushReview, { type RushPuzzle } from '$lib/puzzles/RushReview.svelte';
   import RushStanding from '$lib/puzzles/RushStanding.svelte';
+  import { t } from '$lib/i18n';
 
   const SECONDS = 180;
   const LIVES = 3;
@@ -48,6 +49,8 @@
   const left = $derived(Math.max(0, Math.ceil((deadline - now) / 1000)));
   const clock = $derived(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
   const hardest = $derived(Math.max(0, ...log.filter((x) => x.ok).map((x) => x.r)));
+  /** A sentence with *bold* parts (features/awards.ts): its parts in order, the odd ones bold, values filled in after. */
+  const rich = (s: string, vars: Record<string, string | number> = {}) => s.split('*').map((part) => part.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? '')));
   const shownScore = new Tween(0, { duration: 1200, delay: 300, easing: cubicOut });
 
   const tick = setInterval(() => (now = Date.now()), 200);
@@ -132,20 +135,22 @@
   }
 </script>
 
+{#snippet bold(parts: string[])}{#each parts as part, i (i)}{#if i % 2}<b>{part}</b>{:else}{part}{/if}{/each}{/snippet}
+
 {#snippet titles(bestNow: number)}
   {@const next = nextRushTitle(bestNow)}
   <div class="titles">
-    <ol class="ladder" aria-label="Puzzle Rush titles">
-      {#each RUSH_TITLES as t (t.min)}
-        {@const got = bestNow >= t.min || $rewards.badges.includes(t.badge)}
-        <li class:got class:next={next?.min === t.min}>
-          <Medal badge={BADGES.find((b) => b.id === t.badge)!} {got} peek={next?.min === t.min} size={52} />
-          <span class="tname">{t.name}</span>
-          <span class="tmin num">{t.min}+</span>
+    <ol class="ladder" aria-label={$t('awards.rush.ladder')}>
+      {#each RUSH_TITLES as rt (rt.min)}
+        {@const got = bestNow >= rt.min || $rewards.badges.includes(rt.badge)}
+        <li class:got class:next={next?.min === rt.min}>
+          <Medal badge={BADGES.find((b) => b.id === rt.badge)!} {got} peek={next?.min === rt.min} size={52} />
+          <span class="tname">{rt.name}</span>
+          <span class="tmin num">{rt.min}+</span>
         </li>
       {/each}
     </ol>
-    <p class="chase">{#if next}Next title: <b>{next.name}</b>, {next.more} more than your best!{:else}You hold the highest title. Can you beat your best?{/if}</p>
+    <p class="chase">{#if next}{@render bold(rich($t('awards.rush.next'), { name: next.name, n: next.more }))}{:else}{$t('awards.rush.top')}{/if}</p>
   </div>
 {/snippet}
 
@@ -158,23 +163,23 @@
     <section class="card ready">
       <img class="hero" src="/puzzles/rush-hero.webp" alt="" width="200" height="200" />
       <h1 class="display">Puzzle Rush</h1>
-      <p class="lead">Solve as many puzzles as you can in <b>3 minutes</b>. <b>3 mistakes</b> and it's over. They start easy and get harder with every solve!</p>
+      <p class="lead">{@render bold(rich($t('awards.rush.lead')))}</p>
       <div class="facts">
-        <span><Icon name="trophy" size={18} />Your best: <b class="num">{$rewards.rushBest}</b></span>
+        <span><Icon name="trophy" size={18} />{$t('awards.rush.yourbest')} <b class="num">{$rewards.rushBest}</b></span>
         {#if rushTitle($rewards.rushBest)}<span class="rtitle">🚀 {rushTitle($rewards.rushBest)}</span>{/if}
-        {#if $rewards.rushRuns.length}<span class="label">Last: {$rewards.rushRuns.slice(-5).join(', ')}</span>{/if}
-        <a class="board" href="/leaderboard#rush">Puzzle Rush leaderboard →</a>
+        {#if $rewards.rushRuns.length}<span class="label">{$t('awards.rush.last', { list: $rewards.rushRuns.slice(-5).join(', ') })}</span>{/if}
+        <a class="board" href="/leaderboard#rush">{$t('awards.rush.board')}</a>
       </div>
-      <button class="btn primary go" onclick={start} disabled={starting}>Start the rush 🚀</button>
+      <button class="btn primary go" onclick={start} disabled={starting}>{$t('awards.rush.start')}</button>
       {#if $rewards.rushBest}<RushStanding best={$rewards.rushBest} />{/if}
-      <p class="label small">One try a puzzle. Rush doesn't change your puzzle rating.</p>
+      <p class="label small">{$t('awards.rush.onetry')}</p>
       {@render titles($rewards.rushBest)}
     </section>
   {:else if phase === 'run'}
     <div class="hud" class:ok={flash === 'ok'} class:bad={flash === 'bad'}>
       <span class="time num" class:low={left <= 20}>⏱ {clock}</span>
-      <span class="score num" aria-label="Solved">{score}</span>
-      <span class="lives" aria-label="{LIVES - misses} mistakes left">
+      <span class="score num" aria-label={$t('awards.rush.solved')}>{score}</span>
+      <span class="lives" aria-label={$t('awards.rush.lives', { n: LIVES - misses })}>
         {#each Array.from({ length: LIVES }) as _, i (i)}<i class:used={i < misses}>✕</i>{/each}
       </span>
     </div>
@@ -184,13 +189,13 @@
           <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} tries={1} {onresult} premoves />
         {/key}
       {:else}
-        <div class="card skel">Finding a puzzle…</div>
+        <div class="card skel">{$t('awards.rush.finding')}</div>
       {/if}
     </div>
-    <ol class="trail" aria-label="This rush">
+    <ol class="trail" aria-label={$t('awards.rush.trail')}>
       {#each log as x, i (i)}<li class:ok={x.ok} title="Puzzle {x.r}">{x.ok ? '✓' : '✕'}</li>{/each}
     </ol>
-    <button class="btn stop" onclick={() => finish('stop')}>End the rush</button>
+    <button class="btn stop" onclick={() => finish('stop')}>{$t('awards.rush.end')}</button>
   {:else}
     <section class="card over" class:best={best?.newBest}>
       {#if best?.newBest}
@@ -199,26 +204,26 @@
         </span>
       {/if}
       <img class="hero small" src="/puzzles/rush-hero.webp" alt="" width="120" height="120" />
-      <span class="why label">{ended === 'time' ? "Time's up!" : ended === 'lives' ? 'Three mistakes' : 'Rush over'}</span>
+      <span class="why label">{ended === 'time' ? $t('awards.rush.why.time') : ended === 'lives' ? $t('awards.rush.why.lives') : $t('awards.rush.why.stop')}</span>
       <strong class="display big num">{Math.round(shownScore.current)}</strong>
-      <span class="solved">{score === 1 ? 'puzzle' : 'puzzles'} solved</span>
+      <span class="solved">{score === 1 ? $t('awards.rush.solved.one') : $t('awards.rush.solved.many')}</span>
       {#if best?.newBest}
-        <span class="newbest display">New best!</span>
+        <span class="newbest display">{$t('awards.rush.newbest')}</span>
       {:else if best}
-        <span class="label">Your best: <b class="num">{best.best}</b></span>
+        <span class="label">{$t('awards.rush.yourbest')} <b class="num">{best.best}</b></span>
       {/if}
       {#if best && rushTitle(best.best)}<span class="rtitle">🚀 {rushTitle(best.best)}</span>{/if}
-      {#if hardest}<span class="label">Hardest solved: <b class="num">{hardest}</b></span>{/if}
+      {#if hardest}<span class="label">{$t('awards.rush.hardest')} <b class="num">{hardest}</b></span>{/if}
       {#if best}{@render titles(best.best)}{/if}
       {#if log.length}
-        <p class="label small tap">Tap a puzzle to see it again{log.some((x) => !x.ok) ? ' (the red ones: your move and the answer)' : ''}</p>
+        <p class="label small tap">{$t('awards.rush.tap')}{log.some((x) => !x.ok) ? $t('awards.rush.tap.red') : ''}</p>
         <ol class="trail end">
-          {#each log as x, i (i)}<li class:ok={x.ok}><button onclick={() => (reviewing = i)} title={x.ok ? `Puzzle ${x.r}: solved` : `Puzzle ${x.r}: see why`}>{x.r}</button></li>{/each}
+          {#each log as x, i (i)}<li class:ok={x.ok}><button onclick={() => (reviewing = i)} title={x.ok ? $t('awards.rush.tip.ok', { r: x.r }) : $t('awards.rush.tip.bad', { r: x.r })}>{x.r}</button></li>{/each}
         </ol>
       {/if}
       {#if best}<RushStanding best={best.best} />{/if}
       <div class="actions">
-        <button class="btn primary go" onclick={start} disabled={starting}>Play again</button>
+        <button class="btn primary go" onclick={start} disabled={starting}>{$t('awards.rush.again')}</button>
         <a class="btn" href="/puzzles">Rated puzzles</a>
       </div>
     </section>

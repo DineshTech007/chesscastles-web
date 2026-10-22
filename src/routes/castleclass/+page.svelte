@@ -36,6 +36,7 @@
   import { took } from '$lib/classroom/tasks';
   import Leaderboard from '$lib/classroom/Leaderboard.svelte';
   import AskDialog from '$lib/classroom/AskDialog.svelte';
+  import { t } from '$lib/i18n';
 
   let classes = $state<ClassSummary[]>([]);
   let loaded = $state(false);
@@ -109,12 +110,12 @@
       .slice(0, 30),
   );
   const when = (t: number) => new Date(t).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  const inTime = (t: number) => {
-    const m = Math.round((t - Date.now()) / 60000);
-    if (m < 0) return 'now';
-    if (m < 60) return `in ${m} min`;
-    if (m < 1440) return `in ${Math.round(m / 60)} h`;
-    return `in ${Math.round(m / 1440)} days`;
+  const inTime = (at: number) => {
+    const m = Math.round((at - Date.now()) / 60000);
+    if (m < 0) return $t('kidsclass.list.now');
+    if (m < 60) return $t('kidsclass.list.inMin', { n: m });
+    if (m < 1440) return $t('kidsclass.list.inHours', { n: Math.round(m / 60) });
+    return $t('kidsclass.list.inDays', { n: Math.round(m / 1440) });
   };
 
   // ----- one class (the coach's editor)
@@ -270,12 +271,12 @@
 <div class="page">
   <header class="head">
     <h1>CastlesClass</h1>
-    <p class="muted">Live chess classes: one shared board, voice, questions with a timer, games, homework and leaderboards.</p>
+    <p class="muted">{$t('kidsclass.list.about')}</p>
   </header>
 
   {#if !signedIn}
     <div class="card pad">
-      <p>Sign in to see your classes.</p>
+      <p>{$t('kidsclass.list.signIn')}</p>
       <button class="btn primary" onclick={startSignIn}>Sign in</button>
     </div>
   {:else}
@@ -305,21 +306,21 @@
     {#if classes.length}
       <div class="sessions card pad">
         <div class="chips" role="tablist" aria-label="Sessions">
-          <button class="chip" class:on={sessTab === 'live'} onclick={() => (sessTab = 'live')}>● Live now ({liveNow.length})</button>
-          <button class="chip" class:on={sessTab === 'upcoming'} onclick={() => (sessTab = 'upcoming')}>Upcoming ({upcoming.length})</button>
+          <button class="chip" class:on={sessTab === 'live'} onclick={() => (sessTab = 'live')}>{$t('kidsclass.list.liveNow', { n: liveNow.length })}</button>
+          <button class="chip" class:on={sessTab === 'upcoming'} onclick={() => (sessTab = 'upcoming')}>{$t('kidsclass.list.upcoming', { n: upcoming.length })}</button>
           {#if teaching}<button class="chip" class:on={sessTab === 'done'} onclick={() => (sessTab = 'done')}>Completed ({completed.length})</button>{/if}
         </div>
         {#if sessTab === 'live'}
           {#each liveNow as c (c.id)}
-            <div class="srow"><span><b>{c.name}</b> <span class="muted">{c.mine ? '' : `${c.coachName} · `}live for {took(Date.now() - c.live)}</span></span><button class="btn primary" onclick={() => enter(c)}>{c.mine ? 'Back to the class' : c.manage ? '👁 Watch' : 'Join now'}</button></div>
+            <div class="srow"><span><b>{c.name}</b> <span class="muted">{c.mine ? '' : `${c.coachName} · `}{$t('kidsclass.list.liveFor', { time: took(Date.now() - c.live) })}</span></span><button class="btn primary" onclick={() => enter(c)}>{c.mine ? 'Back to the class' : c.manage ? '👁 Watch' : $t('kidsclass.list.joinNow')}</button></div>
           {:else}
-            <p class="muted">No class is live right now.</p>
+            <p class="muted">{$t('kidsclass.list.noneLive')}</p>
           {/each}
         {:else if sessTab === 'upcoming'}
           {#each upcoming as s (s.id + s.at)}
-            <div class="srow"><span><b>{when(s.at)}</b> · {s.cls}{s.title ? ` · ${s.title}` : ''} <span class="muted">({s.minutes} min, {inTime(s.at)})</span></span></div>
+            <div class="srow"><span><b>{when(s.at)}</b> · {s.cls}{s.title ? ` · ${s.title}` : ''} <span class="muted">{$t('kidsclass.list.minIn', { m: s.minutes, when: inTime(s.at) })}</span></span></div>
           {:else}
-            <p class="muted">No sessions planned.{teaching ? ' Plan them in a class: Schedule.' : ''}</p>
+            <p class="muted">{$t('kidsclass.list.noSessions')}{teaching ? ' Plan them in a class: Schedule.' : ''}</p>
           {/each}
         {:else}
           {#each completed as p (p.id + p.ended)}
@@ -332,23 +333,23 @@
     {/if}
 
     {#if studentClasses.length}
-      <h2>My classes</h2>
+      <h2>{$t('kidsclass.room.myClasses')}</h2>
       <div class="list">
         {#each studentClasses as c (c.id)}
           <div class="card cls" class:live={c.live}>
             <div class="main-c">
               <b>{c.name}</b>
-              <span class="muted">with {c.coachName}{c.sessions[0] ? ` · next: ${when(c.sessions[0].at)}` : ''}</span>
+              <span class="muted">{$t('kidsclass.sv.with', { coach: c.coachName })}{c.sessions[0] ? ` · ${$t('kidsclass.list.next', { when: when(c.sessions[0].at) })}` : ''}</span>
               {#if c.notes[0]}<span class="notec">📢 {c.notes[0].text}</span>{/if}
               {#each todo(c) as h (h.id)}
-                <a class="hw" href="/castleclass/{c.id}/homework/{h.id}">📝 {h.title} · {h.items} puzzles · due {when(h.due)}{h.mine ? ` · ${h.mine.solved} solved` : ''}</a>
+                <a class="hw" href="/castleclass/{c.id}/homework/{h.id}">📝 {h.title} · {h.items} puzzles · {$t('kidsclass.list.due', { when: when(h.due) })}{h.mine ? ` · ${$t('kidsclass.lb.solved', { n: h.mine.solved })}` : ''}</a>
               {/each}
               {#each (homework[c.id] ?? []).filter((h) => h.mine?.done || h.due <= now).slice(0, 3) as h (h.id)}
                 <a class="hw done" href="/castleclass/{c.id}/homework/{h.id}">✓ {h.title}{h.mine ? ` · ${h.mine.points} pts` : ''}</a>
               {/each}
             </div>
             <div class="acts">
-              {#if c.live}<button class="btn primary" onclick={() => goto(`/castleclass/${c.id}`)}>● Join now: live</button>{:else}<button class="btn" onclick={() => goto(`/castleclass/${c.id}`)}>Open</button>{/if}
+              {#if c.live}<button class="btn primary" onclick={() => goto(`/castleclass/${c.id}`)}>{$t('kidsclass.list.joinLive')}</button>{:else}<button class="btn" onclick={() => goto(`/castleclass/${c.id}`)}>{$t('kidsclass.list.open')}</button>{/if}
               <button class="btn ghost" onclick={() => showBoard(c)}>🏆 Leaderboard</button>
             </div>
           </div>
@@ -405,8 +406,8 @@
       {/if}
     {:else if loaded && !studentClasses.length}
       <div class="card pad">
-        <p>You are not in a class yet.</p>
-        <p class="muted">When your coach adds you, the class shows here. You can also open the class link your coach sends.</p>
+        <p>{$t('kidsclass.list.notYet')}</p>
+        <p class="muted">{$t('kidsclass.list.notYetHelp')}</p>
       </div>
     {/if}
   {/if}
@@ -415,9 +416,9 @@
 {#if boardOf}
   <div class="scrim" role="presentation" onclick={() => (boardOf = undefined)}></div>
   <div class="dialog" role="dialog" aria-modal="true" aria-label="Leaderboard">
-    <header class="dh"><h2>🏆 {boardOf.name}</h2><button class="btn ghost" onclick={() => (boardOf = undefined)} aria-label="Close">✕</button></header>
-    <p class="muted small">Every class so far: points from the questions in class.</p>
-    <Leaderboard rows={boardOf.rows} me={$session.status === 'in' ? $session.uid : (devPlayer() ?? '')} empty="Scores show here after the first class." />
+    <header class="dh"><h2>🏆 {boardOf.name}</h2><button class="btn ghost" onclick={() => (boardOf = undefined)} aria-label={$t('kidsclass.ts.close')}>✕</button></header>
+    <p class="muted small">{$t('kidsclass.list.boardHelp')}</p>
+    <Leaderboard rows={boardOf.rows} me={$session.status === 'in' ? $session.uid : (devPlayer() ?? '')} empty={$t('kidsclass.list.boardEmpty')} />
   </div>
 {/if}
 

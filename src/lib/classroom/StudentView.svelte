@@ -28,6 +28,7 @@
   import type { EngineInfo } from '$lib/engine/stockfish';
   import { lineAt } from './tasks';
   import type { Live } from './live.svelte';
+  import { t } from '$lib/i18n';
 
   let { live, onexit }: { live: Live; onexit: () => void } = $props();
 
@@ -93,25 +94,25 @@
     <div class="name">
       <ClassBrand />
       <b>{live.info.name}</b>
-      <span class="muted">with {live.info.coachName}</span>
-      {#if live.status !== 'open'}<span class="pill warn">Reconnecting…</span>{:else if !live.coachOnline}<span class="pill">Coach away</span>{:else}<span class="pill live">● LIVE</span>{/if}
+      <span class="muted">{$t('kidsclass.sv.with', { coach: live.info.coachName })}</span>
+      {#if live.status !== 'open'}<span class="pill warn">{$t('kidsclass.sv.reconnecting')}</span>{:else if !live.coachOnline}<span class="pill">{$t('kidsclass.sv.coachAway')}</span>{:else}<span class="pill live">● LIVE</span>{/if}
     </div>
     <div class="acts">
       {#if !live.inVoice}
-        <button class="btn primary" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>🎧 {live.joiningVoice ? 'Joining…' : 'Join voice'}</button>
-        {#if live.settings.cams !== false}<button class="btn" onclick={() => live.setCam('camera')} disabled={live.joiningVoice} title="Joins the voice and switches your camera on">📷 Camera</button>{/if}
+        <button class="btn primary" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>🎧 {live.joiningVoice ? $t('kidsclass.sv.joining') : $t('kidsclass.sv.joinVoice')}</button>
+        {#if live.settings.cams !== false}<button class="btn" onclick={() => live.setCam('camera')} disabled={live.joiningVoice} title={$t('kidsclass.sv.camTitle')}>📷 Camera</button>{/if}
       {:else}
-        <button class="btn" class:on={live.micOn} onclick={() => live.setMic(!live.micOn)} disabled={!canTalk && !live.micOn} title={canTalk ? 'Your microphone' : 'Raise your hand to speak'}>{live.micOn ? '🎙️ Mic on' : '🔇 Mic off'}</button>
+        <button class="btn" class:on={live.micOn} onclick={() => live.setMic(!live.micOn)} disabled={!canTalk && !live.micOn} title={canTalk ? $t('kidsclass.sv.micTitle') : $t('kidsclass.sv.raiseToSpeak')}>{live.micOn ? $t('kidsclass.sv.micOn') : $t('kidsclass.sv.micOff')}</button>
         {#if live.settings.cams !== false || live.camOn}
-          <button class="btn" class:on={!!live.camOn} onclick={() => live.setCam(live.camOn ? '' : 'camera')} title={live.settings.peers === false ? 'Only your coach sees your camera' : 'Your class sees your camera'}>📷 {live.camOn ? 'Camera on' : 'Camera'}</button>
+          <button class="btn" class:on={!!live.camOn} onclick={() => live.setCam(live.camOn ? '' : 'camera')} title={live.settings.peers === false ? $t('kidsclass.sv.camCoachOnly') : $t('kidsclass.sv.camClass')}>📷 {live.camOn ? $t('kidsclass.sv.cameraOn') : 'Camera'}</button>
         {/if}
       {/if}
-      <button class="btn" class:hand={live.handUp} onclick={() => live.raiseHand(!live.handUp)}>{live.handUp ? '✋ Hand up' : '✋ Raise hand'}</button>
-      <button class="btn ghost" onclick={onexit}>Leave</button>
+      <button class="btn" class:hand={live.handUp} onclick={() => live.raiseHand(!live.handUp)}>{live.handUp ? $t('kidsclass.sv.handUp') : $t('kidsclass.sv.raiseHand')}</button>
+      <button class="btn ghost" onclick={onexit}>{$t('kidsclass.sv.leave')}</button>
     </div>
   </header>
   {#if !live.inVoice && live.coachOnline}
-    <button class="join" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>🎧 Tap to hear{coachCam ? ' and see' : ''} your coach</button>
+    <button class="join" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>{coachCam ? $t('kidsclass.sv.tapHearSee') : $t('kidsclass.sv.tapHear')}</button>
   {/if}
   {#if live.micError && live.inVoice}<p class="note">{live.micError}</p>{/if}
 
@@ -119,14 +120,14 @@
     <section class="stage">
       {#if showing === 'task'}
         <TaskSolver host={live} />
-        <button class="btn ghost small" onclick={() => (peek = true)}>See the coach's board</button>
+        <button class="btn ghost small" onclick={() => (peek = true)}>{$t('kidsclass.sv.seeCoachBoard')}</button>
       {:else if showing === 'game' && myGame}
         <GameBoard {live} game={myGame} />
-        <button class="btn ghost small" onclick={() => (peek = true)}>See the coach's board</button>
+        <button class="btn ghost small" onclick={() => (peek = true)}>{$t('kidsclass.sv.seeCoachBoard')}</button>
       {:else}
-        {#if live.task}<button class="btn primary" onclick={() => (peek = false)}>Back to the question</button>{:else if myGame}<button class="btn primary" onclick={() => (peek = false)}>Back to my game</button>{/if}
+        {#if live.task}<button class="btn primary" onclick={() => (peek = false)}>{$t('kidsclass.sv.backQuestion')}</button>{:else if myGame}<button class="btn primary" onclick={() => (peek = false)}>{$t('kidsclass.sv.backGame')}</button>{/if}
         <div class="banner" class:mine={holding}>
-          {#if holding}<b>Your turn on the big board!</b> Everyone sees your move.{:else if b.title}<b>{b.title}</b>{:else if !live.coachOnline}Waiting for the coach…{:else}Watching the coach's board{/if}
+          {#if holding}<b>{$t('kidsclass.sv.yourTurn')}</b> {$t('kidsclass.sv.everyoneSees')}{:else if b.title}<b>{b.title}</b>{:else if !live.coachOnline}{$t('kidsclass.sv.waitingCoach')}{:else}{$t('kidsclass.sv.watchingBoard')}{/if}
         </div>
         <div class="board-row">
           {#if live.settings.engine}<EvalBar info={engInfo} orientation={orient} />{/if}
@@ -144,7 +145,7 @@
                 squares={b.squares}
                 blind={b.blind}
                 pawns={b.pawns}
-                label="The coach's board"
+                label={$t('kidsclass.sv.boardLabel')}
                 autoShapes={engineArrows}
                 {onmove}
               />
@@ -152,7 +153,7 @@
           </div>
         </div>
         <div class="row">
-          <button class="btn ghost small" onclick={() => (flipped = !flipped)}>⇅ Flip</button>
+          <button class="btn ghost small" onclick={() => (flipped = !flipped)}>{$t('kidsclass.sv.flip')}</button>
           {#if live.settings.moves && b.moves.length}<span class="muted small">Move {Math.ceil(b.ply / 2)}{b.ply % 2 ? '' : b.ply ? '…' : ''}</span>{/if}
         </div>
         {#if live.settings.engine}<EnginePanel fen={at.fen} bind:info={engInfo} bind:lines={engLines} />{/if}
@@ -173,17 +174,17 @@
           <Chat {live} />
         {:else if tab === 'lb'}
           {#if live.task && live.lb.length}
-            <h3>This question</h3>
+            <h3>{$t('kidsclass.sv.thisQuestion')}</h3>
             <Leaderboard rows={live.lb} me={live.me.uid} total={live.task.items.length} />
           {/if}
-          <h3>Today's class</h3>
-          <Leaderboard rows={live.session.scores} me={live.me.uid} empty="Scores show here after the first question." />
-          <h3>All classes</h3>
-          <Leaderboard rows={live.allTime} me={live.me.uid} empty="Your class's leaderboard over every class shows here." />
+          <h3>{$t('kidsclass.sv.today')}</h3>
+          <Leaderboard rows={live.session.scores} me={live.me.uid} empty={$t('kidsclass.sv.todayEmpty')} />
+          <h3>{$t('kidsclass.sv.allClasses')}</h3>
+          <Leaderboard rows={live.allTime} me={live.me.uid} empty={$t('kidsclass.sv.allEmpty')} />
         {:else if tab === 'moves' && live.settings.moves}
-          {#if at.sans.length}<MoveList sans={at.sans} current={b.ply} />{:else}<p class="muted">No moves yet.</p>{/if}
+          {#if at.sans.length}<MoveList sans={at.sans} current={b.ply} />{:else}<p class="muted">{$t('kidsclass.sv.noMoves')}</p>{/if}
         {:else if tab === 'db' && live.settings.db}
-          {#if at.pos}<DbPanel pos={at.pos} {book} onplay={() => {}} />{:else}<p class="muted">No position to look up.</p>{/if}
+          {#if at.pos}<DbPanel pos={at.pos} {book} onplay={() => {}} />{:else}<p class="muted">{$t('kidsclass.sv.noPosition')}</p>{/if}
         {:else}
           {#each live.info.notes ?? [] as n (n.id)}<p class="note-row">📢 {n.text}</p>{/each}
           <People {live} />
@@ -192,7 +193,7 @@
     </aside>
   </div>
 </div>
-{#if live.coachVideo && coachScreen}<VideoTile stream={live.coachVideo} label="{live.info.coachName}'s screen" wide />{/if}
+{#if live.coachVideo && coachScreen}<VideoTile stream={live.coachVideo} label={$t('kidsclass.sv.screen', { name: live.info.coachName })} wide />{/if}
 
 
 <style>

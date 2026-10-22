@@ -13,6 +13,8 @@
   import { CARS, newRace, quickRace } from '$lib/racer/api';
   import { racerStats, racerTitle } from '$lib/racer/stats';
   import TitleLadder from '$lib/racer/TitleLadder.svelte';
+  import { t } from '$lib/i18n';
+  import { RACER_ERRORS } from '$lib/i18n/features/racer';
 
   const signedIn = $derived($session.status === 'in' || !!devPlayer());
   let busy = $state('');
@@ -51,8 +53,8 @@
 
   <section class="hero">
     <div class="sky">
-      <h1 class="display">Puzzle Racer <span class="new">NEW</span></h1>
-      <p class="lead">Race other players through the same puzzles. Every right answer drives your car forward!</p>
+      <h1 class="display">Puzzle Racer <span class="new">{$t('racer.new')}</span></h1>
+      <p class="lead">{$t('racer.home.lead')}</p>
     </div>
     <div class="road" aria-hidden="true">
       <div class="kerb"></div>
@@ -70,65 +72,65 @@
     </div>
   </section>
 
-  {#if error}<p class="err">{error}</p>{/if}
+  {#if error}<p class="err">{RACER_ERRORS[error] ? $t(RACER_ERRORS[error]) : error}</p>{/if}
 
   <div class="modes">
     <button class="mode quick" onclick={() => go('quick')} disabled={!!busy}>
       <span class="icon">🏎️</span>
-      <span class="name">Quick race</span>
-      <span class="what">Race whoever is here now, up to 10 cars. Nobody? Computer racers join you.</span>
-      <span class="cta">{busy === 'quick' ? 'Finding a race…' : 'Race now'}</span>
+      <span class="name">{$t('racer.home.quick')}</span>
+      <span class="what">{$t('racer.home.quickWhat')}</span>
+      <span class="cta">{busy === 'quick' ? $t('racer.home.quickBusy') : $t('racer.home.quickCta')}</span>
     </button>
     <button class="mode friends" onclick={() => go('friends')} disabled={!!busy}>
       <span class="icon">🏁</span>
-      <span class="name">Race with friends</span>
-      <span class="what">Get a link for your friends or your class. You start the race when everyone is in.</span>
-      <span class="cta">{busy === 'friends' ? 'Making the race…' : 'Make a race'}</span>
+      <span class="name">{$t('racer.withFriends')}</span>
+      <span class="what">{$t('racer.home.friendsWhat')}</span>
+      <span class="cta">{busy === 'friends' ? $t('racer.home.friendsBusy') : $t('racer.home.friendsCta')}</span>
     </button>
     <button class="mode battle" onclick={() => go('battle')} disabled={!!busy}>
       <span class="icon">⚔️</span>
       <span class="name">Puzzle Battle</span>
-      <span class="what">You against one friend: the same puzzles, who solves more wins. They get a popup!</span>
-      <span class="cta">{busy === 'battle' ? 'Making the battle…' : 'Challenge a friend'}</span>
+      <span class="what">{$t('racer.home.battleWhat')}</span>
+      <span class="cta">{busy === 'battle' ? $t('racer.home.battleBusy') : $t('racer.challengeFriend')}</span>
     </button>
   </div>
-  <div class="len" role="group" aria-label="Race length for friends and battles">
-    <span class="muted">Races with friends last</span>
-    {#each [60, 90, 120] as s (s)}<button class="chip" class:on={seconds === s} onclick={() => (seconds = s)}>{s === 60 ? '1 min' : s === 90 ? '90 s' : '2 min'}</button>{/each}
-    <span class="muted small">(battles: up to 90 s)</span>
+  <div class="len" role="group" aria-label={$t('racer.home.lenAria')}>
+    <span class="muted">{$t('racer.home.lenLabel')}</span>
+    {#each [60, 90, 120] as s (s)}<button class="chip" class:on={seconds === s} onclick={() => (seconds = s)}>{s === 90 ? $t('racer.home.sec', { n: 90 }) : $t('racer.home.min', { n: s / 60 })}</button>{/each}
+    <span class="muted small">{$t('racer.home.lenBattles')}</span>
   </div>
 
   <div class="cols">
     <section class="card pad stats">
-      <h2>Your record{#if racerTitle($racerStats.best)} <span class="rtitle">🏎️ {racerTitle($racerStats.best)}</span>{/if}</h2>
+      <h2>{$t('racer.home.record')}{#if racerTitle($racerStats.best)} <span class="rtitle">🏎️ {racerTitle($racerStats.best)}</span>{/if}</h2>
       <div class="nums">
-        <span><b class="num lcd">{$racerStats.best}</b><span class="muted">best score</span></span>
-        <span><b class="num">{$racerStats.races}</b><span class="muted">races</span></span>
-        <span><b class="num">{$racerStats.wins}</b><span class="muted">wins 🥇</span></span>
-        <span><b class="num">{$racerStats.battleWins}</b><span class="muted">battles won ⚔️</span></span>
+        <span><b class="num lcd">{$racerStats.best}</b><span class="muted">{$t('racer.home.bestScore')}</span></span>
+        <span><b class="num">{$racerStats.races}</b><span class="muted">{$t('racer.home.races')}</span></span>
+        <span><b class="num">{$racerStats.wins}</b><span class="muted">{$t('racer.home.wins')}</span></span>
+        <span><b class="num">{$racerStats.battleWins}</b><span class="muted">{$t('racer.home.battlesWon')}</span></span>
       </div>
       <TitleLadder best={$racerStats.best} size={44} />
-      {#if !signedIn}<button class="btn primary" onclick={() => startSignIn()}>Sign in to race</button>{/if}
+      {#if !signedIn}<button class="btn primary" onclick={() => startSignIn()}>{$t('racer.home.signIn')}</button>{/if}
     </section>
     <section class="card pad">
-      <h2>Top racers</h2>
+      <h2>{$t('racer.home.top')}</h2>
       {#each top as p, i (p.uid)}
-        <div class="row" class:me={p.me}><span class="pos">{['🥇', '🥈', '🥉'][i] ?? `#${i + 1}`}</span><span class="nm">{p.name}{p.me ? ' (you)' : ''}</span><b class="num">{p.rating}</b></div>
+        <div class="row" class:me={p.me}><span class="pos">{['🥇', '🥈', '🥉'][i] ?? `#${i + 1}`}</span><span class="nm">{p.name}{p.me ? $t('racer.home.youTag') : ''}</span><b class="num">{p.rating}</b></div>
       {:else}
-        <p class="muted">{signedIn ? 'No scores yet: win the first race and lead the board!' : 'Sign in to see the leaderboard.'}</p>
+        <p class="muted">{signedIn ? $t('racer.home.noScores') : $t('racer.home.signInBoard')}</p>
       {/each}
-      <a class="all" href="/leaderboard#racer">Whole leaderboard →</a>
+      <a class="all" href="/leaderboard#racer">{$t('racer.home.wholeBoard')}</a>
     </section>
   </div>
 
   <section class="card pad how">
-    <h2>How it works</h2>
+    <h2>{$t('racer.home.how')}</h2>
     <ol>
-      <li><b>🚦 Lights:</b> five red lights, then GO! Everyone starts together.</li>
-      <li><b>🧩 Puzzles:</b> the same ones for every racer, easy first and harder each time.</li>
-      <li><b>⚡ Combo:</b> right answers in a row earn bonus points (+1 at 5, +2 at 12, +3 at 20, +4 at 30).</li>
-      <li><b>❌ A wrong move</b> breaks the combo and goes straight to the next puzzle.</li>
-      <li><b>🏆 The flag:</b> most points wins. After the race, open any puzzle to see the answer.</li>
+      <li><b>{$t('racer.home.howLightsB')}</b>{$t('racer.home.howLights')}</li>
+      <li><b>{$t('racer.home.howPuzzlesB')}</b>{$t('racer.home.howPuzzles')}</li>
+      <li><b>{$t('racer.home.howComboB')}</b>{$t('racer.home.howCombo')}</li>
+      <li><b>{$t('racer.home.howWrongB')}</b>{$t('racer.home.howWrong')}</li>
+      <li><b>{$t('racer.home.howFlagB')}</b>{$t('racer.home.howFlag')}</li>
     </ol>
   </section>
 </div>

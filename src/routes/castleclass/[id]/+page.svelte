@@ -13,6 +13,7 @@
   import StudentView from '$lib/classroom/StudentView.svelte';
   import { took } from '$lib/classroom/tasks';
   import Fireworks from '$lib/components/Fireworks.svelte';
+  import { t } from '$lib/i18n';
 
   const id = $derived(page.params.id ?? '');
   let live = $state<Live | undefined>();
@@ -57,9 +58,9 @@
   $effect(() => {
     const h = live?.newHomework;
     if (!h || live?.coach) return;
-    banner = `📝 New homework: ${h.title} (due ${new Date(h.due).toLocaleDateString([], { day: 'numeric', month: 'short' })}). Find it in My classes.`;
-    const t = setTimeout(() => (banner = ''), 9000);
-    return () => clearTimeout(t);
+    banner = $t('kidsclass.room.newHomework', { title: h.title, date: new Date(h.due).toLocaleDateString([], { day: 'numeric', month: 'short' }) });
+    const timer = setTimeout(() => (banner = ''), 9000);
+    return () => clearTimeout(timer);
   });
   const myRank = $derived(live?.ended ? live.ended.scores.findIndex((s) => s.uid === live!.me.uid) : -1);
   let copied = $state(false);
@@ -88,17 +89,17 @@
 <div class="room">
   {#if !signedIn}
     <div class="center">
-      {#if $session.status === 'loading'}<p>Loading…</p>{:else}
-        <h1>Sign in to join your class</h1>
-        <p class="muted">Use the same account your coach added to the class.</p>
+      {#if $session.status === 'loading'}<p>{$t('kidsclass.room.loading')}</p>{:else}
+        <h1>{$t('kidsclass.room.signIn')}</h1>
+        <p class="muted">{$t('kidsclass.room.sameAccount')}</p>
         <button class="btn primary big" onclick={startSignIn}>Sign in</button>
-        <a class="btn ghost" href="/">Home</a>
+        <a class="btn ghost" href="/">{$t('shell.home')}</a>
       {/if}
     </div>
   {:else if live?.ended}
     <div class="center report">
       <Fireworks rockets={4} />
-      <h1>Class ended</h1>
+      <h1>{$t('kidsclass.room.ended')}</h1>
       {#if live.coach}
         <p class="muted">{live.info.name} · {took(live.ended.ended - (live.ended.started || live.ended.ended))} · {live.ended.people.length} students</p>
         <pre>{reportText()}</pre>
@@ -107,23 +108,23 @@
           <a class="btn" href="/castleclass">Back to my classes</a>
         </div>
       {:else}
-        <p>Well done today! 👏</p>
+        <p>{$t('kidsclass.room.wellDone')}</p>
         {#if myRank >= 0}
           {@const s = live.ended.scores[myRank]}
-          <p class="big">{['🥇', '🥈', '🥉'][myRank] ?? `#${myRank + 1}`} {s.points} points · {s.solved} solved</p>
+          <p class="big">{['🥇', '🥈', '🥉'][myRank] ?? `#${myRank + 1}`} {$t('kidsclass.room.score', { p: s.points, s: s.solved })}</p>
         {/if}
-        <a class="btn primary" href="/castleclass">Back to my classes</a>
+        <a class="btn primary" href="/castleclass">{$t('kidsclass.room.back')}</a>
       {/if}
     </div>
   {:else if live?.closed}
     <div class="center">
-      <h1>{live.closed === 'ended' ? 'Class ended' : live.closed === 'deleted' ? 'This class is not there any more' : live.closed === 'removed' ? 'You were taken off this class' : live.closed === 'coach' ? 'The admin gave this class to another coach' : 'You are not in this class'}</h1>
-      <p class="muted">{live.closed === 'refused' ? 'Ask your coach to add you, then open the class link again (signed in with that account). Coaches: ask the admin if your coach access is paused.' : ''}</p>
-      <a class="btn primary" href="/castleclass">My classes</a>
+      <h1>{live.closed === 'ended' ? $t('kidsclass.room.ended') : live.closed === 'deleted' ? $t('kidsclass.room.deleted') : live.closed === 'removed' ? $t('kidsclass.room.removed') : live.closed === 'coach' ? 'The admin gave this class to another coach' : $t('kidsclass.room.notIn')}</h1>
+      <p class="muted">{live.closed === 'refused' ? $t('kidsclass.room.refused') : ''}</p>
+      <a class="btn primary" href="/castleclass">{$t('kidsclass.room.myClasses')}</a>
     </div>
   {:else if !live || !live.me.uid}
     <div class="center">
-      <p>{live?.status === 'reconnecting' ? 'Connecting to the class… (checking the connection)' : 'Joining the class…'}</p>
+      <p>{live?.status === 'reconnecting' ? $t('kidsclass.room.reconnecting') : $t('kidsclass.room.joining')}</p>
     </div>
   {:else if live.coach}
     <CoachView {live} onexit={exit} />

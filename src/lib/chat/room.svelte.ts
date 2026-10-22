@@ -34,7 +34,7 @@ export class GameChatRoom {
       this.here = m.here;
     } else if (m.t === 'chat') this.lines = [...this.lines, m.line].slice(-40);
     else if (m.t === 'here') this.here = m.here;
-    else if (m.t === 'guard') this.guard = { text: m.text, until: m.until ?? 0, at: Date.now() };
+    else if (m.t === 'guard') this.guard = { text: m.text, until: m.until ?? 0, at: Date.now(), code: m.code, minutes: m.minutes };
   }
   send(kind: ChatLine['kind'], text: string | number) {
     this.room.send({ t: 'chat', kind, text });

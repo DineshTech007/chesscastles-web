@@ -17,6 +17,7 @@
   import { keyOf } from '$lib/chess/position';
   import { PremoveQueue } from '$lib/game/premoves';
   import { premovesOn } from '$lib/preferences';
+  import { t } from '$lib/i18n';
 
   let { live, game, coordinates = true }: { live: Live; game: Game; coordinates?: boolean } = $props();
 
@@ -110,7 +111,16 @@
   };
   const top = $derived(orient === 'white' ? 'black' : 'white');
   const nameOf = (side: 'white' | 'black') => (side === 'white' ? game.whiteName : game.blackName);
-  const RESULT: Record<string, string> = { '1-0': 'White won', '0-1': 'Black won', '1/2-1/2': 'Draw' };
+  const RESULT = $derived<Record<string, string>>({ '1-0': $t('kidsclass.gb.whiteWon'), '0-1': $t('kidsclass.gb.blackWon'), '1/2-1/2': 'Draw' });
+  /** How the game ended (the room says it in English: src/classroom.ts end()), in the player's language. */
+  function reasonText(r: string): string {
+    if (r === 'Not enough pieces to mate') return $t('kidsclass.gb.noMate');
+    if (r === 'Time') return $t('kidsclass.gb.time');
+    if (r === 'Draw agreed') return $t('kidsclass.gb.drawAgreed');
+    if (r === 'Ended by the coach') return $t('kidsclass.gb.byCoach');
+    if (r.endsWith(' resigned')) return $t('kidsclass.gb.resigned', { name: r.slice(0, -' resigned'.length) });
+    return r;
+  }
   const won = $derived(game.result && mine ? (game.result === '1/2-1/2' ? 'draw' : (game.result === '1-0') === (mine === 'white') ? 'win' : 'loss') : '');
   let confirm = $state(false);
 </script>
@@ -138,23 +148,23 @@
     />
   {/key}
   <div class="player" class:turn={!game.result && at.turn === orient}>
-    <span class="nm">{orient === 'white' ? '♔' : '♚'} {nameOf(orient)}{mine ? ' (you)' : ''}</span>
+    <span class="nm">{orient === 'white' ? '♔' : '♚'} {nameOf(orient)}{mine ? ` ${$t('kidsclass.gb.you')}` : ''}</span>
     {#if game.clock}<span class="clk num" class:low={(left(orient) ?? 1) < 20_000}>{fmt(left(orient))}</span>{/if}
   </div>
   {#if game.result}
-    <div class="result {won}">{won === 'win' ? '🏆 You won!' : won === 'loss' ? 'You lost' : won === 'draw' ? '🤝 Draw' : RESULT[game.result]} · {game.reason}</div>
+    <div class="result {won}">{won === 'win' ? $t('kidsclass.gb.youWon') : won === 'loss' ? $t('kidsclass.gb.youLost') : won === 'draw' ? '🤝 Draw' : RESULT[game.result]} · {reasonText(game.reason)}</div>
   {:else if mine}
     <div class="acts">
-      {#if myTurn}<span class="your">Your move</span>{:else}<span class="muted">{nameOf(at.turn)} to move</span>{/if}
-      {#if queued.length}<button class="btn ghost" onclick={clearPremoves}>Cancel premoves ({queued.length / 2})</button>{/if}
+      {#if myTurn}<span class="your">{$t('kidsclass.gb.yourMove')}</span>{:else}<span class="muted">{$t('kidsclass.gb.toMove', { name: nameOf(at.turn) })}</span>{/if}
+      {#if queued.length}<button class="btn ghost" onclick={clearPremoves}>{$t('kidsclass.gb.cancelPremoves', { n: queued.length / 2 })}</button>{/if}
       {#if game.draw && game.draw !== me}
-        <button class="btn primary" onclick={() => live.offerDraw(game.id)}>Accept the draw</button>
+        <button class="btn primary" onclick={() => live.offerDraw(game.id)}>{$t('kidsclass.gb.acceptDraw')}</button>
       {:else}
-        <button class="btn ghost" onclick={() => live.offerDraw(game.id)} disabled={game.draw === me}>{game.draw === me ? 'Draw offered' : '½ Offer a draw'}</button>
+        <button class="btn ghost" onclick={() => live.offerDraw(game.id)} disabled={game.draw === me}>{game.draw === me ? $t('kidsclass.gb.drawOffered') : $t('kidsclass.gb.offerDraw')}</button>
       {/if}
       {#if confirm}
-        <button class="btn" onclick={() => live.resign(game.id)}>Yes, resign</button>
-        <button class="btn ghost" onclick={() => (confirm = false)}>No</button>
+        <button class="btn" onclick={() => live.resign(game.id)}>{$t('kidsclass.gb.yesResign')}</button>
+        <button class="btn ghost" onclick={() => (confirm = false)}>{$t('kidsclass.gb.no')}</button>
       {:else}
         <button class="btn ghost" onclick={() => (confirm = true)}>🏳 Resign</button>
       {/if}

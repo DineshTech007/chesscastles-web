@@ -5,17 +5,29 @@
    * analyse it. Castling rights follow from where the kings and rooks stand.
    * Dragging works too (owner, 2026-10-22: "we can't drag the pieces"): a piece on the board to another square, off
    * the board to take it away, or one from the pieces below straight onto a square.
+   * The ✕ at the top closes it (and Esc); taking pieces off is the eraser, not a ✕ (owner, 2026-10-22: the old ✕
+   * eraser looked like a close button that "is not working").
    */
   import { positionFromFen } from '$lib/chess/position';
   import '@lichess-org/chessground/assets/chessground.base.css';
   import '@lichess-org/chessground/assets/chessground.cburnett.css';
+  import { t } from '$lib/i18n';
 
   let {
     fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     onapply,
     oncancel,
-    applyLabel = 'Analyse this position',
-  }: { fen?: string; onapply: (fen: string) => void; oncancel: () => void; /** The confirm button (a class board: "Put on the class board"). */ applyLabel?: string } = $props();
+    applyLabel,
+    title = '',
+  }: {
+    fen?: string;
+    onapply: (fen: string) => void;
+    oncancel: () => void;
+    /** The confirm button (a class board: "Put on the class board"); "Analyse this position" when not given. */
+    applyLabel?: string;
+    /** A heading beside the close button, when the page around has none. */
+    title?: string;
+  } = $props();
 
   const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
   const ROLE: Record<string, string> = { k: 'king', q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' };
@@ -50,13 +62,13 @@
   const full = $derived(`${placement} ${turn} ${castling} - 0 1`);
   const problem = $derived.by(() => {
     const kings = (c: string) => squares.filter((x) => x === c).length;
-    if (kings('K') !== 1 || kings('k') !== 1) return 'Each side needs exactly one king.';
-    if (squares.slice(0, 8).some((c) => c.toLowerCase() === 'p') || squares.slice(56).some((c) => c.toLowerCase() === 'p')) return 'Pawns cannot stand on the first or last rank.';
+    if (kings('K') !== 1 || kings('k') !== 1) return $t('kidsclass.editor.oneKing');
+    if (squares.slice(0, 8).some((c) => c.toLowerCase() === 'p') || squares.slice(56).some((c) => c.toLowerCase() === 'p')) return $t('kidsclass.editor.pawnRank');
     try {
       positionFromFen(full);
       return '';
     } catch {
-      return `This position is not possible: the side not to move is in check.`;
+      return $t('kidsclass.editor.inCheck');
     }
   });
 
@@ -115,6 +127,8 @@
   const pieceClass = (c: string) => `${c === c.toUpperCase() ? 'white' : 'black'} ${ROLE[c.toLowerCase()]}`;
 </script>
 
+<svelte:window onkeydown={(e) => e.key === 'Escape' && !drag && oncancel()} />
+
 <div class="editor">
   <div class="cg-wrap board" class:flipped bind:this={boardEl}>
     {#each order as i (i)}
@@ -131,28 +145,35 @@
   {/if}
 
   <div class="side">
+    <div class="head">
+      {#if title}<h2>{title}</h2>{/if}
+      <button class="close" onclick={oncancel} aria-label={$t('kidsclass.editor.close')} title={$t('kidsclass.editor.close')}>✕</button>
+    </div>
     <div class="cg-wrap palette" role="radiogroup" aria-label="Piece to place">
       {#each ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p'] as c (c)}
         <button class="pick" class:on={tool === c} role="radio" aria-checked={tool === c} aria-label={pieceClass(c)} onpointerdown={(e) => startDrag(e, c, null)} onclick={() => !dropped && (tool = c)}><piece class={pieceClass(c)}></piece></button>
       {/each}
-      <button class="pick erase" class:on={tool === 'x'} role="radio" aria-checked={tool === 'x'} aria-label="Remove pieces" onclick={() => (tool = 'x')}>✕</button>
+      <button class="pick erase" class:on={tool === 'x'} role="radio" aria-checked={tool === 'x'} aria-label={$t('kidsclass.editor.removeTitle')} title={$t('kidsclass.editor.removeTitle')} onclick={() => (tool = 'x')}>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M15.2 3.6a2 2 0 0 1 2.8 0l3.4 3.4a2 2 0 0 1 0 2.8L11.6 19.6H20v1.9H8.4L3.6 16.7a2 2 0 0 1 0-2.8z" fill="currentColor" opacity=".35" /><path d="M15.2 3.6a2 2 0 0 1 2.8 0l3.4 3.4a2 2 0 0 1 0 2.8l-6 6-6.2-6.2z" fill="currentColor" /></svg>
+        <span class="erase-label">{$t('kidsclass.editor.remove')}</span>
+      </button>
     </div>
-    <p class="label hint">Drag pieces onto the board, between squares, or off it to remove them. Or tap a piece, then tap squares to place it.</p>
+    <p class="label hint">{$t('kidsclass.editor.hint')}</p>
 
     <div class="segmented" role="group" aria-label="To move">
-      <button aria-pressed={turn === 'w'} onclick={() => (turn = 'w')}>White to move</button>
-      <button aria-pressed={turn === 'b'} onclick={() => (turn = 'b')}>Black to move</button>
+      <button aria-pressed={turn === 'w'} onclick={() => (turn = 'w')}>{$t('kidsclass.editor.white')}</button>
+      <button aria-pressed={turn === 'b'} onclick={() => (turn = 'b')}>{$t('kidsclass.editor.black')}</button>
     </div>
     <div class="row">
-      <button class="btn" onclick={() => (squares = Array(64).fill(''))}>Clear board</button>
-      <button class="btn" onclick={() => (squares = parse(START))}>Start position</button>
-      <button class="btn" onclick={() => (flipped = !flipped)}>Flip</button>
+      <button class="btn" onclick={() => (squares = Array(64).fill(''))}>{$t('kidsclass.editor.clear')}</button>
+      <button class="btn" onclick={() => (squares = parse(START))}>{$t('kidsclass.editor.start')}</button>
+      <button class="btn" onclick={() => (flipped = !flipped)}>{$t('kidsclass.editor.flip')}</button>
     </div>
     <code class="fen">{full}</code>
     {#if problem}<p class="err">{problem}</p>{/if}
     <div class="row">
-      <button class="btn primary" disabled={!!problem} onclick={() => onapply(full)}>{applyLabel}</button>
-      <button class="btn ghost" onclick={oncancel}>Cancel</button>
+      <button class="btn primary" disabled={!!problem} onclick={() => onapply(full)}>{applyLabel ?? $t('kidsclass.editor.analyse')}</button>
+      <button class="btn ghost" onclick={oncancel}>{$t('kidsclass.editor.cancel')}</button>
     </div>
   </div>
 </div>
@@ -206,6 +227,8 @@
   }
   .side {
     flex: 1 1 280px;
+    /* Never wider than the dialog on a phone (it scrolled sideways and hid the close button). */
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -213,7 +236,7 @@
   .palette {
     position: relative;
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 6px;
   }
   .pick {
@@ -237,6 +260,45 @@
     grid-column: 7;
     grid-row-start: 1;
     aspect-ratio: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 1px;
+  }
+  .erase-label {
+    max-width: 100%;
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .head h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+  .close {
+    margin-left: auto;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--raised);
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .close:hover {
+    border-color: var(--gold);
   }
   .hint {
     margin: 0;

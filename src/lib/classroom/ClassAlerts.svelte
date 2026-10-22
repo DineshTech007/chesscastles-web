@@ -12,6 +12,7 @@
   import { checkClassroom, classroomShown } from './visible';
   import { classroomAccess, devPlayer, type ClassSummary } from './api';
   import { sounds } from '$lib/sound';
+  import { t } from '$lib/i18n';
 
   type Alert = { key: string; kind: 'join' | 'teach'; id: string; name: string; who: string; title: string };
   let alert = $state<Alert | undefined>();
@@ -104,14 +105,14 @@
   <div class="ca" class:teach={alert.kind === 'teach'} role="alertdialog" aria-labelledby="ca-h">
     <span class="icon" aria-hidden="true">{alert.kind === 'join' ? '🔴' : '⏰'}</span>
     <div class="txt">
-      <h2 id="ca-h">{alert.kind === 'join' ? 'Your class has started!' : 'Time to teach!'}</h2>
+      <h2 id="ca-h">{alert.kind === 'join' ? $t('kidsclass.alert.started') : 'Time to teach!'}</h2>
       <p>
-        {#if alert.kind === 'join'}<b>{alert.name}</b> · {alert.who} is teaching now.{:else}<b>{alert.name}</b>{alert.title ? ` · ${alert.title}` : ''}: your session is now. Your students are waiting.{/if}
+        {#if alert.kind === 'join'}<b>{alert.name}</b> · {$t('kidsclass.alert.teaching', { coach: alert.who })}{:else}<b>{alert.name}</b>{alert.title ? ` · ${alert.title}` : ''}: your session is now. Your students are waiting.{/if}
       </p>
     </div>
     <div class="btns">
-      <button class="btn primary big" onclick={go}>{alert.kind === 'join' ? '🎓 Join the class' : '🚀 Start the class'}</button>
-      <button class="btn ghost" onclick={close}>Later</button>
+      <button class="btn primary big" onclick={go}>{alert.kind === 'join' ? $t('kidsclass.alert.join') : '🚀 Start the class'}</button>
+      <button class="btn ghost" onclick={close}>{$t('kidsclass.alert.later')}</button>
     </div>
   </div>
 {/if}

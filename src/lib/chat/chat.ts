@@ -20,6 +20,10 @@ export interface Guard {
   text: string;
   until: number;
   at: number;
+  /** Which warning (the server's code), so it shows in the player's language. */
+  code?: 'privacy' | 'rude' | 'unkind' | 'paused15' | 'pausedDay' | 'still';
+  /** Minutes left (for 'still'). */
+  minutes?: number;
 }
 
 export const EMOJIS = ['👍', '😂', '😮', '🔥', '👏', '😎', '🤝', '🏆', '💪', '😅', '🍀', '♟️'] as const;

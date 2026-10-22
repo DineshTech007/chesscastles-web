@@ -6,24 +6,25 @@
    */
   import Car from '$lib/racer/Car.svelte';
   import { racerStats } from '$lib/racer/stats';
+  import { t } from '$lib/i18n';
 </script>
 
 <div class="racer card">
   <a class="main" href="/puzzles/racer">
     <span class="top">
       <strong class="display">Puzzle Racer</strong>
-      {#if $racerStats.best}<span class="best num">Best: {$racerStats.best}</span>{:else}<span class="new">NEW</span>{/if}
+      {#if $racerStats.best}<span class="best num">{$t('racer.promo.best', { n: $racerStats.best })}</span>{:else}<span class="new">{$t('racer.new')}</span>{/if}
     </span>
-    <span class="sub">Race other kids through the same puzzles. Every right answer drives your car forward!</span>
+    <span class="sub">{$t('racer.promo.sub')}</span>
     <span class="road" aria-hidden="true">
       {#each [0, 4, 1] as c, i (c)}
         <span class="drive" style="--d: {5 + i * 1.2}s; --delay: {-i * 1.7}s; top: {4 + i * 22}px"><Car car={c} size={46} moving /></span>
       {/each}
       <span class="finish"></span>
     </span>
-    <span class="cta">Race now 🏁</span>
+    <span class="cta">{$t('racer.promo.cta')}</span>
   </a>
-  <a class="rushline" href="/puzzles/racer"><span class="new small">NEW</span> ⚔️ Puzzle Battle: challenge a friend to the same puzzles. Who solves more wins! →</a>
+  <a class="rushline" href="/puzzles/racer"><span class="new small">{$t('racer.new')}</span> {$t('racer.promo.battle')}</a>
 </div>
 
 <style>

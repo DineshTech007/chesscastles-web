@@ -6,6 +6,7 @@
   import Medal from '$lib/puzzles/Medal.svelte';
   import { AWARDS } from '$lib/awards/awards';
   import { RACER_TITLES, nextRacerTitle } from './stats';
+  import { t } from '$lib/i18n';
 
   let { best, size = 52 }: { best: number; size?: number } = $props();
   const next = $derived(nextRacerTitle(best));
@@ -13,17 +14,17 @@
 
 <div class="titles">
   <ol class="ladder" aria-label="Puzzle Racer titles">
-    {#each RACER_TITLES as t (t.min)}
-      {@const a = AWARDS.find((x) => x.id === t.award)}
-      {@const got = best >= t.min}
-      <li class:got class:next={next?.min === t.min}>
-        {#if a}<Medal badge={a} art={a.art} {got} peek={next?.min === t.min} {size} />{/if}
-        <span class="tname">{t.name}</span>
-        <span class="tmin num">{t.min}+</span>
+    {#each RACER_TITLES as rt (rt.min)}
+      {@const a = AWARDS.find((x) => x.id === rt.award)}
+      {@const got = best >= rt.min}
+      <li class:got class:next={next?.min === rt.min}>
+        {#if a}<Medal badge={a} art={a.art} {got} peek={next?.min === rt.min} {size} />{/if}
+        <span class="tname">{rt.name}</span>
+        <span class="tmin num">{rt.min}+</span>
       </li>
     {/each}
   </ol>
-  <p class="chase">{#if next}Next title: <b>{next.name}</b>, {next.more} more than your best!{:else}You hold the highest title. Can you beat your best?{/if}</p>
+  <p class="chase">{#if next}{$t('racer.ladder.next')} <b>{next.name}</b>{$t('racer.ladder.more', { n: next.more })}{:else}{$t('racer.ladder.top')}{/if}</p>
 </div>
 
 <style>

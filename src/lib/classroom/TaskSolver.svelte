@@ -19,6 +19,7 @@
   import { playMoveSound, sounds } from '$lib/sound';
   import { puzzleSounds } from '$lib/puzzles/puzzleSounds';
   import Fireworks from '$lib/components/Fireworks.svelte';
+  import { t, type Key as WordKey } from '$lib/i18n';
 
   // The live class or homework at home: the same board (solver.ts).
   let { host: live }: { host: SolverHost } = $props();
@@ -51,6 +52,8 @@
     if (r.top < 0 || r.bottom > innerHeight) wrap.scrollIntoView({ block: r.height > innerHeight ? 'start' : 'nearest', behavior: 'smooth' });
   });
   let seen = 0;
+  /** The words in the player's language (inside the effect below, `t` is the room's answer). */
+  const say = (k: WordKey, v?: Record<string, string | number>) => $t(k, v);
 
   $effect(() => {
     const t = live.tried;
@@ -61,17 +64,17 @@
     const r = t.ended ? t.p.results[t.p.results.length - 1] : undefined;
     if (t.ended === 'solved') {
       puzzleSounds.solved();
-      flash = { fen: it.fen, moves: r?.moves ?? [], kind: 'solved', text: `Solved! +${task.points}`, until: Date.now() + 1300, item: t.p.item - 1 };
+      flash = { fen: it.fen, moves: r?.moves ?? [], kind: 'solved', text: say('kidsclass.ts.solved', { n: task.points }), until: Date.now() + 1300, item: t.p.item - 1 };
       if (t.p.done) party++;
     } else if (t.ended === 'failed') {
       sounds.error();
       const last = r?.tried[r.tried.length - 1] ?? [];
-      flash = { fen: it.fen, moves: last, kind: 'failed', text: task.kind === 'play' ? 'Lost this one.' : 'Missed this one.', until: Date.now() + 1500, item: t.p.item - 1 };
+      flash = { fen: it.fen, moves: last, kind: 'failed', text: task.kind === 'play' ? say('kidsclass.ts.lost') : say('kidsclass.ts.missed'), until: Date.now() + 1500, item: t.p.item - 1 };
     } else if (t.again) {
       sounds.error();
       const last = t.p.tried[t.p.tried.length - 1] ?? [];
       const tries = task.tries - t.p.wrong;
-      flash = { fen: it.fen, moves: last, kind: 'wrong', text: `Not that one. ${tries} ${tries === 1 ? 'try' : 'tries'} left${task.minus ? ` (−${task.minus})` : ''}.`, until: Date.now() + 1200, item: t.p.item };
+      flash = { fen: it.fen, moves: last, kind: 'wrong', text: say(tries === 1 ? 'kidsclass.ts.wrong1' : 'kidsclass.ts.wrong', { n: tries, extra: task.minus ? ` (−${task.minus})` : '' }), until: Date.now() + 1200, item: t.p.item };
     } else if (t.reply) holdReply = Date.now() + 380;
   });
   // The flash and the held reply end by themselves.
@@ -134,7 +137,7 @@
         if (thinking !== key) return;
         const mine = side === 'white' ? 1 : -1;
         if (e && ((e.mate !== undefined && e.mate * mine > 0) || (e.cp !== undefined && e.cp * mine >= 700))) {
-          live.notice = 'The computer gives up!';
+          live.notice = $t('kidsclass.ts.gaveUp');
           return live.claim(p.item, 'win');
         }
       }
@@ -175,52 +178,52 @@
     <div class="q">
       <b>{item.title || task.title}</b>
       <span class="muted"
-        >{task.items.length > 1 ? `Puzzle ${Math.min((flash?.item ?? idx) + 1, task.items.length)} of ${task.items.length} · ` : ''}{side === 'white' ? 'White' : 'Black'} to play{task.kind === 'play'
-          ? ` · ${item.goal === 'draw' ? 'hold the draw' : item.goal === 'win' ? 'win' : 'checkmate'} against the computer`
+        >{task.items.length > 1 ? `${$t('kidsclass.ts.puzzleOf', { i: Math.min((flash?.item ?? idx) + 1, task.items.length), n: task.items.length })} · ` : ''}{side === 'white' ? $t('kidsclass.ts.whiteToPlay') : $t('kidsclass.ts.blackToPlay')}{task.kind === 'play'
+          ? ` · ${item.goal === 'draw' ? $t('kidsclass.ts.goalDraw') : item.goal === 'win' ? $t('kidsclass.ts.goalWin') : $t('kidsclass.ts.goalMate')}`
           : ''}</span
       >
     </div>
     <div class="meta">
       {#if task.ends}<span class="timer num" class:low={left < 15_000}>{frozen ? '0:00' : clock(left)}</span>{/if}
       <span class="pill num">{p?.points ?? 0} pts</span>
-      {#if !done && !frozen}<span class="pill">{triesLeft} {triesLeft === 1 ? 'try' : 'tries'}</span>{/if}
+      {#if !done && !frozen}<span class="pill">{triesLeft === 1 ? $t('kidsclass.ts.try1') : $t('kidsclass.ts.tries', { n: triesLeft })}</span>{/if}
     </div>
   </header>
 
   {#if reviewShown}
-    <ClassBoard fen={reviewShown.fen} lastMove={reviewShown.last} orientation={sideOf(reviewPos!.fen)} label="The answer" />
+    <ClassBoard fen={reviewShown.fen} lastMove={reviewShown.last} orientation={sideOf(reviewPos!.fen)} label={$t('kidsclass.ts.answer')} />
     <div class="row">
       <button class="btn ghost" onclick={() => (reviewPly = Math.max(0, reviewPly - 1))} disabled={reviewPly === 0}>◀</button>
       <span class="muted">{sanLine(reviewPos!.fen, reviewPos!.line.slice(0, reviewPly)) || 'The position'}</span>
       <button class="btn ghost" onclick={() => (reviewPly = Math.min(reviewPos!.line.length, reviewPly + 1))} disabled={reviewPly >= reviewPos!.line.length}>▶</button>
-      <button class="btn" onclick={() => (review = undefined)}>Close</button>
+      <button class="btn" onclick={() => (review = undefined)}>{$t('kidsclass.ts.close')}</button>
     </div>
   {:else if shown}
     <div class="boardwrap" bind:this={wrap}>
       {#key remount}
-        <ClassBoard fen={shown.fen} lastMove={shown.last} check={shown.pos.isCheck()} orientation={side} movable={myTurn ? side : undefined} dests={myTurn ? destsOf(shown.pos) : new Map()} autoShapes={hint as never} label="Your question board" {onmove} />
+        <ClassBoard fen={shown.fen} lastMove={shown.last} check={shown.pos.isCheck()} orientation={side} movable={myTurn ? side : undefined} dests={myTurn ? destsOf(shown.pos) : new Map()} autoShapes={hint as never} label={$t('kidsclass.ts.board')} {onmove} />
       {/key}
       {#if flash}
         <div class="flash {flash.kind}" role="status">{flash.kind === 'solved' ? '✓' : '✗'} {flash.text}</div>
       {:else if frozen && !done}
-        <div class="flash failed" role="status">⏱ Time's up!</div>
+        <div class="flash failed" role="status">{$t('kidsclass.ts.timeUp')}</div>
       {/if}
     </div>
   {/if}
 
   {#if done || frozen}
     <div class="result card">
-      <b>{task.ends && task.ends <= live.now && solved < task.items.length ? "Time's up!" : 'Finished!'}</b>
-      <span>{solved}/{task.items.length} solved · {p?.points ?? 0} points · {took(results.filter((r) => r.solved).reduce((n, r) => n + r.ms, 0))}</span>
-      {#if !task.over && !live.homework}<span class="muted">Waiting for the others…</span>{/if}
+      <b>{task.ends && task.ends <= live.now && solved < task.items.length ? $t('kidsclass.ts.timeUpShort') : $t('kidsclass.ts.finished')}</b>
+      <span>{$t('kidsclass.ts.summary', { s: solved, n: task.items.length, p: p?.points ?? 0, time: took(results.filter((r) => r.solved).reduce((n, r) => n + r.ms, 0)) })}</span>
+      {#if !task.over && !live.homework}<span class="muted">{$t('kidsclass.ts.waitOthers')}</span>{/if}
     </div>
     {#if task.reveal}
       <div class="answers">
-        <b>Answers</b>
+        <b>{$t('kidsclass.ts.answers')}</b>
         {#each task.items as it, i (i)}
           <button class="answer" onclick={() => ((review = i), (reviewPly = it.line.length))}>
             <span class:ok={results[i]?.solved} class:bad={results[i] && !results[i].solved}>{results[i]?.solved ? '✓' : results[i] ? '✗' : '·'}</span>
-            {i + 1}. {sanLine(it.fen, it.line) || (it.goal ? 'Played out against the computer' : '')}
+            {i + 1}. {sanLine(it.fen, it.line) || (it.goal ? $t('kidsclass.ts.playedOut') : '')}
           </button>
         {/each}
       </div>

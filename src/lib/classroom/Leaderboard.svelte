@@ -1,12 +1,13 @@
 <script lang="ts">
   /** A class leaderboard: the first three on a podium (gold, silver, bronze), then everyone else; mine highlighted. */
   import { took } from './tasks';
+  import { t } from '$lib/i18n';
 
   let {
     rows,
     me = '',
     total = 0,
-    empty = 'No answers yet.',
+    empty = '',
   }: {
     rows: { uid: string; name: string; points: number; solved: number; ms: number; wrong?: number; done?: boolean }[];
     me?: string;
@@ -18,7 +19,7 @@
 </script>
 
 {#if !rows.length}
-  <p class="empty">{empty}</p>
+  <p class="empty">{empty || $t('kidsclass.lb.empty')}</p>
 {:else}
   <div class="podium">
     {#each rows.slice(0, 3) as r, i (r.uid)}
@@ -26,13 +27,13 @@
         <span class="medal" aria-hidden="true">{MEDALS[i]}</span>
         <b class="name">{r.name}</b>
         <span class="pts num">{r.points} <small>pts</small></span>
-        <span class="sub">{r.solved}{total ? `/${total}` : ''} solved · {took(r.ms)}</span>
+        <span class="sub">{$t('kidsclass.lb.solved', { n: `${r.solved}${total ? `/${total}` : ''}` })} · {took(r.ms)}</span>
       </div>
     {/each}
   </div>
   {#if rows.length > 3}
     <table>
-      <thead><tr><th>#</th><th>Name</th><th>Points</th><th>Solved</th><th>Time</th></tr></thead>
+      <thead><tr><th>#</th><th>{$t('kidsclass.lb.name')}</th><th>Points</th><th>{$t('kidsclass.lb.solvedCol')}</th><th>{$t('kidsclass.lb.time')}</th></tr></thead>
       <tbody>
         {#each rows.slice(3) as r, i (r.uid)}
           <tr class:me={r.uid === me}>

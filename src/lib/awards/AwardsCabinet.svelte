@@ -10,6 +10,8 @@
   import { RUSH_TITLES } from '$lib/puzzles/rewards';
   import { levelOf } from '$lib/puzzles/bank';
   import { placeMedal, type Trophy } from '$lib/tournament/tournament';
+  import { t, type Key } from '$lib/i18n';
+  import { contentLang } from '$lib/contentLang';
   import { AWARDS, GROUPS, type Award, type AwardGroup } from './awards';
 
   let {
@@ -44,7 +46,7 @@
   const shelf = $derived(SHELF.flatMap((g) => won.filter((a) => a.group === g).reverse()));
   const nextUp = $derived(GROUPS.map((g) => AWARDS.find((a) => a.group === g.id && !earned.has(a.id))).filter((a): a is Award => !!a).slice(0, 6));
   const level = $derived(rating ? levelOf(rating) : undefined);
-  const rush = $derived([...RUSH_TITLES].reverse().find((t) => rushBest >= t.min));
+  const rush = $derived([...RUSH_TITLES].reverse().find((rt) => rushBest >= rt.min));
   const rushAward = $derived(rush ? AWARDS.find((a) => a.id === rush.badge) : undefined);
   const count = (g: AwardGroup) => AWARDS.filter((a) => a.group === g && earned.has(a.id)).length;
   const total = (g: AwardGroup) => AWARDS.filter((a) => a.group === g).length;
@@ -55,25 +57,33 @@
   const tabList = $derived(tab === 'won' ? shelf : AWARDS.filter((a) => a.group === tab));
   const firstLocked = $derived(tab === 'won' ? undefined : tabList.find((a) => !earned.has(a.id))?.id);
 
-  const when = (t: number) => new Date(t).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+  const when = (at: number) => new Date(at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+  /** An award's or group's words in the chosen language (features/awards.ts), else the English in awards.ts. */
+  const tr = (key: string, english: string) => {
+    const s = $t(key as Key);
+    return s === key ? english : s;
+  };
+  const nm = (a: Award) => tr(`awards.a.${a.id}.name`, a.name);
+  const hint = (a: Award) => tr(`awards.a.${a.id}.hint`, a.hint);
+  const groupName = (g: { id: AwardGroup; name: string }) => tr(`awards.g.${g.id}`, g.name);
   const ordinal = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`;
 </script>
 
 {#snippet tile(a: Award, size: number, peek = false)}
   {@const got = earned.has(a.id)}
-  <div class="aw" class:locked={!got} title={got ? `${a.name}: ${a.hint}` : `To win: ${a.hint}`}>
+  <div class="aw" class:locked={!got} title={got ? `${nm(a)}: ${hint(a)}` : $t('awards.towin', { hint: hint(a) })}>
     <Medal badge={a} art={a.art} {got} peek={!got && peek} {size} />
-    <span class="nm">{a.name}</span>
-    {#if !got}<span class="hint">{a.hint}</span>{/if}
+    <span class="nm">{nm(a)}</span>
+    {#if !got}<span class="hint">{hint(a)}</span>{/if}
   </div>
 {/snippet}
 
 <section class="card awards" class:full id="awards" aria-labelledby="awards-h">
   <header class="ah">
-    <h2 id="awards-h" class="title">🏆 {mine ? 'My awards' : name ? `${name}'s awards` : 'Awards'}</h2>
-    <span class="count num">{won.length} <span class="muted">of {AWARDS.length}</span></span>
+    <h2 id="awards-h" class="title">🏆 {mine ? $t('awards.title.mine') : name ? $t('awards.title.of', { name }) : $t('awards.title')}</h2>
+    <span class="count num">{won.length} <span class="muted">{$t('awards.of', { n: AWARDS.length })}</span></span>
   </header>
-  <div class="bar" role="progressbar" aria-label="Awards won" aria-valuemin="0" aria-valuemax={AWARDS.length} aria-valuenow={won.length}>
+  <div class="bar" role="progressbar" aria-label={$t('awards.bar')} aria-valuemin="0" aria-valuemax={AWARDS.length} aria-valuenow={won.length}>
     <span style="width: {Math.round((won.length / AWARDS.length) * 100)}%"></span>
   </div>
 
@@ -82,58 +92,58 @@
       {#if level}
         <div class="top">
           <img src={level.level.image} alt="" width="44" height="44" loading="lazy" />
-          <span><b>{level.level.name} level</b><span class="muted small">Puzzles {rating}{level.next ? ` · ${level.next.name} at ${level.next.from}` : ''}</span></span>
+          <span><b>{$t('awards.level', { name: level.level.name })}</b><span class="muted small">{$t('awards.level.puzzles', { r: rating })}{level.next ? ` · ${$t('awards.level.next', { name: level.next.name, r: level.next.from })}` : ''}</span></span>
         </div>
       {/if}
       {#if rushAward}
         <div class="top">
           <Medal badge={rushAward} size={44} />
-          <span><b>{rushAward.name}</b><span class="muted small">Rush best {rushBest}</span></span>
+          <span><b>{nm(rushAward)}</b><span class="muted small">{$t('awards.rushbest', { n: rushBest })}</span></span>
         </div>
       {/if}
       {#if stars}
-        <div class="top"><span class="big" aria-hidden="true">⭐</span><span><b class="num">{stars}</b><span class="muted small">puzzle stars</span></span></div>
+        <div class="top"><span class="big" aria-hidden="true">⭐</span><span><b class="num">{stars}</b><span class="muted small">{$t('awards.stars')}</span></span></div>
       {/if}
       {#if trophies.length}
-        <div class="top"><span class="big" aria-hidden="true">🏆</span><span><b class="num">{trophies.length}</b><span class="muted small">{trophies.length === 1 ? 'tournament' : 'tournaments'}</span></span></div>
+        <div class="top"><span class="big" aria-hidden="true">🏆</span><span><b class="num">{trophies.length}</b><span class="muted small">{trophies.length === 1 ? $t('awards.tourney.one') : $t('awards.tourney.many')}</span></span></div>
       {/if}
     </div>
   {/if}
 
   {#if !full}
     {#if shelf.length}
-      <h3>Won</h3>
+      <h3>{$t('awards.won')}</h3>
       <div class="shelf">
         {#each more ? shelf : shelf.slice(0, SHELF_MAX) as a (a.id)}{@render tile(a, 46)}{/each}
         {#if !more && shelf.length > SHELF_MAX}
-          <button class="aw more" onclick={() => (more = true)}><span class="plus">+{shelf.length - SHELF_MAX}</span><span class="nm">more</span></button>
+          <button class="aw more" onclick={() => (more = true)}><span class="plus">+{shelf.length - SHELF_MAX}</span><span class="nm">{$t('awards.more')}</span></button>
         {/if}
       </div>
     {/if}
     {#if mine && nextUp.length}
-      <h3>Next to win</h3>
+      <h3>{$t('awards.next')}</h3>
       <div class="shelf">
         {#each nextUp as a (a.id)}{@render tile(a, 46, true)}{/each}
       </div>
     {/if}
-    {#if mine}<a class="all" href="/awards">See all {AWARDS.length} awards →</a>{/if}
+    {#if mine}<a class="all" href="/awards">{$t('awards.all', { n: AWARDS.length })}</a>{/if}
   {:else}
-    <div class="tabs" role="tablist" aria-label="Award groups">
-      <button role="tab" aria-selected={tab === 'won'} class:on={tab === 'won'} onclick={() => (tab = 'won')}>Won <span class="num">{won.length}</span></button>
+    <div class="tabs" role="tablist" aria-label={$t('awards.groups')}>
+      <button role="tab" aria-selected={tab === 'won'} class:on={tab === 'won'} onclick={() => (tab = 'won')}>{$t('awards.won')} <span class="num">{won.length}</span></button>
       {#each GROUPS as g (g.id)}
-        <button role="tab" aria-selected={tab === g.id} class:on={tab === g.id} onclick={() => (tab = g.id)}>{g.name} <span class="num">{count(g.id)}/{total(g.id)}</span></button>
+        <button role="tab" aria-selected={tab === g.id} class:on={tab === g.id} onclick={() => (tab = g.id)}>{groupName(g)} <span class="num">{count(g.id)}/{total(g.id)}</span></button>
       {/each}
     </div>
     <div class="grid">
-      {#each tabList as a (a.id)}{@render tile(a, 60, a.id === firstLocked)}{:else}<p class="muted">Nothing won here yet: pick a group to see what to win.</p>{/each}
+      {#each tabList as a (a.id)}{@render tile(a, 60, a.id === firstLocked)}{:else}<p class="muted">{$t('awards.empty')}</p>{/each}
     </div>
     {#if tab === 'tournaments' && mine && trophies.length}
-      <h3>Tournament trophies</h3>
-      {#each trophies.slice(0, 10) as t (t.id)}
+      <h3>{$t('awards.trophies')}</h3>
+      {#each trophies.slice(0, 10) as tp (tp.id)}
         <div class="trow">
-          <span class="medal">{placeMedal(t.place) || '🏅'}</span>
-          <span class="tname">{t.name}</span>
-          <span class="muted small">{ordinal(t.place)} of {t.players} · {t.score}/{t.rounds} · {when(t.at)}</span>
+          <span class="medal">{placeMedal(tp.place) || '🏅'}</span>
+          <span class="tname">{tp.name}</span>
+          <span class="muted small">{$t('awards.trophy.place', { place: $contentLang === 'en' ? ordinal(tp.place) : `#${tp.place}`, n: tp.players })} · {tp.score}/{tp.rounds} · {when(tp.at)}</span>
         </div>
       {/each}
     {/if}

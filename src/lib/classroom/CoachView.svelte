@@ -27,6 +27,7 @@
   import Gallery from './Gallery.svelte';
   import MoveList from '$lib/components/MoveList.svelte';
   import BoardEditor from '$lib/components/BoardEditor.svelte';
+  import { t } from '$lib/i18n';
   import DbPanel from '$lib/components/DbPanel.svelte';
   import { CloudBook } from '$lib/book/book';
   import { gamesDb } from '$lib/games/gamesDb';
@@ -499,7 +500,8 @@
   <div class="dialog wide" role="dialog" aria-modal="true" aria-label="Set up a position">
     <BoardEditor
       fen={at.fen}
-      applyLabel="Put on the class board"
+      applyLabel={$t('kidsclass.editor.putOnBoard')}
+      title={$t('kidsclass.editor.title')}
       onapply={(fen) => {
         set({ root: fen, moves: [], ply: 0, shapes: [], marks: {}, title: '', game: -1 });
         editing = false;

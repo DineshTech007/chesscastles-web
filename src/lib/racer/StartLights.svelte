@@ -4,6 +4,7 @@
    * 2, 1), then all turn green: GO! Timed by the race's clock (`now`: the room's time), so everyone starts together.
    */
   import { puzzleSounds } from '$lib/puzzles/puzzleSounds';
+  import { t as tr } from '$lib/i18n';
 
   let { startAt, now }: { startAt: number; now: () => number } = $props();
 
@@ -50,7 +51,7 @@
     {:else if count <= 3 && count >= 1}
       {#key count}<strong class="word">{count}</strong>{/key}
     {:else}
-      <strong class="word small">Get ready…</strong>
+      <strong class="word small">{$tr('racer.lights.ready')}</strong>
     {/if}
   </div>
 {/if}

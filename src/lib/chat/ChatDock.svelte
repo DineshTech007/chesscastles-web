@@ -7,6 +7,7 @@
    */
   import { tick } from 'svelte';
   import { EMOJIS, MAX_TEXT, PHRASES, chatOff, colourOf, hiddenChat, setChatOff, toggleHidden, type ChatLine, type Guard } from './chat';
+  import { t, type Key } from '$lib/i18n';
 
   let {
     lines,
@@ -55,16 +56,23 @@
     void tick().then(() => box?.scrollTo({ top: box.scrollHeight, behavior: 'smooth' }));
   });
   const initial = (n: string) => (n.trim()[0] ?? '?').toUpperCase();
+  /** A ready phrase in my language (the server sends the English text). */
+  function phraseText(text: string): string {
+    const i = (PHRASES as readonly string[]).indexOf(text);
+    return i < 0 ? text : $t(`kidsclass.phrase.${i}` as Key);
+  }
+  /** Castle Guard's warning in my language, when the server says which one. */
+  const guardText = $derived(guard?.code ? $t(`kidsclass.guard.${guard.code}` as Key, { m: guard.minutes ?? '' }) : (guard?.text ?? ''));
 </script>
 
 {#if $chatOff}
-  <button class="off-pill" onclick={() => setChatOff(false)}>💬 Chat is off · turn it on</button>
+  <button class="off-pill" onclick={() => setChatOff(false)}>{$t('kidsclass.chat.off')}</button>
 {:else}
   <section class="dock" aria-label="Chat">
     <header class="top">
       <span class="ttl">💬 Chat</span>
-      <span class="guardian" title="Castle Guard reads every message and stops rude words and personal details">🛡️ Castle Guard is watching</span>
-      <button class="mini" onclick={() => setChatOff(true)} title="Turn chat off for me">🔕</button>
+      <span class="guardian" title={$t('kidsclass.chat.guardTitle')}>{$t('kidsclass.chat.watching')}</span>
+      <button class="mini" onclick={() => setChatOff(true)} title={$t('kidsclass.chat.offTitle')}>🔕</button>
     </header>
     {#if note}<p class="note">{note}</p>{/if}
 
@@ -73,42 +81,42 @@
         {@const mine = l.uid === me}
         <div class="msg" class:mine class:big={l.kind === 'emoji'}>
           {#if !mine}
-            <button class="who" style="--c: {colourOf(l.uid)}" onclick={() => (menu = menu === l.uid ? undefined : l.uid)} title="{l.name}: tap to hide their messages">{initial(l.name)}</button>
+            <button class="who" style="--c: {colourOf(l.uid)}" onclick={() => (menu = menu === l.uid ? undefined : l.uid)} title={$t('kidsclass.chat.tapHide', { name: l.name })}>{initial(l.name)}</button>
           {/if}
           <div class="bubble" class:emoji={l.kind === 'emoji'} class:phrase={l.kind === 'phrase'}>
             {#if !mine && l.kind !== 'emoji'}<span class="nm" style="color: {colourOf(l.uid)}">{l.name}</span>{/if}
-            <span class="tx">{l.text}</span>
+            <span class="tx">{l.kind === 'phrase' ? phraseText(l.text) : l.text}</span>
           </div>
         </div>
         {#if menu === l.uid && !mine}
           <div class="menu">
-            <button class="btn ghost small" onclick={() => (toggleHidden(l.uid), (menu = undefined))}>🙈 Hide {l.name}'s messages</button>
-            <span class="muted small">You can still play together.</span>
+            <button class="btn ghost small" onclick={() => (toggleHidden(l.uid), (menu = undefined))}>{$t('kidsclass.chat.hide', { name: l.name })}</button>
+            <span class="muted small">{$t('kidsclass.chat.stillPlay')}</span>
           </div>
         {/if}
       {:else}
-        <p class="empty">Say hi with an emoji! 👋</p>
+        <p class="empty">{$t('kidsclass.chat.empty')}</p>
       {/each}
     </div>
 
     {#if guardShown && guard}
       <div class="guard" class:paused role="alert">
         <span class="knight" aria-hidden="true">🛡️</span>
-        <span><b>Castle Guard:</b> {guard.text}</span>
+        <span><b>Castle Guard:</b> {guardText}</span>
       </div>
     {/if}
 
-    <div class="emojis" role="group" aria-label="Send an emoji">
-      {#each EMOJIS as e (e)}<button class="emo" onclick={() => send('emoji', e)} aria-label="Send {e}">{e}</button>{/each}
+    <div class="emojis" role="group" aria-label={$t('kidsclass.chat.sendEmoji')}>
+      {#each EMOJIS as e (e)}<button class="emo" onclick={() => send('emoji', e)} aria-label={$t('kidsclass.chat.sendThis', { e })}>{e}</button>{/each}
     </div>
-    <div class="phrases" role="group" aria-label="Send a phrase">
-      {#each PHRASES as p, i (p)}<button class="chip" onclick={() => send('phrase', i)}>{p}</button>{/each}
+    <div class="phrases" role="group" aria-label={$t('kidsclass.chat.sendPhrase')}>
+      {#each PHRASES as p, i (p)}<button class="chip" onclick={() => send('phrase', i)}>{$t(`kidsclass.phrase.${i}` as Key)}</button>{/each}
     </div>
     <form class="say" onsubmit={sendText}>
-      <input bind:value={text} maxlength={MAX_TEXT} placeholder={paused ? 'Your chat is paused: emojis only for now' : 'Say something nice…'} disabled={paused} aria-label="Message" />
-      <button class="go" disabled={paused || !text.trim()} aria-label="Send">🚀</button>
+      <input bind:value={text} maxlength={MAX_TEXT} placeholder={paused ? $t('kidsclass.chat.pausedPlaceholder') : $t('kidsclass.chat.placeholder')} disabled={paused} aria-label="Message" />
+      <button class="go" disabled={paused || !text.trim()} aria-label={$t('kidsclass.chat.send')}>🚀</button>
     </form>
-    {#if $hiddenChat.size}<button class="link" onclick={() => [...$hiddenChat].forEach((u) => toggleHidden(u))}>Show hidden players' messages again ({$hiddenChat.size})</button>{/if}
+    {#if $hiddenChat.size}<button class="link" onclick={() => [...$hiddenChat].forEach((u) => toggleHidden(u))}>{$t('kidsclass.chat.showHidden', { n: $hiddenChat.size })}</button>{/if}
   </section>
 {/if}
 

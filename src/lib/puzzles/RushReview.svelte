@@ -25,6 +25,7 @@
   import Board from '$lib/components/Board.svelte';
   import PuzzleBoard from '$lib/components/PuzzleBoard.svelte';
   import { keyOf, positionFromFen } from '$lib/chess/position';
+  import { t } from '$lib/i18n';
 
   let { list, at = $bindable(), onclose }: { list: RushPuzzle[]; at: number; onclose: () => void } = $props();
 
@@ -90,13 +91,13 @@
 <div class="scrim" role="presentation" onclick={onclose}></div>
 <div class="dialog" role="dialog" aria-modal="true" aria-label="Puzzle {p.r}">
   <header class="dh">
-    <button class="btn ghost nav" onclick={() => (at = at - 1)} disabled={at <= 0} aria-label="Previous puzzle">‹</button>
+    <button class="btn ghost nav" onclick={() => (at = at - 1)} disabled={at <= 0} aria-label={$t('awards.review.prev')}>‹</button>
     <span class="what">
-      <b>Puzzle {at + 1} of {list.length}</b>
-      <span class="pill" class:ok={p.ok} class:bad={!p.ok}>{p.ok ? '✓ Solved' : '✕ Missed'} · {p.r}</span>
+      <b>{$t('awards.review.of', { n: at + 1, total: list.length })}</b>
+      <span class="pill" class:ok={p.ok} class:bad={!p.ok}>{p.ok ? $t('awards.review.solved') : $t('awards.review.missed')} · {p.r}</span>
     </span>
-    <button class="btn ghost nav" onclick={() => (at = at + 1)} disabled={at >= list.length - 1} aria-label="Next puzzle">›</button>
-    <button class="btn ghost" onclick={onclose} aria-label="Close">✕</button>
+    <button class="btn ghost nav" onclick={() => (at = at + 1)} disabled={at >= list.length - 1} aria-label={$t('awards.review.next')}>›</button>
+    <button class="btn ghost" onclick={onclose} aria-label={$t('awards.review.close')}>✕</button>
   </header>
 
   {#if trying}
@@ -104,25 +105,27 @@
       <PuzzleBoard fen={p.fen} moves={p.moves} tries={99} hintButton />
     {/key}
     <div class="row">
-      <button class="btn" onclick={() => tryKey++}>Start again</button>
-      <button class="btn ghost" onclick={() => (trying = false)}>Back to the answer</button>
+      <button class="btn" onclick={() => tryKey++}>{$t('awards.review.restart')}</button>
+      <button class="btn ghost" onclick={() => (trying = false)}>{$t('awards.review.back')}</button>
     </div>
   {:else}
     {#if p.miss}
-      <p class="say">You played <b class="bad">{missSan}</b>. The answer was <b class="good">{sans[p.miss.ply] ?? '?'}</b>.</p>
+      {@const [played1, played2] = $t('awards.review.played').split('{move}')}
+      {@const [answer1, answer2] = $t('awards.review.answer').split('{move}')}
+      <p class="say">{played1}<b class="bad">{missSan}</b>{played2} {answer1}<b class="good">{sans[p.miss.ply] ?? '?'}</b>{answer2}</p>
     {:else}
-      <p class="say">You solved it. The whole line:</p>
+      <p class="say">{$t('awards.review.line')}</p>
     {/if}
     <div class="board">
       <Board fen={makeFen(pos.toSetup())} orientation={side} lastMove={last} check={pos.isCheck()} {shapes} viewOnly label="Puzzle {p.r}" />
     </div>
     <div class="tools">
-      <button class="btn ghost" onclick={() => go(1)} disabled={ply <= 1} aria-label="Start">⏮</button>
-      <button class="btn ghost" onclick={() => go(ply - 1)} disabled={ply <= 1} aria-label="Back">◀</button>
-      <button class="btn ghost" onclick={() => go(ply + 1)} disabled={ply >= positions.length - 1} aria-label="Forward">▶</button>
-      <button class="btn ghost" onclick={() => go(positions.length - 1)} disabled={ply >= positions.length - 1} aria-label="End">⏭</button>
+      <button class="btn ghost" onclick={() => go(1)} disabled={ply <= 1} aria-label={$t('awards.review.first')}>⏮</button>
+      <button class="btn ghost" onclick={() => go(ply - 1)} disabled={ply <= 1} aria-label={$t('awards.review.prevmove')}>◀</button>
+      <button class="btn ghost" onclick={() => go(ply + 1)} disabled={ply >= positions.length - 1} aria-label={$t('awards.review.nextmove')}>▶</button>
+      <button class="btn ghost" onclick={() => go(positions.length - 1)} disabled={ply >= positions.length - 1} aria-label={$t('awards.review.last')}>⏭</button>
     </div>
-    <ol class="line" aria-label="The solution">
+    <ol class="line" aria-label={$t('awards.review.solution')}>
       {#each sans as s, i (i)}
         {#if i > 0}
           <li>
@@ -131,10 +134,10 @@
         {/if}
       {/each}
     </ol>
-    {#if atMiss}<p class="key"><span class="sw red"></span>Your move <span class="sw green"></span>The answer</p>{/if}
+    {#if atMiss}<p class="key"><span class="sw red"></span>{$t('awards.review.yours')} <span class="sw green"></span>{$t('awards.review.right')}</p>{/if}
     <div class="row">
-      <button class="btn primary" onclick={() => (trying = true)}>Try it again</button>
-      <a class="btn" href={analyse}>Analyse</a>
+      <button class="btn primary" onclick={() => (trying = true)}>{$t('awards.review.try')}</button>
+      <a class="btn" href={analyse}>{$t('awards.review.analyse')}</a>
     </div>
   {/if}
 </div>
