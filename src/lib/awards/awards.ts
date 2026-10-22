@@ -13,6 +13,7 @@ import { allProgress } from '$lib/books/books';
 import { myGames, outcome } from '$lib/stores/myGames';
 import { gamesOf, kfide } from '$lib/stores/me';
 import { session } from '$lib/auth';
+import { racerStats, type RacerStats } from '$lib/racer/stats';
 
 /**
  * Every award a player can win on Chess Castles, in one list (owner, 2026-10-22: "a section for each student with the
@@ -22,7 +23,7 @@ import { session } from '$lib/auth';
  * profile's progress, kept once won) so they show on every device and to friends.
  */
 
-export type AwardGroup = 'start' | 'games' | 'ratings' | 'levels' | 'puzzles' | 'rush' | 'study' | 'lessons' | 'masters' | 'tournaments';
+export type AwardGroup = 'start' | 'games' | 'ratings' | 'racer' | 'levels' | 'puzzles' | 'rush' | 'study' | 'lessons' | 'masters' | 'tournaments';
 export interface Award extends Badge {
   group: AwardGroup;
   /** Its picture (a medal name or a whole path) and the number on it. */
@@ -33,6 +34,7 @@ export const GROUPS: { id: AwardGroup; name: string }[] = [
   { id: 'start', name: 'Welcome' },
   { id: 'games', name: 'Games' },
   { id: 'ratings', name: 'CC Rating' },
+  { id: 'racer', name: 'Puzzle Racer' },
   { id: 'levels', name: 'Puzzle levels' },
   { id: 'puzzles', name: 'Puzzles' },
   { id: 'rush', name: 'Puzzle Rush' },
@@ -60,6 +62,11 @@ export const AWARDS: Award[] = [
   { id: 'wins10', group: 'games', icon: '🥉', name: '10 wins', hint: 'Win 10 games', art: { medal: 'star', n: '10' } },
   { id: 'wins50', group: 'games', icon: '🥈', name: '50 wins', hint: 'Win 50 games', art: { medal: 'star', n: '50' } },
   { id: 'giant', group: 'games', icon: '⚔️', name: 'Giant killer', hint: 'Beat an opponent rated 200 or more above you', art: { medal: 'flame', n: '+200' } },
+  { id: 'race1', group: 'racer', icon: '🏎️', name: 'First race', hint: 'Finish a Puzzle Racer race', art: { medal: 'rocket', n: '1' } },
+  { id: 'racewin', group: 'racer', icon: '🏁', name: 'Race winner', hint: 'Win a Puzzle Racer race', art: { medal: '/art/trophy-256.webp', n: '1st' } },
+  { id: 'battlewin', group: 'racer', icon: '⚔️', name: 'Battle winner', hint: 'Win a Puzzle Battle against a friend', art: { medal: 'flame', n: '⚔' } },
+  { id: 'racer25', group: 'racer', icon: '🚀', name: 'Speed racer', hint: 'Score 25 in one race', art: { medal: 'rocket', n: '25' } },
+  { id: 'racer50', group: 'racer', icon: '🏆', name: 'Racing legend', hint: 'Score 50 in one race', art: { medal: 'titan', n: '50' } },
   ...[1400, 1600, 1800, 2000].map((r): Award => ({ id: `cc${r}`, group: 'ratings', icon: '♜', name: `CC Rating ${r}`, hint: `Reach a CC Rating of ${r} (after 5 rated games)`, art: { medal: 'crown', n: String(r) } })),
   ...PUZZLE_LEVELS.slice(1).map((l): Award => ({ id: `lvl${l.name.toLowerCase()}`, group: 'levels', icon: l.glyph, name: `${l.name} level`, hint: `Reach a puzzle rating of ${l.from}`, art: { medal: l.image } })),
   ...BADGES.filter((b) => !b.id.startsWith('rush')).map((b): Award => ({ ...b, group: 'puzzles' })),
@@ -100,6 +107,7 @@ export interface AwardInput {
   /** My CC Rating and the rated games behind it. */
   cc: number;
   ccGames: number;
+  racer: RacerStats;
 }
 
 /** The awards won, from the player's numbers. */
@@ -111,6 +119,11 @@ export function earnedFrom(x: AwardInput): Set<string> {
   const stars = Object.values(x.masters);
   const total = stars.reduce((n, s) => n + s, 0);
   const add = (id: string, ok: boolean) => ok && won.add(id);
+  add('race1', x.racer.races >= 1);
+  add('racewin', x.racer.wins >= 1);
+  add('battlewin', x.racer.battleWins >= 1);
+  add('racer25', x.racer.best >= 25);
+  add('racer50', x.racer.best >= 50);
   add('firstgame', x.played >= 1);
   add('firstwin', x.wins >= 1);
   add('wins10', x.wins >= 10);
@@ -151,6 +164,7 @@ export function earnedNow(now = Date.now()): Set<string> {
     gap: Math.max(0, ...won.filter((g) => g.opponentRating && g.myRating).map((g) => g.opponentRating! - g.myRating!)),
     cc: cc.rating,
     ccGames: cc.games,
+    racer: get(racerStats),
     badges: get(rewards).badges,
     puzzleRating: get(puzzleRating),
     study: get(study),

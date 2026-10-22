@@ -66,6 +66,16 @@ export const puzzleSounds = {
     note(392, t, 0.3, 0.12, 'triangle');
     note(311.1, t + 0.18, 0.45, 0.12, 'triangle');
   },
+  /** Puzzle Racer's start lights: a beep for each red light, a higher, longer one for GO. */
+  light(go = false) {
+    const c = audio();
+    if (!c) return;
+    const t = c.currentTime + 0.01;
+    if (go) {
+      note(880, t, 0.6, 0.16, 'square');
+      note(1318.5, t + 0.02, 0.6, 0.08, 'triangle');
+    } else note(440, t, 0.18, 0.12, 'square');
+  },
   /** A tick in the last seconds. */
   tick() {
     const c = audio();

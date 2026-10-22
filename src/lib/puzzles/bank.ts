@@ -13,7 +13,8 @@ const MIN = 400;
 const MAX = 2800;
 const bands = new Map<number, Promise<BandPuzzle[]>>();
 
-function band(b: number): Promise<BandPuzzle[]> {
+/** One band file (100 rating points), loaded once. */
+export function band(b: number): Promise<BandPuzzle[]> {
   let f = bands.get(b);
   if (!f) {
     f = fetch(`/data/puzzles/bands/${b}.json`).then((r) => (r.ok ? (r.json() as Promise<BandPuzzle[]>) : []));

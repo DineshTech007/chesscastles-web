@@ -28,7 +28,8 @@
     { href: '/profile', label: $t('more.profile'), icon: 'users' },
     ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
     // Puzzle Rush: new and a must-try (owner, 2026-10-22), near the top.
-    { href: '/puzzles/rush', label: `${$t('nav.new')} · ${$t('home.rush.h')}: ${$t('home.rush.sub')}`, icon: 'flame' as IconName },
+    { href: '/puzzles/racer', label: `${$t('nav.new')} · Puzzle Racer: race other players through the same puzzles`, icon: 'trophy' as IconName },
+    { href: '/puzzles/rush', label: `${$t('home.rush.h')}: ${$t('home.rush.sub')}`, icon: 'flame' as IconName },
     ...($classroomShown ? [{ href: '/castleclass', label: 'CastleClass: live classes with your coach', icon: 'coach' as IconName }] : []),
     { href: '/students', label: $t('more.students'), icon: 'coach' },
     ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.badge ? `${$t('nav.new')} · ` : ''}${$t(navKey(n.href))}: ${$t(navBlurbKey(n.href))}`, icon: n.icon })),

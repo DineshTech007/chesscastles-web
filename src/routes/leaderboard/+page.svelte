@@ -68,6 +68,7 @@
     kfide: ['No CC Ratings at this speed yet.', 'Play a FIDE-level opponent', '/play?mode=fide'],
     lichess: ['No Chess Castles player has a Lichess rating at this speed yet.', 'Play online', '/play?mode=online'],
     puzzles: ['No puzzle ratings yet.', 'Solve puzzles', '/puzzles'],
+    racer: ['No Puzzle Racer scores yet. Win the first race!', 'Race now', '/puzzles/racer'],
     rush: ['No Puzzle Rush scores yet. Be the first!', 'Play Puzzle Rush', '/puzzles/rush'],
     vision: ['No one on this board yet.', 'Train in the Blindfold Gym', '/vision'],
     study: ['No one has studied yet this week.', 'Study now', '/learn'],

@@ -8,7 +8,7 @@
   import KindWordsStrip from '$lib/components/KindWordsStrip.svelte';
   import MadeInIndia from '$lib/components/MadeInIndia.svelte';
   import PlayCard from './PlayCard.svelte';
-  import RushPromo from './RushPromo.svelte';
+  import RacerPromo from './RacerPromo.svelte';
   import { startSignIn } from '$lib/auth';
   import { betaOn } from '$lib/beta';
   import { t, type Key } from '$lib/i18n';
@@ -29,7 +29,7 @@
   </header>
 
   <PlayCard />
-  <RushPromo />
+  <RacerPromo />
 
   <div class="signin card">
     <p>{$t('home.land.signin.why')}{#if betaOn()}{' '}<strong>{$t('home.land.free')}</strong>{/if}</p>

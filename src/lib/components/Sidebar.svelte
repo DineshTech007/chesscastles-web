@@ -69,10 +69,14 @@
         </a>
       {/each}
     </div>
-    <!-- Puzzle Rush: new and a must-try (owner, 2026-10-22), lit up in the menu. -->
-    <a class="item rushnav" class:on={page.url.pathname.startsWith('/puzzles/rush')} href="/puzzles/rush" title={collapsed ? `${$t('home.rush.h')} (${$t('nav.new')})` : $t('home.rush.sub')}>
+    <!-- Puzzle Racer (2026-10-22) and Puzzle Rush: new and a must-try (owner), lit up in the menu. -->
+    <a class="item rushnav racenav" class:on={page.url.pathname.startsWith('/puzzles/racer')} href="/puzzles/racer" title={collapsed ? `Puzzle Racer (${$t('nav.new')})` : 'Race other players through the same puzzles'}>
+      <span class="rchip">🏎️</span>
+      {#if !collapsed}<span>Puzzle Racer</span><span class="newtag hot">{$t('nav.new')}</span>{:else}<span class="rdot" aria-hidden="true"></span>{/if}
+    </a>
+    <a class="item rushnav" class:on={page.url.pathname.startsWith('/puzzles/rush')} href="/puzzles/rush" title={collapsed ? $t('home.rush.h') : $t('home.rush.sub')}>
       <span class="rchip"><Icon name="flame" size={16} color="#fff" /></span>
-      {#if !collapsed}<span>{$t('home.rush.h')}</span><span class="newtag hot">{$t('nav.new')}</span>{:else}<span class="rdot" aria-hidden="true"></span>{/if}
+      {#if !collapsed}<span>{$t('home.rush.h')}</span>{/if}
     </a>
     {#if $classroomShown}{@render link(classroom)}{/if}
     {#each groups as group, gi (gi)}
@@ -235,6 +239,14 @@
     transform: translateX(-100%);
     animation: rushshine 3.6s ease-in-out infinite;
     pointer-events: none;
+  }
+  .item.racenav {
+    border-color: color-mix(in srgb, #38bdf8 60%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, #38bdf8 20%, transparent), color-mix(in srgb, #a855f7 14%, transparent));
+  }
+  .racenav .rchip {
+    background: linear-gradient(135deg, #38bdf8, #6366f1 55%, #a855f7);
+    font-size: 15px;
   }
   .item.rushnav:hover,
   .item.rushnav.on {

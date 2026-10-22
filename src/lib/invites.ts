@@ -22,6 +22,8 @@ export interface ServerInvite {
   rated: boolean;
   color: 'white' | 'black';
   join?: string;
+  /** A Puzzle Battle (tc "battle"): `id` is the race on Chess Castles (src/lib/racer). */
+  battle?: boolean;
   at: number;
 }
 
@@ -114,9 +116,13 @@ const answered = new Set<string>();
 export const markAnswered = (id: string) => answered.add(id);
 
 const toChallenge = (i: ServerInvite): IncomingChallenge => {
+  if (i.battle) return { id: i.id, from: i.name, fromTitle: i.title, fromRating: i.rating, minutes: 0, increment: 0, rated: false, at: i.at, cc: { from: i.from, battle: true } };
   const [m, inc] = i.tc.split('+').map(Number);
   return { id: i.id, from: i.name, fromTitle: i.title, fromRating: i.rating, minutes: m, increment: inc, rated: i.rated, myColor: i.color, speed: isBullet(m, inc) ? 'bullet' : undefined, at: i.at, cc: { from: i.from, join: i.join } };
 };
+
+/** A Puzzle Battle invite: the friend's site shows it as a popup and Accept takes them into the race. */
+export const inviteToBattle = (to: string, raceId: string) => call<{ sent: true }>('POST', 'invites', { to, game: raceId, tc: 'battle' });
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let running = false;

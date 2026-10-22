@@ -46,6 +46,14 @@
   const colourText = (c: IncomingChallenge) => (c.myColor === 'white' ? 'You play White' : c.myColor === 'black' ? 'You play Black' : 'Colour by chance');
 
   async function accept(c: IncomingChallenge) {
+    // A Puzzle Battle: no Lichess game, straight into the race on Chess Castles.
+    if (c.cc?.battle) {
+      markAnswered(c.id);
+      void answerInvite(c.id, 'accepted');
+      track('feature', 'battle_accept');
+      incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
+      return void goto(`/puzzles/racer/${c.id}`);
+    }
     const t = lichessToken()?.token;
     if (!t) return;
     // A Chess Castles invite (invites.ts): answered on Chess Castles too. Bullet: its game on lichess.org, opened
@@ -95,15 +103,20 @@
       <span class="sword" aria-hidden="true">⚔️</span>
       <div class="who">
         <h2 id="cp-h" class="title">{#if shown.fromTitle}<span class="ttl">{shown.fromTitle}</span> {/if}{shown.from}{#if shown.fromRating}{' '}<span class="rt num">({shown.fromRating})</span>{/if}</h2>
-        <p id="cp-d" class="label">challenges you to a game</p>
+        <p id="cp-d" class="label">{shown.cc?.battle ? 'challenges you to a Puzzle Battle 🏁' : 'challenges you to a game'}</p>
       </div>
       {#if more > 0}<span class="more">+{more}</span>{/if}
     </div>
     <div class="facts">
-      <span class="fact"><Icon name="history" size={15} />{shown.minutes}+{shown.increment}</span>
-      <span class="fact">{shown.rated ? 'Rated' : 'Casual'}</span>
-      <span class="fact">{colourText(shown)}</span>
-      {#if shown.cc?.join}<span class="fact">Bullet · opens Lichess</span>{/if}
+      {#if shown.cc?.battle}
+        <span class="fact">🧩 Same puzzles, who solves more</span>
+        <span class="fact">You and {shown.from}</span>
+      {:else}
+        <span class="fact"><Icon name="history" size={15} />{shown.minutes}+{shown.increment}</span>
+        <span class="fact">{shown.rated ? 'Rated' : 'Casual'}</span>
+        <span class="fact">{colourText(shown)}</span>
+        {#if shown.cc?.join}<span class="fact">Bullet · opens Lichess</span>{/if}
+      {/if}
     </div>
     <div class="btns">
       <button class="btn primary big" disabled={busy === shown.id} onclick={() => accept(shown)}><Icon name="check" size={18} />{busy === shown.id ? 'Starting…' : 'Accept'}</button>

@@ -30,7 +30,7 @@ const DEVICES = {
   tablet: devices['iPad Mini'],
 };
 /** Pages every player can open without signing in. */
-const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision', '/castleclass', '/castleclass/admin', '/awards'];
+const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision', '/castleclass', '/castleclass/admin', '/awards', '/puzzles/racer'];
 /** A tap must open its page within this long. */
 const TAP_MS = 6000;
 /** A phone should never download more than this in one file by itself. */
@@ -596,6 +596,14 @@ async function run(name, options) {
     } finally {
       await page.unroute(bands);
     }
+  });
+
+  // 4o. Puzzle Racer (owner, 2026-10-22): its home shows the cars and the three ways to race, and the menu lights it up.
+  await check(name, page, 'racer: the three ways to race', async () => {
+    await open(page, '/puzzles/racer');
+    for (const n of [/Quick race/, /Race with friends/, /Puzzle Battle/]) expect(await page.getByRole('button', { name: n }).isVisible(), `no ${n} button`);
+    expect((await page.locator('.road svg.car').count()) >= 6, 'no cars on the road');
+    return 'quick, friends, battle';
   });
 
   // 4m. My awards (owner, 2026-10-22): the profile's trophy cabinet shows, every medal held to its box (a tall trophy

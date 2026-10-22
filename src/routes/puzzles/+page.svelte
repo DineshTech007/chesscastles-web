@@ -28,6 +28,7 @@
       <button aria-pressed={tab === 'daily'} onclick={() => show('daily')}>Puzzle of the day</button>
     </div>
     <div class="more">
+      <a class="btn racer" href="/puzzles/racer">🏎️ Puzzle Racer</a>
       <a class="btn rush" href="/puzzles/rush"><Icon name="flame" size={16} />Puzzle Rush</a>
       <a class="btn" href="/puzzles/themes"><Icon name="puzzle" size={16} />By theme</a>
       <a class="btn" href="/insights/mistakes"><Icon name="history" size={16} />Your own mistakes</a>
@@ -63,6 +64,11 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+  }
+  .more .racer {
+    border-color: #38bdf8;
+    background: linear-gradient(135deg, color-mix(in srgb, #38bdf8 22%, transparent), color-mix(in srgb, #a855f7 16%, transparent));
+    font-weight: 800;
   }
   .more .rush {
     border-color: color-mix(in srgb, var(--gold) 65%, var(--border));

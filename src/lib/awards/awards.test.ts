@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AWARDS, GROUPS, earnedFrom, type AwardInput } from './awards';
 
-const none: AwardInput = { badges: [], puzzleRating: 800, study: [], now: Date.now(), openingsLearned: 0, masters: {}, trophies: [], lessonsDone: 0, chapters: 0, played: 0, wins: 0, gap: 0, cc: 1200, ccGames: 0 };
+const none: AwardInput = { badges: [], puzzleRating: 800, study: [], now: Date.now(), openingsLearned: 0, masters: {}, trophies: [], lessonsDone: 0, chapters: 0, played: 0, wins: 0, gap: 0, cc: 1200, ccGames: 0, racer: { best: 0, races: 0, wins: 0, podiums: 0, battles: 0, battleWins: 0 } };
 
 describe('awards', () => {
   it('have ids the server keeps (lower case letters and digits), each once, in a known group', () => {
@@ -30,7 +30,8 @@ describe('awards', () => {
       gap: 250,
       cc: 1650,
       ccGames: 6,
+      racer: { best: 31, races: 3, wins: 1, podiums: 2, battles: 1, battleWins: 0 },
     });
-    expect([...won].sort()).toEqual(['cc1400', 'cc1600', 'chapter1', 'first', 'firstgame', 'firstwin', 'giant', 'lesson1', 'lessons10', 'lvlbishop', 'lvlknight', 'masters1', 'masters3', 'podium', 'rush30', 'tourney1', 'welcome'].sort());
+    expect([...won].sort()).toEqual(['cc1400', 'cc1600', 'race1', 'racewin', 'racer25', 'chapter1', 'first', 'firstgame', 'firstwin', 'giant', 'lesson1', 'lessons10', 'lvlbishop', 'lvlknight', 'masters1', 'masters3', 'podium', 'rush30', 'tourney1', 'welcome'].sort());
   });
 });

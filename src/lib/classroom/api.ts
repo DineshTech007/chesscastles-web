@@ -301,7 +301,7 @@ export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 export const freshBoard = (): BoardView => ({ root: START_FEN, moves: [], ply: 0, orient: 'white', shapes: [], marks: {}, squares: false, blind: false, pawns: false, title: '', game: -1 });
 
 /** The sign-in token. On a developer's computer a test player can stand in (the local test server takes it as the id). */
-async function token(): Promise<string> {
+export async function token(): Promise<string> {
   if (import.meta.env.DEV) {
     const dev = typeof localStorage !== 'undefined' ? localStorage.getItem('cc.devUid') : null;
     if (dev) return dev;
@@ -378,6 +378,8 @@ export class Room {
     private onstatus: (s: RoomStatus, why?: ClosedWhy) => void,
     /** An admin watching unseen. */
     private watch = false,
+    /** Whose room: a class, or a Puzzle Racer race (src/lib/racer). */
+    private kind: 'class' | 'race' = 'class',
   ) {
     void this.connect();
   }
@@ -391,7 +393,7 @@ export class Room {
       this.set('closed', 'refused');
       return;
     }
-    const url = `${API.replace(/^http/, 'ws')}/class/${this.id}/live${this.watch ? '?watch=1' : ''}`;
+    const url = `${API.replace(/^http/, 'ws')}/${this.kind}/${this.id}/live${this.watch ? '?watch=1' : ''}`;
     let ws: WebSocket;
     try {
       ws = new WebSocket(url, ['cc', encodeURIComponent(t)]);

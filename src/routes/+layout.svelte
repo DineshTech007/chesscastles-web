@@ -9,6 +9,7 @@
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import { myGames } from '$lib/stores/myGames';
+  import { racerStats } from '$lib/racer/stats';
   import { study, weekOf, weekPoints } from '$lib/study/progress';
   import { sharedPart, weekProgress } from '$lib/study/shareProgress';
   import { puzzleRating } from '$lib/puzzles/rating';
@@ -159,7 +160,7 @@
         const rush = get(rewards);
         // The awards won (src/lib/awards: the profile's trophy cabinet; the server keeps them once won).
         const awards = await import('$lib/awards/awards').then((m) => [...m.earnedNow(now)]).catch(() => []);
-        const progress = { ...sharedPart(weekProgress(get(study), get(puzzleRating), sess.status === 'in' && sess.profile ? sess.profile.puzzles.solved : 0, now)), rushBest: rush.rushBest, rushRuns: Math.max(rush.rushPlayed, rush.rushRuns.length), awards };
+        const progress = { ...sharedPart(weekProgress(get(study), get(puzzleRating), sess.status === 'in' && sess.profile ? sess.profile.puzzles.solved : 0, now)), rushBest: rush.rushBest, rushRuns: Math.max(rush.rushPlayed, rush.rushRuns.length), awards, racerBest: get(racerStats).best, racerRaces: get(racerStats).races, racerWins: get(racerStats).wins };
         const key = JSON.stringify([studyWeek, booksRead, progress]);
         if (key === lastBoards || (!studyWeek.points && !booksRead && !progress.puzzlesSolved && !progress.rushBest && !awards.length)) return;
         lastBoards = key;
@@ -182,6 +183,8 @@
     const unRush = rewards.subscribe(() => syncBoards());
     // A finished game can win an award (first win, CC Rating…): sent too.
     const unGamesAwards = myGames.subscribe(() => syncBoards());
+    // A race finished: the Puzzle Racer leaderboard.
+    const unRacer = racerStats.subscribe(() => syncBoards());
     // Signed in: keep the friends badge fresh, and share the CC Rating with friends.
     let stopBadge: (() => void) | undefined;
     const unSession = session.subscribe((s) => {
@@ -262,6 +265,7 @@
       unPuzzle();
       unRush();
       unGamesAwards();
+      unRacer();
       unSession();
       unResume();
       stopBadge?.();
