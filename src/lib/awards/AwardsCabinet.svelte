@@ -39,7 +39,7 @@
   } = $props();
 
   /** Best first on the shelf: ratings and levels, Rush, games and tournaments… the welcome last. */
-  const SHELF: AwardGroup[] = ['ratings', 'levels', 'racer', 'rush', 'games', 'tournaments', 'masters', 'puzzles', 'study', 'lessons', 'start'];
+  const SHELF: AwardGroup[] = ['cups', 'ratings', 'levels', 'racer', 'rush', 'games', 'tournaments', 'masters', 'puzzles', 'study', 'lessons', 'start'];
   const SHELF_MAX = 12;
 
   const won = $derived(AWARDS.filter((a) => earned.has(a.id)));

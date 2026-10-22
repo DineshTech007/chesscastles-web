@@ -23,7 +23,7 @@ import { racerStats, type RacerStats } from '$lib/racer/stats';
  * profile's progress, kept once won) so they show on every device and to friends.
  */
 
-export type AwardGroup = 'start' | 'games' | 'ratings' | 'racer' | 'levels' | 'puzzles' | 'rush' | 'study' | 'lessons' | 'masters' | 'tournaments';
+export type AwardGroup = 'start' | 'cups' | 'games' | 'ratings' | 'racer' | 'levels' | 'puzzles' | 'rush' | 'study' | 'lessons' | 'masters' | 'tournaments';
 export interface Award extends Badge {
   group: AwardGroup;
   /** Its picture (a medal name or a whole path) and the number on it. */
@@ -32,6 +32,7 @@ export interface Award extends Badge {
 
 export const GROUPS: { id: AwardGroup; name: string }[] = [
   { id: 'start', name: 'Welcome' },
+  { id: 'cups', name: 'Castle Cups' },
   { id: 'games', name: 'Games' },
   { id: 'ratings', name: 'CC Rating' },
   { id: 'racer', name: 'Puzzle Racer' },
@@ -57,6 +58,12 @@ const STUDY_ICON: Record<string, string> = { streak7: '📅', streak30: '🗓️
 
 export const AWARDS: Award[] = [
   { id: 'welcome', group: 'start', icon: '👋', name: 'Welcome!', hint: 'Join Chess Castles', art: { medal: 'sprout' } },
+  // Castle Cups: the server gives these at the end of a cup (server/api-worker src/cup.ts giveAwards).
+  { id: 'cupfirst', group: 'cups', icon: '🏰', name: 'First cup', hint: 'Play in a Castle Cup', art: { medal: 'target', n: '🏆' } },
+  { id: 'cup1', group: 'cups', icon: '🥇', name: 'Cup winner', hint: 'Win a Castle Cup', art: { medal: '/art/trophy-256.webp', n: '1st' } },
+  { id: 'cup2', group: 'cups', icon: '🥈', name: 'Cup silver', hint: 'Finish second in a Castle Cup', art: { medal: 'star', n: '2nd' } },
+  { id: 'cup3', group: 'cups', icon: '🥉', name: 'Cup bronze', hint: 'Finish third in a Castle Cup', art: { medal: 'star', n: '3rd' } },
+  { id: 'cupgroup', group: 'cups', icon: '🏅', name: 'Group champion', hint: 'Be the best of your group (U1200, U1400 or U1600) in a Castle Cup', art: { medal: 'crown', n: 'U' } },
   { id: 'firstgame', group: 'games', icon: '♟', name: 'First game', hint: 'Finish your first game', art: { medal: 'target' } },
   { id: 'firstwin', group: 'games', icon: '🏆', name: 'First win', hint: 'Win a game', art: { medal: 'star', n: '1' } },
   { id: 'wins10', group: 'games', icon: '🥉', name: '10 wins', hint: 'Win 10 games', art: { medal: 'star', n: '10' } },

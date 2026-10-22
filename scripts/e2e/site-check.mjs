@@ -30,7 +30,7 @@ const DEVICES = {
   tablet: devices['iPad Mini'],
 };
 /** Pages every player can open without signing in. */
-const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision', '/castleclass', '/castleclass/admin', '/awards', '/puzzles/racer'];
+const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision', '/castleclass', '/castleclass/admin', '/awards', '/puzzles/racer', '/cups'];
 /** A tap must open its page within this long. */
 const TAP_MS = 6000;
 /** A phone should never download more than this in one file by itself. */
@@ -617,6 +617,35 @@ async function run(name, options) {
     const overlap = a && c && a.x < c.x + c.width && c.x < a.x + a.width && a.y < c.y + c.height && c.y < a.y + a.height;
     expect(a && c && !overlap, 'Cancel lies over "Analyse this position"');
     return 'side by side';
+  });
+
+  // 4q. Castle Cups (owner, 2026-10-22): the cups page lists the day's four cups with their times, and Home shows them.
+  await check(name, page, 'cups: the four cups of the day', async () => {
+    await open(page, '/cups');
+    // A local build calls the live API, which only answers chesscastles.com: here only the page itself is checked.
+    if (/127\.0\.0\.1|localhost/.test(BASE)) {
+      await page.getByRole('heading', { level: 1, name: /Castle Cups/ }).waitFor({ timeout: 15000 });
+      return 'page shows (the cups list needs the live site)';
+    }
+    await page.locator('article.cup').first().waitFor({ timeout: 15000 });
+    const n = await page.locator('article.cup').count();
+    expect(n === 4, `${n} cups listed`);
+    await open(page, '/');
+    await page.locator('section.cups').waitFor({ timeout: 15000 });
+    const chips = await page.locator('section.cups .chip').count();
+    expect(chips === 4, `Home shows ${chips} cup times`);
+    return '4 cups, on Home too';
+  });
+
+  // 4r. The position editor's ✕ closes it (owner, 2026-10-22: the eraser looked like a close button that did nothing).
+  await check(name, page, 'board editor: the close button closes it', async () => {
+    await open(page, '/analysis');
+    await tap(page.getByRole('button', { name: /Clear \/ set up/ }));
+    await page.locator('.editor .head .close').waitFor({ timeout: 10000 });
+    expect(!(await page.locator('.pick.erase').innerText()).includes('✕'), 'the eraser is a ✕ again');
+    await tap(page.locator('.editor .head .close'));
+    await page.locator('.editor').waitFor({ state: 'detached', timeout: 5000 });
+    return 'closed';
   });
 
   // 4m. My awards (owner, 2026-10-22): the profile's trophy cabinet shows, every medal held to its box (a tall trophy

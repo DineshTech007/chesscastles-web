@@ -256,6 +256,9 @@ export function watchSession(): () => void {
       /* storage blocked */
     }
     if (!user) {
+      // On a developer's computer a test player (localStorage cc.devUid) is signed in, for the local browser tests.
+      const dev = import.meta.env.DEV && typeof localStorage !== 'undefined' ? localStorage.getItem('cc.devUid') : null;
+      if (dev) return session.set({ status: 'in', uid: dev, username: dev.replace(/^lichess:/, '') });
       session.set({ status: 'out' });
       return;
     }

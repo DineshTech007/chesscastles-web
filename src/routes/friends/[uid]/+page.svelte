@@ -1,5 +1,9 @@
 <script lang="ts">
-  /** A conversation with a friend (friends only); new messages arrive every few seconds while it is open. */
+  /**
+   * A conversation with a friend, or with the Chess Castles team (owner, 2026-10-22: the team writes to any player to
+   * ask how they like the site; the server decides who may write to whom). New messages arrive every few seconds. A
+   * question from the team gets one-tap answers.
+   */
   import TitleBadge from '$lib/components/TitleBadge.svelte';
   import { onDestroy, tick } from 'svelte';
   import { page } from '$app/state';
@@ -7,6 +11,7 @@
   import { session, startSignIn } from '$lib/auth';
   import { getPlayer, initialsOf, messagesWith, playerPhoto, refreshBadge, sendMessage, type Message, type Player } from '$lib/social';
   import { poll as keepAsking } from '$lib/poll';
+  import { t } from '$lib/i18n';
 
   const uid = decodeURIComponent(page.params.uid!);
   let friend = $state<Player | undefined>();
@@ -43,15 +48,22 @@
     getPlayer(uid).then(
       (r) => {
         friend = r.player;
-        if (r.relation !== 'friends') error = 'You can message friends only.';
-        // Now, then every 6 seconds while the chat is in front (slower after failures).
-        else stopPolling = keepAsking(poll, 6000);
+        // Now, then every 6 seconds while the chat is in front (slower after failures). Friends, or the team: the
+        // server says no to anyone else.
+        stopPolling = keepAsking(poll, 6000);
       },
       () => (error = 'This player could not be loaded.'),
     );
     return () => stopPolling?.();
   });
   onDestroy(() => stopPolling?.());
+
+  /** The team asked something and it's the last message: answers in a tap. */
+  const quick = $derived(!!friend?.team && msgs.length > 0 && !msgs[msgs.length - 1].mine && msgs[msgs.length - 1].body.trim().endsWith('?'));
+  async function answer(body: string) {
+    text = body;
+    await send(new Event('submit'));
+  }
 
   async function send(e: Event) {
     e.preventDefault();
@@ -82,12 +94,12 @@
   {:else}
     <section class="card chat">
       <header class="top">
-        <span class="av">{#if photo}<img src={photo} alt="" />{:else}{friend ? initialsOf(friend.name) : ''}{/if}</span>
+        <span class="av">{#if photo}<img src={photo} alt="" />{:else if friend?.team}<img src="/icon-192.png" alt="Chess Castles" />{:else}{friend ? initialsOf(friend.name) : ''}{/if}</span>
         <div class="who">
-          <a class="title" href="/players/{encodeURIComponent(uid)}"><TitleBadge title={friend?.title} size={12} />{friend?.name ?? '…'}</a>
-          <span class="label">{friend?.online ? 'Online now' : friend ? `@${friend.username}` : ''}</span>
+          <a class="title" href="/players/{encodeURIComponent(uid)}"><TitleBadge title={friend?.title} size={12} />{friend?.name ?? '…'}{#if friend?.team} <span class="team">✓ {$t('msg.team')}</span>{/if}</a>
+          <span class="label">{friend?.team ? $t('msg.teamNote') : friend?.online ? 'Online now' : friend ? `@${friend.username}` : ''}</span>
         </div>
-        {#if friend}<a class="btn" href="/play?mode=online&friend={encodeURIComponent(friend.username)}"><Icon name="knight" size={16} />Challenge</a>{/if}
+        {#if friend && !friend.team}<a class="btn" href="/play?mode=online&friend={encodeURIComponent(friend.username)}"><Icon name="knight" size={16} />Challenge</a>{/if}
       </header>
       <div class="msgs" bind:this={box} aria-live="polite">
         {#if error}
@@ -108,6 +120,14 @@
           </div>
         {/each}
       </div>
+      {#if quick}
+        <div class="quick" role="group" aria-label={$t('msg.quickH')}>
+          <span class="label">{$t('msg.quickH')}</span>
+          {#each ['msg.q.love', 'msg.q.good', 'msg.q.ok', 'msg.q.not'] as const as k (k)}
+            <button class="chip" disabled={sending} onclick={() => answer($t(k))}>{$t(k)}</button>
+          {/each}
+        </div>
+      {/if}
       <form class="compose" onsubmit={send}>
         <textarea id="chat-text" bind:value={text} maxlength="500" rows="2" placeholder="Write a message" disabled={!!error} onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && send(e)}></textarea>
         <button class="btn primary" type="submit" disabled={sending || !text.trim() || !!error}><Icon name="send" size={18} />Send</button>
@@ -117,6 +137,21 @@
 </div>
 
 <style>
+  .team {
+    font: 800 11px var(--font-body);
+    color: #fff;
+    background: var(--win);
+    padding: 2px 7px;
+    border-radius: 999px;
+    vertical-align: middle;
+  }
+  .quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    padding: 8px 12px 0;
+  }
   .page {
     max-width: 760px;
     margin: 0 auto;

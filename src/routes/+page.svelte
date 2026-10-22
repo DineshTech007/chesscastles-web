@@ -17,6 +17,7 @@
   import Landing from '$lib/components/home/Landing.svelte';
   import PlayCard from '$lib/components/home/PlayCard.svelte';
   import PuzzleLobby from '$lib/components/home/PuzzleLobby.svelte';
+  import CupsCard from '$lib/cups/CupsCard.svelte';
   import TodayRow from '$lib/components/home/TodayRow.svelte';
   import RatingTiles from '$lib/components/home/RatingTiles.svelte';
   import ExploreIcons from '$lib/components/home/ExploreIcons.svelte';
@@ -60,6 +61,8 @@
     <div class="cols">
       <div class="col main-col">
         <div class="o1"><PlayCard /></div>
+        <!-- Castle Cups (owner, 2026-10-22): tonight's tournaments, the next one's countdown, the top board. -->
+        <div class="o1"><CupsCard /></div>
         <!-- The Puzzle Lobby (owner, 2026-10-22): races and battles to join in a tap. -->
         <div class="o1"><PuzzleLobby /></div>
         <div class="o2"><TodayRow /></div>

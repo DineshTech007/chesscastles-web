@@ -10,11 +10,23 @@
   import { formatDate } from '$lib/format';
   import { findPlayers, friendAction, friendsList, inbox, liveFriends, refreshBadge, serverResting, type Conversation, type Player } from '$lib/social';
   import { poll } from '$lib/poll';
+  import { adminMe } from '$lib/admin';
+  import { t } from '$lib/i18n';
   import { lichessRatings, lichessStatus, searchLichess, type LichessPlayer, type LichessStatus } from '$lib/lichess';
 
   let tab = $state<'friends' | 'find' | 'invite'>('friends');
   let friends = $state<{ friends: Player[]; incoming: Player[]; outgoing: Player[] } | undefined>();
   let convos = $state<Conversation[]>([]);
+  // The Chess Castles team's messages (not friends): a player sees the team's; an admin sees their talks with players.
+  let iAmTeam = $state(false);
+  $effect(() => {
+    if ($session.status !== 'in') return void (iAmTeam = false);
+    adminMe().then(
+      () => (iAmTeam = true),
+      () => (iAmTeam = false),
+    );
+  });
+  const teamTalks = $derived(convos.filter((c) => (c.team || iAmTeam) && !friends?.friends.some((f) => f.uid === c.player.uid)));
   let error = $state('');
   let q = $state('');
   let found = $state<Player[] | undefined>();
@@ -195,6 +207,22 @@
               </div>
             </div>
           {/each}
+        </section>
+      {/if}
+
+      {#if teamTalks.length}
+        <section class="card block team-talks">
+          <h2 class="title">✉️ {iAmTeam ? 'Your messages as the team' : $t('msg.team')}</h2>
+          <div class="list">
+            {#each teamTalks as c (c.player.uid)}
+              <div class="friend">
+                <PlayerCard p={c.player} note={`${c.mine ? 'You: ' : ''}${c.last}`} />
+                <div class="f-btns">
+                  <a class="btn primary" href="/friends/{encodeURIComponent(c.player.uid)}"><Icon name="send" size={16} />Message{#if c.unread}<span class="badge">{c.unread}</span>{/if}</a>
+                </div>
+              </div>
+            {/each}
+          </div>
         </section>
       {/if}
 

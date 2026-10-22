@@ -69,6 +69,11 @@
         </a>
       {/each}
     </div>
+    <!-- Castle Cups (2026-10-22): our own tournaments every evening, lit up like Puzzle Racer. -->
+    <a class="item rushnav cupnav" class:on={page.url.pathname.startsWith('/cups')} href="/cups" title={collapsed ? `Castle Cups (${$t('nav.new')})` : $t('nav.cups.b')}>
+      <span class="rchip">🏆</span>
+      {#if !collapsed}<span>Castle Cups</span><span class="newtag hot">{$t('nav.new')}</span>{:else}<span class="rdot" aria-hidden="true"></span>{/if}
+    </a>
     <!-- Puzzle Racer (2026-10-22) and Puzzle Rush: new and a must-try (owner), lit up in the menu. -->
     <a class="item rushnav racenav" class:on={page.url.pathname.startsWith('/puzzles/racer')} href="/puzzles/racer" title={collapsed ? `Puzzle Racer (${$t('nav.new')})` : 'Race other players through the same puzzles'}>
       <span class="rchip">🏎️</span>
@@ -239,6 +244,12 @@
     transform: translateX(-100%);
     animation: rushshine 3.6s ease-in-out infinite;
     pointer-events: none;
+  }
+  .item.cupnav {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 24%, transparent), color-mix(in srgb, #ef4444 12%, transparent));
+  }
+  .cupnav .rchip {
+    background: linear-gradient(135deg, #fde68a, var(--gold) 55%, #d97706);
   }
   .item.racenav {
     border-color: color-mix(in srgb, #38bdf8 60%, transparent);

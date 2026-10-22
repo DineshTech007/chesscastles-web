@@ -194,6 +194,19 @@ export interface Settings {
 }
 
 /** A game in the class: the coach's simul, students paired in the game zone, or the coach against one student. */
+/**
+ * What a game board needs from the room it is in (a class: Live in live.svelte.ts; a Castle Cup: src/lib/cups):
+ * who I am, the room's time, and sending moves, flags, draw offers and resignations.
+ */
+export interface GameHost {
+  me: { uid: string };
+  now: number;
+  gameMove(game: string, uci: string): void;
+  flag(game: string): void;
+  offerDraw(game: string): void;
+  resign(game: string): void;
+}
+
 export interface Game {
   id: string;
   kind: 'simul' | 'pair' | 'coach';
@@ -379,7 +392,7 @@ export class Room {
     /** An admin watching unseen. */
     private watch = false,
     /** Whose room: a class, or a Puzzle Racer race (src/lib/racer). */
-    private kind: 'class' | 'race' | 'chat' = 'class',
+    private kind: 'class' | 'race' | 'chat' | 'cup' = 'class',
   ) {
     void this.connect();
   }

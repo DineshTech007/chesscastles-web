@@ -2,14 +2,14 @@
   /**
    * A class game (simul, game zone, or the coach against one student): the opponent above, me below, clocks when the
    * game has them, resign and draw offers. The room checks every move and the clocks; a flag is claimed when the
-   * clock of the side to move shows zero.
+   * clock of the side to move shows zero. A Castle Cup uses it too (src/lib/cups): `host` is whatever room the game is
+   * in, and `tag` adds a note to a name (a rating, "computer").
    */
   import type { Key } from '@lichess-org/chessground/types';
   import { makeUci } from 'chessops/util';
   import ClassBoard from './ClassBoard.svelte';
   import { lineAt } from './tasks';
-  import type { Game } from './api';
-  import type { Live } from './live.svelte';
+  import type { Game, GameHost } from './api';
   import { destsOf, moveFromKeys } from '$lib/chess/position';
   import { promotionFor } from '$lib/chess/promotion';
   import { sounds } from '$lib/sound';
@@ -19,7 +19,7 @@
   import { premovesOn } from '$lib/preferences';
   import { t } from '$lib/i18n';
 
-  let { live, game, coordinates = true }: { live: Live; game: Game; coordinates?: boolean } = $props();
+  let { live, game, coordinates = true, tag }: { live: GameHost; game: Game; coordinates?: boolean; tag?: (uid: string) => string } = $props();
 
   const me = $derived(live.me.uid);
   const mine = $derived<'white' | 'black' | undefined>(game.white === me ? 'white' : game.black === me ? 'black' : undefined);
@@ -111,6 +111,7 @@
   };
   const top = $derived(orient === 'white' ? 'black' : 'white');
   const nameOf = (side: 'white' | 'black') => (side === 'white' ? game.whiteName : game.blackName);
+  const tagOf = (side: 'white' | 'black') => tag?.(side === 'white' ? game.white : game.black) ?? '';
   const RESULT = $derived<Record<string, string>>({ '1-0': $t('kidsclass.gb.whiteWon'), '0-1': $t('kidsclass.gb.blackWon'), '1/2-1/2': 'Draw' });
   /** How the game ended (the room says it in English: src/classroom.ts end()), in the player's language. */
   function reasonText(r: string): string {
@@ -119,7 +120,18 @@
     if (r === 'Draw agreed') return $t('kidsclass.gb.drawAgreed');
     if (r === 'Ended by the coach') return $t('kidsclass.gb.byCoach');
     if (r.endsWith(' resigned')) return $t('kidsclass.gb.resigned', { name: r.slice(0, -' resigned'.length) });
-    return r;
+    // A Castle Cup's endings (server/api-worker src/cup.ts).
+    const cup: Record<string, string> = {
+      'No first move': $t('cups.end.noFirst'),
+      'Left the game': $t('cups.end.left'),
+      Withdrew: $t('cups.end.withdrew'),
+      'Cup called off': $t('cups.end.called'),
+      Checkmate: $t('cups.end.mate'),
+      Stalemate: $t('cups.end.stalemate'),
+      '50-move rule': $t('cups.end.fifty'),
+      Repetition: $t('cups.end.repetition'),
+    };
+    return cup[r] ?? r;
   }
   const won = $derived(game.result && mine ? (game.result === '1/2-1/2' ? 'draw' : (game.result === '1-0') === (mine === 'white') ? 'win' : 'loss') : '');
   let confirm = $state(false);
@@ -127,7 +139,7 @@
 
 <div class="gb">
   <div class="player" class:turn={!game.result && at.turn === top}>
-    <span class="nm">{top === 'white' ? '♔' : '♚'} {nameOf(top)}</span>
+    <span class="nm">{top === 'white' ? '♔' : '♚'} {nameOf(top)}{#if tagOf(top)} <span class="tag">{tagOf(top)}</span>{/if}</span>
     {#if game.clock}<span class="clk num" class:low={(left(top) ?? 1) < 20_000}>{fmt(left(top))}</span>{/if}
   </div>
   {#key remount}
@@ -148,7 +160,7 @@
     />
   {/key}
   <div class="player" class:turn={!game.result && at.turn === orient}>
-    <span class="nm">{orient === 'white' ? '♔' : '♚'} {nameOf(orient)}{mine ? ` ${$t('kidsclass.gb.you')}` : ''}</span>
+    <span class="nm">{orient === 'white' ? '♔' : '♚'} {nameOf(orient)}{mine ? ` ${$t('kidsclass.gb.you')}` : ''}{#if tagOf(orient)} <span class="tag">{tagOf(orient)}</span>{/if}</span>
     {#if game.clock}<span class="clk num" class:low={(left(orient) ?? 1) < 20_000}>{fmt(left(orient))}</span>{/if}
   </div>
   {#if game.result}
@@ -192,6 +204,12 @@
   }
   .nm {
     font-weight: 700;
+  }
+  .tag {
+    margin-left: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
   }
   .clk {
     font: 800 20px var(--font-title);

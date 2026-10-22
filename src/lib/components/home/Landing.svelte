@@ -9,6 +9,7 @@
   import MadeInIndia from '$lib/components/MadeInIndia.svelte';
   import PlayCard from './PlayCard.svelte';
   import RacerPromo from './RacerPromo.svelte';
+  import CupsCard from '$lib/cups/CupsCard.svelte';
   import { startSignIn } from '$lib/auth';
   import { betaOn } from '$lib/beta';
   import { t, type Key } from '$lib/i18n';
@@ -29,6 +30,7 @@
   </header>
 
   <PlayCard />
+  <CupsCard />
   <RacerPromo />
 
   <div class="signin card">

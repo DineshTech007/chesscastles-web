@@ -7,6 +7,7 @@
   import { TITLES, TITLE_NAME } from '$lib/titles';
   import { KFIDE_SPEEDS, SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
   import { PLANS, PLANS_ON, PLAN_INFO, untilText, type Plan } from '$lib/plans';
+  import { sendMessage } from '$lib/social';
 
   let { can, openUid, onmakecoach }: { can: Can[]; openUid?: string; /** CastlesClass coach access for this player (the CastlesClass tab). */ onmakecoach?: (p: { uid: string; name: string }) => void } = $props();
   // Opened from a report: show that player.
@@ -22,6 +23,30 @@
   let msg = $state('');
 
   // Give a plan.
+  // A message from the Chess Castles team (owner, 2026-10-22: "reach out to each player… how they like the site").
+  let mText = $state('');
+  let mSent = $state('');
+  /** A question ending in "?": the player gets one-tap answers (😍 🙂 😐 😕) under it. */
+  const ASK: Record<string, (name: string) => string> = {
+    English: (n) => `Hi ${n}! 👋 This is the Chess Castles team. How do you like Chess Castles?`,
+    हिंदी: (n) => `नमस्ते ${n}! 👋 यह Chess Castles team है। आपको Chess Castles कैसा लग रहा है?`,
+    मराठी: (n) => `नमस्कार ${n}! 👋 हा Chess Castles team आहे. तुम्हाला Chess Castles कसं वाटतंय?`,
+  };
+  async function message(uid: string) {
+    const body = mText.trim();
+    if (!body) return;
+    busy = true;
+    mSent = '';
+    try {
+      await sendMessage(uid, body);
+      mSent = 'Sent. Their answers come to your Friends & Invites messages.';
+      mText = '';
+    } catch (e) {
+      mSent = e instanceof Error ? e.message : 'The message could not be sent.';
+    } finally {
+      busy = false;
+    }
+  }
   let gPlan = $state<Plan>('premium');
   let gDays = $state(30);
   let gNote = $state('');
@@ -169,6 +194,18 @@
         </div>
         <p class="label">From now on the player's {SPEED_LABEL[rSpeed]} games count from this rating (their earlier games stay in their history). It shows on leaderboards at once and on their own screens the next time they open Chess Castles. The reason box below goes into the admin log.</p>
       {/if}
+
+      <h3 class="title">✉️ Message from the team</h3>
+      <p class="label">Shows in their messages as "Chess Castles team ✓" (no need to be friends); they can answer you. End with a question mark and they get one-tap answers.</p>
+      <div class="mrow">
+        {#each Object.entries(ASK) as [lang, f] (lang)}<button class="btn ghost" onclick={() => (mText = f(u.name || u.username))}>Ask how they like it ({lang})</button>{/each}
+      </div>
+      <textarea bind:value={mText} rows="3" maxlength="500" placeholder="Write to {u.name || u.username}…" aria-label="Message"></textarea>
+      <div class="mrow">
+        <button class="btn primary" disabled={busy || !mText.trim()} onclick={() => message(u.uid)}>Send message</button>
+        <a class="btn ghost" href="/friends/{encodeURIComponent(u.uid)}" target="_blank" rel="noopener">Open the conversation</a>
+      </div>
+      {#if mSent}<p class="label" role="status">{mSent}</p>{/if}
 
       {#if onmakecoach && (can.includes('owner') || can.includes('grant'))}
         <h3 class="title">CastlesClass</h3>
@@ -321,6 +358,15 @@
     color: var(--text);
     font: inherit;
     cursor: pointer;
+  }
+  .mrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 6px 0;
+  }
+  .detail textarea {
+    width: 100%;
   }
   .row.on {
     border-color: var(--accent);

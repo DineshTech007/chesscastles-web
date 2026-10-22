@@ -37,6 +37,11 @@ export interface Player {
   progress?: FriendProgress;
   /** Awards won, for everyone signed in: the ids, and the puzzle rating and Rush best their top badges show. */
   awards?: { ids: string[]; puzzleRating: number; rushBest: number };
+  /** The picture everyone sees (src/lib/look/avatars.ts) and the award worn beside the name. */
+  avatar?: string;
+  flair?: string;
+  /** The Chess Castles team (owner, admins): messages from them show as the team's. */
+  team?: boolean;
   joined: number;
   /** False for a Lichess player who was sent a request but has not joined Chess Castles yet. */
   member?: boolean;
@@ -80,6 +85,8 @@ export interface Conversation {
   at: number;
   mine: boolean;
   unread: number;
+  /** With the Chess Castles team. */
+  team?: boolean;
 }
 
 export interface Message {
@@ -119,7 +126,8 @@ const routeOf = (path: string) =>
     .join('/');
 
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const token = await auth.currentUser?.getIdToken().catch(() => undefined);
+  const dev = import.meta.env.DEV && typeof localStorage !== 'undefined' ? localStorage.getItem('cc.devUid') : null;
+  const token = dev ?? (await auth.currentUser?.getIdToken().catch(() => undefined));
   if (!token) throw new Error('Sign in to use friends and messages.');
   let res: Response;
   try {
@@ -174,7 +182,11 @@ export async function refreshBadge(): Promise<boolean> {
   }
 }
 
-export const playerPhoto = (p: Pick<Player, 'photo'>) => (p.photo ? `data:image/jpeg;base64,${p.photo}` : undefined);
+/** A player's picture: their own photo (friends only), else the avatar they chose (everyone). */
+export const playerPhoto = (p: Pick<Player, 'photo' | 'avatar'>) => (p.photo ? `data:image/jpeg;base64,${p.photo}` : p.avatar ? `/avatars/${p.avatar}.webp` : undefined);
+/** My look: the picture and flair everyone sees, the name, and when the name may change again (0: now). */
+export const getLook = () => call<{ avatar?: string; flair?: string; name: string; nextNameAt: number }>('GET', 'look');
+export const saveLook = (l: { avatar?: string; flair?: string; name?: string }) => call<{ avatar?: string; flair?: string; name: string }>('PUT', 'look', l);
 export const initialsOf = (name: string) => name.split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase();
 
 /** A small copy of a photo (96 px) for friends to see. */

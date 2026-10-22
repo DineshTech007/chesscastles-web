@@ -19,6 +19,8 @@
   import { myCountry, setMyCountry } from '$lib/stores/me';
   import CoachWork from '$lib/components/CoachWork.svelte';
   import AwardsCabinet from '$lib/awards/AwardsCabinet.svelte';
+  import LookCard from '$lib/look/LookCard.svelte';
+  import Flair from '$lib/look/Flair.svelte';
   import { earnedNow } from '$lib/awards/awards';
   import { rewards } from '$lib/puzzles/rewards';
   import { puzzleRating } from '$lib/puzzles/rating';
@@ -167,12 +169,14 @@
     <div class="photo">
       {#if $myPhoto}
         <img src={photoSrc($myPhoto)} alt="Your profile" />
+      {:else if details?.avatar}
+        <img src="/avatars/{details.avatar}.webp" alt="Your picture" />
       {:else}
         <span class="initials display">{initials}</span>
       {/if}
     </div>
     <div class="who">
-      <h1 class="display">{#if $session.status === 'in'}<TitleBadge title={myTitleNow} size={24} />{/if}{name}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'free'} size={30} />{/if}</h1>
+      <h1 class="display">{#if $session.status === 'in'}<TitleBadge title={myTitleNow} size={24} />{/if}{name}{#if details?.flair} <Flair id={details.flair} size={26} />{/if}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'free'} size={30} />{/if}</h1>
       {#if $session.status === 'in' && myTitleNow}<div class="title-banner"><TitleBadge title={myTitleNow} full size={14} /></div>{/if}
       <p class="label">
         {#if $session.status === 'in'}{$session.uid.startsWith('lichess:') ? `Signed in with Lichess as ${$session.username}` : 'Signed in with Google'}{:else}Not signed in: your photo and games stay on this device.{/if}
@@ -196,6 +200,10 @@
       <p class="label small">Your photo is shown only to you (it never appears on leaderboards). With an account, the app shows it too.</p>
     </div>
   </section>
+
+  {#if $session.status === 'in'}
+    <LookCard earned={myAwards} onchange={(l) => details && (details = { ...details, avatar: l.avatar, flair: l.flair, name: l.name }, form.name = l.name)} />
+  {/if}
 
   <AwardsCabinet earned={myAwards} mine rating={$puzzleRating} rushBest={Math.max($rewards.rushBest, details?.progress?.rushBest ?? 0)} stars={$rewards.stars} {trophies} />
 
