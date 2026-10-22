@@ -20,7 +20,7 @@ import chess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from extract import NOT_CLASSICAL, ONLINE_SITE, TEACHERS  # noqa: E402
 
-sys.path.insert(0, os.environ.get("CAISSA_TOOL", "F:/dev/knight24/tool/gamesdb"))
+sys.path.insert(0, os.environ.get("CAISSA_TOOL", "C:/dev/knight24/tool/gamesdb"))
 from caissa import DecodeError, decode_game, position_key  # noqa: E402
 
 PLIES = 24

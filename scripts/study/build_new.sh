@@ -3,7 +3,7 @@
 #   bash scripts/study/build_new.sh ruy-lopez,italian,...
 # Work files in $W; the site's files in static/data/study and src/lib/study/chapters.json.
 set -e
-export PYTHONPATH=F:/dev/tools/py
+export PYTHONPATH=C:/dev/tools/py
 W=/f/dev/gamesdb_work/study2
 LIST="$1"
 cd /f/dev/knight24-web

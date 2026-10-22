@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from openings_cfg import ALL, which  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "..", "masters"))
-sys.path.insert(0, os.environ.get("CAISSA_TOOL", "F:/dev/knight24/tool/gamesdb"))
+sys.path.insert(0, os.environ.get("CAISSA_TOOL", "C:/dev/knight24/tool/gamesdb"))
 
 MIN_ELO = 1800
 

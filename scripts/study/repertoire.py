@@ -26,7 +26,7 @@ import sys
 import chess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.environ.get("CAISSA_TOOL", "F:/dev/knight24/tool/gamesdb"))
+sys.path.insert(0, os.environ.get("CAISSA_TOOL", "C:/dev/knight24/tool/gamesdb"))
 from caissa import position_key  # noqa: E402
 
 sys.path.insert(0, HERE)

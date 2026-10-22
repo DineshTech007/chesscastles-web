@@ -16,7 +16,7 @@ import sys
 
 import chess
 
-sys.path.insert(0, os.environ.get("CAISSA_TOOL", "F:/dev/knight24/tool/gamesdb"))
+sys.path.insert(0, os.environ.get("CAISSA_TOOL", "C:/dev/knight24/tool/gamesdb"))
 from caissa import position_key  # noqa: E402
 
 PER_CHAPTER = 120

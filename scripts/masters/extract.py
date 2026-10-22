@@ -22,7 +22,7 @@ import sys
 
 import chess
 
-sys.path.insert(0, os.environ.get("CAISSA_TOOL", "F:/dev/knight24/tool/gamesdb"))
+sys.path.insert(0, os.environ.get("CAISSA_TOOL", "C:/dev/knight24/tool/gamesdb"))
 from caissa import DecodeError, decode_game  # noqa: E402
 
 # Teacher id -> the names they appear under in CaissaBase.

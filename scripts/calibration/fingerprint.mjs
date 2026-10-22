@@ -12,7 +12,7 @@ import { makeUci } from 'chessops/util';
 
 const [samplePath, outDir, wArg, nArg, depthArg, sfPath] = process.argv.slice(2);
 const worker = Number(wArg), workers = Number(nArg), depth = Number(depthArg ?? 11);
-const SF = sfPath ?? 'F:/dev/tools/stockfish/stockfish/stockfish-windows-x86-64-avx2.exe';
+const SF = sfPath ?? 'C:/dev/tools/stockfish/stockfish/stockfish-windows-x86-64-avx2.exe';
 const FIRST_PLY = 16, LAST_PLY = 80;
 /** At most this many games per type and level (env MAXPER; classical half), the first of the sample's random order. */
 const MAXPER = Number(process.env.MAXPER ?? 150);

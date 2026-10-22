@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "masters"))
 from extract import NOT_CLASSICAL, ONLINE_SITE  # noqa: E402
 
-sys.path.insert(0, os.environ.get("CAISSA_TOOL", "F:/dev/knight24/tool/gamesdb"))
+sys.path.insert(0, os.environ.get("CAISSA_TOOL", "C:/dev/knight24/tool/gamesdb"))
 from caissa import mainline_bytes, ordered_legal_moves, position_key  # noqa: E402
 
 CLASSIFY_PLIES = 30
