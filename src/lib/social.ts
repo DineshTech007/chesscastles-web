@@ -62,6 +62,8 @@ export interface FriendProgress {
   /** Puzzle Rush: the best score and how many rushes (for the Puzzle Rush leaderboard). */
   rushBest?: number;
   rushRuns?: number;
+  /** Awards won (src/lib/awards/awards.ts ids): the server keeps them once won. */
+  awards?: string[];
 }
 
 export type Relation = 'self' | 'friends' | 'incoming' | 'outgoing' | 'blocked' | 'none';

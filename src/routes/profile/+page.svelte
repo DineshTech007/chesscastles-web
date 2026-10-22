@@ -18,6 +18,12 @@
   import { myProfile, saveProfile, type Player } from '$lib/social';
   import { myCountry, setMyCountry } from '$lib/stores/me';
   import CoachWork from '$lib/components/CoachWork.svelte';
+  import AwardsCabinet from '$lib/awards/AwardsCabinet.svelte';
+  import { earnedNow } from '$lib/awards/awards';
+  import { rewards } from '$lib/puzzles/rewards';
+  import { puzzleRating } from '$lib/puzzles/rating';
+  import { study } from '$lib/study/progress';
+  import { loadTrophies } from '$lib/tournament/tournament';
   import { PLAN_INFO, PLANS_ON, RANK, hasGate, myPlan, untilText } from '$lib/plans';
 
   let busy = $state(false);
@@ -41,6 +47,12 @@
     }
   })();
   const countries = Object.entries(FED_NAMES).sort((a, b) => a[1].localeCompare(b[1]));
+  // My awards: what this browser counts, and what the account kept from my other devices.
+  const myAwards = $derived.by(() => {
+    void [$rewards, $study, $puzzleRating];
+    return new Set([...earnedNow(), ...(details?.progress?.awards ?? [])]);
+  });
+  const trophies = loadTrophies();
 
   $effect(() => {
     if ($session.status !== 'in') return;
@@ -184,6 +196,8 @@
       <p class="label small">Your photo is shown only to you (it never appears on leaderboards). With an account, the app shows it too.</p>
     </div>
   </section>
+
+  <AwardsCabinet earned={myAwards} mine rating={$puzzleRating} rushBest={Math.max($rewards.rushBest, details?.progress?.rushBest ?? 0)} stars={$rewards.stars} {trophies} />
 
   {#if $session.status === 'in'}
     <form class="card details" onsubmit={saveDetails}>

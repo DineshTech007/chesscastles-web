@@ -567,6 +567,17 @@ async function run(name, options) {
     return new URL(page.url()).pathname;
   });
 
+  // 4m. My awards (owner, 2026-10-22): the profile's trophy cabinet shows, every medal held to its box (a tall trophy
+  // picture once ran over its name).
+  await check(name, page, 'profile: My awards', async () => {
+    await open(page, '/profile');
+    await page.locator('#awards').waitFor({ timeout: 15000 });
+    // Layout sizes (the next medal to win pulses a little bigger on purpose).
+    const over = await page.evaluate(() => [...document.querySelectorAll('#awards .medal img')].filter((i) => i.offsetHeight > i.parentElement.offsetHeight + 1).length);
+    expect(over === 0, `${over} award pictures run out of their medal`);
+    return `${await page.locator('#awards .aw').count()} medals shown`;
+  });
+
   // 5. A game against the computer: play e4 by tapping, the computer answers.
   await check(name, page, 'play the computer: e4 and an answer', async () => {
     await open(page, '/play/computer?l=1350&c=white');

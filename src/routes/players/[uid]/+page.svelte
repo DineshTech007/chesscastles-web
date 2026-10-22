@@ -12,6 +12,7 @@
   import FriendGames from '$lib/components/FriendGames.svelte';
   import { lichessStatus, type LichessProfile } from '$lib/lichess';
   import { friendAction, getPlayer, initialsOf, playerPhoto, type Player, type Relation } from '$lib/social';
+  import AwardsCabinet from '$lib/awards/AwardsCabinet.svelte';
 
   const uid = decodeURIComponent(page.params.uid!);
   let player = $state<Player | undefined>();
@@ -181,6 +182,11 @@
       {/if}
       <div class="card tile"><span class="label">FIDE rating</span><strong class="display num">{player.fideRating ?? '—'}</strong>{#if player.fideId}<a class="label" href="/ratings/player/{player.fideId}">FIDE profile</a>{/if}</div>
     </section>
+
+    <!-- The awards they won (friends and the player only: the server sends progress to them alone). -->
+    {#if player.progress?.awards?.length}
+      <AwardsCabinet earned={new Set(player.progress.awards)} name={player.name} rating={player.progress.puzzleRating} rushBest={player.progress.rushBest ?? 0} />
+    {/if}
 
     {#if player.about}
       <section class="card pad"><h2 class="title">About</h2><p class="about">{player.about}</p></section>

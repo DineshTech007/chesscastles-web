@@ -61,7 +61,8 @@ export const BADGE_ART: Record<string, { medal: string; n?: string }> = {
   rush40: { medal: 'titan', n: '40' },
   rush50: { medal: 'immortal', n: '50' },
 };
-export const medalSrc = (medal: string) => `/puzzles/medal-${medal}.webp`;
+/** A medal's picture: a name from static/puzzles/medal-*.webp, or a whole path (the awards' trophies). */
+export const medalSrc = (medal: string) => (medal.startsWith('/') ? medal : `/puzzles/medal-${medal}.webp`);
 
 export const BADGES: Badge[] = [
   { id: 'first', icon: '🌱', name: 'First solve', hint: 'Solve your first puzzle' },

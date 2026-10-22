@@ -1,11 +1,18 @@
 <script lang="ts">
   /**
    * A badge's medal (rewards.ts BADGE_ART) with its number; grey with a lock until earned. `peek`: the next one to
-   * chase, locked but in full colour with a soft glow, so a child sees the prize.
+   * chase, locked but in full colour with a soft glow, so a child sees the prize. `art`: a picture other than the
+   * badge's own (the awards: src/lib/awards/awards.ts).
    */
   import { BADGE_ART, medalSrc, type Badge } from './rewards';
-  let { badge, got = true, size = 72, peek = false }: { badge: Badge; got?: boolean; size?: number; peek?: boolean } = $props();
-  const art = $derived(BADGE_ART[badge.id]);
+  let {
+    badge,
+    got = true,
+    size = 72,
+    peek = false,
+    art: given,
+  }: { badge: Badge; got?: boolean; size?: number; peek?: boolean; art?: { medal: string; n?: string } } = $props();
+  const art = $derived(given ?? BADGE_ART[badge.id]);
 </script>
 
 <span class="medal" class:locked={!got} class:peek={!got && peek} style="--s: {size}px">
@@ -28,8 +35,9 @@
     flex: none;
   }
   img {
-    width: 100%;
-    height: 100%;
+    /* The box's own size (a percentage height does not hold in a grid: a tall picture, the trophy, ran out of it). */
+    width: var(--s);
+    height: var(--s);
     object-fit: contain;
     filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
   }

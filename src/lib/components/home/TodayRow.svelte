@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
    * The home page's "Today": the puzzle of the day (its position), puzzles with the player's puzzle rating, and
-   * today's lesson (the study plan's step, or Chess Guru's lessons) with the study streak. Cards side by side, as on
-   * chess.com; on a phone they scroll sideways.
+   * today's lesson (the study plan's step, or Chess Guru's lessons) with the study streak, and the awards won (the
+   * profile's trophy cabinet, new 2026-10-22). Cards side by side, as on chess.com; on a phone they scroll sideways.
    */
   import { onMount } from 'svelte';
   import Board from '$lib/components/Board.svelte';
@@ -16,8 +16,11 @@
 
   let puzzle = $state<DailyPuzzle | undefined>();
   let lesson = $state<{ label: string; title: string; href: string } | undefined>();
+  let awards = $state<{ won: number; total: number } | undefined>();
   onMount(() => {
     dailyPuzzle().then((p) => (puzzle = p), () => {});
+    // Counted after the page shows (the awards read every kind of progress).
+    import('$lib/awards/awards').then((m) => (awards = { won: m.earnedNow().size, total: m.AWARDS.length }), () => {});
     if (!hasPlan()) return;
     const topic = topicOn(loadPlan(), new Date());
     if (topic === 'rest') return;
@@ -63,6 +66,16 @@
         <span class="sub two-lines">{lesson ? $t('home.learn.today', { title: lesson.title }) : $t('home.learn.sub')}</span>
         {#if days > 0}<span class="streak" class:done={studiedToday}><Icon name="flame" size={14} />{$t('home.streak.short', { n: days })}</span>{/if}
         <span class="cta">{$t('home.start')}</span>
+      </div>
+    </a>
+
+    <a class="tcard art-card awards" href="/profile#awards">
+      <img src="/art/trophy-256.webp" alt="" width="256" height="256" loading="lazy" />
+      <div class="txt">
+        <strong>{$t('home.awards.h')} <span class="newpill">{$t('nav.new')}</span></strong>
+        <span class="big num">{awards?.won ?? '–'}</span>
+        <span class="sub">{$t('home.awards.won', { total: awards?.total ?? 0 })}</span>
+        <span class="cta">{$t('home.awards.cta')}</span>
       </div>
     </a>
   </div>
@@ -165,6 +178,15 @@
     filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.35));
     pointer-events: none;
   }
+  .newpill {
+    vertical-align: middle;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #f43f5e;
+    color: #fff;
+    font: 800 10.5px var(--font-body);
+    letter-spacing: 0.04em;
+  }
   .streak {
     display: inline-flex;
     align-items: center;
@@ -180,6 +202,35 @@
   .streak.done {
     background: color-mix(in srgb, var(--win) 16%, transparent);
     color: var(--win);
+  }
+  /* Wider screens: the awards as a slim strip under the three cards (a fourth card squeezed them all). */
+  @media (min-width: 768px) {
+    .tcard.awards {
+      grid-column: 1 / -1;
+      min-height: 0;
+      padding: 8px 16px;
+      align-items: center;
+    }
+    .tcard.awards img {
+      position: static;
+      order: -1;
+      width: 48px;
+      flex: none;
+    }
+    .tcard.awards .txt {
+      flex: 1;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      max-width: none;
+      height: auto;
+    }
+    .tcard.awards .big {
+      font-size: 26px;
+    }
+    .tcard.awards .cta {
+      margin: 0 0 0 auto;
+    }
   }
   /* Phones: the cards scroll sideways, the next one peeking in. */
   @media (max-width: 767px) {
