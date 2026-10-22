@@ -51,6 +51,19 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 export const newRace = (o: { seconds?: number; duel?: boolean } = {}) => call<{ id: string }>('POST', '', o);
 /** The open race filling up now (everyone who asks gets the same one), or a new one. */
 export const quickRace = () => call<{ id: string }>('POST', '/quick');
+/** A Puzzle Battle anyone can take: it shows in the Puzzle Lobby (Home) until someone does. */
+export const seekBattle = () => call<{ id: string }>('POST', '/seek');
+/** The Puzzle Lobby (Home), as the server sends it with every change. */
+export interface Lobby {
+  now: number;
+  /** The race filling up now: its GO and how many have joined. */
+  open: { id: string; startAt: number; cars: number } | null;
+  /** Races running now, and how many racers in them. */
+  racing: number;
+  racers: number;
+  /** Battles waiting for anyone. */
+  seeks: { id: string; uid: string; name: string; best: number; at: number }[];
+}
 export const raceLink = (id: string) => `https://chesscastles.com/puzzles/racer/${id}`;
 
 /** The race's puzzles, in order: puzzle `number % band size` of each band. */

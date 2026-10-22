@@ -6,8 +6,23 @@
    */
   import Car from './Car.svelte';
   import type { CarView, Phase } from './api';
+  import { hiddenChat, chatOff, type ChatLine } from '$lib/chat/chat';
 
-  let { cars, me, phase, seconds = 90 }: { cars: CarView[]; me: string; phase: Phase; seconds?: number } = $props();
+  let {
+    cars,
+    me,
+    phase,
+    seconds = 90,
+    chat = [],
+    now = 0,
+  }: { cars: CarView[]; me: string; phase: Phase; seconds?: number; chat?: ChatLine[]; now?: number } = $props();
+  /** What each racer just said: a speech bubble over their car for a few seconds. */
+  const bubbles = $derived.by(() => {
+    const out = new Map<string, ChatLine>();
+    if ($chatOff) return out;
+    for (const l of chat) if (now - l.at < 4500 && (l.uid === me || !$hiddenChat.has(l.uid))) out.set(l.uid, l);
+    return out;
+  });
 
   const lanes = $derived([...cars].sort((a, b) => a.car - b.car));
   const top = $derived(Math.max(0, ...cars.map((c) => c.score)));
@@ -38,6 +53,10 @@
         <div class="road">
           <div class="rider" style="--p: {pct}">
             <span class="tag">{c.uid === me ? 'You' : c.name}{c.bot ? ' 🤖' : ''}</span>
+            {#if bubbles.get(c.uid)}
+              {@const b = bubbles.get(c.uid)!}
+              {#key b.id}<span class="say" class:emoji={b.kind === 'emoji'}>{b.text}</span>{/key}
+            {/if}
             <Car car={c.car} size={58} moving={phase === 'racing'} boost={phase === 'racing' && c.combo >= 5} />
             {#if phase === 'over' && rank === 1 && top > 0}<span class="cup" aria-label="Winner">🏆</span>{/if}
           </div>
@@ -156,6 +175,37 @@
   }
   .me .tag {
     color: #f7d27a;
+  }
+  /* A speech bubble over the car, like a comic. */
+  .say {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-30%);
+    z-index: 5;
+    max-width: 180px;
+    padding: 4px 9px;
+    border-radius: 12px 12px 12px 3px;
+    background: #fff;
+    color: #0b1426;
+    font: 800 12px var(--font-body);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    animation: bubble 0.3s ease-out;
+  }
+  .say.emoji {
+    background: transparent;
+    box-shadow: none;
+    font-size: 26px;
+    padding: 0;
+  }
+  @keyframes bubble {
+    from {
+      transform: translateX(-30%) scale(0.3);
+      opacity: 0;
+    }
   }
   .cup {
     position: absolute;

@@ -28,6 +28,8 @@
   import Car from '$lib/racer/Car.svelte';
   import StartLights from '$lib/racer/StartLights.svelte';
   import ComboBar from '$lib/racer/ComboBar.svelte';
+  import ChatDock from '$lib/chat/ChatDock.svelte';
+  import EmojiBurst from '$lib/chat/EmojiBurst.svelte';
 
   const id = $derived(page.params.id ?? '');
   const signedIn = $derived($session.status === 'in' || !!devPlayer());
@@ -308,7 +310,15 @@
       </aside>
     </div>
 
-    <Track cars={race?.cars ?? []} me={race?.me ?? ''} {phase} seconds={info.seconds} />
+    <div class="trackwrap">
+      <Track cars={race?.cars ?? []} me={race?.me ?? ''} {phase} seconds={info.seconds} chat={race?.chat ?? []} {now} />
+      <EmojiBurst lines={race?.chat ?? []} me={race?.me ?? ''} />
+    </div>
+    {#if race}
+      <div class="chatrow">
+        <ChatDock lines={race.chat} me={race.me} guard={race.guard} onsend={(k, v) => race?.say(k, v)} note={phase === 'lobby' ? 'Say hi while the racers come in!' : ''} />
+      </div>
+    {/if}
 
     {#if phase === 'over' && log.length}
       <section class="card pad review">
@@ -629,6 +639,13 @@
   .lb {
     font-weight: 700;
     font-size: 14px;
+  }
+  .trackwrap {
+    position: relative;
+  }
+  .chatrow {
+    max-width: 560px;
+    width: 100%;
   }
   .review h3 {
     margin: 0;

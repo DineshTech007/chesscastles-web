@@ -30,6 +30,9 @@
   import { onLichessEvent, openWhenStarted } from '$lib/lichessEvents';
   import { analyseGame, type GameReview } from '$lib/coach/review';
   import { quota } from '$lib/plans';
+  import GameChat from '$lib/chat/GameChat.svelte';
+  import EmojiBurst from '$lib/chat/EmojiBurst.svelte';
+  import type { ChatLine } from '$lib/chat/chat';
 
   const gameId = page.params.id!;
   const color = page.url.searchParams.get('c');
@@ -113,6 +116,9 @@
     if (!confirm('Your game is still going and your clock keeps running. Leave the board anyway?\n\n(You can come back from the bar at the top of every page.)')) nav.cancel();
   });
   const opponentPlayer = () => (game.me === 'white' ? game.black : game.white);
+  // Chat with the other Chess Castles player (Castle Guard reads it): its emojis float over the board.
+  let chatLines = $state<ChatLine[]>([]);
+  let chatMe = $state('');
   const rematchLabel = $derived(!rematch ? 'Rematch' : rematch.state === 'sending' ? 'Sending…' : rematch.state === 'waiting' ? 'Waiting… tap to cancel' : 'Rematch again');
   async function sendRematch() {
     const t = token;
@@ -559,6 +565,7 @@
         onswipe={controls.over ? (d) => go((viewPly ?? game.plies.length) + (d === 'forward' ? 1 : -1)) : undefined}
       />
       <PlayerBar {...bottom} />
+      <EmojiBurst lines={chatLines} me={chatMe} />
       <!-- Phones: the move buttons and Resign / Draw right under the board, no scrolling. -->
       <div class="phone-controls">
         <MoveNav ply={viewPly ?? view.sans.length} max={view.sans.length} {go} onflip={() => (orientation = orientation === 'white' ? 'black' : 'white')} />
@@ -583,6 +590,9 @@
         {#if viewPly !== undefined && !controls.over}<div class="looking-row wide-only"><button class="btn primary back-live" onclick={() => go(view.sans.length)}>Back to the game</button></div>{/if}
       </div>
 
+      {#if game.me && !opponentPlayer().ai}
+        <GameChat {gameId} opponent={opponentPlayer().name} bind:lines={chatLines} bind:me={chatMe} />
+      {/if}
       {#if notice}<div class="notice">{notice}</div>{/if}
       {#if connection === 'reconnecting'}<div class="notice warn">Reconnecting to Lichess… your moves are safe.</div>{/if}
 
@@ -648,6 +658,7 @@
     margin: 0 auto;
   }
   .board-col {
+    position: relative;
     flex: 0 1 min(100%, calc(100vh - 210px), 760px);
     min-width: min(100%, 300px);
     display: flex;

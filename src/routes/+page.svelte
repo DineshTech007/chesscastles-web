@@ -16,7 +16,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import Landing from '$lib/components/home/Landing.svelte';
   import PlayCard from '$lib/components/home/PlayCard.svelte';
-  import RacerPromo from '$lib/components/home/RacerPromo.svelte';
+  import PuzzleLobby from '$lib/components/home/PuzzleLobby.svelte';
   import TodayRow from '$lib/components/home/TodayRow.svelte';
   import RatingTiles from '$lib/components/home/RatingTiles.svelte';
   import ExploreIcons from '$lib/components/home/ExploreIcons.svelte';
@@ -60,7 +60,8 @@
     <div class="cols">
       <div class="col main-col">
         <div class="o1"><PlayCard /></div>
-        <div class="o1"><RacerPromo /></div>
+        <!-- The Puzzle Lobby (owner, 2026-10-22): races and battles to join in a tap. -->
+        <div class="o1"><PuzzleLobby /></div>
         <div class="o2"><TodayRow /></div>
         {#if $session.status === 'in'}<div class="o5"><LiveOnCC /></div>{/if}
         <div class="o7"><MyInsightsCard /></div>

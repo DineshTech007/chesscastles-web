@@ -379,7 +379,7 @@ export class Room {
     /** An admin watching unseen. */
     private watch = false,
     /** Whose room: a class, or a Puzzle Racer race (src/lib/racer). */
-    private kind: 'class' | 'race' = 'class',
+    private kind: 'class' | 'race' | 'chat' = 'class',
   ) {
     void this.connect();
   }
