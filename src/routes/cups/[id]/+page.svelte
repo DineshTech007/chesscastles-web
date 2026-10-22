@@ -14,6 +14,7 @@
   import { track } from '$lib/analytics';
   import { sounds } from '$lib/sound';
   import GameBoard from '$lib/classroom/GameBoard.svelte';
+  import CupResults from '$lib/cups/CupResults.svelte';
   import { CupLive } from '$lib/cups/cup.svelte';
   import { countdown, cupTime, GROUP_NAME, joinCup, leaveCup, MIN_GAMES, parseCup, type CupGame } from '$lib/cups/api';
   import { forgetCup, rememberCup } from '$lib/cups/joined';
@@ -62,7 +63,7 @@
   const shown = $derived(myGame ?? topGame);
   const tag = (uid: string) => {
     const p = v?.players.find((x) => x.uid === uid);
-    return p ? `${p.rating}${p.bot ? ` · ${$t('cups.computer')}` : ''}` : '';
+    return p ? String(p.rating) : '';
   };
   // A sound when my new game starts.
   let heardRound = 0;
@@ -80,6 +81,22 @@
     remembered = id;
     rememberCup({ id, name: info.name, startAt: Math.min(info.startAt, Date.now()) });
   });
+  // Phones: the board or the standings, one tap apart (owner, 2026-10-23: "a proper link to the standings").
+  let pane = $state<'board' | 'table'>('board');
+
+  // The countdown to the start and to each round: a tick a second for the last five seconds.
+  let ticked = 0;
+  $effect(() => {
+    if (!v || !inCup) return;
+    const at = v.status === 'open' ? v.startAt : v.status === 'running' && v.nextAt ? v.nextAt : 0;
+    if (!at) return;
+    const s = Math.ceil((at - now) / 1000);
+    if (s >= 1 && s <= 5 && s !== ticked) {
+      ticked = s;
+      sounds.tick();
+    }
+  });
+
   /** My first move is due (each side has 30 s for it). */
   const firstMoveLeft = $derived.by(() => {
     const g = myGame;
@@ -121,10 +138,6 @@
   }
   const medal = (r: number) => ['🥇', '🥈', '🥉'][r - 1] ?? '';
   /** Each group's best kid (with a group: 10 rated games at this speed). */
-  const groupBest = $derived.by(() => {
-    const seen = new Set<string>();
-    return standing.filter((r) => !r.bot && !r.provisional && r.group !== 'open' && !seen.has(r.group) && seen.add(r.group));
-  });
 </script>
 
 <svelte:head><title>{info?.name ?? 'Castle Cup'} · Castle Cups · Chess Castles</title></svelte:head>
@@ -134,7 +147,7 @@
     <a class="back" href="/cups" aria-label={$t('cups.allCups')}>‹</a>
     <div class="ttl">
       <h1>🏆 {info?.name ?? 'Castle Cup'}</h1>
-      <span class="sub">{info ? cupTime(info.startAt, $contentLang) : ''} · {info?.day ?? ''}</span>
+      <span class="sub">{info ? cupTime(v?.startAt || info.startAt, $contentLang) : ''} · {info?.test ? $t('cups.testTag') : (info?.day ?? '')}</span>
     </div>
     {#if status === 'running' && v}<span class="pill live">● {$t('cups.round', { n: v.round, of: v.rounds })}</span>{/if}
   </header>
@@ -176,31 +189,16 @@
     {:else if status === 'cancelled' || status === 'skipped'}
       <section class="card center"><p class="big">{status === 'cancelled' ? $t('cups.calledOff') : $t('cups.noEntries')}</p><a class="btn" href="/cups">{$t('cups.allCups')}</a></section>
     {:else if status === 'over'}
-      <section class="card podium" aria-label={$t('cups.podiumH')}>
-        <h2>{$t('cups.podiumH')}</h2>
-        <ol class="steps">
-          {#each [1, 0, 2] as i (i)}
-            {@const r = standing[i]}
-            {#if r}
-              <li class="step s{i + 1}" class:me={r.uid === me}>
-                <span class="m">{medal(i + 1)}</span>
-                <span class="n">{r.name}</span>
-                <span class="sc num">{r.score}</span>
-              </li>
-            {/if}
-          {/each}
-        </ol>
-        {#if groupBest.length}
-          <p class="groups">{#each groupBest as g (g.uid)}<span>🏅 {$t('cups.bestIn', { group: GROUP_NAME[g.group] })}: <b>{g.name}</b></span>{/each}</p>
-        {/if}
-        {#if myRank}<p class="mine">{$t('cups.yourPlace', { n: myRank.rank, of: standing.length, score: myRank.score })}</p>{/if}
-        <a class="btn ghost" href="/awards">{$t('cups.seeAwards')}</a>
-      </section>
+      <CupResults {v} {me} name={info.name} />
     {/if}
 
     {#if status === 'running' && v}
+      <div class="panes" role="tablist" aria-label={info.name}>
+        <button role="tab" aria-selected={pane === 'board'} class:on={pane === 'board'} onclick={() => (pane = 'board')}>♟ {myGame ? $t('cups.myBoard') : $t('cups.topBoard')}</button>
+        <button role="tab" aria-selected={pane === 'table'} class:on={pane === 'table'} onclick={() => (pane = 'table')}>🏆 {$t('cups.standingsH')}{#if myRank} · #{myRank.rank}{/if}</button>
+      </div>
       <div class="play">
-        <section class="board">
+        <section class="board" class:away={pane !== 'board'}>
           {#if v.nextAt}
             <p class="banner">⏳ {$t('cups.nextRound', { time: countdown(v.nextAt - now) })}</p>
           {:else if myGame && firstMoveLeft !== undefined}
@@ -221,7 +219,7 @@
           {/if}
           {#if canJoin}<button class="btn primary" onclick={join} disabled={busy}>{$t('cups.joinLate')}</button>{/if}
         </section>
-        <aside class="side">
+        <aside class="side" class:away={pane !== 'table'}>
           {@render table()}
           {#if inCup}
             {#if confirmLeave}
@@ -230,7 +228,7 @@
           {/if}
         </aside>
       </div>
-    {:else if v && (status === 'open' || status === 'over')}
+    {:else if v && status === 'open'}
       {@render table()}
     {/if}
   {/if}
@@ -250,8 +248,8 @@
             <tr class:me={r.uid === me} class:out={r.out}>
               <td class="num">{status === 'open' ? '' : medal(r.rank) || r.rank}</td>
               <td class="nm">
-                {#if !r.bot}<span class="dot" class:on={p?.online} aria-hidden="true"></span>{/if}
-                {r.name}{#if r.bot} <span class="cpu" title={$t('cups.computerTitle')}>🤖</span>{/if}
+                <span class="dot" class:on={p?.online} aria-hidden="true"></span>
+                {r.name}
                 <span class="rt">{r.rating}</span>
               </td>
               <td><span class="grp g-{r.group}" title={r.provisional ? $t('cups.provisional', { n: MIN_GAMES }) : ''}>{GROUP_NAME[r.group]}{r.provisional ? '?' : ''}</span></td>
@@ -351,6 +349,14 @@
     cursor: pointer;
     font-size: 13px;
     align-self: center;
+  }
+  .panes {
+    display: none;
+  }
+  .next-note {
+    margin: 4px 0 0;
+    font-weight: 800;
+    text-align: center;
   }
   .play {
     display: grid;
@@ -473,68 +479,37 @@
   .b {
     font-weight: 800;
   }
-  .podium {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    text-align: center;
-  }
-  .steps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    align-items: flex-end;
-    gap: 8px;
-    width: 100%;
-    max-width: 460px;
-  }
-  .step {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    padding: 10px 6px;
-    border-radius: 14px 14px 6px 6px;
-    background: var(--raised);
-    min-width: 0;
-  }
-  .step.s1 {
-    padding-top: 26px;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 40%, var(--raised)), var(--raised));
-  }
-  .step.s2 {
-    padding-top: 16px;
-  }
-  .step.me {
-    outline: 2px solid var(--gold);
-  }
-  .step .m {
-    font-size: 34px;
-  }
-  .step .n {
-    font-weight: 800;
-    word-break: break-word;
-  }
-  .step .sc {
-    color: var(--muted);
-    font-weight: 700;
-  }
-  .groups {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin: 0;
-  }
-  .mine {
-    margin: 0;
-    font-weight: 800;
-  }
   @media (max-width: 900px) {
     .play {
       grid-template-columns: 1fr;
+    }
+    .panes {
+      display: flex;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 6;
+      padding: 4px;
+      border-radius: 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+    }
+    .panes button {
+      flex: 1;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 8px;
+      background: transparent;
+      color: var(--muted);
+      font: 800 14px var(--font-body);
+      cursor: pointer;
+    }
+    .panes button.on {
+      background: var(--gold);
+      color: #1b1300;
+    }
+    .away {
+      display: none !important;
     }
     .board {
       max-width: none;

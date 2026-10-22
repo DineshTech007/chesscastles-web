@@ -18,10 +18,18 @@ export const SLOTS: Record<string, { name: string; minutes: number; inc: number;
   b5: { name: 'Blitz 5+0', minutes: 5, inc: 0, speed: 'blitz', at: '18:30' },
   u1: { name: 'Bullet 1+1', minutes: 1, inc: 1, speed: 'bullet', at: '19:30' },
   b3: { name: 'Blitz 3+0', minutes: 3, inc: 0, speed: 'blitz', at: '20:15' },
-  u0: { name: 'Bullet 1+0', minutes: 1, inc: 0, speed: 'bullet', at: '21:15' },
+  u0: { name: 'Bullet 2+1', minutes: 2, inc: 1, speed: 'bullet', at: '21:15' },
 };
 /** A cup's day and slot from its id ("2026-10-23-u1"). */
 export function parseCup(id: string) {
+  // A test cup (admins): "t3p2-ab12cd" is 3+2; its start comes from the room.
+  const t = /^t(\d{1,2})p(\d{1,2})-[a-z0-9]{6}$/.exec(id);
+  if (t) {
+    const minutes = Number(t[1]), inc = Number(t[2]);
+    const total = minutes * 60 + inc * 40;
+    const kind = total < 180 ? 'Bullet' : total < 480 ? 'Blitz' : 'Rapid';
+    return { day: 'test', slot: 'test', name: `Test cup · ${kind} ${minutes}+${inc}`, minutes, inc, speed: (total < 180 ? 'bullet' : 'blitz') as 'bullet' | 'blitz', at: '', startAt: 0, test: true as const };
+  }
   const m = /^(\d{4}-\d{2}-\d{2})-(b5|u1|b3|u0)$/.exec(id);
   if (!m) return undefined;
   const slot = SLOTS[m[2]];
@@ -83,6 +91,8 @@ export interface Standing {
   wins: number;
   played: number;
   rank: number;
+  /** The rating the player played like in this cup. */
+  perf?: number;
 }
 /** The cup as its room sends it. */
 export interface CupView {
@@ -121,6 +131,10 @@ export const leaveCup = (id: string) => call<{ ok: true }>('POST', `/${id}/leave
 /** Admins: call a cup off, or start it now. */
 export const cancelCup = (id: string) => call<{ ok: true }>('POST', `/${id}/cancel`);
 export const startCup = (id: string) => call<{ ok: true }>('POST', `/${id}/start`);
+/** Admins: a private test cup (any time control, starting in `startIn` minutes): its link to share. */
+export const testCup = (minutes: number, inc: number, startIn: number) => call<{ id: string; startAt: number }>('POST', '/test', { minutes, inc, startIn });
+/** The owner: every cup's data wiped. */
+export const resetCups = () => call<{ ok: true; wiped: string[] }>('POST', '/reset');
 
 /** "6:30 pm" in India time (the cups' times; the site is for India). */
 export function cupTime(t: number, lang = 'en'): string {

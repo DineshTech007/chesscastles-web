@@ -35,11 +35,33 @@
     if (sent >= 0 && n === sent && !game.result) remount++;
     sent = -1;
   });
-  let heard = 0;
+  // Every move is heard, the first too (owner, 2026-10-23: "there should be some sound after a move"): a capture and
+  // a check sound different; the board opened on a game already going is quiet.
+  let heard = -1;
   $effect(() => {
     const n = game.moves.length;
-    if (n > heard && heard) sounds.move();
+    const san = at.sans[at.sans.length - 1] ?? '';
+    if (heard >= 0 && n > heard) (san.includes('+') || san.includes('#') ? sounds.check : san.includes('x') ? sounds.capture : sounds.move)();
     heard = n;
+  });
+  // My clock under 10 seconds: one warning sound, as on Lichess and chess.com.
+  let warned = '';
+  $effect(() => {
+    if (!mine || game.result || !game.clock) return;
+    const l = left(mine);
+    if (l !== undefined && l < 10_000 && l > 0 && warned !== game.id) {
+      warned = game.id;
+      sounds.lowTime();
+    }
+  });
+  // The end: its sound, once (not for a game that was already over when the board opened).
+  // svelte-ignore state_referenced_locally
+  let ended = game.result ? game.id : '';
+  $effect(() => {
+    if (!game.result || ended === game.id) return;
+    ended = game.id;
+    if (!mine) return sounds.end();
+    (won === 'win' ? sounds.win : won === 'loss' ? sounds.loss : sounds.draw)();
   });
 
   // Premoves (owner, 2026-10-22: "we can't do premoves in game zone"): queued while the opponent thinks, the first
@@ -142,6 +164,7 @@
     <span class="nm">{top === 'white' ? '♔' : '♚'} {nameOf(top)}{#if tagOf(top)} <span class="tag">{tagOf(top)}</span>{/if}</span>
     {#if game.clock}<span class="clk num" class:low={(left(top) ?? 1) < 20_000}>{fmt(left(top))}</span>{/if}
   </div>
+  <div class="bwrap">
   {#key remount}
     <ClassBoard
       bind:this={cb}
@@ -159,6 +182,14 @@
       {onpremove}
     />
   {/key}
+  {#if game.result}
+    <!-- The result in the middle of the board (owner, 2026-10-23: "Black won by resignation… in the centre"). -->
+    <div class="over {won}" aria-live="polite">
+      <strong>{game.result === '1/2-1/2' ? '🤝 Draw' : RESULT[game.result]}</strong>
+      <span>{reasonText(game.reason)}</span>
+    </div>
+  {/if}
+  </div>
   <div class="player" class:turn={!game.result && at.turn === orient}>
     <span class="nm">{orient === 'white' ? '♔' : '♚'} {nameOf(orient)}{mine ? ` ${$t('kidsclass.gb.you')}` : ''}{#if tagOf(orient)} <span class="tag">{tagOf(orient)}</span>{/if}</span>
     {#if game.clock}<span class="clk num" class:low={(left(orient) ?? 1) < 20_000}>{fmt(left(orient))}</span>{/if}
@@ -189,6 +220,56 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+  .bwrap {
+    position: relative;
+  }
+  /* Over the board, not in the way: taps go through to the board (to look at the final position). */
+  .over {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 58%;
+    max-width: 90%;
+    padding: 12px 18px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--card) 88%, transparent);
+    border: 2px solid var(--border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    text-align: center;
+    pointer-events: none;
+    animation: pop-in 0.35s ease-out;
+  }
+  .over strong {
+    font: 800 22px var(--font-title);
+  }
+  .over span {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .over.win {
+    border-color: var(--win);
+  }
+  .over.loss {
+    border-color: var(--loss);
+  }
+  @keyframes pop-in {
+    from {
+      transform: translate(-50%, -50%) scale(0.8);
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .over {
+      animation: none;
+    }
   }
   .player {
     display: flex;

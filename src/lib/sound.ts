@@ -182,6 +182,7 @@ const WOOD = {
     tone(0, 1568, 0.09, 0.14);
     tone(0.16, 1568, 0.09, 0.14);
   },
+  tick: () => tone(0, 1250, 0.035, 0.16),
   win: () => {
     mallet(0, 523, { gain: 0.28, length: 0.4 });
     mallet(0.1, 659, { gain: 0.28, length: 0.4 });
@@ -232,6 +233,7 @@ const FUN = {
     tone(0, 1760, 0.07, 0.16, 'triangle');
     tone(0.13, 1760, 0.07, 0.16, 'triangle');
   },
+  tick: () => tone(0, 1480, 0.04, 0.18, 'triangle'),
   win: () => {
     mallet(0, 523, { gain: 0.24, length: 0.3, wave: 'triangle' });
     mallet(0.09, 659, { gain: 0.24, length: 0.3, wave: 'triangle' });
@@ -260,6 +262,7 @@ export const sounds: Record<keyof Sounds, () => void> = {
   error: () => pick('error'),
   start: () => pick('start'),
   lowTime: () => pick('lowTime'),
+  tick: () => pick('tick'),
   win: () => pick('win'),
   loss: () => pick('loss'),
   draw: () => pick('draw'),

@@ -219,6 +219,17 @@
         savedId = g.id;
         creditAnalysis(g.id, title);
       }
+    } else if (q.get('moves')) {
+      // A game given by its moves (a Castle Cup game: ?moves=e2e4,e7e5&fen=…&title=…&side=black).
+      try {
+        const uci = (q.get('moves') ?? '').split(',').filter((m) => /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(m)).slice(0, 600);
+        load(positionFromFen(fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'), uci, q.has('review'));
+        title = (q.get('title') ?? '').slice(0, 80);
+        if (q.get('side') === 'black') orientation = 'black';
+        cursor = 0;
+      } catch {
+        /* keep the start position */
+      }
     } else if (q.get('import')) {
       try {
         const [g] = readPgn(sessionStorage.getItem('k24.importPgn') ?? '');

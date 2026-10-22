@@ -12,7 +12,7 @@
   import { track } from '$lib/analytics';
   import { t } from '$lib/i18n';
   import CupCard from '$lib/cups/CupCard.svelte';
-  import { cancelCup, joinCup, leaveCup, startCup, todayCups, type CupSummary, type Today } from '$lib/cups/api';
+  import { cancelCup, joinCup, leaveCup, resetCups, startCup, testCup, todayCups, type CupSummary, type Today } from '$lib/cups/api';
   import { forgetCup, rememberCup } from '$lib/cups/joined';
   import { API } from '$lib/api';
   import { token } from '$lib/classroom/api';
@@ -88,6 +88,29 @@
       await (what === 'start' ? startCup(c.id) : cancelCup(c.id));
       if (what === 'start') await goto(`/cups/${c.id}`);
       else patch(c.id, (x) => ({ ...x, status: 'cancelled' }));
+    } catch (e) {
+      error = (e as Error).message;
+    }
+  }
+  // A private test cup (owner, 2026-10-23: "arrange one tournament for me to test"): its link to share.
+  let tMin = $state(3);
+  let tInc = $state(0);
+  let tIn = $state(10);
+  let made = $state<{ id: string; startAt: number }[]>([]);
+  async function makeTest() {
+    error = '';
+    try {
+      made = [await testCup(tMin, tInc, tIn), ...made];
+    } catch (e) {
+      error = (e as Error).message;
+    }
+  }
+  async function wipe() {
+    if (!confirm('Wipe every cup played so far (results, champions)? This cannot be undone.')) return;
+    try {
+      const r = await resetCups();
+      error = `Wiped ${r.wiped.length} cups.`;
+      await load();
     } catch (e) {
       error = (e as Error).message;
     }
@@ -171,8 +194,22 @@
           </li>
         {/each}
       </ul>
+      <h3>Test cup (private)</h3>
+      <p class="muted">Only people with its link can join; not on Home, no awards. Start it with "Start now" on its page, or it starts by itself.</p>
+      <div class="tc">
+        <label>Minutes <input type="number" min="1" max="30" bind:value={tMin} /></label>
+        <label>+ seconds <input type="number" min="0" max="30" bind:value={tInc} /></label>
+        <label>Starts in (min) <input type="number" min="1" max="1440" bind:value={tIn} /></label>
+        <button class="btn primary" onclick={makeTest}>Make a test cup</button>
+      </div>
+      {#each made as m (m.id)}
+        <p class="made">🔗 <a href="/cups/{m.id}">chesscastles.com/cups/{m.id}</a> · starts {new Date(m.startAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</p>
+      {/each}
+      <h3>Cups on or off</h3>
       {#if today.off}<button class="btn primary" onclick={() => switchCups(true)}>{$t('cups.turnOn')}</button>
       {:else}<button class="btn" onclick={() => switchCups(false)}>{$t('cups.turnOff')}</button>{/if}
+      <h3>Wipe old cups</h3>
+      <button class="btn ghost danger" onclick={wipe}>Wipe every cup played so far</button>
     </section>
   {/if}
 </div>
@@ -292,6 +329,25 @@
   }
   .muted {
     color: var(--muted);
+  }
+  .tc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .tc label {
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .tc input {
+    width: 90px;
+  }
+  .made {
+    margin: 6px 0 0;
+    word-break: break-all;
   }
   .adm {
     list-style: none;
