@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * A class's live room (Classroom, src/lib/classroom): the whole window, the coach's laptop view or a student's.
+   * A class's live room (CastleClass, src/lib/classroom): the whole window, the coach's laptop view or a student's.
    * Signed-in members only; the room keeps the class, so reloading or a dropped connection comes back to it as it is.
    */
   import { onDestroy } from 'svelte';
@@ -20,7 +20,7 @@
 
   $effect(() => {
     if (!signedIn || !id || live) return;
-    live = new Live(id);
+    live = new Live(id, page.url.searchParams.get('watch') === '1');
   });
   onDestroy(() => live?.close());
   // Local tests look at the class state.
@@ -29,8 +29,9 @@
   });
 
   function exit() {
+    const back = live?.watching ? '/castleclass/admin' : '/castleclass';
     live?.close();
-    void goto('/classroom');
+    void goto(back);
   }
 
   // The coach's 👏: big on everyone's screen for a few seconds.
@@ -68,7 +69,7 @@
     const lines = [`♟ ${live!.info.name} · ${date}`, `Class time: ${took(r.ended - (r.started || r.ended))}`, '', `Present (${r.people.length}):`, ...r.people.map((p) => `• ${p.name} (${p.minutes} min)`)];
     if (r.scores.length) lines.push('', 'Leaderboard:', ...r.scores.slice(0, 10).map((s, i) => `${['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`} ${s.name}: ${s.points} pts, ${s.solved} solved`));
     if (r.tasks.length) lines.push('', 'Questions:', ...r.tasks.map((t, i) => `${i + 1}. ${t.title}${t.top[0] ? ` (best: ${t.top[0].name})` : ''}`));
-    lines.push('', 'Chess Castles Classroom');
+    lines.push('', 'CastleClass by Chess Castles');
     return lines.join('\n');
   }
   async function copyReport() {
@@ -82,7 +83,7 @@
   }
 </script>
 
-<svelte:head><title>{live?.info.name || 'Class'} · Chess Castles Classroom</title></svelte:head>
+<svelte:head><title>{live?.info.name || 'Class'} · CastleClass · Chess Castles</title></svelte:head>
 
 <div class="room">
   {#if !signedIn}
@@ -103,7 +104,7 @@
         <pre>{reportText()}</pre>
         <div class="row">
           <button class="btn primary" onclick={copyReport}>{copied ? 'Copied ✓' : 'Copy for WhatsApp'}</button>
-          <a class="btn" href="/classroom">Back to my classes</a>
+          <a class="btn" href="/castleclass">Back to my classes</a>
         </div>
       {:else}
         <p>Well done today! 👏</p>
@@ -111,14 +112,14 @@
           {@const s = live.ended.scores[myRank]}
           <p class="big">{['🥇', '🥈', '🥉'][myRank] ?? `#${myRank + 1}`} {s.points} points · {s.solved} solved</p>
         {/if}
-        <a class="btn primary" href="/classroom">Back to my classes</a>
+        <a class="btn primary" href="/castleclass">Back to my classes</a>
       {/if}
     </div>
   {:else if live?.closed}
     <div class="center">
-      <h1>{live.closed === 'ended' ? 'Class ended' : live.closed === 'deleted' ? 'This class is not there any more' : live.closed === 'removed' ? 'You were taken off this class' : 'You are not in this class'}</h1>
-      <p class="muted">{live.closed === 'refused' ? 'Ask your coach to add you, then open the class link again (signed in with that account).' : ''}</p>
-      <a class="btn primary" href="/classroom">My classes</a>
+      <h1>{live.closed === 'ended' ? 'Class ended' : live.closed === 'deleted' ? 'This class is not there any more' : live.closed === 'removed' ? 'You were taken off this class' : live.closed === 'coach' ? 'The admin gave this class to another coach' : 'You are not in this class'}</h1>
+      <p class="muted">{live.closed === 'refused' ? 'Ask your coach to add you, then open the class link again (signed in with that account). Coaches: ask the admin if your coach access is paused.' : ''}</p>
+      <a class="btn primary" href="/castleclass">My classes</a>
     </div>
   {:else if !live || !live.me.uid}
     <div class="center">

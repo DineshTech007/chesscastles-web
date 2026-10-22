@@ -39,11 +39,13 @@
       <b>Games</b>
       <span class="muted">{games.length} {games.length === 1 ? 'game' : 'games'} · {finished} finished{waiting.length ? ` · ${waiting.length} waiting for your move` : ''}</span>
     </div>
-    <div class="acts">
-      {#if waiting.length}<button class="btn primary" onclick={next} title="The next board waiting for your move">Next board ▶</button>{/if}
-      <button class="btn" onclick={onnew}>+ New games</button>
-      {#if games.length}<button class="btn ghost" onclick={() => live.clearGames()}>Clear all</button>{/if}
-    </div>
+    {#if !live.watching}
+      <div class="acts">
+        {#if waiting.length}<button class="btn primary" onclick={next} title="The next board waiting for your move">Next board ▶</button>{/if}
+        <button class="btn" onclick={onnew}>+ New games</button>
+        {#if games.length}<button class="btn ghost" onclick={() => live.clearGames()}>Clear all</button>{/if}
+      </div>
+    {/if}
   </header>
 
   {#if sel}
@@ -53,8 +55,8 @@
       </div>
       <div class="side-acts">
         <button class="btn" onclick={() => (open = undefined)}>◀ All games</button>
-        <button class="btn" onclick={() => spotlight(sel)}>Show on the class board</button>
-        {#if !sel.result}
+        {#if !live.watching}<button class="btn" onclick={() => spotlight(sel)}>Show on the class board</button>{/if}
+        {#if !sel.result && !live.watching}
           <span class="muted small">End the game:</span>
           <div class="row">
             <button class="btn ghost" onclick={() => live.endGame(sel.id, '1-0')}>1–0</button>
@@ -66,7 +68,7 @@
     </div>
   {:else if !games.length}
     <p class="muted">No games yet. Start a simul (you against every student), the game zone (students in pairs), or play one student.</p>
-    <button class="btn primary" onclick={onnew}>Start games</button>
+    {#if !live.watching}<button class="btn primary" onclick={onnew}>Start games</button>{/if}
   {:else}
     <div class="grid">
       {#each games as g (g.id)}

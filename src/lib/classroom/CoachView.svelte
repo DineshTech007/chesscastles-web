@@ -37,6 +37,8 @@
   import type { Live } from './live.svelte';
 
   let { live, onexit }: { live: Live; onexit: () => void } = $props();
+  /** An admin watching unseen: the class as the coach sees it, without the tools. */
+  const watch = $derived(live.watching);
 
   const b = $derived(live.board);
   const at = $derived(lineAt(b.root, b.moves, b.ply));
@@ -61,6 +63,17 @@
   let copied = $state('');
   let note = $state('');
   const book = new CloudBook();
+  // A problem the coach meets (voice, camera, the board…): straight to the admins, with this class.
+  let reporting = $state(false);
+  let problem = $state('');
+  function sendProblem() {
+    const text = problem.trim();
+    if (!text) return;
+    live.issue('report', text, navigator.userAgent);
+    problem = '';
+    reporting = false;
+    live.notice = 'Sent to the admin. Thank you!';
+  }
 
   // The coach's list of games and positions for the class (pasted PGN), kept on this device per class.
   type LibGame = { title: string; root: string; moves: string[] };
@@ -207,7 +220,7 @@
 
   function onkey(e: KeyboardEvent) {
     const t = e.target as HTMLElement | null;
-    if (e.ctrlKey || e.metaKey || e.altKey || asking || editing || pasting || ending || gaming) return;
+    if (watch || e.ctrlKey || e.metaKey || e.altKey || asking || editing || pasting || ending || gaming || reporting) return;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
     const k = e.key;
     const act: Record<string, () => void> = {
@@ -225,7 +238,7 @@
       e: () => (engineOn = !engineOn),
       n: () => newBoard(),
       q: () => (asking = true),
-      g: () => (gaming = true),
+      g: () => live.may('games') && (gaming = true),
       Escape: () => clearDrawings(),
       x: () => clearDrawings(),
       '?': () => (helpOpen = !helpOpen),
@@ -266,27 +279,39 @@
       <b>{live.info.name}</b>
       <span class="pill live">● LIVE {liveFor}</span>
       {#if live.status !== 'open'}<span class="pill warn">Reconnecting…</span>{/if}
+      {#if watch}<span class="pill watch" title="Admins watch a class unseen: the coach and the students do not see you">👁 Watching · coach {live.info.coachName} · the class does not see you</span>{/if}
     </div>
-    <div class="voice">
-      {#if !live.inVoice}
-        <button class="btn" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>🎙️ {live.joiningVoice ? 'Joining…' : 'Start voice'}</button>
-        <button class="btn" onclick={() => live.setCam('camera')} disabled={live.joiningVoice} title="Starts the voice and your camera">📷 Camera</button>
-      {:else}
-        <button class="btn" class:on={live.micOn} onclick={() => live.setMic(!live.micOn)} title="Your microphone">{live.micOn ? '🎙️ Mic on' : '🔇 Mic off'}</button>
-        <button class="btn" class:on={live.camOn === 'camera'} onclick={() => live.setCam(live.camOn === 'camera' ? '' : 'camera')} title="Your camera to every student">📷 {live.camOn === 'camera' ? 'Camera on' : 'Camera'}</button>
-        <button class="btn" class:on={live.camOn === 'screen'} onclick={() => live.setCam(live.camOn === 'screen' ? '' : 'screen')} title="Share your screen with every student">🖥 {live.camOn === 'screen' ? 'Sharing' : 'Screen'}</button>
-        <button class="btn ghost" onclick={() => live.mute('*')} title="Mute every student">Mute all</button>
-        <button class="btn ghost" onclick={() => live.leaveVoice()}>Leave voice</button>
-      {/if}
-    </div>
-    <div class="acts">
-      <button class="btn primary" onclick={() => (asking = true)} title="Q">❓ Ask a question</button>
-      <button class="btn" onclick={() => (gaming = true)} title="G">🎮 Games</button>
-      <button class="btn" onclick={() => (tab = 'lb')}>🏆 Leaderboard</button>
-      <button class="btn ghost" onclick={fullscreen} title="Full screen">⛶</button>
-      <button class="btn ghost" onclick={() => (ending = true)}>End class</button>
-      <button class="btn ghost" onclick={onexit} title="Leave the room (the class stays open)">Exit</button>
-    </div>
+    {#if watch}
+      <div class="acts">
+        <button class="btn" onclick={() => (tab = 'lb')}>🏆 Leaderboard</button>
+        <button class="btn ghost" onclick={fullscreen} title="Full screen">⛶</button>
+        <button class="btn ghost" onclick={onexit}>Stop watching</button>
+      </div>
+    {:else}
+      <div class="voice">
+        {#if !live.inVoice}
+          <button class="btn" onclick={() => live.joinVoice()} disabled={live.joiningVoice}>🎙️ {live.joiningVoice ? 'Joining…' : 'Start voice'}</button>
+          {#if live.may('video')}<button class="btn" onclick={() => live.setCam('camera')} disabled={live.joiningVoice} title="Starts the voice and your camera">📷 Camera</button>{/if}
+        {:else}
+          <button class="btn" class:on={live.micOn} onclick={() => live.setMic(!live.micOn)} title="Your microphone">{live.micOn ? '🎙️ Mic on' : '🔇 Mic off'}</button>
+          {#if live.may('video')}
+            <button class="btn" class:on={live.camOn === 'camera'} onclick={() => live.setCam(live.camOn === 'camera' ? '' : 'camera')} title="Your camera to every student">📷 {live.camOn === 'camera' ? 'Camera on' : 'Camera'}</button>
+            <button class="btn" class:on={live.camOn === 'screen'} onclick={() => live.setCam(live.camOn === 'screen' ? '' : 'screen')} title="Share your screen with every student">🖥 {live.camOn === 'screen' ? 'Sharing' : 'Screen'}</button>
+          {/if}
+          <button class="btn ghost" onclick={() => live.mute('*')} title="Mute every student">Mute all</button>
+          <button class="btn ghost" onclick={() => live.leaveVoice()}>Leave voice</button>
+        {/if}
+      </div>
+      <div class="acts">
+        <button class="btn primary" onclick={() => (asking = true)} title="Q">❓ Ask a question</button>
+        {#if live.may('games')}<button class="btn" onclick={() => (gaming = true)} title="G">🎮 Games</button>{/if}
+        <button class="btn" onclick={() => (tab = 'lb')}>🏆 Leaderboard</button>
+        <button class="btn ghost" onclick={() => (reporting = true)} title="Tell the admin about a problem (voice, camera, the board…)">⚠ Report a problem</button>
+        <button class="btn ghost" onclick={fullscreen} title="Full screen">⛶</button>
+        <button class="btn ghost" onclick={() => (ending = true)}>End class</button>
+        <button class="btn ghost" onclick={onexit} title="Leave the room (the class stays open)">Exit</button>
+      </div>
+    {/if}
   </header>
   {#if live.micError && live.inVoice}<p class="note">{live.micError}</p>{/if}
 
@@ -306,7 +331,7 @@
         <Gallery {live} big />
       {:else}
         <div class="board-head">
-          {#if library.length}
+          {#if library.length && !watch}
             <div class="games">
               <button class="btn ghost" onclick={() => loadGame(Math.max(0, b.game - 1))} disabled={b.game <= 0} aria-label="Previous game">‹</button>
               <select value={b.game} onchange={(e) => loadGame(Number(e.currentTarget.value))} aria-label="Game">
@@ -317,7 +342,7 @@
             </div>
           {/if}
           <span class="title">{b.title || (holderName ? `${holderName} is moving` : '')}</span>
-          {#if holderName}<button class="btn ghost" onclick={() => live.give('')}>Take the board back from {holderName}</button>{/if}
+          {#if holderName && !watch}<button class="btn ghost" onclick={() => live.give('')}>Take the board back from {holderName}</button>{/if}
         </div>
         <div class="board-row">
           {#if engineOn}<EvalBar info={engInfo} orientation={b.orient} />{/if}
@@ -328,8 +353,8 @@
                 orientation={b.orient}
                 lastMove={at.last as Key[] | undefined}
                 check={at.check}
-                movable={paint || !at.pos ? undefined : at.turn}
-                dests={paint || !at.pos ? new Map() : destsOf(at.pos)}
+                movable={watch || paint || !at.pos ? undefined : at.turn}
+                dests={watch || paint || !at.pos ? new Map() : destsOf(at.pos)}
                 shapes={b.shapes}
                 marks={b.marks}
                 squares={b.squares}
@@ -339,13 +364,13 @@
                 {brush}
                 label="The class board"
                 {onmove}
-                ondraw={(shapes) => set({ shapes })}
+                ondraw={watch ? undefined : (shapes) => set({ shapes })}
                 {onselect}
               />
             {/key}
           </div>
         </div>
-        <div class="tools" role="toolbar" aria-label="Board tools">
+        {#if !watch}<div class="tools" role="toolbar" aria-label="Board tools">
           <button class="tool" onclick={() => go(0)} disabled={b.ply === 0} title="Start (Home)">⏮</button>
           <button class="tool" onclick={() => go(b.ply - 1)} disabled={b.ply === 0} title="Back (←)">◀</button>
           <button class="tool" onclick={() => go(b.ply + 1)} disabled={b.ply >= b.moves.length} title="Forward (→)">▶</button>
@@ -375,7 +400,7 @@
           <button class="tool" class:on={engineOn} onclick={() => (engineOn = !engineOn)} title="Engine (E)">⚙</button>
           <button class="tool" onclick={() => (helpOpen = !helpOpen)} title="Keys (?)">?</button>
           {#if copied}<span class="copied">{copied}</span>{/if}
-        </div>
+        </div>{/if}
         {#if engineOn}<div class="engine"><EnginePanel fen={at.fen} bind:info={engInfo} /></div>{/if}
       {/if}
     </section>
@@ -388,7 +413,7 @@
         <button role="tab" class:on={tab === 'moves'} onclick={() => (tab = 'moves')}>Moves</button>
         <button role="tab" class:on={tab === 'db'} onclick={() => (tab = 'db')}>Database</button>
         <button role="tab" class:on={tab === 'lb'} onclick={() => (tab = 'lb')}>Leaderboard</button>
-        <button role="tab" class:on={tab === 'class'} onclick={() => (tab = 'class')}>Class</button>
+        {#if !watch}<button role="tab" class:on={tab === 'class'} onclick={() => (tab = 'class')}>Class</button>{/if}
       </div>
       <div class="panel">
         {#if tab === 'people'}
@@ -404,7 +429,7 @@
           {:else}
             <p class="muted">The database needs a position that can be played.</p>
           {/if}
-          <label class="toggle"><input type="checkbox" checked={!!live.settings.db} onchange={(e) => live.setSettings({ db: e.currentTarget.checked })} /> Students see the database too</label>
+          {#if !watch}<label class="toggle"><input type="checkbox" checked={!!live.settings.db} onchange={(e) => live.setSettings({ db: e.currentTarget.checked })} /> Students see the database too</label>{/if}
         {:else if tab === 'lb'}
           {#if live.task}
             <h3>This question</h3>
@@ -417,7 +442,7 @@
           {/each}
           <h3>All classes</h3>
           <Leaderboard rows={live.allTime} empty="The class's leaderboard over every class shows here." />
-        {:else}
+        {:else if !watch}
           <div class="settings">
             <button class="btn" onclick={() => copyText(classLink(live.info.id), 'Class link copied')}>🔗 Copy the class link</button>
             <h3>Announce</h3>
@@ -449,7 +474,7 @@
 {#if live.localVideo && live.camOn === 'screen'}<VideoTile stream={live.localVideo} label="Your screen (everyone sees it)" />{/if}
 
 {#if asking}
-  <AskDialog fen={at.fen} {used} onask={ask} onclose={() => (asking = false)} />
+  <AskDialog fen={at.fen} {used} pdfOk={live.may('pdf')} homeworkOk={live.may('homework')} onask={ask} onclose={() => (asking = false)} />
 {/if}
 {#if gaming}
   <GamesDialog {live} fen={at.fen} onclose={() => (gaming = false)} />
@@ -496,6 +521,18 @@
     <button class="btn" onclick={() => (helpOpen = false)}>Close</button>
   </div>
 {/if}
+{#if reporting}
+  <div class="scrim" role="presentation" onclick={() => (reporting = false)}></div>
+  <div class="dialog" role="dialog" aria-modal="true" aria-label="Report a problem">
+    <h2>Report a problem</h2>
+    <p class="muted small">It goes to the admin with this class, so they can help (for example: a student cannot hear me, a camera shows nothing, the board did not update).</p>
+    <textarea bind:value={problem} rows="4" maxlength="600" placeholder="What happened?"></textarea>
+    <div class="row">
+      <button class="btn ghost" onclick={() => (reporting = false)}>Cancel</button>
+      <button class="btn primary" onclick={sendProblem} disabled={!problem.trim()}>Send to the admin</button>
+    </div>
+  </div>
+{/if}
 {#if ending}
   <div class="scrim" role="presentation" onclick={() => (ending = false)}></div>
   <div class="dialog" role="dialog" aria-modal="true" aria-label="End the class">
@@ -538,6 +575,10 @@
   }
   .name b {
     font: 700 20px var(--font-title);
+  }
+  .pill.watch {
+    background: var(--gold-soft);
+    color: var(--gold);
   }
   .pill.warn {
     background: rgba(240, 82, 82, 0.18);

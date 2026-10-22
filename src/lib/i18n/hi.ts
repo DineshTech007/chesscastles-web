@@ -184,6 +184,8 @@ export const hi: Record<Key, string> = {
   'home.rush.best': 'Best: {n}',
   'home.rush.sub': '3 मिनट में आप कितने puzzles हल कर सकते हैं?',
   'home.rush.cta': 'Rush खेलें',
+  'home.rush.legend': 'हमारा पहला Rush legend आ गया! अगला कौन?',
+  'home.rush.levels': '2 नए levels: Rush titan (40) और Rush immortal (50)',
   'home.puzzles.rating': 'आपकी puzzle rating',
   'home.learn.h': 'सीखें',
   'home.learn.sub': 'Chess Guru के साथ lessons',

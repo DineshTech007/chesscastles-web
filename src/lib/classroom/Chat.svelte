@@ -36,10 +36,14 @@
       <p class="muted">{live.coach ? 'Students’ answers and questions show here.' : 'Ask your coach a question or type your answer.'}</p>
     {/each}
   </div>
-  <form onsubmit={send}>
-    <input bind:value={text} maxlength="300" placeholder={live.coach ? 'Message the class' : live.settings.chat ? 'Message the class' : 'Message your coach'} aria-label="Message" />
-    <button class="btn primary" disabled={!text.trim()}>Send</button>
-  </form>
+  {#if live.watching}
+    <p class="muted small">You are watching: the class does not see you, so you cannot write here.</p>
+  {:else}
+    <form onsubmit={send}>
+      <input bind:value={text} maxlength="300" placeholder={live.coach ? 'Message the class' : live.settings.chat ? 'Message the class' : 'Message your coach'} aria-label="Message" />
+      <button class="btn primary" disabled={!text.trim()}>Send</button>
+    </form>
+  {/if}
   {#if !live.coach && !live.settings.chat}<p class="muted small">Only your coach sees your messages.</p>{/if}
 </div>
 

@@ -28,9 +28,9 @@
   });
 
   let { collapsed = false }: { collapsed?: boolean } = $props();
-  // Classroom: admins, and students once an admin opens it (src/lib/classroom/visible.ts).
+  // CastleClass: admins, coaches, and students once a coach enrols them (src/lib/classroom/visible.ts).
   $effect(() => checkClassroom($session.status === 'in' ? $session.uid : undefined));
-  const classroom = { href: '/classroom', label: 'Classroom', icon: 'coach' as IconName, match: ['/classroom'] };
+  const classroom = { href: '/castleclass', label: 'CastleClass', icon: 'coach' as IconName, match: ['/castleclass'] };
 
   type Item = { href: string; label: string; icon: IconName; match: string[]; not?: string[]; badge?: string; key?: Key };
   /** Home, then the five features only Chess Castles has (in gold), then the everyday pages (src/lib/nav.ts). */
@@ -69,6 +69,11 @@
         </a>
       {/each}
     </div>
+    <!-- Puzzle Rush: new and a must-try (owner, 2026-10-22), lit up in the menu. -->
+    <a class="item rushnav" class:on={page.url.pathname.startsWith('/puzzles/rush')} href="/puzzles/rush" title={collapsed ? `${$t('home.rush.h')} (${$t('nav.new')})` : $t('home.rush.sub')}>
+      <span class="rchip"><Icon name="flame" size={16} color="#fff" /></span>
+      {#if !collapsed}<span>{$t('home.rush.h')}</span><span class="newtag hot">{$t('nav.new')}</span>{:else}<span class="rdot" aria-hidden="true"></span>{/if}
+    </a>
     {#if $classroomShown}{@render link(classroom)}{/if}
     {#each groups as group, gi (gi)}
       {#if gi}<hr class="sep" />{/if}
@@ -210,6 +215,96 @@
     border-radius: 8px;
     background: linear-gradient(135deg, #f7d27a, #edb040 50%, #c98a1b);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  /* Puzzle Rush: a warm glow that breathes, a shine passing over, a flickering flame and a bobbing NEW. */
+  .item.rushnav {
+    position: relative;
+    overflow: hidden;
+    margin: 4px 0;
+    color: var(--text);
+    font-weight: 700;
+    border: 1px solid color-mix(in srgb, #f97316 60%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, #f97316 20%, transparent), color-mix(in srgb, var(--gold) 12%, transparent));
+    animation: rushglow 2.4s ease-in-out infinite;
+  }
+  .item.rushnav::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.22) 45%, transparent 60%);
+    transform: translateX(-100%);
+    animation: rushshine 3.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .item.rushnav:hover,
+  .item.rushnav.on {
+    background: linear-gradient(135deg, color-mix(in srgb, #f97316 32%, transparent), color-mix(in srgb, var(--gold) 20%, transparent));
+  }
+  .rchip {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #fbbf24, #f97316 55%, #ef4444);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    animation: rushflame 1.4s ease-in-out infinite;
+  }
+  .newtag.hot {
+    background: linear-gradient(135deg, #fb7185, #f43f5e);
+    color: #fff;
+    animation: rushbob 1.2s ease-in-out infinite;
+  }
+  .rdot {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #f43f5e;
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7);
+    animation: rushping 1.6s ease-out infinite;
+  }
+  @keyframes rushglow {
+    50% {
+      box-shadow: 0 0 14px color-mix(in srgb, #f97316 45%, transparent);
+    }
+  }
+  @keyframes rushshine {
+    55%,
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes rushflame {
+    25% {
+      transform: rotate(-6deg) scale(1.06);
+    }
+    75% {
+      transform: rotate(5deg) scale(0.97);
+    }
+  }
+  @keyframes rushbob {
+    50% {
+      transform: translateY(-2px) scale(1.06);
+    }
+  }
+  @keyframes rushping {
+    80%,
+    100% {
+      box-shadow: 0 0 0 7px rgba(244, 63, 94, 0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .item.rushnav,
+    .item.rushnav::after,
+    .rchip,
+    .newtag.hot,
+    .rdot {
+      animation: none;
+    }
   }
   .sep {
     border: 0;

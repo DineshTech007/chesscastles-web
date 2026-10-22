@@ -13,7 +13,7 @@
   import { checkClassroom, classroomShown } from '$lib/classroom/visible';
 
   let isAdmin = $state(false);
-  // Classroom: admins, and students once an admin opens it (src/lib/classroom/visible.ts).
+  // CastleClass: admins, coaches, and students once a coach enrols them (src/lib/classroom/visible.ts).
   $effect(() => checkClassroom($session.status === 'in' ? $session.uid : undefined));
   $effect(() => {
     if ($session.status === 'in')
@@ -27,7 +27,9 @@
   const links = $derived<{ href: string; label: string; icon: IconName }[]>([
     { href: '/profile', label: $t('more.profile'), icon: 'users' },
     ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
-    ...($classroomShown ? [{ href: '/classroom', label: 'Classroom: live classes with your coach', icon: 'coach' as IconName }] : []),
+    // Puzzle Rush: new and a must-try (owner, 2026-10-22), near the top.
+    { href: '/puzzles/rush', label: `${$t('nav.new')} · ${$t('home.rush.h')}: ${$t('home.rush.sub')}`, icon: 'flame' as IconName },
+    ...($classroomShown ? [{ href: '/castleclass', label: 'CastleClass: live classes with your coach', icon: 'coach' as IconName }] : []),
     { href: '/students', label: $t('more.students'), icon: 'coach' },
     ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.badge ? `${$t('nav.new')} · ` : ''}${$t(navKey(n.href))}: ${$t(navBlurbKey(n.href))}`, icon: n.icon })),
     { href: '/parents', label: $t('more.parents'), icon: 'shield' },

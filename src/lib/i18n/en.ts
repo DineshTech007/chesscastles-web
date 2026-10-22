@@ -189,6 +189,8 @@ export const en = {
   'home.rush.best': 'Best: {n}',
   'home.rush.sub': 'How many puzzles can you solve in 3 minutes?',
   'home.rush.cta': 'Play Rush',
+  'home.rush.legend': 'We have our first Rush legend! Who is next?',
+  'home.rush.levels': '2 new levels: Rush titan (40) and Rush immortal (50)',
   'home.puzzles.rating': 'Your puzzle rating',
   'home.learn.h': 'Learn',
   'home.learn.sub': 'Lessons with Chess Guru',

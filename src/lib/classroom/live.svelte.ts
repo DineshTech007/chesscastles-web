@@ -2,7 +2,7 @@
  * The live class as the page sees it: everything the room sends, kept in one place (Svelte state), and what the coach
  * or a student can do. The room is the single source of truth: after a drop the page gets the whole state again.
  */
-import { freshBoard, iceServers, Room, type BoardView, type ChatMsg, type ClosedWhy, type Game, type Note, type Person, type Progress, type Report, type RoomStatus, type Row, type ScoreRow, type Session, type Settings, type Task } from './api';
+import { freshBoard, iceServers, Room, type BoardView, type ChatMsg, type ClosedWhy, type Game, type Issue, type Note, type Perms, type Person, type Progress, type Report, type RoomStatus, type Row, type ScoreRow, type Session, type Settings, type Task } from './api';
 import { Voice } from './voice';
 import { sounds } from '$lib/sound';
 
@@ -55,7 +55,8 @@ export function cameraTrouble(e: unknown): string {
 export class Live {
   status = $state<RoomStatus>('connecting');
   closed = $state<ClosedWhy | undefined>();
-  me = $state<{ uid: string; name: string; coach: boolean }>({ uid: '', name: '', coach: false });
+  /** `watch`: an admin watching unseen; `perms`: the coach's rights. */
+  me = $state<{ uid: string; name: string; coach: boolean; watch?: boolean; perms?: Perms }>({ uid: '', name: '', coach: false });
   info = $state<{ id: string; name: string; coach: string; coachName: string; members: { uid: string; name: string }[]; notes?: Note[]; sessions?: Session[] }>({ id: '', name: '', coach: '', coachName: '', members: [] });
   board = $state<BoardView>(freshBoard());
   holder = $state('');
@@ -105,7 +106,9 @@ export class Live {
   private noticeTimer?: ReturnType<typeof setTimeout>;
   chatOpen = false;
 
-  constructor(id: string) {
+  constructor(id: string, watch = false) {
+    let drops = 0;
+    let since = Date.now();
     this.room = new Room(
       id,
       (m) => this.on(m),
@@ -113,14 +116,30 @@ export class Live {
         this.status = s;
         if (why) this.closed = why;
         if (s === 'closed') this.leaveVoice();
+        // Dropping out again and again: told to the admins once (a weak connection).
+        if (s === 'reconnecting') {
+          if (Date.now() - since > 300_000) {
+            drops = 0;
+            since = Date.now();
+          }
+          if (++drops === 3) this.issue('connection', 'The class connection keeps dropping (3 times in 5 minutes).', navigator.userAgent);
+        }
       },
+      watch,
     );
     let n = 0;
     this.tick = setInterval(() => {
       this.now = this.room.now();
       if (++n % 4 || !this.voice) return;
       const st = this.voice.states();
-      if (JSON.stringify(st) !== JSON.stringify(this.peerStates)) this.peerStates = st;
+      if (JSON.stringify(st) === JSON.stringify(this.peerStates)) return;
+      this.peerStates = st;
+      // A voice/video connection that fails: told to the admins (with whether a relay is set up).
+      for (const [uid, state] of Object.entries(st))
+        if (state === 'failed') {
+          const who = this.people.find((p) => p.uid === uid)?.name ?? 'someone';
+          this.issue('voice', `Voice/video could not connect with ${who}.`, `${this.voice?.relayed ? 'relay on' : 'no relay (TURN not set up)'}; ${navigator.userAgent}`);
+        }
     }, 250);
     document.addEventListener('visibilitychange', this.onAway);
     window.addEventListener('blur', this.onAway);
@@ -148,6 +167,15 @@ export class Live {
   }
   get mine(): Progress | undefined {
     return this.progress[this.me.uid];
+  }
+
+  /** Problems for the admins' list (once each): the room adds the class. */
+  private issued = new Set<string>();
+  issue(kind: Issue['kind'], text: string, detail = '') {
+    const key = `${kind}:${text}`;
+    if (kind !== 'report' && this.issued.has(key)) return;
+    this.issued.add(key);
+    this.room.send({ t: 'issue', kind, text, detail: detail.slice(0, 800) });
   }
 
   private say(text: string, ms = 3500) {
@@ -289,7 +317,17 @@ export class Live {
 
   // ----- the coach
 
+  /** An admin watching unseen: sees the class as the coach does, changes nothing. */
+  get watching() {
+    return !!this.me.watch;
+  }
+  /** What the coach may do here: what the admin gave them (an admin teaching: everything; a watcher: nothing). */
+  may(k: Exclude<keyof Perms, 'maxClasses' | 'maxStudents'>) {
+    return !this.me.watch && this.me.perms?.[k] !== false;
+  }
+
   setBoard(b: BoardView) {
+    if (this.me.watch) return;
     this.board = b;
     this.room.send({ t: 'board', board: $state.snapshot(b) });
   }
@@ -297,6 +335,7 @@ export class Live {
     this.room.send({ t: 'give', uid });
   }
   setSettings(change: Partial<Settings>) {
+    if (this.me.watch) return;
     this.settings = { ...this.settings, ...change };
     this.room.send({ t: 'settings', settings: change });
   }
@@ -382,6 +421,7 @@ export class Live {
   }
 
   async joinVoice() {
+    if (this.me.watch) return;
     if (this.inVoice || this.joiningVoice) return;
     this.joiningVoice = true;
     try {
@@ -405,6 +445,7 @@ export class Live {
       this.relayed = this.voice.relayed;
       await this.voice.start();
       this.micError = this.voice.micError;
+      if (this.micError) this.issue('mic', this.micError, navigator.userAgent);
       this.inVoice = true;
       this.micOn = false;
       this.room.send({ t: 'voice', on: true, mic: false });
@@ -445,6 +486,7 @@ export class Live {
         await this.voice.setVideo(track, kind === 'screen');
       } catch (e) {
         this.say(kind === 'screen' ? 'The screen was not shared.' : cameraTrouble(e), 9000);
+        if (kind === 'camera') this.issue('camera', cameraTrouble(e), `${(e as DOMException)?.name ?? ''}; ${navigator.userAgent}`);
         kind = '';
         await this.voice.setVideo(undefined);
       }

@@ -30,7 +30,7 @@ const DEVICES = {
   tablet: devices['iPad Mini'],
 };
 /** Pages every player can open without signing in. */
-const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision', '/classroom'];
+const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision', '/castleclass', '/castleclass/admin'];
 /** A tap must open its page within this long. */
 const TAP_MS = 6000;
 /** A phone should never download more than this in one file by itself. */
@@ -551,13 +551,20 @@ async function run(name, options) {
     }
   });
 
-  // 4k. Classroom: the coach's camera and everyone's microphone are allowed on our own pages (owner, 2026-10-22: the
+  // 4k. CastleClass: the coach's camera and everyone's microphone are allowed on our own pages (owner, 2026-10-22: the
   // headers blocked the camera); local servers without the live headers pass.
-  await check(name, page, 'classroom: camera and microphone allowed', async () => {
-    const res = await page.request.get(BASE + '/classroom');
+  await check(name, page, 'castleclass: camera and microphone allowed', async () => {
+    const res = await page.request.get(BASE + '/castleclass');
     const policy = res.headers()['permissions-policy'] ?? '';
-    expect(!policy || (/camera=\(self\)/.test(policy) && /microphone=\(self\)/.test(policy)), `Permissions-Policy blocks the classroom: ${policy}`);
+    expect(!policy || (/camera=\(self\)/.test(policy) && /microphone=\(self\)/.test(policy)), `Permissions-Policy blocks CastleClass: ${policy}`);
     return policy ? 'camera=(self), microphone=(self)' : 'no policy header here';
+  });
+
+  // 4l. CastleClass was first called Classroom: links already sent (/classroom/<class>) still open the class.
+  await check(name, page, 'old classroom links open CastleClass', async () => {
+    await open(page, '/classroom/abc123?watch=1');
+    await page.waitForURL(/\/castleclass\/abc123\?watch=1$/, { timeout: 10000 });
+    return new URL(page.url()).pathname;
   });
 
   // 5. A game against the computer: play e4 by tapping, the computer answers.

@@ -1,7 +1,8 @@
 /**
- * Classroom (server/api-worker/src/classroom.ts): live classes. A coach (an admin, for now) makes a class, picks its
- * students, and teaches on one shared board; every change goes through the class's live room (a WebSocket), which
- * keeps the whole class state, so a student who drops out comes back to the board exactly as it is.
+ * CastleClass (server/api-worker/src/classroom.ts): live classes. An admin makes players coaches with rights; a coach
+ * makes classes, enrols students and teaches on one shared board; every change goes through the class's live room
+ * (a WebSocket), which keeps the whole class state, so a student who drops out comes back to the board as it is.
+ * Admins see every class, watch any live class unseen, and get the issues list.
  */
 import { API } from '$lib/api';
 import { auth } from '$lib/auth';
@@ -16,6 +17,8 @@ export interface ClassSummary {
   live: number;
   /** I teach it. */
   mine: boolean;
+  /** I teach it, or I am an admin (who manages every class). */
+  manage: boolean;
   /** Coming sessions, soonest first. */
   sessions: Session[];
   /** The coach's announcements, newest first. */
@@ -56,7 +59,7 @@ export interface ClassInfo {
   coach: string;
   coachName: string;
   members: Member[];
-  role?: 'coach' | 'student';
+  role?: 'coach' | 'student' | 'admin';
   online?: string[];
   reports?: Report[];
   sessions?: Session[];
@@ -240,6 +243,60 @@ export interface HomeworkReply {
   ranking?: Row[];
 }
 
+/** What an admin lets a coach do (admins may do everything). */
+export interface Perms {
+  classes: boolean;
+  enrol: boolean;
+  live: boolean;
+  homework: boolean;
+  video: boolean;
+  games: boolean;
+  pdf: boolean;
+  maxClasses: number;
+  maxStudents: number;
+}
+export type PermKey = Exclude<keyof Perms, 'maxClasses' | 'maxStudents'>;
+export const PERM_LABELS: [PermKey, string, string][] = [
+  ['classes', 'Make classes', 'Make and rename classes, plan sessions, announce'],
+  ['enrol', 'Enrol students', 'Add and remove students in their classes'],
+  ['live', 'Teach live', 'Start and run live classes'],
+  ['homework', 'Homework', 'Set homework with a due date'],
+  ['video', 'Camera and screen', "Their camera, screen sharing, and students' cameras"],
+  ['games', 'Games', 'Simuls, the game zone, games against a student'],
+  ['pdf', 'Puzzles from a PDF', 'Turn a puzzle PDF into questions or homework'],
+];
+export interface CoachRec {
+  uid: string;
+  name: string;
+  perms: Perms;
+  active: boolean;
+  added: number;
+  by: string;
+  note: string;
+}
+export interface Issue {
+  id: string;
+  at: number;
+  uid: string;
+  name: string;
+  role: string;
+  classId: string;
+  className: string;
+  kind: 'report' | 'voice' | 'camera' | 'mic' | 'connection' | 'other';
+  text: string;
+  detail: string;
+  resolved: number;
+}
+export interface Dashboard {
+  /** May add, change and remove coaches (the owner and moderators). */
+  manager?: boolean;
+  totals: { coaches: number; classes: number; students: number; live: number; online: number; held7: number; minutes7: number; issues: number };
+  live: { id: string; name: string; coach: string; coachName: string; since: number; students: number; online?: number; coachHere?: boolean; watching?: number; voice?: number; cams?: number; task?: string; games?: number }[];
+  classes: { id: string; name: string; coach: string; coachName: string; students: number; live: number; created: number; last: number; held7: number; minutes7: number; next: number }[];
+  coaches: { uid: string; name: string; admin: boolean; perms: Perms; active: boolean; added: number; note: string; classes: number; students: number; live: number; held7: number; minutes7: number; last: number; issues: number }[];
+  issues: Issue[];
+}
+
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 export const freshBoard = (): BoardView => ({ root: START_FEN, moves: [], ply: 0, orient: 'white', shapes: [], marks: {}, squares: false, blind: false, pawns: false, title: '', game: -1 });
 
@@ -273,17 +330,23 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 export const myClasses = () => call<{ classes: ClassSummary[] }>('GET', '').then((r) => r.classes);
 export const newClass = (name: string) => call<{ id: string }>('POST', '', { name });
 export const getClass = (id: string) => call<ClassInfo>('GET', `/${id}`);
-export const saveClass = (id: string, change: { name?: string; members?: Member[]; sessions?: Session[]; announce?: string; unannounce?: string }) => call<{ ok: true; info: ClassInfo }>('PUT', `/${id}`, change);
+export const saveClass = (id: string, change: { name?: string; members?: Member[]; sessions?: Session[]; announce?: string; unannounce?: string; coach?: string; coachName?: string }) => call<{ ok: true; info: ClassInfo }>('PUT', `/${id}`, change);
 export const deleteClass = (id: string) => call<{ ok: true }>('DELETE', `/${id}`);
 export const iceServers = (): Promise<RTCIceServer[]> =>
   call<{ iceServers: RTCIceServer[] }>('GET', '/ice')
     .then((r) => r.iceServers)
     .catch(() => [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }]);
 
-export const classLink = (id: string) => `https://chesscastles.com/classroom/${id}`;
+export const classLink = (id: string) => `https://chesscastles.com/castleclass/${id}`;
 
-/** My classes (a student sees the Classroom only once a coach enrols them in one), and whether I may make classes. */
-export const classroomAccess = () => call<{ classes: ClassSummary[]; admin?: boolean }>('GET', '');
+/** My classes (a student sees CastleClass only once a coach enrols them in one), whether I am an admin, my coach record. */
+export const classroomAccess = () => call<{ classes: ClassSummary[]; admin?: boolean; coach?: CoachRec | null }>('GET', '');
+export const adminDashboard = () => call<Dashboard>('GET', '/admin');
+export const saveCoach = (uid: string, change: { perms?: Partial<Perms>; active?: boolean; note?: string }) => call<{ ok: true; coach: CoachRec }>('PUT', `/coaches/${encodeURIComponent(uid)}`, change);
+export const removeCoach = (uid: string) => call<{ ok: true }>('DELETE', `/coaches/${encodeURIComponent(uid)}`);
+export const resolveIssue = (id: string, resolved = true) => call<{ ok: true }>('PUT', `/issues/${id}`, { resolved });
+/** A problem outside a live class (inside one, the room passes it on with the class). */
+export const reportIssue = (issue: { kind: Issue['kind']; text: string; detail?: string; classId?: string; className?: string }) => call<{ ok: true }>('POST', '/issues', issue);
 
 export const homeworkList = (id: string) => call<{ homework: HomeworkSummary[] }>('GET', `/${id}/homework`).then((r) => r.homework);
 export const setHomework = (id: string, hw: { kind: TaskKind; title: string; points: number; minus: number; tries: number; items: Item[]; due: number }) => call<{ id: string }>('POST', `/${id}/homework`, hw);
@@ -293,8 +356,8 @@ export const homeworkClaim = (id: string, hid: string, body: { item: number; res
 export const deleteHomework = (id: string, hid: string) => call<{ ok: true }>('DELETE', `/${id}/homework/${hid}`);
 
 export type RoomStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
-/** Why the room closed for good: the class ended, I was taken off it, it was removed, or I may not come in. */
-export type ClosedWhy = 'ended' | 'removed' | 'deleted' | 'refused';
+/** Why the room closed for good: the class ended, I was taken off it, it was removed, its coach changed, or I may not come in. */
+export type ClosedWhy = 'ended' | 'removed' | 'deleted' | 'coach' | 'refused';
 
 /**
  * The live room: one WebSocket that comes back by itself after a drop (each time with the whole class state), and a
@@ -313,6 +376,8 @@ export class Room {
     private id: string,
     private onmessage: (m: any) => void,
     private onstatus: (s: RoomStatus, why?: ClosedWhy) => void,
+    /** An admin watching unseen. */
+    private watch = false,
   ) {
     void this.connect();
   }
@@ -326,7 +391,7 @@ export class Room {
       this.set('closed', 'refused');
       return;
     }
-    const url = `${API.replace(/^http/, 'ws')}/class/${this.id}/live`;
+    const url = `${API.replace(/^http/, 'ws')}/class/${this.id}/live${this.watch ? '?watch=1' : ''}`;
     let ws: WebSocket;
     try {
       ws = new WebSocket(url, ['cc', encodeURIComponent(t)]);
@@ -357,7 +422,7 @@ export class Room {
     ws.onclose = (e) => {
       clearInterval(this.ping);
       if (this.ws !== ws) return;
-      const why: ClosedWhy | undefined = e.code === 4000 ? 'ended' : e.code === 4003 ? 'removed' : e.code === 4004 ? 'deleted' : undefined;
+      const why: ClosedWhy | undefined = e.code === 4000 ? 'ended' : e.code === 4003 ? 'removed' : e.code === 4004 ? 'deleted' : e.code === 4005 ? 'coach' : undefined;
       if (why) return this.set('closed', why);
       // Refused before it opened, several times over: not in this class (or signed out).
       if (!opened && this.tries >= 3) return this.set('closed', 'refused');
@@ -385,6 +450,8 @@ export class Room {
 
   send(m: unknown): boolean {
     if (this.ws?.readyState !== 1) return false;
+    // An admin watching changes nothing: only problems go out (the room refuses the rest anyway).
+    if (this.watch && (m as { t?: string })?.t !== 'issue') return false;
     this.ws.send(JSON.stringify(m));
     return true;
   }

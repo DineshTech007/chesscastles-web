@@ -1,6 +1,6 @@
 /**
- * Whether the menus show Classroom: always to admins (they make the classes); to a player only once a coach has added
- * them to a class (owner, 2026-10-22: off by default). Asked once per sign-in; a yes is remembered on the device for
+ * Whether the menus show CastleClass: to admins and coaches always; to a player only once a coach has enrolled them in
+ * a class (owner, 2026-10-22: off by default). Asked once per sign-in; a yes is remembered on the device for
  * ten minutes, a no for two (a student just added sees it soon).
  */
 import { writable } from 'svelte/store';
@@ -38,7 +38,7 @@ async function decide(uid: string): Promise<boolean> {
   void uid;
   try {
     const r = await classroomAccess();
-    return !!r.admin || r.classes.length > 0;
+    return !!r.admin || !!r.coach?.active || r.classes.length > 0;
   } catch {
     return false;
   }

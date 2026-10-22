@@ -1,9 +1,10 @@
 <script lang="ts">
   /**
-   * Classroom: classes, sessions and homework. The coach (an admin, for now) makes a class, picks its students, plans
-   * its sessions, posts announcements, sets homework and starts the class. A player sees the Classroom only once added
-   * to a class (owner, 2026-10-22: off by default): their classes, the next session, announcements, homework to do,
-   * and the live class to join.
+   * CastleClass: classes, sessions and homework. A coach (made by an admin, with the rights the admin gave) makes a
+   * class, enrols its students, plans its sessions, posts announcements, sets homework and starts the class. Admins
+   * also see every coach's classes (to manage or watch them; the dashboard is /castleclass/admin). A player sees
+   * CastleClass only once a coach enrols them (owner, 2026-10-22: off by default): their classes, the next session,
+   * announcements, homework to do, and the live class to join.
    */
   import { goto } from '$app/navigation';
   import { session, startSignIn } from '$lib/auth';
@@ -18,14 +19,17 @@
     getClass,
     homeworkList,
     newClass,
+    PERM_LABELS,
     saveClass,
     setHomework,
     START_FEN,
     type ClassInfo,
     type ClassSummary,
+    type CoachRec,
     type HomeworkSummary,
     type Item,
     type Member,
+    type Perms,
     type Session,
     type TaskKind,
   } from '$lib/classroom/api';
@@ -36,7 +40,13 @@
   let classes = $state<ClassSummary[]>([]);
   let loaded = $state(false);
   let error = $state('');
-  let canCoach = $state(false);
+  let isAdmin = $state(false);
+  /** My coach record (the rights an admin gave me), if I am a coach. */
+  let coachRec = $state<CoachRec | null>(null);
+  /** I teach (an admin, or a coach, even paused: they still see their classes). */
+  const teaching = $derived(isAdmin || !!coachRec);
+  /** What I may do with my own classes; an admin may do everything. */
+  const may = (k: Exclude<keyof Perms, 'maxClasses' | 'maxStudents'>) => isAdmin || (!!coachRec?.active && coachRec.perms[k] !== false);
   let name = $state('');
   let busy = $state(false);
   let copied = $state('');
@@ -47,7 +57,8 @@
     try {
       const r = await classroomAccess();
       classes = r.classes;
-      canCoach = !!r.admin;
+      isAdmin = !!r.admin;
+      coachRec = r.coach ?? null;
       error = '';
       // Homework of each class (a few classes: one small request each).
       for (const c of r.classes) homeworkList(c.id).then((h) => (homework = { ...homework, [c.id]: h }), () => {});
@@ -72,7 +83,7 @@
       const { id } = await newClass(name.trim());
       name = '';
       await load();
-      void openClass(id, 'students');
+      void openClass(id, may('enrol') ? 'students' : 'schedule');
     } catch (err) {
       error = (err as Error).message;
     } finally {
@@ -123,12 +134,12 @@
   let sMinutes = $state(60);
   let sTitle = $state('');
   let sWeeks = $state(1);
-  async function openClass(id: string, tab: typeof edTab = 'students') {
+  async function openClass(id: string, tab?: typeof edTab) {
     error = '';
     try {
       const info = await getClass(id);
       editing = info;
-      edTab = tab;
+      edTab = tab ?? (may('enrol') ? 'students' : may('classes') ? 'schedule' : 'board');
       members = [...info.members];
       sessions = [...(info.sessions ?? [])];
       myStudents()
@@ -164,7 +175,8 @@
     if (!editing) return;
     saving = true;
     try {
-      await saveClass(editing.id, { name: editing.name, members, sessions });
+      // Only what my coach rights cover (the room refuses the rest).
+      await saveClass(editing.id, { ...(may('classes') ? { name: editing.name, sessions } : {}), ...(may('enrol') ? { members } : {}) });
       editing = undefined;
       await load();
     } catch (e) {
@@ -234,15 +246,30 @@
     }
   }
   const coachClasses = $derived(classes.filter((c) => c.mine));
-  const studentClasses = $derived(classes.filter((c) => !c.mine));
+  /** Other coaches' classes (admins manage every class). */
+  const otherClasses = $derived(classes.filter((c) => c.manage && !c.mine));
+  const studentClasses = $derived(classes.filter((c) => !c.manage));
+  const enter = (c: ClassSummary) => goto(c.manage && !c.mine ? `/castleclass/${c.id}?watch=1` : `/castleclass/${c.id}`);
+  const tabs = $derived(
+    (
+      [
+        ['students', `Enrolled students (${members.length})`, may('enrol')],
+        ['schedule', `Schedule (${sessions.length})`, may('classes')],
+        ['notes', 'Announcements', may('classes')],
+        ['homework', 'Homework', may('homework')],
+        ['board', 'Leaderboard', true],
+        ['past', 'Past classes', true],
+      ] as const
+    ).filter((t) => t[2]),
+  );
   const todo = (c: ClassSummary) => (homework[c.id] ?? []).filter((h) => !h.mine?.done && h.due > now);
 </script>
 
-<svelte:head><title>Classroom · Chess Castles</title></svelte:head>
+<svelte:head><title>CastleClass · Chess Castles</title></svelte:head>
 
 <div class="page">
   <header class="head">
-    <h1>Classroom</h1>
+    <h1>CastleClass</h1>
     <p class="muted">Live chess classes: one shared board, voice, questions with a timer, games, homework and leaderboards.</p>
   </header>
 
@@ -254,8 +281,25 @@
   {:else}
     {#if error}<p class="err">{error}</p>{/if}
 
-    {#if canCoach}
-      <p class="muted small">Players see the Classroom only once you enrol them in a class (Manage, then Enrolled students).</p>
+    {#if isAdmin}
+      <a class="card pad dash" href="/castleclass/admin">
+        <b>📊 Admin dashboard</b>
+        <span class="muted">Coaches and their rights, every class, who is live now (watch unseen), and problems coaches and students report.</span>
+      </a>
+    {/if}
+    {#if coachRec && !isAdmin}
+      <div class="card pad rights" class:paused={!coachRec.active}>
+        {#if coachRec.active}
+          <b>Your coach access</b>
+          <span class="muted small">{PERM_LABELS.filter(([k]) => coachRec!.perms[k]).map(([, l]) => l).join(' · ') || 'Nothing yet: ask the admin'} · up to {coachRec.perms.maxClasses} classes, {coachRec.perms.maxStudents} students each</span>
+        {:else}
+          <b>Your coach access is paused</b>
+          <span class="muted small">You can see your classes but not change or start them. Ask the admin.</span>
+        {/if}
+      </div>
+    {/if}
+    {#if teaching}
+      <p class="muted small">Players see CastleClass only once you enrol them in a class (Manage, then Enrolled students).</p>
     {/if}
 
     {#if classes.length}
@@ -263,11 +307,11 @@
         <div class="chips" role="tablist" aria-label="Sessions">
           <button class="chip" class:on={sessTab === 'live'} onclick={() => (sessTab = 'live')}>● Live now ({liveNow.length})</button>
           <button class="chip" class:on={sessTab === 'upcoming'} onclick={() => (sessTab = 'upcoming')}>Upcoming ({upcoming.length})</button>
-          {#if canCoach}<button class="chip" class:on={sessTab === 'done'} onclick={() => (sessTab = 'done')}>Completed ({completed.length})</button>{/if}
+          {#if teaching}<button class="chip" class:on={sessTab === 'done'} onclick={() => (sessTab = 'done')}>Completed ({completed.length})</button>{/if}
         </div>
         {#if sessTab === 'live'}
           {#each liveNow as c (c.id)}
-            <div class="srow"><span><b>{c.name}</b> <span class="muted">live for {took(Date.now() - c.live)}</span></span><button class="btn primary" onclick={() => goto(`/classroom/${c.id}`)}>{c.mine ? 'Back to the class' : 'Join now'}</button></div>
+            <div class="srow"><span><b>{c.name}</b> <span class="muted">{c.mine ? '' : `${c.coachName} · `}live for {took(Date.now() - c.live)}</span></span><button class="btn primary" onclick={() => enter(c)}>{c.mine ? 'Back to the class' : c.manage ? '👁 Watch' : 'Join now'}</button></div>
           {:else}
             <p class="muted">No class is live right now.</p>
           {/each}
@@ -275,7 +319,7 @@
           {#each upcoming as s (s.id + s.at)}
             <div class="srow"><span><b>{when(s.at)}</b> · {s.cls}{s.title ? ` · ${s.title}` : ''} <span class="muted">({s.minutes} min, {inTime(s.at)})</span></span></div>
           {:else}
-            <p class="muted">No sessions planned.{canCoach ? ' Plan them in a class: Schedule.' : ''}</p>
+            <p class="muted">No sessions planned.{teaching ? ' Plan them in a class: Schedule.' : ''}</p>
           {/each}
         {:else}
           {#each completed as p (p.id + p.ended)}
@@ -297,14 +341,14 @@
               <span class="muted">with {c.coachName}{c.sessions[0] ? ` · next: ${when(c.sessions[0].at)}` : ''}</span>
               {#if c.notes[0]}<span class="notec">📢 {c.notes[0].text}</span>{/if}
               {#each todo(c) as h (h.id)}
-                <a class="hw" href="/classroom/{c.id}/homework/{h.id}">📝 {h.title} · {h.items} puzzles · due {when(h.due)}{h.mine ? ` · ${h.mine.solved} solved` : ''}</a>
+                <a class="hw" href="/castleclass/{c.id}/homework/{h.id}">📝 {h.title} · {h.items} puzzles · due {when(h.due)}{h.mine ? ` · ${h.mine.solved} solved` : ''}</a>
               {/each}
               {#each (homework[c.id] ?? []).filter((h) => h.mine?.done || h.due <= now).slice(0, 3) as h (h.id)}
-                <a class="hw done" href="/classroom/{c.id}/homework/{h.id}">✓ {h.title}{h.mine ? ` · ${h.mine.points} pts` : ''}</a>
+                <a class="hw done" href="/castleclass/{c.id}/homework/{h.id}">✓ {h.title}{h.mine ? ` · ${h.mine.points} pts` : ''}</a>
               {/each}
             </div>
             <div class="acts">
-              {#if c.live}<button class="btn primary" onclick={() => goto(`/classroom/${c.id}`)}>● Join now: live</button>{:else}<button class="btn" onclick={() => goto(`/classroom/${c.id}`)}>Open</button>{/if}
+              {#if c.live}<button class="btn primary" onclick={() => goto(`/castleclass/${c.id}`)}>● Join now: live</button>{:else}<button class="btn" onclick={() => goto(`/castleclass/${c.id}`)}>Open</button>{/if}
               <button class="btn ghost" onclick={() => showBoard(c)}>🏆 Leaderboard</button>
             </div>
           </div>
@@ -312,12 +356,14 @@
       </div>
     {/if}
 
-    {#if canCoach}
+    {#if teaching}
       <h2>Classes I teach</h2>
-      <form class="new card pad" onsubmit={create}>
-        <input bind:value={name} maxlength="60" placeholder="New class, e.g. Rated 1400–1600 (6 pm)" aria-label="Class name" />
-        <button class="btn primary" disabled={busy || !name.trim()}>Make the class</button>
-      </form>
+      {#if may('classes')}
+        <form class="new card pad" onsubmit={create}>
+          <input bind:value={name} maxlength="60" placeholder="New class, e.g. Rated 1400–1600 (6 pm)" aria-label="Class name" />
+          <button class="btn primary" disabled={busy || !name.trim()}>Make the class</button>
+        </form>
+      {/if}
       <div class="list">
         {#each coachClasses as c (c.id)}
           <div class="card cls" class:live={c.live}>
@@ -328,16 +374,35 @@
               {#if (homework[c.id] ?? []).length}<span class="muted small">📝 {(homework[c.id] ?? []).length} homework · {(homework[c.id] ?? []).reduce((n, h) => n + h.done, 0)} finished answers</span>{/if}
             </div>
             <div class="acts">
-              <button class="btn primary" onclick={() => goto(`/classroom/${c.id}`)}>{c.live ? 'Back to the class' : 'Start the class'}</button>
+              {#if may('live')}<button class="btn primary" onclick={() => goto(`/castleclass/${c.id}`)}>{c.live ? 'Back to the class' : 'Start the class'}</button>{/if}
               <button class="btn" onclick={() => openClass(c.id)}>Manage</button>
               <button class="btn ghost" onclick={() => copy(c.id)}>{copied === c.id ? 'Link copied ✓' : '🔗 Link'}</button>
-              <button class="btn ghost" onclick={() => remove(c)} aria-label="Remove the class">🗑</button>
+              {#if may('classes')}<button class="btn ghost" onclick={() => remove(c)} aria-label="Remove the class">🗑</button>{/if}
             </div>
           </div>
         {:else}
-          {#if loaded}<p class="muted">No classes yet: make one above, then add its students.</p>{/if}
+          {#if loaded}<p class="muted">{may('classes') ? 'No classes yet: make one above, then enrol its students.' : 'No classes yet.'}</p>{/if}
         {/each}
       </div>
+      {#if otherClasses.length}
+        <h2>Other coaches' classes</h2>
+        <p class="muted small">As an admin you can manage any class, or watch it live without the class seeing you.</p>
+        <div class="list">
+          {#each otherClasses as c (c.id)}
+            <div class="card cls" class:live={c.live}>
+              <div class="main-c">
+                <b>{c.name}</b>
+                <span class="muted">{c.coachName} · {c.students} {c.students === 1 ? 'student' : 'students'}{c.live ? ` · live for ${took(Date.now() - c.live)}` : c.sessions[0] ? ` · next: ${when(c.sessions[0].at)}` : ''}</span>
+              </div>
+              <div class="acts">
+                {#if c.live}<button class="btn primary" onclick={() => enter(c)}>👁 Watch</button>{/if}
+                <button class="btn" onclick={() => openClass(c.id)}>Manage</button>
+                <button class="btn ghost" onclick={() => copy(c.id)}>{copied === c.id ? 'Link copied ✓' : '🔗 Link'}</button>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
     {:else if loaded && !studentClasses.length}
       <div class="card pad">
         <p>You are not in a class yet.</p>
@@ -360,15 +425,16 @@
   <div class="scrim" role="presentation" onclick={() => (editing = undefined)}></div>
   <div class="dialog" role="dialog" aria-modal="true" aria-label="Manage the class">
     <header class="dh">
-      <input class="title" bind:value={editing.name} maxlength="60" aria-label="Class name" />
+      <input class="title" bind:value={editing.name} maxlength="60" aria-label="Class name" readonly={!may('classes')} />
       <button class="btn ghost" onclick={() => (editing = undefined)} aria-label="Close">✕</button>
     </header>
     <div class="chips" role="tablist">
-      {#each [['students', `Enrolled students (${members.length})`], ['schedule', `Schedule (${sessions.length})`], ['notes', 'Announcements'], ['homework', 'Homework'], ['board', 'Leaderboard'], ['past', 'Past classes']] as [k, l] (k)}
-        <button class="chip" class:on={edTab === k} onclick={() => (edTab = k as typeof edTab)}>{l}</button>
+      {#each tabs as [k, l] (k)}
+        <button class="chip" class:on={edTab === k} onclick={() => (edTab = k)}>{l}</button>
       {/each}
     </div>
 
+    {#if editing.coach !== ($session.status === 'in' ? $session.uid : devPlayer())}<p class="muted small">Coach: {editing.coachName}</p>{/if}
     {#if edTab === 'students'}
       <div class="chips">
         {#each members as m (m.uid)}<button class="chip on" onclick={() => toggle(m)} title="Take off the class">{m.name} ✕</button>{:else}<span class="muted">No students enrolled yet: enrol them below, then Save.</span>{/each}
@@ -384,7 +450,7 @@
       <div class="chips">
         {#each found as m (m.uid)}<button class="chip" class:on={has(m.uid)} onclick={() => toggle(m)}>{has(m.uid) ? '✓ ' : '+ '}{m.name}</button>{/each}
       </div>
-      <p class="muted small">Only enrolled students see the Classroom (in their menu) and can join, signed in with the account you enrol here.</p>
+      <p class="muted small">Only enrolled students see CastleClass (in their menu) and can join, signed in with the account you enrol here.</p>
     {:else if edTab === 'schedule'}
       <div class="grid2">
         <label class="f"><span>Date</span><input type="date" bind:value={sDate} /></label>
@@ -415,7 +481,7 @@
       <button class="btn primary" onclick={() => (setting = true)}>📝 Set homework</button>
       {#each homework[editing.id] ?? [] as h (h.id)}
         <div class="srow">
-          <span><a href="/classroom/{editing.id}/homework/{h.id}"><b>{h.title}</b></a> · {h.items} puzzles · due {when(h.due)} · {h.done} finished{h.top[0] ? ` · top: ${h.top[0].name} (${h.top[0].points})` : ''}</span>
+          <span><a href="/castleclass/{editing.id}/homework/{h.id}"><b>{h.title}</b></a> · {h.items} puzzles · due {when(h.due)} · {h.done} finished{h.top[0] ? ` · top: ${h.top[0].name} (${h.top[0].points})` : ''}</span>
           <button class="btn ghost" onclick={() => dropHomework(editing!.id, h.id)} aria-label="Remove">✕</button>
         </div>
       {:else}
@@ -480,6 +546,21 @@
   }
   .pad {
     padding: 14px 16px;
+  }
+  .dash,
+  .rights {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .dash b,
+  .rights b {
+    font: 700 17px var(--font-title);
+  }
+  .rights.paused {
+    border-color: var(--loss);
   }
   .sessions {
     display: flex;

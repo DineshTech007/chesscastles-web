@@ -22,6 +22,8 @@
     onask,
     onclose,
     homeworkOnly = false,
+    pdfOk = true,
+    homeworkOk = true,
   }: {
     fen: string;
     /** Bank puzzles this class has had (not given again). */
@@ -31,6 +33,9 @@
     onclose: () => void;
     /** Outside a live class: only homework (and no question from the board). */
     homeworkOnly?: boolean;
+    /** The coach's rights (from the admin): puzzles from a PDF, homework. */
+    pdfOk?: boolean;
+    homeworkOk?: boolean;
   } = $props();
   // svelte-ignore state_referenced_locally
   let when = $state<'now' | 'homework'>(homeworkOnly ? 'homework' : 'now');
@@ -187,7 +192,7 @@
       <button class="chip" class:on={mode === 'play'} onclick={() => ((mode = 'play'), (pdf = false))}>Play it out vs computer</button>
     {/if}
     <button class="chip" class:on={mode === 'set' && !pdf} onclick={() => ((mode = 'set'), (pdf = false))}>Puzzle set</button>
-    <button class="chip" class:on={pdf} onclick={() => ((mode = 'set'), (pdf = true), !pdfItems.length && (importing = true))}>📄 From a PDF</button>
+    {#if pdfOk}<button class="chip" class:on={pdf} onclick={() => ((mode = 'set'), (pdf = true), !pdfItems.length && (importing = true))}>📄 From a PDF</button>{/if}
   </div>
 
   <div class="body">
@@ -279,7 +284,7 @@
 
       <hr />
       <label class="field inline"><span>Title</span><input type="text" maxlength="80" placeholder={defaultTitle} bind:value={title} /></label>
-      {#if !homeworkOnly}
+      {#if !homeworkOnly && homeworkOk}
         <div class="field" role="group" aria-label="When">
           <span>When</span>
           <div class="chips">

@@ -26,8 +26,9 @@
     started = `${id}/${hid}`;
     getClass(id)
       .then(async (info) => {
-        role = info.role;
-        if (info.role === 'coach') view = await getHomework(id, hid);
+        // An admin sees the answers as the coach does.
+        role = info.role === 'admin' ? 'coach' : info.role;
+        if (role === 'coach') view = await getHomework(id, hid);
         else hw = new HomeworkSession(id, hid, uid);
       })
       .catch((e) => (error = (e as Error).message));
@@ -37,10 +38,10 @@
   const students = $derived(view ? Object.values(view.progress).sort((a, b) => a.name.localeCompare(b.name)) : []);
 </script>
 
-<svelte:head><title>Homework · Chess Castles Classroom</title></svelte:head>
+<svelte:head><title>Homework · CastleClass · Chess Castles</title></svelte:head>
 
 <div class="page">
-  <a class="back" href="/classroom">← My classes</a>
+  <a class="back" href="/castleclass">← My classes</a>
   {#if !uid}
     <p>Sign in to do your homework.</p>
     <button class="btn primary" onclick={startSignIn}>Sign in</button>

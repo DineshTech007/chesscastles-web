@@ -1,5 +1,5 @@
 /**
- * Classroom voice and the coach's video, browser to browser (WebRTC, no paid service): everyone in the call is
+ * CastleClass voice and the coach's video, browser to browser (WebRTC, no paid service): everyone in the call is
  * connected to everyone else, audio and cameras both ways, like a meeting (owner, 2026-10-22: every tile shows the
  * camera or the name). A student's camera goes to the coach, and to the other students when the coach allows it
  * (`sendTo`). Students' video is small, and smaller the more people there are. Fine for
