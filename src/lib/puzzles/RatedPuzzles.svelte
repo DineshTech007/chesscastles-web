@@ -7,6 +7,8 @@
    * and the last seven days (rewards.ts). The rewards never change the rating.
    */
   import { onDestroy, onMount } from 'svelte';
+  import { get } from 'svelte/store';
+  import { session } from '$lib/auth';
   import { Tween } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
   import PuzzleBoard from '$lib/components/PuzzleBoard.svelte';
@@ -89,7 +91,45 @@
 
   const tick = setInterval(() => (now = Date.now()), 250);
   onDestroy(() => clearInterval(tick));
-  onMount(() => void next());
+  /**
+   * No skipping (owner, 2026-10-23: "remove the skip puzzle option, that's why they are easily gaining puzzle
+   * rating"): there is no Skip button, and a puzzle left without a move (the page reloaded or closed) counts as a
+   * miss the next time the puzzles open. The rating changes at the first move (rate), as before.
+   */
+  const PENDING = 'cc.puzzlePending';
+  /** Whose puzzle it is: the signed-in player, or '' (this browser, signed out). */
+  const whose = () => {
+    const s = get(session);
+    return s.status === 'in' ? s.uid : '';
+  };
+  function pending(p?: [string, number, string]) {
+    try {
+      if (p) localStorage.setItem(PENDING, JSON.stringify([...p, whose()]));
+      else localStorage.removeItem(PENDING);
+    } catch {
+      /* storage blocked: nothing kept */
+    }
+  }
+  async function settleLeft() {
+    // Once the sign-in is known (and the account's puzzle rating loaded), so the miss goes to the right rating.
+    const ready = () => {
+      const s = get(session);
+      return s.status === 'out' || (s.status === 'in' && !!s.profile);
+    };
+    for (let i = 0; i < 40 && !ready(); i++) await new Promise((r) => setTimeout(r, 200));
+    if (!ready()) return;
+    try {
+      const p = JSON.parse(localStorage.getItem(PENDING) ?? 'null') as [string, number, string, string] | null;
+      if (!Array.isArray(p) || typeof p[0] !== 'string' || !Number.isFinite(p[1])) return pending();
+      // Someone else's (another account on this browser): theirs to settle.
+      if ((p[3] ?? '') !== whose()) return;
+      pending();
+      await ratePuzzle(p[0], p[1], false, p[2] || 'mix');
+    } catch {
+      /* nothing left behind */
+    }
+  }
+  onMount(() => void settleLeft().then(next));
 
   async function next() {
     if (loading) return;
@@ -114,6 +154,7 @@
         return;
       }
       markSeen(p[0]);
+      pending([p[0], p[3], p[4][0] ?? 'mix']);
       current = p;
       result = undefined;
       change = undefined;
@@ -138,6 +179,7 @@
   function rate(clean: boolean) {
     if (!current) return;
     firstClean = clean;
+    pending();
     const p = current;
     rated = ratePuzzle(p[0], p[3], clean, p[4][0] ?? 'mix').then((c) => {
       if (current === p) change = c;
@@ -313,8 +355,6 @@
         {#if result === undefined}
           <p class="msg">{timerOn ? (left > 0 ? 'Find the best move before the clock runs out for a speed star!' : "Time's up, but keep going: you can still solve it!") : 'Find the best move, then keep finding them.'}</p>
           <p class="label small">⭐ solve it · ⭐ first try, no hint{timerOn ? ' · ⭐ before the clock ends' : ''}</p>
-          <button class="btn primary big" onclick={next} disabled={loading}>Skip to the next puzzle</button>
-          <p class="label small">Skipping doesn't change your rating.</p>
         {:else}
           <p class="msg" class:ok={result} class:bad={!result}>{result ? cheer(stars) : 'This one was tricky: watch the answer, then try the next.'}</p>
         {/if}
@@ -865,10 +905,6 @@
   }
   .small {
     font-size: 13px;
-  }
-  .big {
-    min-height: 48px;
-    font-size: 16px;
   }
   .switch {
     display: inline-flex;

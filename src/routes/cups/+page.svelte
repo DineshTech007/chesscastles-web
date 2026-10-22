@@ -83,7 +83,7 @@
     }
   }
   async function adminDo(c: CupSummary, what: 'start' | 'cancel') {
-    if (what === 'cancel' && !confirm($t('cups.confirmCallOff', { name: c.name }))) return;
+    if (!confirm(what === 'cancel' ? $t('cups.confirmCallOff', { name: c.name }) : $t('cups.confirmStart', { name: c.name }))) return;
     try {
       await (what === 'start' ? startCup(c.id) : cancelCup(c.id));
       if (what === 'start') await goto(`/cups/${c.id}`);
@@ -126,7 +126,7 @@
       {#each [0, 1, 2, 3] as i (i)}<div class="skel"></div>{/each}
     {:else}
       {#each today.cups as c (c.id)}
-        <CupCard cup={c} {now} {me} busy={busy === c.id} {admin} onjoin={() => join(c)} onleave={() => leave(c)} onstart={() => adminDo(c, 'start')} oncancel={() => adminDo(c, 'cancel')} />
+        <CupCard cup={c} {now} {me} busy={busy === c.id} onjoin={() => join(c)} onleave={() => leave(c)} />
       {/each}
     {/if}
   </section>
@@ -160,8 +160,17 @@
 
   {#if admin && today}
     <section class="card admin">
-      <h2>Admin</h2>
-      <p class="muted">{$t('cups.adminHelp')}</p>
+      <h2>🔒 Admin</h2>
+      <p class="muted">{$t('cups.adminOnly')}</p>
+      <ul class="adm">
+        {#each today.cups.filter((c) => c.status === 'open' || c.status === 'running') as c (c.id)}
+          <li>
+            <span>{c.name} · {c.entries} 👥</span>
+            {#if c.status === 'open'}<button class="btn small" onclick={() => adminDo(c, 'start')}>{$t('cups.startNow')}</button>{/if}
+            <button class="btn small ghost danger" onclick={() => adminDo(c, 'cancel')}>{$t('cups.callOff')}</button>
+          </li>
+        {/each}
+      </ul>
       {#if today.off}<button class="btn primary" onclick={() => switchCups(true)}>{$t('cups.turnOn')}</button>
       {:else}<button class="btn" onclick={() => switchCups(false)}>{$t('cups.turnOff')}</button>{/if}
     </section>
@@ -283,6 +292,27 @@
   }
   .muted {
     color: var(--muted);
+  }
+  .adm {
+    list-style: none;
+    margin: 8px 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .adm li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .adm li span {
+    flex: 1;
+    font-weight: 700;
+  }
+  .danger {
+    color: var(--loss);
   }
   @media (prefers-reduced-motion: reduce) {
     .trophy,

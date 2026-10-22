@@ -357,7 +357,8 @@ async function run(name, options) {
     await page.locator('cg-board').first().waitFor({ timeout: 20000 });
     const ids = new Set();
     let last;
-    for (let i = 0; i < 12; i++) {
+    // No Skip any more (2026-10-23): a reload brings the next puzzle (the one left counts as a miss).
+    for (let i = 0; i < 8; i++) {
       // The next puzzle may come from another difficulty band (the learning ladder), loaded from the network:
       // wait until it has really arrived, not a fixed moment.
       await page
@@ -373,9 +374,10 @@ async function run(name, options) {
       const seen = await page.evaluate(() => JSON.parse(localStorage.getItem('k24.seenPuzzles') ?? '[]'));
       last = seen[seen.length - 1];
       ids.add(last);
-      await tap(page.getByRole('button', { name: /next puzzle/i }));
+      await page.reload();
+      await page.locator('cg-board').first().waitFor({ timeout: 20000 });
     }
-    expect(ids.size === 12, `only ${ids.size} different puzzles in 12`);
+    expect(ids.size === 8, `only ${ids.size} different puzzles in 8`);
   });
 
   // 4e. Puzzle ratings (owner, 2026-10-21: "their rating goes very fast down"): a new player's rating is a "?" until
@@ -646,6 +648,14 @@ async function run(name, options) {
     await tap(page.locator('.editor .head .close'));
     await page.locator('.editor').waitFor({ state: 'detached', timeout: 5000 });
     return 'closed';
+  });
+
+  // 4s. Rated puzzles (owner, 2026-10-23): no Skip (kids skipped the hard ones and their rating only went up).
+  await check(name, page, 'puzzles: no Skip button', async () => {
+    await open(page, '/puzzles');
+    await page.locator('cg-board piece').first().waitFor({ timeout: 20000 });
+    expect((await page.getByRole('button', { name: /Skip/i }).count()) === 0, 'a Skip button is back');
+    return 'no skip';
   });
 
   // 4m. My awards (owner, 2026-10-22): the profile's trophy cabinet shows, every medal held to its box (a tall trophy

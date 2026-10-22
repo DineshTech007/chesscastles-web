@@ -12,23 +12,17 @@
     now,
     me = '',
     busy = false,
-    admin = false,
     compact = false,
     onjoin,
     onleave,
-    onstart,
-    oncancel,
   }: {
     cup: CupSummary;
     now: number;
     me?: string;
     busy?: boolean;
-    admin?: boolean;
     compact?: boolean;
     onjoin?: () => void;
     onleave?: () => void;
-    onstart?: () => void;
-    oncancel?: () => void;
   } = $props();
 
   const joined = $derived(!!me && cup.uids.includes(me));
@@ -76,12 +70,6 @@
       {:else}<a class="btn" {href}>{$t('cups.watch')}</a>{/if}
     {:else if cup.status === 'over'}
       <a class="btn ghost" {href}>{$t('cups.results')}</a>
-    {/if}
-    {#if admin && !compact && (cup.status === 'open' || cup.status === 'running')}
-      <span class="adm">
-        {#if cup.status === 'open' && cup.entries}<button class="link" onclick={onstart}>{$t('cups.startNow')}</button>{/if}
-        <button class="link danger" onclick={oncancel}>{$t('cups.callOff')}</button>
-      </span>
     {/if}
   </div>
 </article>
@@ -180,13 +168,6 @@
     text-decoration: underline;
     cursor: pointer;
     padding: 0;
-  }
-  .link.danger {
-    color: var(--loss);
-  }
-  .adm {
-    display: flex;
-    gap: 10px;
   }
   .compact {
     padding: 10px 12px;

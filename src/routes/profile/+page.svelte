@@ -170,7 +170,7 @@
       {#if $myPhoto}
         <img src={photoSrc($myPhoto)} alt="Your profile" />
       {:else if details?.avatar}
-        <img src="/avatars/{details.avatar}.webp" alt="Your picture" />
+        <img src="/avatars/{details.avatar}.webp" alt="Your avatar" />
       {:else}
         <span class="initials display">{initials}</span>
       {/if}

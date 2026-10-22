@@ -72,6 +72,14 @@
       sounds.start();
     }
   });
+  // Running and I'm in it: remembered as started (even if an admin started it early), so "back to your board"
+  // shows on other pages (src/lib/cups/CupAlerts.svelte).
+  let remembered = '';
+  $effect(() => {
+    if (!info || !inCup || status !== 'running' || remembered === id) return;
+    remembered = id;
+    rememberCup({ id, name: info.name, startAt: Math.min(info.startAt, Date.now()) });
+  });
   /** My first move is due (each side has 30 s for it). */
   const firstMoveLeft = $derived.by(() => {
     const g = myGame;

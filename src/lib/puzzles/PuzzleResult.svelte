@@ -322,4 +322,31 @@
     min-height: 52px;
     font-size: 18px;
   }
+  /* Phones and tablets: the board fills the screen and this card sits below it, so Next is pinned above the menu bar
+     (always in reach after a puzzle, without scrolling). */
+  @media (max-width: 899px) {
+    .pres {
+      padding-bottom: 72px;
+    }
+    .go {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(76px + env(safe-area-inset-bottom));
+      z-index: 55;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      animation: rise 0.3s ease-out;
+    }
+  }
+  @keyframes rise {
+    from {
+      transform: translateY(16px);
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .go {
+      animation: none;
+    }
+  }
 </style>
