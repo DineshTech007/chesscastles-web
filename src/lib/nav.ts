@@ -35,6 +35,7 @@ export const NAV_GROUPS: NavItem[][] = [
     { href: '/puzzles', label: 'Puzzles', icon: 'puzzle', match: ['/puzzles'], blurb: 'Unlimited puzzles, 17 themes' },
     { href: '/analysis', label: 'Analysis board', icon: 'analyse', match: ['/analysis'], blurb: 'Engine, game import and board editor' },
     { href: '/books', label: 'Audio Books', icon: 'book', match: ['/books'], blurb: 'Listen to or read the chess classics' },
+    { href: '/awards', label: 'My awards', icon: 'trophy', match: ['/awards'], badge: 'NEW', blurb: 'Every badge to win: games, ratings, puzzles' },
     { href: '/leaderboard', label: 'Leaderboard', icon: 'star', match: ['/leaderboard'], blurb: 'Top players, you and your friends' },
     { href: '/ratings', label: 'FIDE Ratings', icon: 'trophy', match: ['/ratings'], blurb: 'Rating lists and charts of FIDE players' },
   ],

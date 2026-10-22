@@ -10,6 +10,9 @@ import { loadStars } from '$lib/masters/data';
 import { loadTrophies, type Trophy } from '$lib/tournament/tournament';
 import { loadCoach } from '$lib/coach/progress';
 import { allProgress } from '$lib/books/books';
+import { myGames, outcome } from '$lib/stores/myGames';
+import { gamesOf, kfide } from '$lib/stores/me';
+import { session } from '$lib/auth';
 
 /**
  * Every award a player can win on Chess Castles, in one list (owner, 2026-10-22: "a section for each student with the
@@ -19,7 +22,7 @@ import { allProgress } from '$lib/books/books';
  * profile's progress, kept once won) so they show on every device and to friends.
  */
 
-export type AwardGroup = 'levels' | 'puzzles' | 'rush' | 'study' | 'lessons' | 'masters' | 'tournaments';
+export type AwardGroup = 'start' | 'games' | 'ratings' | 'levels' | 'puzzles' | 'rush' | 'study' | 'lessons' | 'masters' | 'tournaments';
 export interface Award extends Badge {
   group: AwardGroup;
   /** Its picture (a medal name or a whole path) and the number on it. */
@@ -27,6 +30,9 @@ export interface Award extends Badge {
 }
 
 export const GROUPS: { id: AwardGroup; name: string }[] = [
+  { id: 'start', name: 'Welcome' },
+  { id: 'games', name: 'Games' },
+  { id: 'ratings', name: 'CC Rating' },
   { id: 'levels', name: 'Puzzle levels' },
   { id: 'puzzles', name: 'Puzzles' },
   { id: 'rush', name: 'Puzzle Rush' },
@@ -48,6 +54,13 @@ const STUDY_ART: Record<string, { medal: string; n?: string }> = {
 const STUDY_ICON: Record<string, string> = { streak7: '📅', streak30: '🗓️', puzzles25: '🧩', games10: '⚔️', opening: '📖', points1000: '⭐' };
 
 export const AWARDS: Award[] = [
+  { id: 'welcome', group: 'start', icon: '👋', name: 'Welcome!', hint: 'Join Chess Castles', art: { medal: 'sprout' } },
+  { id: 'firstgame', group: 'games', icon: '♟', name: 'First game', hint: 'Finish your first game', art: { medal: 'target' } },
+  { id: 'firstwin', group: 'games', icon: '🏆', name: 'First win', hint: 'Win a game', art: { medal: 'star', n: '1' } },
+  { id: 'wins10', group: 'games', icon: '🥉', name: '10 wins', hint: 'Win 10 games', art: { medal: 'star', n: '10' } },
+  { id: 'wins50', group: 'games', icon: '🥈', name: '50 wins', hint: 'Win 50 games', art: { medal: 'star', n: '50' } },
+  { id: 'giant', group: 'games', icon: '⚔️', name: 'Giant killer', hint: 'Beat an opponent rated 200 or more above you', art: { medal: 'flame', n: '+200' } },
+  ...[1400, 1600, 1800, 2000].map((r): Award => ({ id: `cc${r}`, group: 'ratings', icon: '♜', name: `CC Rating ${r}`, hint: `Reach a CC Rating of ${r} (after 5 rated games)`, art: { medal: 'crown', n: String(r) } })),
   ...PUZZLE_LEVELS.slice(1).map((l): Award => ({ id: `lvl${l.name.toLowerCase()}`, group: 'levels', icon: l.glyph, name: `${l.name} level`, hint: `Reach a puzzle rating of ${l.from}`, art: { medal: l.image } })),
   ...BADGES.filter((b) => !b.id.startsWith('rush')).map((b): Award => ({ ...b, group: 'puzzles' })),
   ...BADGES.filter((b) => b.id.startsWith('rush')).map((b): Award => ({ ...b, group: 'rush' })),
@@ -80,16 +93,30 @@ export interface AwardInput {
   trophies: Trophy[];
   lessonsDone: number;
   chapters: number;
+  /** Games finished and won, and the biggest rating gap beaten (opponent minus me). */
+  played: number;
+  wins: number;
+  gap: number;
+  /** My CC Rating and the rated games behind it. */
+  cc: number;
+  ccGames: number;
 }
 
 /** The awards won, from the player's numbers. */
 export function earnedFrom(x: AwardInput): Set<string> {
   const won = new Set(x.badges.filter((b) => AWARDS.some((a) => a.id === b)));
+  won.add('welcome');
   for (const l of PUZZLE_LEVELS.slice(1)) if (x.puzzleRating >= l.from) won.add(`lvl${l.name.toLowerCase()}`);
   for (const b of studyBadges(x.study, x.now, x.openingsLearned)) if (b.earned) won.add(b.id);
   const stars = Object.values(x.masters);
   const total = stars.reduce((n, s) => n + s, 0);
   const add = (id: string, ok: boolean) => ok && won.add(id);
+  add('firstgame', x.played >= 1);
+  add('firstwin', x.wins >= 1);
+  add('wins10', x.wins >= 10);
+  add('wins50', x.wins >= 50);
+  add('giant', x.gap >= 200);
+  for (const r of [1400, 1600, 1800, 2000]) add(`cc${r}`, x.ccGames >= 5 && x.cc >= r);
   add('lesson1', x.lessonsDone >= 1);
   add('lessons10', x.lessonsDone >= 10);
   add('lessons25', x.lessonsDone >= 25);
@@ -112,7 +139,18 @@ export function earnedNow(now = Date.now()): Set<string> {
     const t = loadTree(o.id);
     return t && userNodes(t).length && learnedCount(t) === userNodes(t).length;
   }).length;
+  // Games: the signed-in player's own (another account on this browser has its own), else the ones played signed out.
+  const s = get(session);
+  const games = s.status === 'in' ? gamesOf(get(myGames), s.uid) : get(myGames).filter((g) => !g.owner);
+  const done = games.filter((g) => outcome(g) !== 'unfinished');
+  const won = done.filter((g) => outcome(g) === 'won');
+  const cc = get(kfide);
   return earnedFrom({
+    played: done.length,
+    wins: won.length,
+    gap: Math.max(0, ...won.filter((g) => g.opponentRating && g.myRating).map((g) => g.opponentRating! - g.myRating!)),
+    cc: cc.rating,
+    ccGames: cc.games,
     badges: get(rewards).badges,
     puzzleRating: get(puzzleRating),
     study: get(study),

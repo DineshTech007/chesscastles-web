@@ -166,6 +166,7 @@
         <a class="board" href="/leaderboard#rush">Puzzle Rush leaderboard →</a>
       </div>
       <button class="btn primary go" onclick={start} disabled={starting}>Start the rush 🚀</button>
+      {#if $rewards.rushBest}<RushStanding best={$rewards.rushBest} />{/if}
       <p class="label small">One try a puzzle. Rush doesn't change your puzzle rating.</p>
       {@render titles($rewards.rushBest)}
     </section>

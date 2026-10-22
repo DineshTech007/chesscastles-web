@@ -69,7 +69,7 @@
       </div>
     </a>
 
-    <a class="tcard art-card awards" href="/profile#awards">
+    <a class="tcard art-card awards" href="/awards">
       <img src="/art/trophy-256.webp" alt="" width="256" height="256" loading="lazy" />
       <div class="txt">
         <strong>{$t('home.awards.h')} <span class="newpill">{$t('nav.new')}</span></strong>

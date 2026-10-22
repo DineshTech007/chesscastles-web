@@ -45,6 +45,8 @@ export const mr: Record<Key, string> = {
   'nav.books.b': 'Chess ची क्लासिक पुस्तकं ऐका किंवा वाचा',
   'nav.leaderboard': 'Leaderboard',
   'nav.leaderboard.b': 'टॉप players, तुम्ही आणि तुमचे मित्र',
+  'nav.awards': 'माझे awards',
+  'nav.awards.b': 'जिंकण्यासारखे सर्व badges: games, ratings, puzzles',
   'nav.ratings': 'FIDE Ratings',
   'nav.ratings.b': 'FIDE players च्या rating lists आणि charts',
   'nav.guide': 'Chess Guide',

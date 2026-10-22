@@ -47,6 +47,8 @@ export const en = {
   'nav.books.b': 'Listen to or read the chess classics',
   'nav.leaderboard': 'Leaderboard',
   'nav.leaderboard.b': 'Top players, you and your friends',
+  'nav.awards': 'My awards',
+  'nav.awards.b': 'Every badge to win: games, ratings, puzzles',
   'nav.ratings': 'FIDE Ratings',
   'nav.ratings.b': 'Rating lists and charts of FIDE players',
   'nav.guide': 'Chess Guide',

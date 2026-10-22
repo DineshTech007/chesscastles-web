@@ -30,7 +30,7 @@ const DEVICES = {
   tablet: devices['iPad Mini'],
 };
 /** Pages every player can open without signing in. */
-const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision', '/castleclass', '/castleclass/admin'];
+const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision', '/castleclass', '/castleclass/admin', '/awards'];
 /** A tap must open its page within this long. */
 const TAP_MS = 6000;
 /** A phone should never download more than this in one file by itself. */
