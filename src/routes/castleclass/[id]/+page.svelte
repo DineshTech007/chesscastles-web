@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * A class's live room (CastleClass, src/lib/classroom): the whole window, the coach's laptop view or a student's.
+   * A class's live room (CastlesClass, src/lib/classroom): the whole window, the coach's laptop view or a student's.
    * Signed-in members only; the room keeps the class, so reloading or a dropped connection comes back to it as it is.
    */
   import { onDestroy } from 'svelte';
@@ -69,7 +69,7 @@
     const lines = [`♟ ${live!.info.name} · ${date}`, `Class time: ${took(r.ended - (r.started || r.ended))}`, '', `Present (${r.people.length}):`, ...r.people.map((p) => `• ${p.name} (${p.minutes} min)`)];
     if (r.scores.length) lines.push('', 'Leaderboard:', ...r.scores.slice(0, 10).map((s, i) => `${['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`} ${s.name}: ${s.points} pts, ${s.solved} solved`));
     if (r.tasks.length) lines.push('', 'Questions:', ...r.tasks.map((t, i) => `${i + 1}. ${t.title}${t.top[0] ? ` (best: ${t.top[0].name})` : ''}`));
-    lines.push('', 'CastleClass by Chess Castles');
+    lines.push('', 'CastlesClass by Chess Castles');
     return lines.join('\n');
   }
   async function copyReport() {
@@ -83,7 +83,7 @@
   }
 </script>
 
-<svelte:head><title>{live?.info.name || 'Class'} · CastleClass · Chess Castles</title></svelte:head>
+<svelte:head><title>{live?.info.name || 'Class'} · CastlesClass · Chess Castles</title></svelte:head>
 
 <div class="room">
   {#if !signedIn}

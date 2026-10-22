@@ -1,5 +1,5 @@
 /**
- * Whether the menus show CastleClass: to admins and coaches always; to a player only once a coach has enrolled them in
+ * Whether the menus show CastlesClass: to admins and coaches always; to a player only once a coach has enrolled them in
  * a class (owner, 2026-10-22: off by default). Asked once per sign-in; a yes is remembered on the device for
  * ten minutes, a no for two (a student just added sees it soon).
  */

@@ -38,7 +38,7 @@
   const students = $derived(view ? Object.values(view.progress).sort((a, b) => a.name.localeCompare(b.name)) : []);
 </script>
 
-<svelte:head><title>Homework · CastleClass · Chess Castles</title></svelte:head>
+<svelte:head><title>Homework · CastlesClass · Chess Castles</title></svelte:head>
 
 <div class="page">
   <a class="back" href="/castleclass">← My classes</a>

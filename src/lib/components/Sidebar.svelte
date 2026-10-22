@@ -28,9 +28,9 @@
   });
 
   let { collapsed = false }: { collapsed?: boolean } = $props();
-  // CastleClass: admins, coaches, and students once a coach enrols them (src/lib/classroom/visible.ts).
+  // CastlesClass: admins, coaches, and students once a coach enrols them (src/lib/classroom/visible.ts).
   $effect(() => checkClassroom($session.status === 'in' ? $session.uid : undefined));
-  const classroom = { href: '/castleclass', label: 'CastleClass', icon: 'coach' as IconName, match: ['/castleclass'] };
+  const classroom = { href: '/castleclass', label: 'CastlesClass', icon: 'coach' as IconName, match: ['/castleclass'] };
 
   type Item = { href: string; label: string; icon: IconName; match: string[]; not?: string[]; badge?: string; key?: Key };
   /** Home, then the five features only Chess Castles has (in gold), then the everyday pages (src/lib/nav.ts). */

@@ -15,6 +15,7 @@
   import People from './People.svelte';
   import Leaderboard from './Leaderboard.svelte';
   import EnginePanel from './EnginePanel.svelte';
+  import ClassBrand from './ClassBrand.svelte';
   import EvalBar from './EvalBar.svelte';
   import VideoTile from './VideoTile.svelte';
   import Gallery from './Gallery.svelte';
@@ -90,6 +91,7 @@
 <div class="student">
   <header class="top">
     <div class="name">
+      <ClassBrand />
       <b>{live.info.name}</b>
       <span class="muted">with {live.info.coachName}</span>
       {#if live.status !== 'open'}<span class="pill warn">Reconnecting…</span>{:else if !live.coachOnline}<span class="pill">Coach away</span>{:else}<span class="pill live">● LIVE</span>{/if}
@@ -210,7 +212,7 @@
   }
   .name {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
     flex: 1;
     min-width: 0;

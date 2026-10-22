@@ -97,6 +97,15 @@
     window.addEventListener('pointercancel', up);
   }
 
+  /**
+   * The dragged piece is drawn on the page itself: inside a dialog that is moved with a transform (CastlesClass), a
+   * fixed position counts from the dialog, and the piece showed away from the finger (owner, 2026-10-22).
+   */
+  function portal(node: HTMLElement) {
+    document.body.appendChild(node);
+    return { destroy: () => node.remove() };
+  }
+
   function tap(i: number) {
     if (dropped) return;
     if (tool === 'x') squares[i] = '';
@@ -116,7 +125,7 @@
     {/each}
   </div>
   {#if drag?.moved}
-    <div class="cg-wrap ghost" style="left: {drag.x - drag.size / 2}px; top: {drag.y - drag.size / 2}px; width: {drag.size}px; height: {drag.size}px" aria-hidden="true">
+    <div class="cg-wrap drag-ghost" use:portal style="left: {drag.x - drag.size / 2}px; top: {drag.y - drag.size / 2}px; width: {drag.size}px; height: {drag.size}px" aria-hidden="true">
       <piece class={pieceClass(drag.piece)}></piece>
     </div>
   {/if}
@@ -174,7 +183,8 @@
     /* A finger dragging a piece doesn't scroll the page. */
     touch-action: none;
   }
-  .ghost {
+  /* The piece being dragged (not .ghost: the Cancel button is a .btn.ghost and took this style). */
+  .drag-ghost {
     position: fixed;
     z-index: 200;
     pointer-events: none;

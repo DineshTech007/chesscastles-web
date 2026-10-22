@@ -144,7 +144,8 @@
   }
   const waText = $derived(info?.duel ? `I challenge you to a Puzzle Battle on Chess Castles! 🏁 ${raceLink(id)}` : `Race me in Puzzle Racer on Chess Castles! 🏎️ ${raceLink(id)}`);
   let friends = $state<Player[]>([]);
-  let invited = $state<Record<string, 'sent' | 'error'>>({});
+  /** Invites sent (when): after 15 seconds an invite can go again (the friend missed or lost the popup). */
+  let invited = $state<Record<string, { state: 'sent' | 'error'; at: number }>>({});
   $effect(() => {
     if (!info || info.open || phase !== 'lobby' || $session.status !== 'in') return;
     friendsList().then(
@@ -155,9 +156,9 @@
   async function challenge(p: Player) {
     try {
       await inviteToBattle(p.uid, id);
-      invited = { ...invited, [p.uid]: 'sent' };
+      invited = { ...invited, [p.uid]: { state: 'sent', at: Date.now() } };
     } catch {
-      invited = { ...invited, [p.uid]: 'error' };
+      invited = { ...invited, [p.uid]: { state: 'error', at: Date.now() } };
     }
   }
 
@@ -260,9 +261,11 @@
               <h3>Challenge a friend</h3>
               <div class="friends">
                 {#each friends as f (f.uid)}
-                  <button class="friend" onclick={() => challenge(f)} disabled={!!invited[f.uid]}>
+                  {@const inv = invited[f.uid]}
+                  {@const again = !inv || now - inv.at > 15_000}
+                  <button class="friend" onclick={() => challenge(f)} disabled={!again}>
                     <span class="dot" class:on={f.online}></span>{f.name}
-                    <span class="state">{invited[f.uid] === 'sent' ? 'Invited ✓' : invited[f.uid] === 'error' ? 'Could not invite' : f.online ? 'Online' : ''}</span>
+                    <span class="state">{!inv ? (f.online ? 'Online' : '') : inv.state === 'error' ? (again ? 'Try again' : 'Could not invite') : again ? 'Invited · invite again' : 'Invited ✓'}</span>
                   </button>
                 {/each}
               </div>

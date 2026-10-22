@@ -39,6 +39,7 @@
   import ConsentNotice from '$lib/components/ConsentNotice.svelte';
   import FriendRequests from '$lib/components/FriendRequests.svelte';
   import ChallengePopup from '$lib/components/ChallengePopup.svelte';
+  import ClassAlerts from '$lib/classroom/ClassAlerts.svelte';
   import { ongoingGames, ongoingHref, stopLichessEvents, syncLichessEvents, wakeLichessEvents } from '$lib/lichessEvents';
   import { consentNeeded, consentSynced, hasConsent, markConsentSynced, readConsent } from '$lib/consent';
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
@@ -505,6 +506,7 @@
 <ConsentNotice />
 {#if !noPopups}<FriendRequests />{/if}
 <ChallengePopup />
+<ClassAlerts />
 <PromotionHost />
 
 {#if dasara}

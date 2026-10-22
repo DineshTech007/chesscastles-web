@@ -551,17 +551,17 @@ async function run(name, options) {
     }
   });
 
-  // 4k. CastleClass: the coach's camera and everyone's microphone are allowed on our own pages (owner, 2026-10-22: the
+  // 4k. CastlesClass: the coach's camera and everyone's microphone are allowed on our own pages (owner, 2026-10-22: the
   // headers blocked the camera); local servers without the live headers pass.
   await check(name, page, 'castleclass: camera and microphone allowed', async () => {
     const res = await page.request.get(BASE + '/castleclass');
     const policy = res.headers()['permissions-policy'] ?? '';
-    expect(!policy || (/camera=\(self\)/.test(policy) && /microphone=\(self\)/.test(policy)), `Permissions-Policy blocks CastleClass: ${policy}`);
+    expect(!policy || (/camera=\(self\)/.test(policy) && /microphone=\(self\)/.test(policy)), `Permissions-Policy blocks CastlesClass: ${policy}`);
     return policy ? 'camera=(self), microphone=(self)' : 'no policy header here';
   });
 
-  // 4l. CastleClass was first called Classroom: links already sent (/classroom/<class>) still open the class.
-  await check(name, page, 'old classroom links open CastleClass', async () => {
+  // 4l. CastlesClass was first called Classroom: links already sent (/classroom/<class>) still open the class.
+  await check(name, page, 'old classroom links open CastlesClass', async () => {
     await open(page, '/classroom/abc123?watch=1');
     await page.waitForURL(/\/castleclass\/abc123\?watch=1$/, { timeout: 10000 });
     return new URL(page.url()).pathname;
@@ -604,6 +604,19 @@ async function run(name, options) {
     for (const n of [/Quick race/, /Race with friends/, /Puzzle Battle/]) expect(await page.getByRole('button', { name: n }).isVisible(), `no ${n} button`);
     expect((await page.locator('.road svg.car').count()) >= 6, 'no cars on the road');
     return 'quick, friends, battle';
+  });
+
+  // 4p. The board editor (owner, 2026-10-22): its buttons side by side (a style for the dragged piece once made Cancel
+  // float over "Analyse this position").
+  await check(name, page, 'board editor: buttons do not overlap', async () => {
+    await open(page, '/analysis');
+    await tap(page.getByRole('button', { name: /Clear \/ set up/ }));
+    await page.getByRole('heading', { name: 'Set up a position' }).waitFor({ timeout: 10000 });
+    const a = await page.getByRole('button', { name: 'Analyse this position' }).boundingBox();
+    const c = await page.getByRole('button', { name: 'Cancel' }).boundingBox();
+    const overlap = a && c && a.x < c.x + c.width && c.x < a.x + a.width && a.y < c.y + c.height && c.y < a.y + a.height;
+    expect(a && c && !overlap, 'Cancel lies over "Analyse this position"');
+    return 'side by side';
   });
 
   // 4m. My awards (owner, 2026-10-22): the profile's trophy cabinet shows, every medal held to its box (a tall trophy

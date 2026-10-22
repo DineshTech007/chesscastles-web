@@ -1,5 +1,5 @@
 /**
- * CastleClass (server/api-worker/src/classroom.ts): live classes. An admin makes players coaches with rights; a coach
+ * CastlesClass (server/api-worker/src/classroom.ts): live classes. An admin makes players coaches with rights; a coach
  * makes classes, enrols students and teaches on one shared board; every change goes through the class's live room
  * (a WebSocket), which keeps the whole class state, so a student who drops out comes back to the board as it is.
  * Admins see every class, watch any live class unseen, and get the issues list.
@@ -339,7 +339,7 @@ export const iceServers = (): Promise<RTCIceServer[]> =>
 
 export const classLink = (id: string) => `https://chesscastles.com/castleclass/${id}`;
 
-/** My classes (a student sees CastleClass only once a coach enrols them in one), whether I am an admin, my coach record. */
+/** My classes (a student sees CastlesClass only once a coach enrols them in one), whether I am an admin, my coach record. */
 export const classroomAccess = () => call<{ classes: ClassSummary[]; admin?: boolean; coach?: CoachRec | null }>('GET', '');
 export const adminDashboard = () => call<Dashboard>('GET', '/admin');
 export const saveCoach = (uid: string, change: { perms?: Partial<Perms>; active?: boolean; note?: string }) => call<{ ok: true; coach: CoachRec }>('PUT', `/coaches/${encodeURIComponent(uid)}`, change);

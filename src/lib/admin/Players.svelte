@@ -8,7 +8,7 @@
   import { KFIDE_SPEEDS, SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
   import { PLANS, PLANS_ON, PLAN_INFO, untilText, type Plan } from '$lib/plans';
 
-  let { can, openUid }: { can: Can[]; openUid?: string } = $props();
+  let { can, openUid, onmakecoach }: { can: Can[]; openUid?: string; /** CastlesClass coach access for this player (the CastlesClass tab). */ onmakecoach?: (p: { uid: string; name: string }) => void } = $props();
   // Opened from a report: show that player.
   $effect(() => {
     if (openUid) void show(openUid);
@@ -170,19 +170,26 @@
         <p class="label">From now on the player's {SPEED_LABEL[rSpeed]} games count from this rating (their earlier games stay in their history). It shows on leaderboards at once and on their own screens the next time they open Chess Castles. The reason box below goes into the admin log.</p>
       {/if}
 
+      {#if onmakecoach && (can.includes('owner') || can.includes('grant'))}
+        <h3 class="title">CastlesClass</h3>
+        <p class="label">A CastlesClass coach makes classes, enrols students and teaches live, with the rights you choose.</p>
+        <button class="btn primary" onclick={() => onmakecoach({ uid: u.uid, name: u.name || u.username })}>🎓 Make CastlesClass coach</button>
+      {/if}
+
       {#if !PLANS_ON}
         <!-- Everything is free: the only thing an admin still gives is access to the coach tools (students). -->
-        <h3 class="title">Coach tools</h3>
+        <h3 class="title">Student tools (Students page)</h3>
         {@const active = open.grants.filter((g) => g.start <= Date.now() && g.until > Date.now())}
         {#if active.length}
           {#each active as g (g.id)}
-            <p class="label">Coach tools until {date(g.until)}{g.note ? ` · ${g.note}` : ''} {#if can.includes('grant')}<button class="btn small" disabled={busy} onclick={() => act(() => revoke(g.id), 'Coach tools ended.')}>End now</button>{/if}</p>
+            <p class="label">Student tools until {date(g.until)}{g.note ? ` · ${g.note}` : ''} {#if can.includes('grant')}<button class="btn small" disabled={busy} onclick={() => act(() => revoke(g.id), 'Student tools ended.')}>End now</button>{/if}</p>
           {/each}
         {:else}
-          <p class="label">No coach tools. They let a coach add students and set them work.</p>
+          <p class="label">No student tools.</p>
         {/if}
         {#if can.includes('grant')}
-          <button class="btn primary" disabled={busy} onclick={() => act(() => grant(u.uid, 'elite', 365, 'Coach tools'), 'Coach tools given for a year.')}>Give coach tools (1 year)</button>
+          <button class="btn primary" disabled={busy} onclick={() => act(() => grant(u.uid, 'elite', 365, 'Coach tools'), 'Student tools given for a year.')}>Give student tools (1 year)</button>
+          <p class="label">For a private coach: on the Students page they add their own students and follow their progress, games and the work they set. This is not CastlesClass (that is the button above).</p>
         {/if}
       {:else}
       <h3 class="title">Plans</h3>

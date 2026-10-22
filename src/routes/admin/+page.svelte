@@ -18,12 +18,15 @@
   import Registrations from '$lib/admin/Registrations.svelte';
   import Wishes from '$lib/admin/Wishes.svelte';
   import WhatsApp from '$lib/admin/WhatsApp.svelte';
+  import AdminPanel from '$lib/classroom/AdminPanel.svelte';
 
-  type Tab = 'dashboard' | 'registrations' | 'players' | 'fairplay' | 'plans' | 'reports' | 'feedback' | 'wishes' | 'whatsapp' | 'team';
+  type Tab = 'dashboard' | 'registrations' | 'players' | 'castleclass' | 'fairplay' | 'plans' | 'reports' | 'feedback' | 'wishes' | 'whatsapp' | 'team';
   let tab = $state<Tab>('dashboard');
   let role = $state<{ role: Role; can: Can[] } | undefined>();
   let denied = $state(false);
   let openUid = $state<string | undefined>();
+  /** A player to make a CastlesClass coach (from Players): the CastlesClass tab opens their rights. */
+  let coachFor = $state<{ uid: string; name: string } | undefined>();
 
   $effect(() => {
     if ($session.status !== 'in') return;
@@ -35,7 +38,7 @@
   onMount(() => {
     const fromHash = () => {
       const h = location.hash.slice(1) as Tab;
-      if (['dashboard', 'registrations', 'players', 'fairplay', 'plans', 'reports', 'feedback', 'wishes', 'whatsapp', 'team'].includes(h)) tab = h;
+      if (['dashboard', 'registrations', 'players', 'castleclass', 'fairplay', 'plans', 'reports', 'feedback', 'wishes', 'whatsapp', 'team'].includes(h)) tab = h;
     };
     fromHash();
     // The dashboard's tiles link to #reports and #feedback.
@@ -58,6 +61,7 @@
         ['dashboard', 'Dashboard', 'view'],
         ['registrations', 'Registrations', 'view'],
         ['players', 'Players', 'view'],
+        ['castleclass', 'CastlesClass', 'view'],
         ['fairplay', 'Fair play', 'view'],
         ['plans', PLANS_ON ? 'Plans & offers' : 'Site banner', 'view'],
         ['reports', 'Reports', 'reports'],
@@ -94,7 +98,10 @@
     {:else if tab === 'registrations'}
       <Registrations />
     {:else if tab === 'players'}
-      <Players can={role.can} {openUid} />
+      <Players can={role.can} {openUid} onmakecoach={(p) => ((coachFor = p), go('castleclass'))} />
+    {:else if tab === 'castleclass'}
+      <p class="label">CastlesClass coaches and their rights, classes live now, and problems in class. <a href="/castleclass/admin">Open on its own page</a></p>
+      <AdminPanel add={coachFor} />
     {:else if tab === 'fairplay'}
       <FairPlay can={role.can} />
     {:else if tab === 'plans'}

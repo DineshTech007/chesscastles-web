@@ -1,9 +1,9 @@
 <script lang="ts">
   /**
-   * CastleClass: classes, sessions and homework. A coach (made by an admin, with the rights the admin gave) makes a
+   * CastlesClass: classes, sessions and homework. A coach (made by an admin, with the rights the admin gave) makes a
    * class, enrols its students, plans its sessions, posts announcements, sets homework and starts the class. Admins
    * also see every coach's classes (to manage or watch them; the dashboard is /castleclass/admin). A player sees
-   * CastleClass only once a coach enrols them (owner, 2026-10-22: off by default): their classes, the next session,
+   * CastlesClass only once a coach enrols them (owner, 2026-10-22: off by default): their classes, the next session,
    * announcements, homework to do, and the live class to join.
    */
   import { goto } from '$app/navigation';
@@ -265,11 +265,11 @@
   const todo = (c: ClassSummary) => (homework[c.id] ?? []).filter((h) => !h.mine?.done && h.due > now);
 </script>
 
-<svelte:head><title>CastleClass · Chess Castles</title></svelte:head>
+<svelte:head><title>CastlesClass · Chess Castles</title></svelte:head>
 
 <div class="page">
   <header class="head">
-    <h1>CastleClass</h1>
+    <h1>CastlesClass</h1>
     <p class="muted">Live chess classes: one shared board, voice, questions with a timer, games, homework and leaderboards.</p>
   </header>
 
@@ -299,7 +299,7 @@
       </div>
     {/if}
     {#if teaching}
-      <p class="muted small">Players see CastleClass only once you enrol them in a class (Manage, then Enrolled students).</p>
+      <p class="muted small">Players see CastlesClass only once you enrol them in a class (Manage, then Enrolled students).</p>
     {/if}
 
     {#if classes.length}
@@ -450,7 +450,7 @@
       <div class="chips">
         {#each found as m (m.uid)}<button class="chip" class:on={has(m.uid)} onclick={() => toggle(m)}>{has(m.uid) ? '✓ ' : '+ '}{m.name}</button>{/each}
       </div>
-      <p class="muted small">Only enrolled students see CastleClass (in their menu) and can join, signed in with the account you enrol here.</p>
+      <p class="muted small">Only enrolled students see CastlesClass (in their menu) and can join, signed in with the account you enrol here.</p>
     {:else if edTab === 'schedule'}
       <div class="grid2">
         <label class="f"><span>Date</span><input type="date" bind:value={sDate} /></label>

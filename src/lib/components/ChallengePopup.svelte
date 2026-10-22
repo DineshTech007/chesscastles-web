@@ -48,7 +48,7 @@
   async function accept(c: IncomingChallenge) {
     // A Puzzle Battle: no Lichess game, straight into the race on Chess Castles.
     if (c.cc?.battle) {
-      markAnswered(c.id);
+      markAnswered(c.id, c.at);
       void answerInvite(c.id, 'accepted');
       track('feature', 'battle_accept');
       incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
@@ -59,7 +59,7 @@
     // A Chess Castles invite (invites.ts): answered on Chess Castles too. Bullet: its game on lichess.org, opened
     // from this tap (Lichess plays bullet only there).
     if (c.cc) {
-      markAnswered(c.id);
+      markAnswered(c.id, c.at);
       void answerInvite(c.id, 'accepted');
       if (c.cc.join) {
         window.open(c.cc.join, '_blank', 'noopener');
@@ -89,7 +89,7 @@
     incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
     track('feature', 'challenge_decline');
     if (c.cc) {
-      markAnswered(c.id);
+      markAnswered(c.id, c.at);
       return void answerInvite(c.id, 'declined');
     }
     if (t) await declineChallenge(t, c.id).catch(() => {});

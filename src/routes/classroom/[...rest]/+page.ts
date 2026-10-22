@@ -1,4 +1,4 @@
-// CastleClass was first called Classroom (owner, 2026-10-22): old links (/classroom, /classroom/<class>…) still work.
+// CastlesClass was first called Classroom (owner, 2026-10-22): old links (/classroom, /classroom/<class>…) still work.
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 

@@ -23,6 +23,7 @@
   import EvalBar from './EvalBar.svelte';
   import Leaderboard from './Leaderboard.svelte';
   import VideoTile from './VideoTile.svelte';
+  import ClassBrand from './ClassBrand.svelte';
   import Gallery from './Gallery.svelte';
   import MoveList from '$lib/components/MoveList.svelte';
   import BoardEditor from '$lib/components/BoardEditor.svelte';
@@ -288,6 +289,7 @@
 <div class="coach">
   <header class="top">
     <div class="name">
+      <ClassBrand />
       <b>{live.info.name}</b>
       <span class="pill live">● LIVE {liveFor}</span>
       {#if live.status !== 'open'}<span class="pill warn">Reconnecting…</span>{/if}
@@ -579,12 +581,17 @@
     border-bottom: 1px solid var(--border);
     flex-wrap: wrap;
   }
+  /* The brand, the class's name and LIVE keep their room: the buttons go to the next line instead. */
   .name {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex: 1;
+    flex: 1 0 auto;
     min-width: 200px;
+  }
+  .name b,
+  .name .pill {
+    white-space: nowrap;
   }
   .name b {
     font: 700 20px var(--font-title);

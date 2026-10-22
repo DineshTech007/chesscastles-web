@@ -113,7 +113,8 @@ async function watchSent(token: string, id: string, to: string) {
 
 /** Answered here already (the server's list catches up a moment later). */
 const answered = new Set<string>();
-export const markAnswered = (id: string) => answered.add(id);
+/** By invite and when it was sent: the same battle sent again is a new invite. */
+export const markAnswered = (id: string, at = 0) => answered.add(`${id}:${at}`);
 
 const toChallenge = (i: ServerInvite): IncomingChallenge => {
   if (i.battle) return { id: i.id, from: i.name, fromTitle: i.title, fromRating: i.rating, minutes: 0, increment: 0, rated: false, at: i.at, cc: { from: i.from, battle: true } };
@@ -133,7 +134,7 @@ async function look() {
   if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !onGame() && lichessToken()) {
     const list = await myInvites().catch(() => undefined);
     if (list && running) {
-      const fresh = list.filter((i) => !answered.has(i.id)).map(toChallenge);
+      const fresh = list.filter((i) => !answered.has(`${i.id}:${i.at}`) && !answered.has(`${i.id}:0`)).map(toChallenge);
       incomingChallenges.update((l) => [...l.filter((c) => !c.cc), ...fresh]);
     }
   }
