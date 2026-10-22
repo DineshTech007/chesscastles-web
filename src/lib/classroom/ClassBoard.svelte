@@ -27,6 +27,9 @@
     coordinates = true,
     label = 'Class board',
     onmove,
+    premovable = false,
+    queued = [],
+    onpremove,
     ondraw,
     onselect,
   }: {
@@ -50,9 +53,20 @@
     coordinates?: boolean;
     label?: string;
     onmove?: (orig: Key, dest: Key) => void;
+    /** Premoves (the game zone): moves made while the opponent thinks, queued by the page. */
+    premovable?: boolean;
+    queued?: Key[];
+    onpremove?: (orig: Key, dest: Key) => void;
     ondraw?: (shapes: Shape[]) => void;
     onselect?: (key: Key) => void;
   } = $props();
+
+  let board = $state<ReturnType<typeof Board>>();
+  /** The board's own premove dropped (the page keeps the queue). */
+  export function cancelPremove() {
+    board?.cancelPremove();
+    board?.unselect();
+  }
 
   /** Only the pawns: the other pieces left out of the position shown. */
   const shown = $derived.by(() => {
@@ -94,6 +108,7 @@
 
 <div class="cb" class:blind class:coach>
   <Board
+    bind:this={board}
     fen={shown}
     {orientation}
     turnColor={fen.split(' ')[1] === 'b' ? 'black' : 'white'}
@@ -107,6 +122,9 @@
     {coordinates}
     {label}
     {onmove}
+    {premovable}
+    {queued}
+    {onpremove}
     ondraw={ondraw ? changed : undefined}
     {onselect}
   />

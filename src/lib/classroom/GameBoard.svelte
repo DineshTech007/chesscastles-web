@@ -13,6 +13,10 @@
   import { destsOf, moveFromKeys } from '$lib/chess/position';
   import { promotionFor } from '$lib/chess/promotion';
   import { sounds } from '$lib/sound';
+  import { makeBoardFen } from 'chessops/fen';
+  import { keyOf } from '$lib/chess/position';
+  import { PremoveQueue } from '$lib/game/premoves';
+  import { premovesOn } from '$lib/preferences';
 
   let { live, game, coordinates = true }: { live: Live; game: Game; coordinates?: boolean } = $props();
 
@@ -36,6 +40,45 @@
     if (n > heard && heard) sounds.move();
     heard = n;
   });
+
+  // Premoves (owner, 2026-10-22: "we can't do premoves in game zone"): queued while the opponent thinks, the first
+  // played the moment their move arrives (as in online games: src/lib/game/premoves.ts).
+  const queue = new PremoveQueue();
+  let qv = $state(0);
+  let cb = $state<ReturnType<typeof ClassBoard>>();
+  function onpremove(orig: Key, dest: Key) {
+    if (!at.pos || !mine) return;
+    const shown = at.pos.clone();
+    shown.board = queue.preview(shown.board);
+    queue.add(moveFromKeys(shown, orig, dest));
+    cb?.cancelPremove();
+    qv++;
+  }
+  function clearPremoves() {
+    queue.clear();
+    cb?.cancelPremove();
+    qv++;
+  }
+  $effect(() => {
+    void game.moves.length;
+    if (game.result && queue.length) return clearPremoves();
+    if (!myTurn || !queue.length || !at.pos) return;
+    const next = queue.takeNext(at.pos);
+    qv++;
+    if (!next) return cb?.cancelPremove();
+    sent = game.moves.length;
+    live.gameMove(game.id, makeUci(next));
+  });
+  /** With premoves queued, the board shows where they lead (the opponent's replies not known yet). */
+  const shownFen = $derived.by(() => {
+    void qv;
+    return queue.length && !myTurn && at.pos ? `${makeBoardFen(queue.preview(at.pos.board))} ${at.pos.turn[0]} - - 0 1` : at.fen;
+  });
+  const queued = $derived.by(() => {
+    void qv;
+    return queue.moves.flatMap((m) => [keyOf(m.from), keyOf(m.to)]) as Key[];
+  });
+  const playing = $derived(!game.result && !!mine && !!at.pos);
 
   async function onmove(orig: Key, dest: Key) {
     if (!myTurn || !at.pos) return;
@@ -78,7 +121,21 @@
     {#if game.clock}<span class="clk num" class:low={(left(top) ?? 1) < 20_000}>{fmt(left(top))}</span>{/if}
   </div>
   {#key remount}
-    <ClassBoard fen={at.fen} orientation={orient} lastMove={at.last as Key[] | undefined} check={at.check} movable={myTurn ? mine : undefined} dests={myTurn && at.pos ? destsOf(at.pos) : new Map()} {coordinates} label="Game board" {onmove} />
+    <ClassBoard
+      bind:this={cb}
+      fen={shownFen}
+      orientation={orient}
+      lastMove={at.last as Key[] | undefined}
+      check={at.check}
+      movable={playing ? mine : undefined}
+      dests={myTurn && at.pos ? destsOf(at.pos) : new Map()}
+      premovable={$premovesOn && playing}
+      {queued}
+      {coordinates}
+      label="Game board"
+      {onmove}
+      {onpremove}
+    />
   {/key}
   <div class="player" class:turn={!game.result && at.turn === orient}>
     <span class="nm">{orient === 'white' ? '♔' : '♚'} {nameOf(orient)}{mine ? ' (you)' : ''}</span>
@@ -89,6 +146,7 @@
   {:else if mine}
     <div class="acts">
       {#if myTurn}<span class="your">Your move</span>{:else}<span class="muted">{nameOf(at.turn)} to move</span>{/if}
+      {#if queued.length}<button class="btn ghost" onclick={clearPremoves}>Cancel premoves ({queued.length / 2})</button>{/if}
       {#if game.draw && game.draw !== me}
         <button class="btn primary" onclick={() => live.offerDraw(game.id)}>Accept the draw</button>
       {:else}

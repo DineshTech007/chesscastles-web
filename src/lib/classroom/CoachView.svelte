@@ -8,6 +8,7 @@
    */
   import { onMount } from 'svelte';
   import type { Key } from '@lichess-org/chessground/types';
+  import type { DrawShape } from '@lichess-org/chessground/draw';
   import type { NormalMove } from 'chessops/types';
   import { makeUci } from 'chessops/util';
   import { makeFen, parseFen } from 'chessops/fen';
@@ -59,6 +60,17 @@
   let ending = $state(false);
   let engineOn = $state(true);
   let engInfo = $state<EngineInfo | undefined>();
+  let engLines = $state<EngineInfo[]>([]);
+  /** The engine's three best moves as arrows on this board only (the class doesn't see them): the best the thickest. */
+  const engineArrows = $derived<DrawShape[]>(
+    engineOn
+      ? engLines.slice(0, 3).flatMap((l, i) => {
+          const u = l.pv[0];
+          return u ? [{ orig: u.slice(0, 2) as Key, dest: u.slice(2, 4) as Key, brush: i === 0 ? 'paleBlue' : 'paleGrey', modifiers: { lineWidth: [14, 9, 6][i] } }] : [];
+        })
+      : [],
+  );
+
   let remount = $state(0);
   let copied = $state('');
   let note = $state('');
@@ -304,7 +316,7 @@
       </div>
       <div class="acts">
         <button class="btn primary" onclick={() => (asking = true)} title="Q">❓ Ask a question</button>
-        {#if live.may('games')}<button class="btn" onclick={() => (gaming = true)} title="G">🎮 Games</button>{/if}
+        {#if live.may('games')}<button class="btn" onclick={() => (gaming = true)} title="G">🎮 Game zone</button>{/if}
         <button class="btn" onclick={() => (tab = 'lb')}>🏆 Leaderboard</button>
         <button class="btn ghost" onclick={() => (reporting = true)} title="Tell the admin about a problem (voice, camera, the board…)">⚠ Report a problem</button>
         <button class="btn ghost" onclick={fullscreen} title="Full screen">⛶</button>
@@ -320,7 +332,7 @@
       <div class="views" role="tablist" aria-label="View">
         <button role="tab" class:on={view === 'board'} onclick={() => (view = 'board')}>♟ Class board</button>
         {#if live.task}<button role="tab" class:on={view === 'students'} onclick={() => (view = 'students')}>👥 Students' boards{live.task.over ? '' : ' ●'}</button>{/if}
-        {#if live.games.length}<button role="tab" class:on={view === 'games'} onclick={() => (view = 'games')}>🎮 Games ({live.games.length})</button>{/if}
+        {#if live.games.length}<button role="tab" class:on={view === 'games'} onclick={() => (view = 'games')}>🎮 Game zone ({live.games.length})</button>{/if}
         <button role="tab" class:on={view === 'cams'} onclick={() => (view = 'cams')}>👥 Gallery{studentCams ? ` (${studentCams} 📷)` : ''}</button>
       </div>
       {#if view === 'students' && live.task}
@@ -365,6 +377,7 @@
                 label="The class board"
                 {onmove}
                 ondraw={watch ? undefined : (shapes) => set({ shapes })}
+                autoShapes={engineArrows}
                 {onselect}
               />
             {/key}
@@ -401,7 +414,7 @@
           <button class="tool" onclick={() => (helpOpen = !helpOpen)} title="Keys (?)">?</button>
           {#if copied}<span class="copied">{copied}</span>{/if}
         </div>{/if}
-        {#if engineOn}<div class="engine"><EnginePanel fen={at.fen} bind:info={engInfo} /></div>{/if}
+        {#if engineOn}<div class="engine"><EnginePanel fen={at.fen} bind:info={engInfo} bind:lines={engLines} onplay={watch ? undefined : playUci} /></div>{/if}
       {/if}
     </section>
 
@@ -515,7 +528,7 @@
       <li>Right-drag: arrows and circles; <kbd>A</kbd> changes the colour (Shift, Ctrl, Alt give others)</li>
       <li><kbd>S</kbd> colour squares (then click squares)</li>
       <li><kbd>Esc</kbd> or <kbd>X</kbd> clear arrows and squares</li>
-      <li><kbd>F</kbd> flip · <kbd>N</kbd> new board · <kbd>Q</kbd> ask a question · <kbd>G</kbd> games</li>
+      <li><kbd>F</kbd> flip · <kbd>N</kbd> new board · <kbd>Q</kbd> ask a question · <kbd>G</kbd> game zone</li>
       <li><kbd>C</kbd> square names · <kbd>P</kbd> only pawns · <kbd>B</kbd> blindfold · <kbd>H</kbd> hide moves · <kbd>E</kbd> engine</li>
     </ul>
     <button class="btn" onclick={() => (helpOpen = false)}>Close</button>

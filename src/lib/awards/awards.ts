@@ -65,8 +65,11 @@ export const AWARDS: Award[] = [
   { id: 'race1', group: 'racer', icon: '🏎️', name: 'First race', hint: 'Finish a Puzzle Racer race', art: { medal: 'rocket', n: '1' } },
   { id: 'racewin', group: 'racer', icon: '🏁', name: 'Race winner', hint: 'Win a Puzzle Racer race', art: { medal: '/art/trophy-256.webp', n: '1st' } },
   { id: 'battlewin', group: 'racer', icon: '⚔️', name: 'Battle winner', hint: 'Win a Puzzle Battle against a friend', art: { medal: 'flame', n: '⚔' } },
+  { id: 'racer10', group: 'racer', icon: '🚗', name: 'Rookie racer', hint: 'Score 10 in one race', art: { medal: 'rocket', n: '10' } },
   { id: 'racer25', group: 'racer', icon: '🚀', name: 'Speed racer', hint: 'Score 25 in one race', art: { medal: 'rocket', n: '25' } },
+  { id: 'racer40', group: 'racer', icon: '⚡', name: 'Turbo racer', hint: 'Score 40 in one race', art: { medal: 'titan', n: '40' } },
   { id: 'racer50', group: 'racer', icon: '🏆', name: 'Racing legend', hint: 'Score 50 in one race', art: { medal: 'titan', n: '50' } },
+  { id: 'racer70', group: 'racer', icon: '👑', name: 'Racing champion', hint: 'Score 70 in one race', art: { medal: 'immortal', n: '70' } },
   ...[1400, 1600, 1800, 2000].map((r): Award => ({ id: `cc${r}`, group: 'ratings', icon: '♜', name: `CC Rating ${r}`, hint: `Reach a CC Rating of ${r} (after 5 rated games)`, art: { medal: 'crown', n: String(r) } })),
   ...PUZZLE_LEVELS.slice(1).map((l): Award => ({ id: `lvl${l.name.toLowerCase()}`, group: 'levels', icon: l.glyph, name: `${l.name} level`, hint: `Reach a puzzle rating of ${l.from}`, art: { medal: l.image } })),
   ...BADGES.filter((b) => !b.id.startsWith('rush')).map((b): Award => ({ ...b, group: 'puzzles' })),
@@ -122,8 +125,7 @@ export function earnedFrom(x: AwardInput): Set<string> {
   add('race1', x.racer.races >= 1);
   add('racewin', x.racer.wins >= 1);
   add('battlewin', x.racer.battleWins >= 1);
-  add('racer25', x.racer.best >= 25);
-  add('racer50', x.racer.best >= 50);
+  for (const n of [10, 25, 40, 50, 70]) add(`racer${n}`, x.racer.best >= n);
   add('firstgame', x.played >= 1);
   add('firstwin', x.wins >= 1);
   add('wins10', x.wins >= 10);

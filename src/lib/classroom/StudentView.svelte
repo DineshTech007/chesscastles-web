@@ -6,6 +6,7 @@
    * coach, the leaderboards, and (when the coach allows) the moves, the engine and the games database.
    */
   import type { Key } from '@lichess-org/chessground/types';
+  import type { DrawShape } from '@lichess-org/chessground/draw';
   import { makeUci } from 'chessops/util';
   import ClassBoard from './ClassBoard.svelte';
   import TaskSolver from './TaskSolver.svelte';
@@ -37,6 +38,16 @@
   let tab = $state<'chat' | 'lb' | 'moves' | 'db' | 'people'>('chat');
   let remount = $state(0);
   let engInfo = $state<EngineInfo | undefined>();
+  let engLines = $state<EngineInfo[]>([]);
+  /** When the coach gives the class the engine: its three best moves as arrows on my board. */
+  const engineArrows = $derived<DrawShape[]>(
+    live.settings.engine
+      ? engLines.slice(0, 3).flatMap((l, i) => {
+          const u = l.pv[0];
+          return u ? [{ orig: u.slice(0, 2) as Key, dest: u.slice(2, 4) as Key, brush: i === 0 ? 'paleBlue' : 'paleGrey', modifiers: { lineWidth: [14, 9, 6][i] } }] : [];
+        })
+      : [],
+  );
   const book = new CloudBook();
   /** Back to the coach's board during a question or a game (to look), or the question/game. */
   let peek = $state(false);
@@ -132,6 +143,7 @@
                 blind={b.blind}
                 pawns={b.pawns}
                 label="The coach's board"
+                autoShapes={engineArrows}
                 {onmove}
               />
             {/key}
@@ -141,7 +153,7 @@
           <button class="btn ghost small" onclick={() => (flipped = !flipped)}>⇅ Flip</button>
           {#if live.settings.moves && b.moves.length}<span class="muted small">Move {Math.ceil(b.ply / 2)}{b.ply % 2 ? '' : b.ply ? '…' : ''}</span>{/if}
         </div>
-        {#if live.settings.engine}<EnginePanel fen={at.fen} bind:info={engInfo} />{/if}
+        {#if live.settings.engine}<EnginePanel fen={at.fen} bind:info={engInfo} bind:lines={engLines} />{/if}
       {/if}
     </section>
 

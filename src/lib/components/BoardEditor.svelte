@@ -3,6 +3,8 @@
    * Set up any position: clear the board, tap a piece below then tap
    * squares to place it (tap again to remove), choose who is to move, and
    * analyse it. Castling rights follow from where the kings and rooks stand.
+   * Dragging works too (owner, 2026-10-22: "we can't drag the pieces"): a piece on the board to another square, off
+   * the board to take it away, or one from the pieces below straight onto a square.
    */
   import { positionFromFen } from '$lib/chess/position';
   import '@lichess-org/chessground/assets/chessground.base.css';
@@ -58,7 +60,45 @@
     }
   });
 
+  // ----- dragging (mouse and touch): a tap stays a tap; a move of a few pixels is a drag.
+  let boardEl = $state<HTMLDivElement>();
+  let drag = $state<{ piece: string; from: number | null; x: number; y: number; size: number; moved: boolean } | undefined>();
+  /** The click that follows a drop is not a tap. */
+  let dropped = false;
+  function startDrag(e: PointerEvent, piece: string, from: number | null) {
+    if (!piece || (e.pointerType === 'mouse' && e.button !== 0) || !boardEl) return;
+    const size = boardEl.getBoundingClientRect().width / 8;
+    const sx = e.clientX;
+    const sy = e.clientY;
+    drag = { piece, from, x: sx, y: sy, size, moved: false };
+    const move = (ev: PointerEvent) => {
+      if (!drag) return;
+      if (!drag.moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 6) return;
+      drag = { ...drag, x: ev.clientX, y: ev.clientY, moved: true };
+    };
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      const d = drag;
+      drag = undefined;
+      if (!d?.moved || ev.type === 'pointercancel') return;
+      dropped = true;
+      setTimeout(() => (dropped = false), 60);
+      const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-sq]');
+      const to = el ? Number(el.getAttribute('data-sq')) : -1;
+      if (to >= 0) {
+        if (d.from !== null) squares[d.from] = '';
+        squares[to] = d.piece;
+      } else if (d.from !== null) squares[d.from] = '';
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+
   function tap(i: number) {
+    if (dropped) return;
     if (tool === 'x') squares[i] = '';
     else squares[i] = squares[i] === tool ? '' : tool;
   }
@@ -67,23 +107,28 @@
 </script>
 
 <div class="editor">
-  <div class="cg-wrap board" class:flipped>
+  <div class="cg-wrap board" class:flipped bind:this={boardEl}>
     {#each order as i (i)}
       {@const dark = (Math.floor(i / 8) + (i % 8)) % 2 === 1}
-      <button class="sq" class:dark onclick={() => tap(i)} aria-label="{'abcdefgh'[i % 8]}{8 - Math.floor(i / 8)}{squares[i] ? `: ${pieceClass(squares[i])}` : ''}">
-        {#if squares[i]}<piece class={pieceClass(squares[i])}></piece>{/if}
+      <button class="sq" class:dark data-sq={i} onpointerdown={(e) => startDrag(e, squares[i], i)} onclick={() => tap(i)} aria-label="{'abcdefgh'[i % 8]}{8 - Math.floor(i / 8)}{squares[i] ? `: ${pieceClass(squares[i])}` : ''}">
+        {#if squares[i] && !(drag?.moved && drag.from === i)}<piece class={pieceClass(squares[i])}></piece>{/if}
       </button>
     {/each}
   </div>
+  {#if drag?.moved}
+    <div class="cg-wrap ghost" style="left: {drag.x - drag.size / 2}px; top: {drag.y - drag.size / 2}px; width: {drag.size}px; height: {drag.size}px" aria-hidden="true">
+      <piece class={pieceClass(drag.piece)}></piece>
+    </div>
+  {/if}
 
   <div class="side">
     <div class="cg-wrap palette" role="radiogroup" aria-label="Piece to place">
       {#each ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p'] as c (c)}
-        <button class="pick" class:on={tool === c} role="radio" aria-checked={tool === c} aria-label={pieceClass(c)} onclick={() => (tool = c)}><piece class={pieceClass(c)}></piece></button>
+        <button class="pick" class:on={tool === c} role="radio" aria-checked={tool === c} aria-label={pieceClass(c)} onpointerdown={(e) => startDrag(e, c, null)} onclick={() => !dropped && (tool = c)}><piece class={pieceClass(c)}></piece></button>
       {/each}
       <button class="pick erase" class:on={tool === 'x'} role="radio" aria-checked={tool === 'x'} aria-label="Remove pieces" onclick={() => (tool = 'x')}>✕</button>
     </div>
-    <p class="label hint">Tap a piece, then tap squares to place it. Tap a piece on the board again to remove it.</p>
+    <p class="label hint">Drag pieces onto the board, between squares, or off it to remove them. Or tap a piece, then tap squares to place it.</p>
 
     <div class="segmented" role="group" aria-label="To move">
       <button aria-pressed={turn === 'w'} onclick={() => (turn = 'w')}>White to move</button>
@@ -126,6 +171,15 @@
     padding: 0;
     background: var(--board-light);
     cursor: pointer;
+    /* A finger dragging a piece doesn't scroll the page. */
+    touch-action: none;
+  }
+  .ghost {
+    position: fixed;
+    z-index: 200;
+    pointer-events: none;
+    filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45));
+    transform: scale(1.12);
   }
   .sq.dark {
     background: var(--board-dark);
@@ -154,6 +208,7 @@
   }
   .pick {
     position: relative;
+    touch-action: none;
     aspect-ratio: 1;
     border: 2px solid var(--border);
     border-radius: 8px;

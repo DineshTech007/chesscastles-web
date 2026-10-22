@@ -22,7 +22,8 @@
   import { track } from '$lib/analytics';
   import { CARS, newRace, preload, puzzleAt, quickRace, raceLink, type CarView } from '$lib/racer/api';
   import { Race } from '$lib/racer/race.svelte';
-  import { racerStats, recordRace } from '$lib/racer/stats';
+  import { racerStats, racerTitle, recordRace } from '$lib/racer/stats';
+  import TitleLadder from '$lib/racer/TitleLadder.svelte';
   import Track from '$lib/racer/Track.svelte';
   import Car from '$lib/racer/Car.svelte';
   import StartLights from '$lib/racer/StartLights.svelte';
@@ -286,6 +287,7 @@
             <p class="lcd num">{myFinal.score}</p>
             <p class="muted">{myFinal.solved} solved · {myFinal.tried - myFinal.solved} missed</p>
             {#if newBest}<p class="best">New best! 🎉</p>{:else}<p class="muted small">Your best: {$racerStats.best}</p>{/if}
+            {#if racerTitle($racerStats.best)}<span class="rtitle">🏎️ {racerTitle($racerStats.best)}</span>{/if}
             <div class="podium" aria-label="The podium">
               {#each podium as c, i (c?.uid ?? i)}
                 {#if c}
@@ -298,6 +300,7 @@
                 {/if}
               {/each}
             </div>
+            <TitleLadder best={$racerStats.best} size={34} />
             <button class="btn primary big go" onclick={nextRace} disabled={going}>{info.open ? '🏎️ Next race' : info.duel ? '⚔️ Rematch' : '🏁 Race again'}</button>
             <a class="lb" href="/leaderboard#racer">Puzzle Racer leaderboard →</a>
           </div>
@@ -615,6 +618,13 @@
   .s3 .block {
     height: 34px;
     background: linear-gradient(180deg, #f3c39a, #c98a5b);
+  }
+  .rtitle {
+    font: 800 13px var(--font-body);
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gold) 18%, transparent);
+    color: var(--gold);
   }
   .lb {
     font-weight: 700;

@@ -32,6 +32,6 @@ describe('awards', () => {
       ccGames: 6,
       racer: { best: 31, races: 3, wins: 1, podiums: 2, battles: 1, battleWins: 0 },
     });
-    expect([...won].sort()).toEqual(['cc1400', 'cc1600', 'race1', 'racewin', 'racer25', 'chapter1', 'first', 'firstgame', 'firstwin', 'giant', 'lesson1', 'lessons10', 'lvlbishop', 'lvlknight', 'masters1', 'masters3', 'podium', 'rush30', 'tourney1', 'welcome'].sort());
+    expect([...won].sort()).toEqual(['cc1400', 'cc1600', 'race1', 'racewin', 'racer10', 'racer25', 'chapter1', 'first', 'firstgame', 'firstwin', 'giant', 'lesson1', 'lessons10', 'lvlbishop', 'lvlknight', 'masters1', 'masters3', 'podium', 'rush30', 'tourney1', 'welcome'].sort());
   });
 });

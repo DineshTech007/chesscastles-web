@@ -10,6 +10,7 @@ import { leaders, type Board as VisionBoard } from '$lib/vision/api';
 import { weekOf } from '$lib/study/progress';
 import { SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
 import { rushTitle } from '$lib/puzzles/rewards';
+import { racerTitle } from '$lib/racer/stats';
 
 export type BoardKind = 'kfide' | 'lichess' | 'puzzles' | 'rush' | 'racer' | 'vision' | 'study' | 'books';
 
@@ -57,7 +58,7 @@ export async function loadBoard(kind: BoardKind, variant = ''): Promise<Row[]> {
   if (kind === 'racer') {
     // Puzzle Racer: the best score in a race, and how many races.
     const l = await boardOf('racer');
-    return l.map((p) => ({ key: p.uid, uid: p.uid, name: p.name, country: p.country, ccTitle: p.title, value: p.rating, sub: p.games ? `${p.games} ${p.games === 1 ? 'race' : 'races'}` : '', me: p.me, plan: p.plan }));
+    return l.map((p) => ({ key: p.uid, uid: p.uid, name: p.name, country: p.country, ccTitle: p.title, value: p.rating, sub: [racerTitle(p.rating) ? `🏎️ ${racerTitle(p.rating)}` : '', p.games ? `${p.games} ${p.games === 1 ? 'race' : 'races'}` : ''].filter(Boolean).join(' · '), me: p.me, plan: p.plan }));
   }
   if (kind === 'rush') {
     // Puzzle Rush: the best score, with the title it earns (Speedster, Rush master, Rush legend).

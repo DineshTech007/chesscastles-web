@@ -26,10 +26,10 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && onclose()} />
 <div class="scrim" role="presentation" onclick={onclose}></div>
 <div class="dialog" role="dialog" aria-modal="true" aria-label="Start games">
-  <h2>Games in class</h2>
+  <h2>🎮 Game zone</h2>
   <div class="chips" role="group" aria-label="Kind">
     <button class="chip" class:on={mode === 'simul'} onclick={() => (mode = 'simul')}>Simul: me vs everyone</button>
-    <button class="chip" class:on={mode === 'pair'} onclick={() => (mode = 'pair')}>Game zone: students in pairs</button>
+    <button class="chip" class:on={mode === 'pair'} onclick={() => (mode = 'pair')}>Students in pairs</button>
     <button class="chip" class:on={mode === 'coach'} onclick={() => (mode = 'coach')}>Me vs one student</button>
   </div>
   <p class="muted small">

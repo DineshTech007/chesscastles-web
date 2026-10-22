@@ -2,7 +2,7 @@
   /**
    * Puzzle Rush on the home page (owner, 2026-10-21: new features kids love are shown on Home): its rocket knight,
    * the challenge in a line, the best score once there is one (else "New"), and one button. Owner, 2026-10-22: the
-   * news too: the first Rush legend (no name: it is the owner) and the two new titles, with their medals.
+   * two new titles, with their medals (the "first Rush legend" line was taken out at the owner's word).
    */
   import { t } from '$lib/i18n';
   import { BADGES, rewards } from '$lib/puzzles/rewards';
@@ -20,7 +20,6 @@
       {#if $rewards.rushBest}<span class="best num">{$t('home.rush.best', { n: $rewards.rushBest })}</span>{:else}<span class="new">{$t('home.rush.new')}</span>{/if}
     </span>
     <span class="sub">{$t('home.rush.sub')}</span>
-    <span class="news legend">👑 {$t('home.rush.legend')}</span>
     <span class="news levels">
       <span class="medals" aria-hidden="true">{#each NEW_TITLES as b (b.id)}<Medal badge={b} size={30} />{/each}</span>
       {$t('home.rush.levels')}
@@ -112,19 +111,6 @@
     font-weight: 700;
     line-height: 1.3;
   }
-  .legend {
-    align-self: flex-start;
-    padding: 2px 9px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--gold) 22%, transparent);
-    color: #f7d27a;
-    animation: glow 2.6s ease-in-out infinite;
-  }
-  @keyframes glow {
-    50% {
-      box-shadow: 0 0 12px color-mix(in srgb, var(--gold) 55%, transparent);
-    }
-  }
   .levels {
     display: flex;
     align-items: center;
@@ -147,8 +133,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .shine,
-    img,
-    .legend {
+    img {
       animation: none;
     }
   }

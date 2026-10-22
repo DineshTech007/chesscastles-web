@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
    * Puzzle Racer on the home page (owner's rule: a new feature kids love gets a Home promo, replacing the older one
-   * rather than stacking): a little road with cars racing across, the challenge in a line, one button, and the
-   * Puzzle Rush news (the first Rush legend, two new levels) kept as a line under it.
+   * rather than stacking): a little road with cars racing across, the challenge in a line, one button, and Puzzle
+   * Battle (new too) as a line under it.
    */
   import Car from '$lib/racer/Car.svelte';
   import { racerStats } from '$lib/racer/stats';
@@ -23,7 +23,7 @@
     </span>
     <span class="cta">Race now 🏁</span>
   </a>
-  <a class="rushline" href="/puzzles/rush">👑 We have our first Rush legend! Puzzle Rush has 2 new levels →</a>
+  <a class="rushline" href="/puzzles/racer"><span class="new small">NEW</span> ⚔️ Puzzle Battle: challenge a friend to the same puzzles. Who solves more wins! →</a>
 </div>
 
 <style>
@@ -122,6 +122,11 @@
     color: #fff;
     font-weight: 800;
     font-size: 15px;
+  }
+  .new.small {
+    font-size: 10px;
+    padding: 1px 6px;
+    margin-right: 4px;
   }
   .rushline {
     padding: 8px 14px;

@@ -11,7 +11,8 @@
   import { track } from '$lib/analytics';
   import Car from '$lib/racer/Car.svelte';
   import { CARS, newRace, quickRace } from '$lib/racer/api';
-  import { racerStats } from '$lib/racer/stats';
+  import { racerStats, racerTitle } from '$lib/racer/stats';
+  import TitleLadder from '$lib/racer/TitleLadder.svelte';
 
   const signedIn = $derived($session.status === 'in' || !!devPlayer());
   let busy = $state('');
@@ -99,13 +100,14 @@
 
   <div class="cols">
     <section class="card pad stats">
-      <h2>Your record</h2>
+      <h2>Your record{#if racerTitle($racerStats.best)} <span class="rtitle">🏎️ {racerTitle($racerStats.best)}</span>{/if}</h2>
       <div class="nums">
         <span><b class="num lcd">{$racerStats.best}</b><span class="muted">best score</span></span>
         <span><b class="num">{$racerStats.races}</b><span class="muted">races</span></span>
         <span><b class="num">{$racerStats.wins}</b><span class="muted">wins 🥇</span></span>
         <span><b class="num">{$racerStats.battleWins}</b><span class="muted">battles won ⚔️</span></span>
       </div>
+      <TitleLadder best={$racerStats.best} size={44} />
       {#if !signedIn}<button class="btn primary" onclick={() => startSignIn()}>Sign in to race</button>{/if}
     </section>
     <section class="card pad">
@@ -331,6 +333,19 @@
     font: 800 34px/1 'Barlow Condensed', var(--font-display);
     color: #ffb84d;
     text-shadow: 0 0 12px rgba(255, 160, 40, 0.5);
+  }
+  .rtitle {
+    font: 800 13px var(--font-body);
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gold) 18%, transparent);
+    color: var(--gold);
+    vertical-align: middle;
+  }
+  .stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
   .row {
     display: flex;

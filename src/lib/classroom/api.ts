@@ -262,7 +262,7 @@ export const PERM_LABELS: [PermKey, string, string][] = [
   ['live', 'Teach live', 'Start and run live classes'],
   ['homework', 'Homework', 'Set homework with a due date'],
   ['video', 'Camera and screen', "Their camera, screen sharing, and students' cameras"],
-  ['games', 'Games', 'Simuls, the game zone, games against a student'],
+  ['games', 'Game zone', 'Simuls, students in pairs, games against a student'],
   ['pdf', 'Puzzles from a PDF', 'Turn a puzzle PDF into questions or homework'],
 ];
 export interface CoachRec {

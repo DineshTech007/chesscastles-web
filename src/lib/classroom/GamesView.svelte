@@ -36,7 +36,7 @@
 <section class="games">
   <header>
     <div>
-      <b>Games</b>
+      <b>Game zone</b>
       <span class="muted">{games.length} {games.length === 1 ? 'game' : 'games'} · {finished} finished{waiting.length ? ` · ${waiting.length} waiting for your move` : ''}</span>
     </div>
     {#if !live.watching}
