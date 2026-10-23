@@ -8,7 +8,8 @@
   import { lichessToken } from '$lib/auth';
   import { acceptChallenge, declineChallenge } from '$lib/lichessBoard';
   import { incomingChallenges, openWhenStarted, type IncomingChallenge } from '$lib/lichessEvents';
-  import { answerInvite, markAnswered } from '$lib/invites';
+  import { answerInvite, isBullet, markAnswered } from '$lib/invites';
+  import { acceptMatch } from '$lib/cups/api';
   import { sounds } from '$lib/sound';
   import { track } from '$lib/analytics';
   import Icon from './Icon.svelte';
@@ -54,19 +55,32 @@
       incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
       return void goto(`/puzzles/racer/${c.id}`);
     }
+    // A bullet invite (invites.ts): a friendly game in a room of ours, started by this answer, no Lichess account needed.
+    if (c.cc && isBullet(c.minutes, c.increment)) {
+      busy = c.id;
+      error = '';
+      try {
+        await acceptMatch(c.id);
+        markAnswered(c.id, c.at);
+        void answerInvite(c.id, 'accepted');
+        track('feature', 'invite_accept_bullet');
+        incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
+        await goto(`/play/match/${c.id}`);
+      } catch (e) {
+        error = e instanceof Error && e.message ? e.message : `${c.from} took the invite back, or it ran out.`;
+        markAnswered(c.id, c.at);
+        incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
+      } finally {
+        busy = '';
+      }
+      return;
+    }
     const t = lichessToken()?.token;
     if (!t) return;
-    // A Chess Castles invite (invites.ts): answered on Chess Castles too. Bullet: its game on lichess.org, opened
-    // from this tap (Lichess plays bullet only there).
+    // A Chess Castles invite (invites.ts): answered on Chess Castles too.
     if (c.cc) {
       markAnswered(c.id, c.at);
       void answerInvite(c.id, 'accepted');
-      if (c.cc.join) {
-        window.open(c.cc.join, '_blank', 'noopener');
-        track('feature', 'invite_accept_bullet');
-        incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
-        return;
-      }
     }
     busy = c.id;
     error = '';
@@ -115,7 +129,7 @@
         <span class="fact"><Icon name="history" size={15} />{shown.minutes}+{shown.increment}</span>
         <span class="fact">{shown.rated ? 'Rated' : 'Casual'}</span>
         <span class="fact">{colourText(shown)}</span>
-        {#if shown.cc?.join}<span class="fact">Bullet · opens Lichess</span>{/if}
+        {#if shown.cc && isBullet(shown.minutes, shown.increment)}<span class="fact">Friendly game · here on Chess Castles</span>{/if}
       {/if}
     </div>
     <div class="btns">

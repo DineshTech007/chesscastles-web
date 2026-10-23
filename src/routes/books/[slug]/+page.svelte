@@ -94,14 +94,28 @@
     if (!book || i < 0 || i >= book.chapters.length) return;
     if (!keepSpeaking) stopSpeaking();
     chapter = i;
+    chapterAt = Date.now();
+    clearTimeout(finishTimer);
     track('feature', 'book_chapter');
     saveProgress(slug, { chapter: i, scroll: 0 });
     await tick();
     if (article) window.scrollTo({ top: article.offsetTop - 70, behavior: keepSpeaking ? 'smooth' : 'auto' });
   }
 
+  /** When this chapter was opened: reaching the bottom pays only after about the time reading it takes (owner, 2026-10-23: no paying for skimming). */
+  let chapterAt = Date.now();
+  let finishTimer: ReturnType<typeof setTimeout> | undefined;
+  onDestroy(() => clearTimeout(finishTimer));
   function finishChapter() {
     if (!book || read.includes(chapter)) return;
+    const words = (article?.innerText ?? '').split(/\s+/).filter(Boolean).length;
+    const need = Math.min(120, Math.max(20, words / 5)) * 1000;
+    const left = need - (Date.now() - chapterAt);
+    if (left > 0) {
+      clearTimeout(finishTimer);
+      finishTimer = setTimeout(finishChapter, left + 200);
+      return;
+    }
     read = [...read, chapter];
     saveProgress(slug, { read });
     study.log('lesson', POINTS.lessonFinished, `Read: ${book.title}, ${book.chapters[chapter].title}`);

@@ -1,7 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import { lichessToken } from '$lib/auth';
-import { listChallenges, streamEvents } from '$lib/lichessBoard';
+import { listChallenges, nowPlaying, streamEvents } from '$lib/lichessBoard';
 
 /**
  * The player's Lichess event stream, once for the whole site (Lichess sends challenges, games starting and
@@ -43,6 +43,22 @@ export interface OngoingGame {
 export const ongoingGames = writable<OngoingGame[]>([]);
 /** Where a game in progress is played: its Chess Castles board, or lichess.org for bullet. */
 export const ongoingHref = (g: OngoingGame) => (g.board ? `/play/online/${g.id}${g.color ? `?c=${g.color}` : ''}` : `https://lichess.org/${g.id}`);
+
+/**
+ * Asks Lichess which games are really still on, and drops the others from the bar (owner, 2026-10-23: "although game
+ * completed it keeps coming: your game is going on"): the event stream can miss a gameFinish (a phone that slept, a
+ * game ended on lichess.org, an abort). A failed question changes nothing.
+ */
+export async function verifyOngoing(): Promise<void> {
+  const token = lichessToken()?.token;
+  if (!token || !get(ongoingGames).length) return;
+  try {
+    const live = new Set(await nowPlaying(token));
+    ongoingGames.update((l) => l.filter((g) => live.has(g.id)));
+  } catch {
+    /* the stream still tells */
+  }
+}
 
 /** A game from Lichess's gameStart event, as the bar shows it; undefined for a correspondence game (no clock to lose). */
 export function readOngoing(g: any): OngoingGame | undefined {

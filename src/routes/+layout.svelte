@@ -51,7 +51,8 @@
   import ChallengePopup from '$lib/components/ChallengePopup.svelte';
   import ClassAlerts from '$lib/classroom/ClassAlerts.svelte';
   import CupAlerts from '$lib/cups/CupAlerts.svelte';
-  import { ongoingGames, ongoingHref, stopLichessEvents, syncLichessEvents, wakeLichessEvents } from '$lib/lichessEvents';
+  import { ongoingGames, ongoingHref, stopLichessEvents, syncLichessEvents, verifyOngoing, wakeLichessEvents } from '$lib/lichessEvents';
+  import { rememberedMatch, type RememberedMatch } from '$lib/match';
   import { consentNeeded, consentSynced, hasConsent, markConsentSynced, readConsent } from '$lib/consent';
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import WelcomeSheet from '$lib/components/WelcomeSheet.svelte';
@@ -112,7 +113,21 @@
   });
   const onGamePage = $derived(!!pending && page.url.pathname === pending.route.split('?')[0]);
   /** A Lichess game in progress, when its board isn't the page (lichessEvents.ts): a bar back to it, on every page. */
-  const liveGame = $derived($ongoingGames.find((g) => page.url.pathname !== `/play/online/${g.id}`));
+  // Only a game with a board here: Lichess's own site is never linked to (owner, 2026-10-23: "never redirect to Lichess").
+  const liveGame = $derived($ongoingGames.find((g) => g.board && page.url.pathname !== `/play/online/${g.id}`));
+  // A bar that is true: asked of Lichess when it shows, and again every half minute while it does.
+  $effect(() => {
+    if (!$ongoingGames.length) return;
+    void verifyOngoing();
+    const t = setInterval(() => document.visibilityState === 'visible' && void verifyOngoing(), 30_000);
+    return () => clearInterval(t);
+  });
+  /** A friendly game (src/lib/match.ts) left by a tap: a bar back to it. */
+  let matchBar = $state<RememberedMatch | undefined>();
+  $effect(() => {
+    void page.url.pathname;
+    matchBar = rememberedMatch();
+  });
 
   // Analytics: the page's route ("/players/[uid]", never the address with names in it).
   afterNavigate(() => pageView(page.route.id ?? page.url.pathname));
@@ -233,7 +248,7 @@
       // Challenges from other players reach every page (a popup), from Lichess's live stream; invites from Chess
       // Castles players too (src/lib/invites.ts), except over a game.
       syncLichessEvents();
-      watchInvites(() => /^\/play\/(fide|computer|online\/|tournament\/game)/.test(location.pathname));
+      watchInvites(() => /^\/play\/(fide|computer|online\/|match\/|tournament\/game)/.test(location.pathname));
       // Agreed to the terms: sent to the account once. Signed in from before the consent form: asked once, over the page.
       const agreed = hasConsent() ? readConsent() : undefined;
       consentNeeded.set(!agreed);
@@ -333,7 +348,7 @@
    * No friend-request popup over a game, a cup round or a live class (2026-10-23: a popup over a cup game's board lost
    * the game on time), or on the Friends page (which lists the requests itself).
    */
-  const noPopups = $derived(/^\/(friends|play\/(fide|computer|online\/|tournament\/game|tournament\/club\/[^/]+\/game)|cups\/.|castleclass\/.|classroom\/.)/.test(page.url.pathname));
+  const noPopups = $derived(/^\/(friends|play\/(fide|computer|online\/|match\/|tournament\/game|tournament\/club\/[^/]+\/game)|cups\/.|castleclass\/.|classroom\/.)/.test(page.url.pathname));
 
   // A club tournament (with friends) waiting for your game: a bar to it, checked once a visit after signing in.
   let clubTurn = $state<{ id: string; name: string; round: number } | undefined>();
@@ -533,9 +548,16 @@
       </a>
     {/if}
     {#if liveGame}
-      <a class="resume-bar live" href={ongoingHref(liveGame)} target={liveGame.board ? undefined : '_blank'} rel={liveGame.board ? undefined : 'noopener'}>
+      <a class="resume-bar live" href={ongoingHref(liveGame)}>
         <span class="pulse"></span>
         <span>Your game against <strong>{liveGame.opponent}</strong> is still on, and your clock keeps running.</span>
+        <span class="go">Back to the game →</span>
+      </a>
+    {/if}
+    {#if matchBar && !page.url.pathname.startsWith('/play/match/')}
+      <a class="resume-bar live" href="/play/match/{matchBar.id}">
+        <span class="pulse"></span>
+        <span>Your game against <strong>{matchBar.opponent}</strong> is still on, and your clock keeps running.</span>
         <span class="go">Back to the game →</span>
       </a>
     {/if}

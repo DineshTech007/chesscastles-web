@@ -3,14 +3,17 @@ import { lichessToken } from '$lib/auth';
 import * as api from '$lib/lichessBoard';
 import { incomingChallenges, openWhenStarted, onLichessEvent, type IncomingChallenge } from '$lib/lichessEvents';
 import { call } from '$lib/social';
+import { goto } from '$app/navigation';
+import { cancelMatch, createMatch } from '$lib/cups/api';
 
 /**
  * Game invites between Chess Castles players (owner, 2026-10-21: "our own lobby… they should get a proper popup";
  * kids were refused with "Cannot challenge due to provisional Blitz rating"). The inviter's browser makes a Lichess
  * game only the two of them can join (no Lichess challenge, so no one's Lichess settings can refuse it) and joins it;
  * the invite goes through Chess Castles (server/api-worker src/social.ts) and the other player's site shows it as a
- * popup (ChallengePopup), wherever they are. Blitz and slower are played here; bullet, which Lichess plays only on its
- * own site, opens there for both.
+ * popup (ChallengePopup), wherever they are. Blitz and slower are played here on Lichess's servers; bullet, which Lichess
+ * plays only on its own site, is played on Chess Castles' own server instead (owner, 2026-10-23: "never redirect to
+ * Lichess"): a friendly game in a room of ours (server/api-worker src/cup.ts, "match"), no ratings, nothing opens elsewhere.
  */
 export interface ServerInvite {
   id: string;
@@ -27,7 +30,7 @@ export interface ServerInvite {
   at: number;
 }
 
-/** Bullet by Lichess's count (minutes + 40 × increment under 3 minutes): played on lichess.org. */
+/** Bullet by Lichess's count (minutes + 40 × increment under 3 minutes): played in a Chess Castles room (a friendly game). */
 export const isBullet = (minutes: number, increment: number) => minutes * 60 + increment * 40 < 180;
 
 /** The invite this player sent, while it waits for an answer. */
@@ -38,34 +41,58 @@ export const answerInvite = (id: string, answer: 'accepted' | 'declined') => cal
 const sentStatus = (to: string, id: string) => call<{ status: string }>('GET', `invites/sent?to=${encodeURIComponent(to)}&id=${id}`).then((r) => r.status);
 
 /**
- * Invites a Chess Castles player with a Lichess account to a game. Call it straight from the tap: for bullet a tab
- * is opened at once (a browser lets a page open one only from a tap) and goes to the game on lichess.org.
+ * Invites a Chess Castles player to a game. Bullet is a friendly game on our own server and needs no Lichess account
+ * (the inviter's page goes to the game's room to wait there); the rest are games on Lichess for two Lichess accounts.
  */
 export async function invitePlayer(p: { uid: string; name: string }, minutes: number, increment: number, rated: boolean): Promise<void> {
+  if (isBullet(minutes, increment)) return inviteMatch(p, minutes, increment);
   const me = lichessToken();
   if (!me) throw new Error('Connect your Lichess account to play online.');
   const theirs = p.uid.startsWith('lichess:') ? p.uid.slice(8) : undefined;
   if (!theirs) throw new Error(`${p.name} hasn't connected a Lichess account yet, so you can't play online together.`);
-  const bullet = isBullet(minutes, increment);
-  const tab = bullet ? window.open('', '_blank') : null;
+  const bullet = false;
   try {
     const meWhite = Math.random() < 0.5;
     const g = await api.openGame(me.token, { white: meWhite ? me.username : theirs, black: meWhite ? theirs : me.username, minutes, increment, rated });
-    if (bullet) {
-      const mine = meWhite ? g.urlWhite : g.urlBlack;
-      if (tab) tab.location.href = mine;
-      else window.open(mine, '_blank');
-    } else {
-      await api.acceptChallenge(me.token, g.id);
-      openWhenStarted(g.id);
-    }
+    await api.acceptChallenge(me.token, g.id);
+    openWhenStarted(g.id);
     const tc = `${minutes}+${increment}`;
-    await call('POST', 'invites', { to: p.uid, game: g.id, tc, rated, color: meWhite ? 'black' : 'white', join: bullet ? (meWhite ? g.urlBlack : g.urlWhite) : undefined });
+    await call('POST', 'invites', { to: p.uid, game: g.id, tc, rated, color: meWhite ? 'black' : 'white' });
     sentInvite.set({ id: g.id, to: p.uid, name: p.name, tc, bullet, state: 'waiting' });
     void watchSent(me.token, g.id, p.uid);
   } catch (e) {
-    tab?.close();
     throw e instanceof Error ? e : new Error('The invite could not be sent. Try again.');
+  }
+}
+
+/** A friendly game: the room is made, the invite sent, and this page goes to the room to wait for the answer. */
+async function inviteMatch(p: { uid: string; name: string }, minutes: number, inc: number): Promise<void> {
+  const m = await createMatch(p.uid, minutes, inc);
+  const tc = `${minutes}+${inc}`;
+  try {
+    await call('POST', 'invites', { to: p.uid, game: m.id, tc, rated: false, color: m.white === p.uid ? 'white' : 'black' });
+  } catch (e) {
+    void cancelMatch(m.id).catch(() => {});
+    throw e instanceof Error ? e : new Error('The invite could not be sent. Try again.');
+  }
+  sentInvite.set({ id: m.id, to: p.uid, name: p.name, tc, bullet: true, state: 'waiting' });
+  void watchMatch(m.id, p.uid);
+  await goto(`/play/match/${m.id}`);
+}
+
+/** Waits for the answer to a friendly game's invite: "no" (or nothing) calls the room off. The room itself tells the page when it starts. */
+async function watchMatch(id: string, to: string) {
+  const until = Date.now() + 125_000;
+  while (Date.now() < until && get(sentInvite)?.id === id) {
+    await new Promise((r) => setTimeout(r, 4000));
+    if (get(sentInvite)?.id !== id) return;
+    const status = await sentStatus(to, id).catch(() => 'open');
+    if (status === 'accepted') return sentInvite.update((s) => (s?.id === id ? undefined : s));
+    if (status === 'declined' || status === 'gone') {
+      void cancelMatch(id).catch(() => {});
+      sentInvite.update((s) => (s?.id === id ? undefined : s));
+      return;
+    }
   }
 }
 
@@ -73,8 +100,9 @@ export async function invitePlayer(p: { uid: string; name: string }, minutes: nu
 export function cancelSent() {
   const s = get(sentInvite);
   const t = lichessToken()?.token;
-  if (s && t && s.state === 'waiting') {
-    void api.cancelChallenge(t, s.id).catch(() => {});
+  if (s?.bullet && s.state === 'waiting') void cancelMatch(s.id).catch(() => {});
+  if (s && s.state === 'waiting') {
+    if (t && !s.bullet) void api.cancelChallenge(t, s.id).catch(() => {});
     void call('POST', 'invites/withdraw', { to: s.to, id: s.id }).catch(() => {});
   }
   sentInvite.set(undefined);
@@ -131,10 +159,15 @@ let onGame: () => boolean = () => false;
 async function look() {
   if (!running) return;
   clearTimeout(timer);
-  if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !onGame() && lichessToken()) {
+  if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !onGame()) {
     const list = await myInvites().catch(() => undefined);
     if (list && running) {
-      const fresh = list.filter((i) => !answered.has(`${i.id}:${i.at}`) && !answered.has(`${i.id}:0`)).map(toChallenge);
+      // Without a Lichess account: only the games that need none (a Puzzle Battle, a bullet game on our own server).
+      const canLichess = !!lichessToken();
+      const fresh = list
+        .filter((i) => !answered.has(`${i.id}:${i.at}`) && !answered.has(`${i.id}:0`))
+        .filter((i) => canLichess || i.battle || isBullet(...(i.tc.split('+').map(Number) as [number, number])))
+        .map(toChallenge);
       incomingChallenges.update((l) => [...l.filter((c) => !c.cc), ...fresh]);
     }
   }

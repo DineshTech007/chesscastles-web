@@ -110,6 +110,8 @@ export interface CupView {
   players: CupPlayer[];
   games: CupGame[];
   standings: Standing[];
+  /** A friendly game's time control. */
+  match?: { minutes: number; inc: number };
 }
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -139,6 +141,16 @@ export const startCup = (id: string) => call<{ ok: true }>('POST', `/${id}/start
 export const testCup = (minutes: number, inc: number, startIn: number) => call<{ id: string; startAt: number }>('POST', '/test', { minutes, inc, startIn });
 /** Admins: an on-demand cup for everyone (many kids online): on Home with the day's cups, starting in `startIn` minutes. */
 export const flashCup = (minutes: number, inc: number, startIn: number) => call<{ id: string; startAt: number }>('POST', '/flash', { minutes, inc, startIn });
+/**
+ * A friendly game with another player, on our server (owner, 2026-10-23: bullet no longer opens Lichess). The inviter
+ * makes the room (white is drawn); the invited player accepts from their popup; either may call it off before it starts.
+ */
+export const createMatch = (to: string, minutes: number, inc: number) => call<{ id: string; white: string }>('POST', '/match', { to, minutes, inc });
+export const acceptMatch = (id: string) => call<{ ok: true }>('POST', `/${id}/accept`);
+export const cancelMatch = (id: string) => call<{ ok: true }>('POST', `/${id}/cancel`);
+/** A friendly game's room id ("mt" and six letters or digits). */
+export const isMatchId = (id: string) => /^mt[a-km-np-z2-9]{6}$/.test(id);
+
 /** The owner: every cup's data wiped. */
 export const resetCups = () => call<{ ok: true; wiped: string[] }>('POST', '/reset');
 

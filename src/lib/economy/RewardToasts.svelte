@@ -21,7 +21,7 @@
     for (const toast of $toasts) {
       if (seen.has(toast.id)) continue;
       seen.add(toast.id);
-      const big = toast.why === 'level' || toast.why === 'unlock' || toast.why === 'streak' || toast.why === 'bonus' || toast.why === 'login';
+      const big = toast.why === 'level' || toast.why === 'unlock' || toast.why === 'streak' || toast.why === 'bonus' || toast.why === 'login' || toast.why === 'history';
       timers.set(
         toast.id,
         setTimeout(() => dismissToast(toast.id), big ? 4200 : 2600),
@@ -85,7 +85,7 @@
     if (x.why === 'quest' && x.item) return `${$t('eco.why.quest')}: ${$t(`eco.q.${x.item}` as Key)}`;
     return $t(`eco.why.${x.why}` as Key);
   };
-  const icon = (x: Toast) => ({ level: '⭐', streak: '🔥', unlock: '👑', login: '🎁', quest: '📜', bonus: '🏆', award: '🏅', welcome: '🏰', win: '♞', winOnline: '♞', cupWin: '🏆', cupPodium: '🥉', rush: '⚡', race: '🏎️', raceWin: '🏁', lesson: '📖', line: '🌳', daily: '🧩', puzzle: '🧩', puzzleClean: '🧩' })[x.why] ?? '✨';
+  const icon = (x: Toast) => ({ level: '⭐', streak: '🔥', unlock: '👑', login: '🎁', quest: '📜', bonus: '🏆', award: '🏅', welcome: '🏰', win: '♞', winOnline: '♞', cupWin: '🏆', cupPodium: '🥉', rush: '⚡', race: '🏎️', raceWin: '🏁', history: '📜', lesson: '📖', line: '🌳', daily: '🧩', puzzle: '🧩', puzzleClean: '🧩' })[x.why] ?? '✨';
 </script>
 
 <div class="toasts" aria-live="polite">

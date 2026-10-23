@@ -542,8 +542,21 @@
     return out;
   });
   /** White's share of the bar: at checkmate all to the winner (not an even bar). */
-  const chances = $derived(pos.isCheckmate() ? (pos.turn === 'white' ? 0 : 1) : info ? whiteChances(info) : 0.5);
-  const evalText = $derived(pos.isCheckmate() ? (pos.turn === 'white' ? '0-1' : '1-0') : pos.isEnd() ? '½-½' : info ? evalLabel(info) : '');
+  const chancesNow = $derived(pos.isCheckmate() ? (pos.turn === 'white' ? 0 : 1) : info ? whiteChances(info) : 0.5);
+  const evalNow = $derived(pos.isCheckmate() ? (pos.turn === 'white' ? '0-1' : '1-0') : pos.isEnd() ? '½-½' : info ? evalLabel(info) : '');
+  // The last evaluation stays while the engine thinks about the next position (owner, 2026-10-23: "the screen blinks"
+  // on "next move"): the bar and its number used to jump to the middle and back at every move.
+  let keptChances = $state(0.5);
+  let keptEval = $state('');
+  $effect(() => {
+    if (info || pos.isEnd()) {
+      keptChances = chancesNow;
+      keptEval = evalNow;
+    }
+  });
+  const thinking = $derived(!info && !pos.isEnd());
+  const chances = $derived(thinking ? keptChances : chancesNow);
+  const evalText = $derived(thinking ? keptEval : evalNow);
 
   /** The whole tree as PGN movetext: the main line with variations in brackets. */
   function pgn(): string {
@@ -1292,6 +1305,11 @@
       flex-direction: column;
       gap: 2px;
       margin-bottom: -4px;
+      /* Always the same height (the bar and two lines): the engine clears its lines at every move and fills them a
+         moment later, and a strip that grew and shrank moved the board down and up at each tap of "next move"
+         (owner, 2026-10-23: "the screen blinks"). */
+      min-height: 80px;
+      contain: layout;
     }
     .h-bar {
       position: relative;
@@ -1327,6 +1345,8 @@
       align-items: center;
       gap: 8px;
       min-width: 0;
+      height: 28px;
+      box-sizing: border-box;
       padding: 3px 2px;
       border: 0;
       border-radius: 6px;
@@ -1356,7 +1376,9 @@
     }
     .s-wait {
       margin: 0;
-      padding: 3px 2px;
+      height: 28px;
+      box-sizing: border-box;
+      padding: 5px 2px;
       font-size: 13px;
       color: var(--muted);
       white-space: nowrap;

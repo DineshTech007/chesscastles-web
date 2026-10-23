@@ -2,7 +2,7 @@
   /**
    * Inviting a Chess Castles player to a game (invites.ts): the clock (bullet, blitz or rapid), rated or casual, then
    * Send. The other player gets a popup wherever they are on the site; this sheet waits for their answer (a game
-   * that starts opens by itself). Bullet is played on lichess.org (Lichess's rule), in a new tab for both.
+   * that starts opens by itself). Bullet is a friendly game on Chess Castles' own server (no ratings).
    */
   import { onDestroy } from 'svelte';
   import { track } from '$lib/analytics';
@@ -12,7 +12,7 @@
   let { player, onclose }: { player: { uid: string; name: string }; onclose: () => void } = $props();
 
   const GROUPS: { label: string; note?: string; tcs: [number, number][] }[] = [
-    { label: 'Bullet', note: 'on lichess.org', tcs: [[1, 0], [1, 1], [2, 1]] },
+    { label: 'Bullet', note: 'friendly game', tcs: [[1, 0], [1, 1], [2, 1]] },
     { label: 'Blitz', tcs: [[3, 0], [3, 2], [5, 0], [5, 3]] },
     { label: 'Rapid', tcs: [[10, 0], [10, 5], [15, 10]] },
   ];
@@ -27,7 +27,6 @@
     sending = true;
     error = '';
     track('feature', isBullet(tc[0], tc[1]) ? 'invite_bullet' : 'invite');
-    // Straight from the tap: bullet opens its tab now.
     invitePlayer(player, tc[0], tc[1], rated)
       .catch((e) => (error = e instanceof Error ? e.message : 'The invite could not be sent.'))
       .finally(() => (sending = false));
@@ -53,7 +52,7 @@
     <div class="wait">
       <span class="spinner" aria-hidden="true"></span>
       <p><strong>Waiting for {player.name}…</strong></p>
-      <p class="label">{mine.bullet ? `Your ${mine.tc} game opened on lichess.org in a new tab: it starts there when ${player.name} accepts.` : `They see your ${mine.tc} invite on Chess Castles now. The game opens here when they accept.`}</p>
+      <p class="label">They see your {mine.tc} invite on Chess Castles now. The game opens here when they accept.</p>
       <button class="btn" onclick={close}>Cancel the invite</button>
     </div>
   {:else if mine?.state === 'declined' || mine?.state === 'gone'}
@@ -73,8 +72,11 @@
         </div>
       </div>
     {/each}
-    <label class="rated"><input type="checkbox" bind:checked={rated} /> Rated (changes your Lichess rating)</label>
-    {#if isBullet(tc[0], tc[1])}<p class="label note">Lichess plays bullet only on its own website, so this game opens there in a new tab for both of you.</p>{/if}
+    {#if isBullet(tc[0], tc[1])}
+      <p class="label note">Bullet is a friendly game played right here on Chess Castles. It does not change anyone's rating.</p>
+    {:else}
+      <label class="rated"><input type="checkbox" bind:checked={rated} /> Rated (changes your Lichess rating)</label>
+    {/if}
     <button class="btn primary big" onclick={send} disabled={sending}>{sending ? 'Sending…' : `Send invite · ${tc[0]}+${tc[1]}`}</button>
     {#if error}<p class="err" role="alert">{error}</p>{/if}
   {/if}

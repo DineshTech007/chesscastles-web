@@ -42,8 +42,8 @@
     { m: 30, i: 20 },
   ];
   /**
-   * Bullet with a friend (owner's request, 2026-10-21): Lichess plays bullet only on its own site and app, so these
-   * open lichess.org's challenge with the friend filled in (a Google-account friend: Lichess makes a link to send).
+   * Bullet with a friend (owner's request, 2026-10-21): Lichess plays bullet only on its own site and app, so these are
+   * friendly games on Chess Castles' own server instead (2026-10-23: never Lichess; see src/lib/invites.ts).
    */
   const BULLET: Tc[] = [
     { m: 1, i: 0 },
@@ -381,28 +381,23 @@
     void quickPair(t);
   }
 
-  /** A bullet game with a friend: on lichess.org, opened at once from the tap (a new tab, not blocked). */
-  function bulletOnLichess() {
+  /** A bullet game with a Chess Castles friend: a friendly game on our own server (invites.ts), never on Lichess. */
+  function bulletWithFriend() {
     const name = username.trim();
     const f = ccFriends.find((x) => x.username.toLowerCase() === name.toLowerCase());
-    if (f?.uid.startsWith('lichess:') && bullet) {
-      track('feature', 'invite_bullet_friend');
-      invitePlayer({ uid: f.uid, name: f.name }, bullet.m, bullet.i, rated).then(
-        () => (waiting = { text: `Your ${bullet!.m}+${bullet!.i} game opened on lichess.org in a new tab. ${f.name} got your invite on Chess Castles: it starts there when they accept.`, cancel: () => cancelSent() }),
-        (e) => (error = e instanceof Error ? e.message : 'The invite could not be sent.'),
-      );
+    if (!f || !bullet) {
+      error = 'Bullet is played between Chess Castles players. Tap a friend’s name above to invite them.';
       return;
     }
-    const li = f ? (f.uid.startsWith('lichess:') ? f.uid.slice(8) : undefined) : name || undefined;
-    track('feature', 'lichess_bullet_friend');
-    window.open(li ? `https://lichess.org/?user=${encodeURIComponent(li)}#friend` : 'https://lichess.org/#friend', '_blank', 'noopener');
+    track('feature', 'invite_bullet_friend');
+    invitePlayer({ uid: f.uid, name: f.name }, bullet.m, bullet.i, rated).catch((e) => (error = e instanceof Error ? e.message : 'The invite could not be sent.'));
   }
 
   async function start() {
     const t = lichessToken()?.token;
     if (!t) return;
     error = '';
-    if (kind === 'friend' && bullet) return bulletOnLichess();
+    if (kind === 'friend' && bullet) return bulletWithFriend();
     if (!events) listen(t);
     const tc = TCS[tcIdx];
     if (kind === 'pair') return quickPair(tc);
@@ -667,7 +662,7 @@
         {#if kind === 'friend'}
           {#each BULLET as t (key(t))}
             <button class="tile" aria-pressed={bullet === t} onclick={() => (bullet = t)}>
-              <span class="title num">{key(t)}</span><span class="label">Bullet · Lichess</span>
+              <span class="title num">{key(t)}</span><span class="label">Bullet · friendly</span>
             </button>
           {/each}
         {/if}
@@ -680,7 +675,7 @@
         {/each}
       </div>
       {#if kind === 'friend' && bullet}
-        <p class="label bullet-note">Lichess plays bullet only on its own website and app (games here can be Blitz at the fastest). This opens Lichess with your friend filled in: choose {key(bullet)} there and send.</p>
+        <p class="label bullet-note">Bullet is a friendly game played here on Chess Castles with a friend. It does not change anyone's rating.</p>
       {/if}
     </div>
 
@@ -701,7 +696,7 @@
     {#if error}<p class="error">{error}</p>{/if}
     <button class="btn primary big block" onclick={start}>
       <Icon name="play" size={18} fill color="currentColor" />
-      {kind === 'pair' ? `Find an opponent · ${key(TCS[tcIdx])}` : kind === 'friend' ? (bullet ? `Play ${key(bullet)} on Lichess` : 'Send challenge') : `Play level ${level}`}
+      {kind === 'pair' ? `Find an opponent · ${key(TCS[tcIdx])}` : kind === 'friend' ? (bullet ? `Invite · ${key(bullet)} bullet` : 'Send challenge') : `Play level ${level}`}
     </button>
   {/if}
 {/if}

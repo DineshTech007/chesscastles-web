@@ -450,6 +450,24 @@ async function run(name, options) {
     return 'ads.txt, 4 pages in the file, contact draws';
   });
 
+  // 4x. A lesson is read, not skipped (owner, 2026-10-23: "I just pressed next next and got the rewards"): Next waits for the
+  // slide's time, and tapping through does not finish the lesson or pay.
+  await check(name, page, 'lessons: Next waits until the slide is read', async () => {
+    await open(page, '/coach/opening-principles');
+    await page.locator('.lesson .nav .next').waitFor({ timeout: 20000 });
+    const at = async () => (await page.locator('.lesson .count').innerText()).replace(/s+/g, '');
+    const first = await at();
+    for (let i = 0; i < 6; i++) {
+      await page.locator('.lesson .nav .next').click({ force: true }).catch(() => {});
+      await page.waitForTimeout(100);
+    }
+    expect((await at()) === first, `Next moved on at once (${first} → ${await at()})`);
+    expect((await page.locator('.lesson .nudge').count()) > 0, 'no word about listening to Guru first');
+    const done = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('k24.coach') ?? '{}').done ?? {}).includes('opening-principles'));
+    expect(!done, 'the lesson was marked done by tapping Next');
+    return 'Next waits';
+  });
+
   // 4f. Puzzle Rush: it starts, the clock runs, and ending it shows the score.
   await check(name, page, 'puzzle rush: start, clock, end', async () => {
     await open(page, '/puzzles/rush');

@@ -11,6 +11,7 @@
   import { LEGENDS } from '$lib/coach/content/legends';
   import { LANGS, tr, type Lang } from '$lib/coach/i18n';
   import { loadCoach, markDone, updateCoach } from '$lib/coach/progress';
+  import { slideSeconds } from '$lib/coach/reading';
   import { POINTS, study } from '$lib/study/progress';
   import type { Lesson, Slide } from '$lib/coach/types';
   import { speak, speaking, stopSpeaking, voicesReady } from '$lib/coach/voice';
@@ -30,6 +31,30 @@
   let playing = $state(false);
   let token = 0;
 
+  /**
+   * A lesson is learned by reading it, not by tapping Next (owner, 2026-10-23: "I just pressed next next and got the
+   * rewards, kids will not actually learn it"). A slide counts as read after the time its words and moves need (Guru's
+   * voice takes about that long); Next waits for it, and the lesson pays (the first time) only when every slide was read.
+   * A lesson already finished once is free to browse.
+   */
+  // svelte-ignore state_referenced_locally
+  const repeat = !!loadCoach().done[lesson.id];
+  let read = $state<boolean[]>([]);
+  let dwell: number[] = [];
+  let nudge = $state(false);
+  let tick = $state(0);
+  let completed = false;
+  let nudgeTimer: ReturnType<typeof setTimeout> | undefined;
+  const needOf = (i: number) => {
+    const sl = lesson.slides[i];
+    return sl ? slideSeconds(tr(sl.text, lang), sl.moves?.length ?? 0) : 0;
+  };
+  const isRead = (i: number) => repeat || !!read[i];
+  const firstUnread = $derived(lesson.slides.findIndex((_, i) => !isRead(i)));
+  const allRead = $derived(firstUnread === -1);
+  /** Seconds left on this slide before Next works. */
+  const waitLeft = $derived(tick < 0 || isRead(index) ? 0 : Math.max(1, Math.ceil(needOf(index) - (dwell[index] ?? 0))));
+
   const slide = $derived<Slide | undefined>(lesson.slides[index]);
   const total = $derived(lesson.slides.length);
   const fen = $derived(fenOf(pos));
@@ -42,9 +67,26 @@
     await voicesReady();
     show(0);
   });
+  // Time on a slide counts only while the page is in front.
+  onMount(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'visible' || !lesson.slides[index] || repeat) return;
+      dwell[index] = (dwell[index] ?? 0) + 0.25;
+      tick++;
+      if (!read[index] && dwell[index] >= needOf(index)) read[index] = true;
+    }, 250);
+    return () => clearInterval(timer);
+  });
+  // Every slide read: the lesson is finished (the first time it counts as study for the streak and pays).
+  $effect(() => {
+    if (!allRead || completed || repeat) return;
+    completed = true;
+    if (markDone(lesson.id) && !lesson.id.startsWith('review-')) study.log('lesson', POINTS.lessonFinished, lesson.title);
+  });
   onDestroy(() => {
     token++;
     stopSpeaking();
+    clearTimeout(nudgeTimer);
   });
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -60,8 +102,6 @@
     shapes = marks(s);
     playing = false;
     if (voiceOn) void speak(tr(s.text, lang), lang, voiceName);
-    // Finishing a lesson (the first time) counts as study for the streak.
-    if (i === lesson.slides.length - 1 && markDone(lesson.id) && !lesson.id.startsWith('review-')) study.log('lesson', POINTS.lessonFinished, lesson.title);
     if (s.moves?.length) {
       playing = true;
       await wait(700);
@@ -84,7 +124,20 @@
 
   function go(d: number) {
     const i = index + d;
-    if (i >= 0 && i < total) show(i);
+    if (i < 0 || i >= total) return;
+    // Forward only once this slide has been read (a gentle word, not a lock: Back and the dots to slides read are free).
+    if (d > 0 && !isRead(index)) return nudgeNow();
+    show(i);
+  }
+  /** Jumping with the dots: only to slides up to the first one not read yet. */
+  function jump(i: number) {
+    if (i > (firstUnread === -1 ? total : firstUnread)) return nudgeNow();
+    show(i);
+  }
+  function nudgeNow() {
+    nudge = true;
+    clearTimeout(nudgeTimer);
+    nudgeTimer = setTimeout(() => (nudge = false), 2600);
   }
 
   function setLang(l: Lang) {
@@ -139,7 +192,9 @@
         <button class="icon-btn" onclick={() => go(-1)} disabled={index === 0} aria-label="Previous slide"><Icon name="back" /></button>
         <button class="icon-btn" onclick={() => show(index)} disabled={!slide?.moves?.length} aria-label="Play the moves again" title="Play the moves again"><Icon name="replay" /></button>
         <span class="count num">{Math.min(index + 1, total)} / {total}</span>
-        <button class="btn primary next" onclick={() => go(1)} disabled={index >= total - 1}>Next<Icon name="chevron" size={18} color="currentColor" /></button>
+        <button class="btn primary next" class:wait={waitLeft > 0 && index < total - 1} onclick={() => go(1)} disabled={index >= total - 1} aria-disabled={waitLeft > 0}>
+          {#if waitLeft > 0 && index < total - 1}<span class="num">{waitLeft}</span>{:else}Next<Icon name="chevron" size={18} color="currentColor" />{/if}
+        </button>
       </div>
     </section>
 
@@ -158,7 +213,7 @@
         </button>
       </header>
       <div class="progress" aria-hidden="true">
-        {#each lesson.slides as _, i (i)}<button class:done={i < index} class:now={i === index} onclick={() => show(i)} tabindex="-1" aria-label="Slide {i + 1}"></button>{/each}
+        {#each lesson.slides as _, i (i)}<button class:done={isRead(i)} class:now={i === index} onclick={() => jump(i)} tabindex="-1" aria-label="Slide {i + 1}"></button>{/each}
       </div>
 
       <div class="guru">
@@ -187,10 +242,15 @@
         {#if practiceHref}
           <a class="btn practice" href={practiceHref}><Icon name="robot" size={18} />Practice this position with the engine</a>
         {/if}
-        {#if index >= total - 1}
+        {#if allRead && index >= total - 1}
           <a class="btn primary" href={back}><Icon name="check" size={18} color="currentColor" />Lesson complete: choose the next one</a>
         {/if}
       </div>
+      {#if !repeat && (nudge || (index >= total - 1 && !allRead))}
+        <p class="nudge" role="status">
+          {#if !isRead(index)}Listen to Guru first: the next slide opens in {waitLeft} s.{:else}A few slides were skipped. Go back to the dots that are not green and read them to finish the lesson.{/if}
+        </p>
+      {/if}
       <p class="keys label">Keys: ← → move between slides.</p>
     </section>
   </div>
@@ -232,6 +292,18 @@
   .next {
     gap: 6px;
     min-width: 120px;
+  }
+  .next.wait {
+    opacity: 0.65;
+    cursor: progress;
+  }
+  .nudge {
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--gold) 16%, var(--card));
+    border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--border));
+    font-size: 14px;
   }
   .talk {
     display: flex;

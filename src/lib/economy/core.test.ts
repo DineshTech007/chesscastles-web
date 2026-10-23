@@ -20,6 +20,8 @@ import {
   claimQuest,
   cleanWallet,
   cupSync,
+  historySync,
+  HISTORY_MAX,
   dealsFor,
   earn,
   equip,
@@ -263,5 +265,27 @@ describe('the server’s extras', () => {
     expect(w.equipped).toEqual({ frame: 'aurora' });
     expect(w.today.counts).toEqual({ win: 2 });
     expect(cleanWallet(null, NOW).gold).toBe(WELCOME.gold);
+  });
+
+  it('pays the past once: what was done before the Treasury, up to the limit, awards already paid left out', () => {
+    const w0 = newWallet(NOW).wallet;
+    const h = { puzzles: 100, rushRuns: 10, races: 10, raceWins: 5, wins: 3, draws: 2, losses: 1, awards: ['a', 'b'] };
+    const r = historySync(w0, h, NOW);
+    if (!r.ok) throw new Error(r.error);
+    // 100x5 + 10x10 + 10x10 + 5x20 + 3x15 + 2x8 + 1x4 + 2 awards x50
+    expect(r.wallet.gold).toBe(WELCOME.gold + 500 + 100 + 100 + 100 + 45 + 16 + 4 + 100);
+    expect(r.wallet.gems).toBeGreaterThanOrEqual(WELCOME.gems + 6);
+    expect(r.wallet.history).toBe(true);
+    const again = historySync(r.wallet, h, NOW);
+    expect(again.ok && again.grants).toEqual([]);
+    // An award paid since the Treasury began (its ref is in the treasury) is not paid again.
+    const paid = { ...w0, refs: ['a:a'] };
+    const r2 = historySync(paid, { ...h, puzzles: 0, rushRuns: 0, races: 0, raceWins: 0, wins: 0, draws: 0, losses: 0 }, NOW);
+    if (!r2.ok) throw new Error(r2.error);
+    expect(r2.wallet.gold).toBe(WELCOME.gold + 50);
+    // Never more than the limit, however much was done.
+    const big = historySync(w0, { ...h, puzzles: 100_000 }, NOW);
+    if (!big.ok) throw new Error(big.error);
+    expect(big.grants.find((g) => g.why === 'history')?.gold).toBe(HISTORY_MAX.gold);
   });
 });

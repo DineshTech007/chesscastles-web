@@ -55,6 +55,13 @@ export interface GameStart {
   opponent?: { username?: string; rating?: number; ai?: number };
 }
 
+/** The ids of the player's Lichess games in progress right now (the truth, when the event stream missed a game ending). */
+export async function nowPlaying(token: string): Promise<string[]> {
+  const res = await call(token, '/api/account/playing?nb=20');
+  const j = (await res.json()) as { nowPlaying?: { gameId?: string; fullId?: string }[] };
+  return (j.nowPlaying ?? []).map((g) => g.gameId ?? g.fullId?.slice(0, 8) ?? '').filter(Boolean);
+}
+
 /** The player's event stream: gameStart, gameFinish, challenge… (runs until aborted). */
 export async function streamEvents(token: string, onEvent: (e: any) => void, signal: AbortSignal): Promise<void> {
   const res = await call(token, '/api/stream/event', { signal });

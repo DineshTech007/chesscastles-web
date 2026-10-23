@@ -13,8 +13,12 @@
   import { t } from '$lib/i18n';
 
   let { compact = false }: { compact?: boolean } = $props();
-  const gold = tweened(0, { duration: 650, easing: cubicOut });
-  const gems = tweened(0, { duration: 650, easing: cubicOut });
+  const gold = tweened(0, { duration: 900, easing: cubicOut });
+  const gems = tweened(0, { duration: 900, easing: cubicOut });
+  /** "+15" under the chip each time it grows (owner, 2026-10-23: a reward should be seen being added to the total). */
+  let deltas = $state<{ id: number; gold: number; gems: number }[]>([]);
+  let deltaId = 0;
+  let last: { gold: number; gems: number } | undefined;
   let bumpGold = $state(false);
   let bumpGems = $state(false);
   let first = true;
@@ -24,7 +28,17 @@
       gold.set(w.gold, { duration: 0 });
       gems.set(w.gems, { duration: 0 });
       first = false;
+      last = { gold: w.gold, gems: w.gems };
       return;
+    }
+    // Shown only for a gain on the same account's treasury (not the swap from a visitor's to the account's at sign-in).
+    const dg = last ? w.gold - last.gold : 0;
+    const dm = last ? w.gems - last.gems : 0;
+    last = { gold: w.gold, gems: w.gems };
+    if ($walletMode !== 'loading' && (dg > 0 || dm > 0) && dg < 100_000) {
+      const id = ++deltaId;
+      deltas = [...deltas, { id, gold: Math.max(0, dg), gems: Math.max(0, dm) }].slice(-4);
+      setTimeout(() => (deltas = deltas.filter((d) => d.id !== id)), 2000);
     }
     if (w.gold > $gold) flash('gold');
     if (w.gems > $gems) flash('gems');
@@ -48,6 +62,11 @@
 </script>
 
 <div class="wallet" class:compact data-wallet>
+  <span class="deltas" aria-hidden="true">
+    {#each deltas as d (d.id)}
+      <span class="d">{#if d.gold}<span class="dg">+{fmt.format(d.gold)} 🪙</span>{/if}{#if d.gems}<span class="dm">+{fmt.format(d.gems)} 💎</span>{/if}</span>
+    {/each}
+  </span>
   {#if claimable && !compact}
     <button class="gift" onclick={() => dailyOpen.set(true)} title={$t('eco.daily.ready')} aria-label={$t('eco.daily.ready')}>
       <span class="gift-ico" aria-hidden="true">🎁</span>
@@ -71,7 +90,68 @@
 </div>
 
 <style>
+  .deltas {
+    position: absolute;
+    top: calc(100% + 2px);
+    right: 0;
+    z-index: 901;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    pointer-events: none;
+  }
+  .d {
+    display: inline-flex;
+    gap: 8px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--card) 92%, #000);
+    border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--border));
+    font: 800 14px var(--font-title);
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    animation: drop 1.9s ease-out forwards;
+  }
+  .dg {
+    color: #ffd76a;
+  }
+  .dm {
+    color: #8fe6f5;
+  }
+  :global(:root[data-theme='light']) .dg {
+    color: #8a5a12;
+  }
+  :global(:root[data-theme='light']) .dm {
+    color: #0e6b85;
+  }
+  @keyframes drop {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.8);
+    }
+    14% {
+      opacity: 1;
+      transform: translateY(0) scale(1.12);
+    }
+    24% {
+      transform: scale(1);
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .d {
+      animation: none;
+    }
+  }
   .wallet {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;

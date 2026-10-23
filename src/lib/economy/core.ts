@@ -284,6 +284,8 @@ export interface Wallet {
   carried: boolean;
   /** Castle Cups counted so far (the server pays the difference); undefined until first seen. */
   cups?: { played: number; podiums: number; wins: number };
+  /** What was done before the Treasury began has been paid (once: see historySync). */
+  history?: true;
 }
 
 const MAX_REFS = 400;
@@ -349,6 +351,7 @@ export function cleanWallet(v: unknown, now: number): Wallet {
     created: n(o.created, 1e15) || now,
     carried: !!o.carried,
     cups: o.cups && typeof o.cups === 'object' ? { played: n(o.cups.played), podiums: n(o.cups.podiums), wins: n(o.cups.wins) } : undefined,
+    ...(o.history === true ? { history: true as const } : {}),
   };
 }
 
@@ -591,6 +594,48 @@ export function cupSync(w0: Wallet, played: number, podiums: number, wins: numbe
   const extra: Grant[] = [];
   settle(w, extra, now);
   return { ok: true, wallet: w, grants: [...grants, ...extra] };
+}
+
+/**
+ * What a player did before the Treasury began (owner, 2026-10-23: "from day one, whoever played puzzles and did the study,
+ * give coin and gems accordingly"). The server counts it from its own records of the account (the progress the site
+ * sends with every change, and the rated games it checked), never from what a browser says.
+ */
+export interface History {
+  /** Rated puzzles solved. */
+  puzzles: number;
+  /** Puzzle Rush and Rush Unlimited runs. */
+  rushRuns: number;
+  races: number;
+  raceWins: number;
+  /** Rated games against the FIDE-level opponents, by result. */
+  wins: number;
+  draws: number;
+  losses: number;
+  /** Awards the account had won. */
+  awards: string[];
+}
+/** The most a player's past can pay (the first weeks of play and study are worth about this). */
+export const HISTORY_MAX = { gold: 6000, gems: 60 };
+/** What the past pays per thing: a little below the live rates, as no daily caps applied then (puzzles ~ the average of 4 and 6). */
+export const HISTORY_RATE = { puzzle: 5, rush: 10, race: 10, raceWin: 20, win: 15, draw: 8, loss: 4 } as const;
+/** The past, paid once: gold for what was done (at the rates above, up to HISTORY_MAX), and an award's pay for each award not paid already. */
+export function historySync(w0: Wallet, h: History, now: number): Result {
+  if (w0.history) return { ok: true, wallet: w0, grants: [] };
+  const w = structuredClone(w0);
+  w.history = true;
+  const grants: Grant[] = [];
+  const c = (x: number) => Math.max(0, Math.min(100_000, Math.floor(Number(x)) || 0));
+  const R = HISTORY_RATE;
+  const play = c(h.wins) * R.win + c(h.draws) * R.draw + c(h.losses) * R.loss;
+  const study = c(h.puzzles) * R.puzzle + c(h.rushRuns) * R.rush;
+  const racer = c(h.races) * R.race + c(h.raceWins) * R.raceWin;
+  const owed = h.awards.filter((id) => !w.refs.includes('a:' + id)).length;
+  const gold = Math.min(HISTORY_MAX.gold, play + study + racer + owed * EARN.award.gold);
+  const gems = Math.min(HISTORY_MAX.gems, owed * EARN.award.gems);
+  give(w, grants, { why: 'history', gold, gems }, now, true);
+  settle(w, grants, now);
+  return { ok: true, wallet: w, grants };
 }
 
 /** What everyone may see of a player's treasury: what they wear, and their level. */
