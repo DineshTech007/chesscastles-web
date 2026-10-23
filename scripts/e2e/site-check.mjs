@@ -107,7 +107,7 @@ async function run(name, options) {
   // 2. The menus: every item opens its page.
   await open(page, '/');
   if (name === 'phone') {
-    for (const label of ['Play', 'Puzzles', 'Analyse', 'More', 'Home']) {
+    for (const label of ['Play', 'Puzzles', 'Analyse', 'Home']) {
       await check(name, page, `bottom bar: ${label}`, async () => {
         const before = page.url();
         const t0 = Date.now();
@@ -116,11 +116,15 @@ async function run(name, options) {
         return `${Date.now() - t0} ms`;
       });
     }
-    await check(name, page, 'More > Learn', async () => {
-      await open(page, '/more');
+    // The last tab opens the menu drawer (owner, 2026-10-23), which lists every page by name.
+    await check(name, page, 'menu: the last tab opens the drawer, a page opens from it', async () => {
+      await open(page, '/');
       const t0 = Date.now();
-      await tap(page.locator('main a[href="/learn"]').first());
+      await tap(page.locator('nav.tabs .tab-btn'));
+      await page.locator('aside.drawer').waitFor({ timeout: TAP_MS });
+      await tap(page.locator('aside.drawer a.row', { hasText: /^Learn$/ }).first());
       await page.waitForURL(/\/learn/, { timeout: TAP_MS });
+      expect((await page.locator('aside.drawer').count()) === 0, 'the menu stayed open');
       return `${Date.now() - t0} ms`;
     });
   } else {
@@ -923,8 +927,8 @@ async function run(name, options) {
         times.push(`${label} ${Date.now() - t0} ms`);
       };
       await step('Puzzles tab', page.locator('nav.tabs a', { hasText: 'Puzzles' }));
-      await step('More tab', page.locator('nav.tabs a', { hasText: 'More' }));
-      await step('Learn on More', page.locator('main a[href="/learn"]').first(), /\/learn/);
+      await page.locator('nav.tabs .tab-btn').click();
+      await step('Learn in the menu', page.locator('aside.drawer a.row', { hasText: /^Learn$/ }).first(), /\/learn/);
       await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       return times.join(', ');

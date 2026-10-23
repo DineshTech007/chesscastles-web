@@ -30,9 +30,18 @@
     }
     current = id;
     applyBoardTheme(id);
-    // What the player wears (the Treasury): the board everyone sees on their profile.
-    void wear('board', id);
+    // What the player wears (the Treasury): the board everyone sees on their profile. The choice made here is the one that
+    // stays on screen (owner, 2026-10-23: a bought board kept showing after another was picked): it is applied again when
+    // the Treasury has answered, whatever it answered.
+    void wear('board', id).finally(() => current === id && applyBoardTheme(id));
     track('feature', `board_theme_${id}`);
+  }
+  /** Back to the standard board (Sandstone & slate), whatever was bought or worn. */
+  function standard() {
+    current = 'stone';
+    applyBoardTheme('stone');
+    void wear('board', 'stone').finally(() => current === 'stone' && applyBoardTheme('stone'));
+    track('feature', 'board_theme_standard');
   }
   function pickPieces(id: string) {
     // A Shop piece set not bought yet: to the Shop.
@@ -66,6 +75,7 @@
         <img src={pieceImage(pieces, 'wK')} alt="" /><img src={pieceImage(pieces, 'bQ')} alt="" /><img src={pieceImage(pieces, 'bN')} alt="" /><img src={pieceImage(pieces, 'wP')} alt="" />
       </span>
     </div>
+    <button class="btn standard" onclick={standard} disabled={current === 'stone'}>Use the standard board</button>
     <h3 class="sub-h">Premium boards</h3>
     <div class="grid">
       {#each premium as t (t.id)}
@@ -116,6 +126,10 @@
 {/if}
 
 <style>
+  .standard {
+    margin: 4px 0 2px;
+    align-self: flex-start;
+  }
   .mini.bprev {
     position: relative;
     overflow: hidden;

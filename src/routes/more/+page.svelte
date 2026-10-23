@@ -5,7 +5,7 @@
   import { session, signOut, startSignIn } from '$lib/auth';
   import { adminMe } from '$lib/admin';
   import { HERO_FEATURES } from '$lib/heroFeatures';
-  import { NAV_ITEMS, navBlurbKey, navKey } from '$lib/nav';
+  import { NAV_ITEMS, navKey } from '$lib/nav';
   import { t, type Key } from '$lib/i18n';
   import { installOpen, installWay } from '$lib/install';
   import { boardThemeOpen } from '$lib/boardTheme';
@@ -23,27 +23,25 @@
       );
   });
 
-  /** Account and policy pages; everything else comes from the shared menu list (src/lib/nav.ts). */
+  /** Short names only (owner, 2026-10-23: the More page was too detailed); the phone's menu drawer lists the same pages. */
   const links = $derived<{ href: string; label: string; icon: IconName }[]>([
-    { href: '/profile', label: $t('more.profile'), icon: 'users' },
-    // The Castle Treasury (2026-10-23): the Shop and Rewards, near the top.
-    { href: '/shop', label: `${$t('nav.new')} · ${$t('eco.nav.shop')}: ${$t('eco.nav.shop.b')}`, icon: 'sparkle' as IconName },
-    { href: '/rewards', label: `${$t('eco.nav.rewards')}: ${$t('eco.nav.rewards.b')}`, icon: 'star' as IconName },
-    ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
-    // Puzzle Rush: new and a must-try (owner, 2026-10-22), near the top.
-    { href: '/puzzles/racer', label: `${$t('nav.new')} · Puzzle Racer: race other players through the same puzzles`, icon: 'trophy' as IconName },
-    { href: '/puzzles/rush', label: `${$t('home.rush.h')}: ${$t('home.rush.sub')}`, icon: 'flame' as IconName },
-    ...($classroomShown ? [{ href: '/castleclass', label: 'CastlesClass: live classes with your coach', icon: 'coach' as IconName }] : []),
-    { href: '/students', label: $t('more.students'), icon: 'coach' },
-    ...NAV_ITEMS.map((n) => ({ href: n.href, label: `${n.badge ? `${$t('nav.new')} · ` : ''}${$t(navKey(n.href))}: ${$t(navBlurbKey(n.href))}`, icon: n.icon })),
-    { href: '/parents', label: $t('more.parents'), icon: 'shield' },
-    { href: '/feedback', label: $t('more.feedback'), icon: 'send' },
-    { href: '/help', label: $t('more.help'), icon: 'bulb' },
-    { href: '/legal/terms', label: $t('more.terms'), icon: 'book' },
-    { href: '/legal/privacy', label: $t('more.privacy'), icon: 'book' },
-    { href: '/legal/fair-play', label: $t('more.fair'), icon: 'flag' },
-    { href: '/legal/refunds', label: $t('more.refunds'), icon: 'book' },
-    { href: '/about', label: $t('more.about'), icon: 'book' },
+    { href: '/profile', label: $t('shell.profile'), icon: 'users' },
+    { href: '/shop', label: $t('eco.nav.shop'), icon: 'sparkle' as IconName },
+    { href: '/rewards', label: $t('eco.nav.rewards'), icon: 'star' as IconName },
+    ...(PLANS_ON ? [{ href: '/plans', label: 'Plans', icon: 'crown' as IconName }] : []),
+    { href: '/cups', label: 'Castle Cups', icon: 'trophy' as IconName },
+    { href: '/puzzles/racer', label: 'Puzzle Racer', icon: 'trophy' as IconName },
+    { href: '/puzzles/rush', label: $t('home.rush.h'), icon: 'flame' as IconName },
+    ...($classroomShown ? [{ href: '/castleclass', label: 'CastlesClass', icon: 'coach' as IconName }] : []),
+    ...NAV_ITEMS.filter((n) => n.menu !== false).map((n) => ({ href: n.href, label: $t(navKey(n.href)), icon: n.icon })),
+    { href: '/parents', label: $t('shell.parents'), icon: 'shield' as IconName },
+    { href: '/feedback', label: $t('shell.feedback'), icon: 'send' as IconName },
+    { href: '/help', label: $t('shell.help'), icon: 'bulb' as IconName },
+    { href: '/legal/terms', label: $t('shell.terms'), icon: 'book' as IconName },
+    { href: '/legal/privacy', label: $t('shell.privacy'), icon: 'book' as IconName },
+    { href: '/legal/fair-play', label: $t('shell.fairplay'), icon: 'flag' as IconName },
+    { href: '/legal/refunds', label: $t('shell.refunds'), icon: 'book' as IconName },
+    { href: '/about', label: $t('menu.about'), icon: 'book' as IconName },
   ]);
 </script>
 

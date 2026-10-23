@@ -25,6 +25,8 @@
   import TreasuryCard from '$lib/economy/TreasuryCard.svelte';
   import ShopProgress from '$lib/economy/ShopProgress.svelte';
   import AdminBoard from '$lib/economy/AdminBoard.svelte';
+  import ShopBanner from '$lib/economy/ShopBanner.svelte';
+  import { menuOpen } from '$lib/menu';
   import { adminTester } from '$lib/economy/wallet';
   import { t } from '$lib/i18n';
   import { session } from '$lib/auth';
@@ -54,6 +56,7 @@
         {$t(greetingKey)}{#if $session.status === 'in' && $myName},&nbsp;<TitleBadge title={$myTitle} size={22} />{$myName}{/if}
       </h1>
       <span class="hello-side">
+        <button class="all-btn" onclick={() => menuOpen.set(true)} aria-haspopup="dialog"><Icon name="menu" size={16} />{$t('menu.all')}</button>
         {#if days > 0}<a class="streak" href="/learn" title={$t('home.streak.short', { n: days })}><Icon name="flame" size={16} />{days}</a>{/if}
       </span>
     </header>
@@ -64,6 +67,8 @@
     <div class="cols">
       <div class="col main-col">
         <div class="o0"><PlayCard /></div>
+        <!-- The Castle Shop, lit up (owner, 2026-10-23: players were not using it). -->
+        <div class="o0"><ShopBanner /></div>
         <!-- Castle Cups (owner, 2026-10-22): tonight's tournaments, the next one's countdown, the top board. -->
         <div class="o1"><CupsCard /></div>
         <!-- The Puzzle Lobby (owner, 2026-10-22): races and battles to join in a tap. -->
@@ -132,6 +137,27 @@
     font-size: 34px;
     line-height: 1.1;
     min-width: 0;
+  }
+  /* The menu drawer exists on phones only (under 768 px). */
+  .all-btn {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--raised);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  @media (max-width: 767px) {
+    .all-btn {
+      display: inline-flex;
+    }
   }
   .hello-side {
     display: flex;

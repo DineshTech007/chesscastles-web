@@ -57,6 +57,8 @@
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import WelcomeSheet from '$lib/components/WelcomeSheet.svelte';
   import ShopAd from '$lib/economy/ShopAd.svelte';
+  import MenuDrawer from '$lib/components/MenuDrawer.svelte';
+  import { menuOpen } from '$lib/menu';
   import FeatureVideo from '$lib/components/FeatureVideo.svelte';
   import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
   import { boardThemeOpen } from '$lib/boardTheme';
@@ -489,6 +491,7 @@
     {:else}
     <header class="top" class:scrolled>
       {#if phone}
+        <button class="icon-btn menu-btn" onclick={() => menuOpen.set(true)} aria-label={$t('menu.open')} aria-haspopup="dialog"><Icon name="menu" size={22} /></button>
         <a class="phone-brand" href="/" title="Chess Castles: Learn, Play, Conquer (home)">
           <img class="logo-dark" src="/brand/chesscastles-crest-dark.svg" alt="" width="32" height="36" />
           <img class="logo-light" src="/brand/chesscastles-crest-light.svg" alt="" width="32" height="36" />
@@ -600,6 +603,7 @@
 <InstallPrompt />
 <WelcomeSheet />
 <ShopAd />
+{#if phone}<MenuDrawer />{/if}
 <BoardThemeModal bind:open={$boardThemeOpen} />
 <RewardToasts />
 <DailyChest />
@@ -608,11 +612,17 @@
   <nav class="tabs" aria-label="Main">
     {#each tabs as tab (tab.href)}
       {@const on = tabOn(tab.href)}
-      <a href={tab.href} aria-current={on ? 'page' : undefined} class:on title={tab.href === '/more' ? 'More: all pages, profile and settings' : undefined}>
-        {#if tab.href === '/more'}<span class="sr-only">All pages, profile and settings: </span>{/if}
-        <span class="tab-icon"><Icon name={tab.icon} color={on ? 'var(--accent)' : 'var(--muted)'} /></span>
-        {$t(tab.label)}
-      </a>
+      {#if tab.href === '/more'}
+        <button class="tab-btn" class:on={$menuOpen} aria-haspopup="dialog" aria-expanded={$menuOpen} onclick={() => menuOpen.set(true)}>
+          <span class="tab-icon"><Icon name={tab.icon} color={$menuOpen ? 'var(--accent)' : 'var(--muted)'} /></span>
+          {$t('menu.all')}
+        </button>
+      {:else}
+        <a href={tab.href} aria-current={on ? 'page' : undefined} class:on>
+          <span class="tab-icon"><Icon name={tab.icon} color={on ? 'var(--accent)' : 'var(--muted)'} /></span>
+          {$t(tab.label)}
+        </a>
+      {/if}
     {/each}
   </nav>
 {/if}
@@ -946,7 +956,8 @@
     border-top: 1px solid var(--border-soft);
     padding: 6px 4px calc(10px + env(safe-area-inset-bottom));
   }
-  .tabs a {
+  .tabs a,
+  .tabs .tab-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -964,10 +975,21 @@
     display: grid;
     place-items: center;
   }
-  .tabs a.on {
+  .tabs .tab-btn {
+    border: 0;
+    background: none;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .tabs a.on,
+  .tabs .tab-btn.on {
     color: var(--text);
   }
-  .tabs a.on .tab-icon {
+  .tabs a.on .tab-icon,
+  .tabs .tab-btn.on .tab-icon {
     background: var(--raised);
+  }
+  .menu-btn {
+    flex: none;
   }
 </style>
