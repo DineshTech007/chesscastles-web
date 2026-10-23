@@ -122,7 +122,7 @@ async function run(name, options) {
       const t0 = Date.now();
       await tap(page.locator('nav.tabs .tab-btn'));
       await page.locator('aside.drawer').waitFor({ timeout: TAP_MS });
-      await tap(page.locator('aside.drawer a.row', { hasText: /^Learn$/ }).first());
+      await tap(page.locator('aside.drawer a.row', { hasText: /^\s*Learn\s*$/ }).first());
       await page.waitForURL(/\/learn/, { timeout: TAP_MS });
       expect((await page.locator('aside.drawer').count()) === 0, 'the menu stayed open');
       return `${Date.now() - t0} ms`;
@@ -928,7 +928,7 @@ async function run(name, options) {
       };
       await step('Puzzles tab', page.locator('nav.tabs a', { hasText: 'Puzzles' }));
       await page.locator('nav.tabs .tab-btn').click();
-      await step('Learn in the menu', page.locator('aside.drawer a.row', { hasText: /^Learn$/ }).first(), /\/learn/);
+      await step('Learn in the menu', page.locator('aside.drawer a.row', { hasText: /^\s*Learn\s*$/ }).first(), /\/learn/);
       await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       return times.join(', ');
