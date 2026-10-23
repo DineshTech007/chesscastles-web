@@ -234,10 +234,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
+  /* The picture on the left, the name above its price: a price never runs off the edge of a narrow card (owner, 2026-10-23: a phone cut "400", "1500" and the like). */
   .swatch {
-    display: flex;
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 10px;
+    column-gap: 10px;
+    row-gap: 3px;
     padding: 10px;
     border-radius: 12px;
     border: 1px solid var(--border);
@@ -256,9 +260,40 @@
     flex: none;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25) inset;
   }
+  .swatch > .mini,
+  .swatch > .pset {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
   .name {
-    flex: 1;
+    grid-column: 2;
+    min-width: 0;
     font-size: 14.5px;
     font-weight: 600;
+    overflow-wrap: break-word;
+  }
+  /* Narrow phones: a smaller picture and name, so a whole word fits on a line. */
+  @media (max-width: 420px) {
+    .swatch {
+      padding: 8px;
+      column-gap: 8px;
+    }
+    .swatch .mini {
+      width: 30px;
+      height: 30px;
+    }
+    .name {
+      font-size: 13.5px;
+    }
+  }
+  .swatch > .cost {
+    grid-column: 2;
+    justify-self: start;
+  }
+  /* The tick on the chosen one sits in the corner. */
+  .swatch > :global(svg) {
+    position: absolute;
+    top: 8px;
+    right: 8px;
   }
 </style>

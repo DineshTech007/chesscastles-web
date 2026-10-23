@@ -133,7 +133,11 @@
       {/if}
     </div>
     <div class="btns">
-      <button class="btn primary big" disabled={busy === shown.id} onclick={() => accept(shown)}><Icon name="check" size={18} />{busy === shown.id ? 'Starting…' : 'Accept'}</button>
+      {#if !shown.cc && isBullet(shown.minutes, shown.increment)}
+        <p class="err">Bullet from Lichess cannot be played here. Decline, and invite them to a friendly bullet game on Chess Castles.</p>
+      {:else}
+        <button class="btn primary big" disabled={busy === shown.id} onclick={() => accept(shown)}><Icon name="check" size={18} />{busy === shown.id ? 'Starting…' : 'Accept'}</button>
+      {/if}
       <button class="btn" disabled={busy === shown.id} onclick={() => decline(shown)}>Decline</button>
     </div>
     {#if error}<p class="err" role="alert">{error}</p>{/if}

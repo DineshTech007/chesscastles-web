@@ -57,7 +57,9 @@ export interface GameStart {
 
 /** The ids of the player's Lichess games in progress right now (the truth, when the event stream missed a game ending). */
 export async function nowPlaying(token: string): Promise<string[]> {
-  const res = await call(token, '/api/account/playing?nb=20');
+  // Asked quietly: a Lichess sign-in that has run out must not fill the admin's error list every half minute.
+  const res = await fetch(LICHESS + '/api/account/playing?nb=20', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`Lichess answered ${res.status}`);
   const j = (await res.json()) as { nowPlaying?: { gameId?: string; fullId?: string }[] };
   return (j.nowPlaying ?? []).map((g) => g.gameId ?? g.fullId?.slice(0, 8) ?? '').filter(Boolean);
 }
