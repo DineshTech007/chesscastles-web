@@ -9,6 +9,7 @@
     ['/legal/privacy', 'Privacy'],
     ['/legal/fair-play', 'Fair play'],
     ['/legal/refunds', 'Refunds'],
+    ['/contact', 'Contact'],
     ['/help', 'Help & support'],
   ];
 </script>

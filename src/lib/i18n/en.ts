@@ -18,6 +18,7 @@ export const en = {
   'shell.privacy': 'Privacy',
   'shell.fairplay': 'Fair play',
   'shell.refunds': 'Refunds',
+  'shell.contact': 'Contact',
   'tab.home': 'Home',
   'tab.play': 'Play',
   'tab.puzzles': 'Puzzles',

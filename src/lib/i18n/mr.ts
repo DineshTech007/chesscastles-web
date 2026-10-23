@@ -16,6 +16,7 @@ export const mr: Record<Key, string> = {
   'shell.privacy': 'Privacy',
   'shell.fairplay': 'Fair play',
   'shell.refunds': 'Refunds',
+  'shell.contact': 'संपर्क',
   'tab.home': 'होम',
   'tab.play': 'खेळा',
   'tab.puzzles': 'Puzzles',

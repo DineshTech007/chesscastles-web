@@ -2,9 +2,9 @@
   import LegalPage from '$lib/components/LegalPage.svelte';
 </script>
 
-<LegalPage title="Privacy policy" updated="21 October 2026">
+<LegalPage title="Privacy policy" updated="23 October 2026">
   <p class="box">
-    In short: we keep only what Chess Castles needs to work, we never sell your data or show ads, messages and photos are for
+    In short: we keep only what Chess Castles needs to work, we never sell your data, no ads are shown to players while they play, learn or chat, messages and photos are for
     friends only, and you can ask us to delete your account and data at any time.
   </p>
 
@@ -30,7 +30,7 @@
     <li><strong>WhatsApp number</strong>, only if you choose to give one after signing in (for a player under 18, only a parent's or guardian's number, given with their agreement): to send Guru's game reports and study reminders on WhatsApp. We keep the number, whether it is yours or a parent's, when you agreed and to which wording, and your latest Guru summary (games checked, score, accuracy, the mistakes that cost the most points, a strong point) to write the message. Only Chess Castles sees it; it is never shown to other players, shared or sold. Stop any time in Settings (the number is deleted) or by replying STOP.</li>
     <li><strong>On your device only</strong>: settings, games played while signed out, your study plan and reading progress are kept in your browser's storage and are not sent to us unless stated above.</li>
   </ul>
-  <p>We do not collect payment details, we do not use advertising or tracking cookies, and we do not sell or rent personal data.</p>
+  <p>We do not collect payment details, we do not sell or rent personal data, and Chess Castles itself sets no tracking cookies. Only the advertising described in section 5 can involve cookies, and only on public reading pages.</p>
 
   <h2>3. Who can see what</h2>
   <ul>
@@ -45,13 +45,25 @@
   <h2>4. Children</h2>
   <p>
     Many Chess Castles players are children. A child under 18 may use Chess Castles only with the consent of a parent or legal
-    guardian. We do not track children's behaviour or show them advertising aimed at them, messaging and photos are
+    guardian. We do not track children's behaviour or show them personalised advertising, messaging and photos are
     limited to friends who both agreed, and any player can be blocked and reported. A WhatsApp number for a player
     under 18 can only be a parent's or guardian's, given with their agreement. A parent or guardian can ask to see,
     correct or delete their child's data through <a href="/help">Help &amp; support</a>.
   </p>
 
-  <h2>5. How long we keep data</h2>
+  <h2>5. Advertising</h2>
+  <p>
+    At the moment Chess Castles shows no advertisements. In future we may show Google AdSense ads on public reading pages only
+    (for example the blog and the Chess Guide). Because many visitors are children, such ads would be set to Google's
+    child-directed treatment: they are not personalised, are not based on what a visitor did elsewhere, and Google does not
+    build an advertising profile of the visitor. Ads would never appear inside games, puzzles, tournaments, the Guru's lessons, chat or
+    messages, or on a signed-in child's own pages. Google, as a service provider for these ads, may use cookies or similar technology
+    to show and measure them; you can read how Google uses data at
+    <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener">policies.google.com/technologies/partner-sites</a>.
+    We will update this policy before any ad is shown.
+  </p>
+
+  <h2>6. How long we keep data</h2>
   <ul>
     <li>Your profile, friends and messages: while your account exists.</li>
     <li>Finished games shared with friends: the newest 100. A game in progress: until 30 minutes after it ends.</li>
@@ -59,7 +71,7 @@
     <li>When you delete your account, we delete your profile, friends, messages and games within 30 days, except what the law requires us to keep.</li>
   </ul>
 
-  <h2>6. Your rights</h2>
+  <h2>7. Your rights</h2>
   <p>Under the DPDP Act you can:</p>
   <ul>
     <li>ask what personal data we hold about you and how it is used;</li>
@@ -74,13 +86,13 @@
     (subject “Grievance”). We acknowledge complaints within 48 hours and aim to resolve them within one month.
   </p>
 
-  <h2>7. Security</h2>
+  <h2>8. Security</h2>
   <p>
     Data is sent over encrypted connections, sign-in uses Lichess and Firebase so we never handle passwords, and access to
     our systems is limited. No system is perfectly secure; if a breach affects you, we will tell you and the authorities as
     the law requires.
   </p>
 
-  <h2>8. Changes</h2>
+  <h2>9. Changes</h2>
   <p>We may update this policy. The date at the top shows the latest version; important changes will be shown in the site.</p>
 </LegalPage>

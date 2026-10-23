@@ -433,6 +433,23 @@ async function run(name, options) {
     return 'no clock, own board';
   });
 
+  // 4w. AdSense review (owner, 2026-10-23): ads.txt is plain text, and About, Contact and the policies hold their words in
+  // the file itself (the reviewer's crawler may not run the app), and the Contact page draws.
+  await check(name, page, 'adsense readiness: ads.txt, policy pages, contact', async () => {
+    const ads = await page.request.get(BASE + '/ads.txt');
+    const adsText = await ads.text();
+    expect(ads.ok() && /^google\.com, pub-\d+, DIRECT, f08c47fec0942fa0/m.test(adsText), `ads.txt is not the AdSense line (${ads.status()})`);
+    for (const [path, words] of [['/about', 'About Chess Castles'], ['/contact', 'support@chesscastles.com'], ['/legal/privacy', 'Advertising'], ['/legal/terms', 'Terms of use']]) {
+      // Cloudflare answers /about from about.html; the local preview server does not, so the built file is read.
+      const html = /127.0.0.1|localhost/.test(BASE) ? readFileSync(`build${path}.html`, 'utf8') : await (await page.request.get(BASE + path)).text();
+      expect(html.includes(`id="seo"`) && html.includes(words), `${path} has no readable text for a crawler`);
+    }
+    await open(page, '/contact');
+    await page.locator('.legal h1').waitFor({ timeout: 15000 });
+    expect((await page.locator('.legal').innerText()).includes('support@chesscastles.com'), 'the Contact page shows no email');
+    return 'ads.txt, 4 pages in the file, contact draws';
+  });
+
   // 4f. Puzzle Rush: it starts, the clock runs, and ending it shows the score.
   await check(name, page, 'puzzle rush: start, clock, end', async () => {
     await open(page, '/puzzles/rush');

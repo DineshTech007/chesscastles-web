@@ -16,6 +16,7 @@ export const hi: Record<Key, string> = {
   'shell.privacy': 'Privacy',
   'shell.fairplay': 'Fair play',
   'shell.refunds': 'Refunds',
+  'shell.contact': 'संपर्क',
   'tab.home': 'होम',
   'tab.play': 'खेलें',
   'tab.puzzles': 'Puzzles',

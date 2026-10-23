@@ -56,7 +56,7 @@ function md(lines) {
 }
 
 const STYLE = `<style>#seo{max-width:760px;margin:0 auto;padding:8px 16px 40px;color:var(--text,#e8ecf3);font:16px/1.65 system-ui,sans-serif}#seo h1{font-size:30px;line-height:1.2}#seo img{max-width:100%;height:auto}#seo a{color:var(--accent,#f0b43a)}#seo nav a{margin-right:12px}</style>`;
-const NAV = `<nav><a href="/">Chess Castles</a><a href="/play">Play</a><a href="/learn">Learn</a><a href="/puzzles">Puzzles</a><a href="/blog">Blog</a><a href="/guide">Chess Guide</a></nav>`;
+const NAV = `<nav><a href="/">Chess Castles</a><a href="/play">Play</a><a href="/learn">Learn</a><a href="/puzzles">Puzzles</a><a href="/blog">Blog</a><a href="/guide">Chess Guide</a><a href="/about">About</a><a href="/contact">Contact</a><a href="/legal/privacy">Privacy</a><a href="/legal/terms">Terms</a></nav>`;
 
 function page(path, { title, description, type = 'website', jsonld, body }) {
   const url = SITE + path;
@@ -130,12 +130,46 @@ written.push(
   }),
 );
 
+// About, Contact and the policies: the text is in the .svelte pages (plain HTML, no logic), so it is read from there and
+// the same words are in the file search engines and the AdSense reviewer fetch.
+const svelteText = (file, open, close) => {
+  let t = readFileSync(join(root, 'src/routes', file), 'utf8').replace(/<script[\s\S]*?<\/script>/, '').replace(/<style[\s\S]*$/, '');
+  const a = t.indexOf(open);
+  const b = t.lastIndexOf(close);
+  if (a < 0 || b < 0) throw new Error(`seo-pages: cannot read ${file}`);
+  t = t.slice(a + open.length, b);
+  if (/[{}]/.test(t)) throw new Error(`seo-pages: ${file} has logic; give it its own text`);
+  return t.replace(/^[^<]*>/, '').trim();
+};
+const LEGAL = [
+  ['/legal/privacy', 'legal/privacy/+page.svelte', 'Privacy policy', "How Chess Castles handles personal data, children's data and advertising, and the rights you have under India's DPDP Act."],
+  ['/legal/terms', 'legal/terms/+page.svelte', 'Terms of use', 'The rules for using Chess Castles: accounts, fair play, children, plans and payments.'],
+  ['/legal/fair-play', 'legal/fair-play/+page.svelte', 'Fair play policy', 'How Chess Castles keeps games fair: what counts as cheating, how it is checked and what happens next.'],
+  ['/legal/refunds', 'legal/refunds/+page.svelte', 'Refund policy', 'When and how payments to Chess Castles can be refunded.'],
+  ['/contact', 'contact/+page.svelte', 'Contact us', 'Email and support for Chess Castles: help for players, parents and coaches, and how to send a complaint.'],
+];
+for (const [path, file, title, description] of LEGAL) {
+  const inner = svelteText(file, '<LegalPage', '</LegalPage>');
+  written.push(page(path, { title: `${title} · Chess Castles`, description, body: `<article><h1>${esc(title)}</h1>${inner}</article>` }));
+}
+{
+  const inner = svelteText('about/+page.svelte', '<div class="page">', '</div>');
+  written.push(
+    page('/about', {
+      title: 'About Chess Castles · who we are and what we use',
+      description: 'Chess Castles is a free chess site and app for players in India: play, learn, analyse and follow ratings. What our opponents, coach and engines are, and the open-source work we build on.',
+      jsonld: { '@context': 'https://schema.org', '@type': 'AboutPage', name: 'About Chess Castles', url: SITE + '/about', publisher: ORG },
+      body: `<article>${inner}</article>`,
+    }),
+  );
+}
+
 // The sitemap: the site's pages (static/sitemap.xml) and every post.
 const base = readFileSync(join(root, 'static/sitemap.xml'), 'utf8');
 const have = new Set([...base.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]));
 const extra = [
   ...POSTS.map((p) => ({ loc: `${SITE}/blog/${p.slug}`, lastmod: p.date, freq: 'monthly', pr: '0.7' })),
-  ...['/blog', '/guide', '/journey', '/journey/story', '/wishes', '/learn/roadmap', '/live'].map((p) => ({ loc: SITE + p, freq: 'weekly', pr: '0.7' })),
+  ...['/blog', '/guide', '/journey', '/journey/story', '/wishes', '/learn/roadmap', '/live', '/about', '/contact', '/legal/privacy', '/legal/terms', '/legal/fair-play', '/legal/refunds'].map((p) => ({ loc: SITE + p, freq: 'weekly', pr: '0.7' })),
 ].filter((u) => !have.has(u.loc));
 const urls = extra.map((u) => `  <url><loc>${u.loc}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}<changefreq>${u.freq}</changefreq><priority>${u.pr}</priority></url>`).join('\n');
 writeFileSync(join(out, 'sitemap.xml'), base.replace('</urlset>', `${urls}\n</urlset>`));
