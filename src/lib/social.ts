@@ -73,6 +73,9 @@ export interface FriendProgress {
   /** Puzzle Rush: the best score and how many rushes (for the Puzzle Rush leaderboard). */
   rushBest?: number;
   rushRuns?: number;
+  /** Rush Unlimited: its own best and runs (its own leaderboard). */
+  endlessBest?: number;
+  endlessRuns?: number;
   /** Awards won (src/lib/awards/awards.ts ids): the server keeps them once won. */
   awards?: string[];
   /** Puzzle Racer: best score, races, wins (the Puzzle Racer leaderboard). */
@@ -224,7 +227,7 @@ export interface KfideLeader {
 /** Chess Castles' CC Rating leaderboard (signed-in players), overall ('main') or at one speed. */
 export const kfideLeaders = (speed: 'main' | KfideSpeed) => call<{ players: KfideLeader[] }>('GET', `leaders?speed=${speed}`).then((r) => r.players);
 /** Study points this week, book chapters read, or (members) everyone, for the Lichess boards. `rating` holds the number. */
-export const boardOf = (kind: 'study' | 'books' | 'members' | 'puzzles' | 'puzzles_solved' | 'rush' | 'racer', week = '') =>
+export const boardOf = (kind: 'study' | 'books' | 'members' | 'puzzles' | 'puzzles_solved' | 'rush' | 'endless' | 'racer', week = '') =>
   call<{ players: KfideLeader[] }>('GET', `leaders?speed=${kind}&week=${encodeURIComponent(week)}`).then((r) => r.players);
 
 export type ReportReason = 'cheating' | 'abuse' | 'profile' | 'sandbagging' | 'other';

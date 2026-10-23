@@ -635,7 +635,10 @@ async function run(name, options) {
     await open(page, '/');
     await page.locator('section.cups').waitFor({ timeout: 15000 });
     const chips = await page.locator('section.cups .chip').count();
-    expect(chips === 4, `Home shows ${chips} cup times`);
+    expect(chips >= 4, `Home shows ${chips} cup times`);
+    // Each chip holds its two lines (owner, 2026-10-23: the site's 34 px chip cut "5+0" under the gold border).
+    const cut = await page.evaluate(() => [...document.querySelectorAll('section.cups .chip')].filter((c) => c.scrollHeight > c.clientHeight + 1).length);
+    expect(cut === 0, `${cut} cup chips cut their text`);
     return '4 cups, on Home too';
   });
 

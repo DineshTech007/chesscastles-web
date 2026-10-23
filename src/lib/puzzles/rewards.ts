@@ -24,6 +24,10 @@ export interface Rewards {
   rushBest: number;
   rushRuns: number[];
   rushPlayed: number;
+  /** Rush Unlimited (no clock, 3 mistakes; owner, 2026-10-23): its own best, last scores and runs played. */
+  endlessBest: number;
+  endlessRuns: number[];
+  endlessPlayed: number;
 }
 
 export interface Badge {
@@ -111,7 +115,7 @@ export function nextRushTitle(best: number): { min: number; name: string; badge:
 }
 
 const KEY = 'cc.puzzleRewards';
-const EMPTY: Rewards = { stars: 0, three: 0, badges: [], days: {}, goal: 10, timer: true, rushBest: 0, rushRuns: [], rushPlayed: 0 };
+const EMPTY: Rewards = { stars: 0, three: 0, badges: [], days: {}, goal: 10, timer: true, rushBest: 0, rushRuns: [], rushPlayed: 0, endlessBest: 0, endlessRuns: [], endlessPlayed: 0 };
 
 function read(): Rewards {
   try {
@@ -211,6 +215,31 @@ export function recordPuzzle(o: { solved: boolean; clean: boolean; inTime: boole
  * Records a finished Puzzle Rush: its solved puzzles count for the day (the daily goal, days in a row; no stars,
  * which are for rated puzzles), the best score, and the badges it earns.
  */
+/**
+ * A Rush Unlimited run: the day's puzzles and its own best (apart from the 3-minute Rush, whose titles stay its own).
+ * The daily goal and days-in-a-row badges still count.
+ */
+export function recordEndless(score: number, tried: number): { best: number; newBest: boolean; earned: Badge[] } {
+  const r = structuredClone(get(rewards));
+  const key = dayKey();
+  const day = r.days[key] ?? { tried: 0, solved: 0, stars: 0 };
+  r.days[key] = { ...day, tried: day.tried + tried, solved: day.solved + score };
+  const newBest = score > r.endlessBest;
+  r.endlessBest = Math.max(r.endlessBest, score);
+  r.endlessRuns = [...r.endlessRuns, score].slice(-20);
+  r.endlessPlayed = Math.max(r.endlessPlayed, r.endlessRuns.length - 1) + 1;
+  const has = new Set(r.badges);
+  const want: [string, boolean][] = [
+    ['goal', r.days[key].solved >= r.goal],
+    ['days3', daysInRow(r) >= 3],
+    ['days7', daysInRow(r) >= 7],
+  ];
+  const earned = want.filter(([id, ok]) => ok && !has.has(id)).map(([id]) => BADGES.find((b) => b.id === id)!);
+  r.badges = [...r.badges, ...earned.map((b) => b.id)];
+  save(r);
+  return { best: r.endlessBest, newBest, earned };
+}
+
 export function recordRush(score: number, tried: number): { best: number; newBest: boolean; earned: Badge[] } {
   const r = structuredClone(get(rewards));
   const key = dayKey();

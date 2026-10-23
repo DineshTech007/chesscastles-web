@@ -163,9 +163,9 @@
         const rush = get(rewards);
         // The awards won (src/lib/awards: the profile's trophy cabinet; the server keeps them once won).
         const awards = await import('$lib/awards/awards').then((m) => [...m.earnedNow(now)]).catch(() => []);
-        const progress = { ...sharedPart(weekProgress(get(study), get(puzzleRating), sess.status === 'in' && sess.profile ? sess.profile.puzzles.solved : 0, now)), rushBest: rush.rushBest, rushRuns: Math.max(rush.rushPlayed, rush.rushRuns.length), awards, racerBest: get(racerStats).best, racerRaces: get(racerStats).races, racerWins: get(racerStats).wins };
+        const progress = { ...sharedPart(weekProgress(get(study), get(puzzleRating), sess.status === 'in' && sess.profile ? sess.profile.puzzles.solved : 0, now)), rushBest: rush.rushBest, rushRuns: Math.max(rush.rushPlayed, rush.rushRuns.length), endlessBest: rush.endlessBest, endlessRuns: Math.max(rush.endlessPlayed, rush.endlessRuns.length), awards, racerBest: get(racerStats).best, racerRaces: get(racerStats).races, racerWins: get(racerStats).wins };
         const key = JSON.stringify([studyWeek, booksRead, progress]);
-        if (key === lastBoards || (!studyWeek.points && !booksRead && !progress.puzzlesSolved && !progress.rushBest && !awards.length)) return;
+        if (key === lastBoards || (!studyWeek.points && !booksRead && !progress.puzzlesSolved && !progress.rushBest && !progress.endlessBest && !awards.length)) return;
         lastBoards = key;
         // A dropped phone connection: one more try a few seconds later, unless a newer save took over. (The progress
         // itself stays on this device either way, and is sent again with the next change or sign-in.)

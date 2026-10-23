@@ -178,12 +178,17 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 2px;
+    /* Two lines (time, then speed): not the site's 34 px one-line chip (app.css), which cut the second line. */
+    height: auto;
+    min-height: 50px;
     padding: 6px 4px;
     border-radius: 12px;
     background: var(--raised);
     border: 1px solid transparent;
     text-decoration: none;
     color: var(--text);
+    line-height: 1.2;
   }
   .chip.upnext {
     border-color: var(--gold);
