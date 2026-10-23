@@ -18,8 +18,9 @@
   import { PremoveQueue } from '$lib/game/premoves';
   import { premovesOn } from '$lib/preferences';
   import { t } from '$lib/i18n';
+  import GameEval from '$lib/cups/GameEval.svelte';
 
-  let { live, game, coordinates = true, tag }: { live: GameHost; game: Game; coordinates?: boolean; tag?: (uid: string) => string } = $props();
+  let { live, game, coordinates = true, tag, evalBar = false }: { live: GameHost; game: Game; coordinates?: boolean; tag?: (uid: string) => string; /** A little engine bar between the players (never in a game of the viewer's own). */ evalBar?: boolean } = $props();
 
   const me = $derived(live.me.uid);
   const mine = $derived<'white' | 'black' | undefined>(game.white === me ? 'white' : game.black === me ? 'black' : undefined);
@@ -164,6 +165,7 @@
     <span class="nm">{top === 'white' ? '♔' : '♚'} {nameOf(top)}{#if tagOf(top)} <span class="tag">{tagOf(top)}</span>{/if}</span>
     {#if game.clock}<span class="clk num" class:low={(left(top) ?? 1) < 20_000}>{fmt(left(top))}</span>{/if}
   </div>
+  {#if evalBar && !mine}<GameEval fen={shownFen} />{/if}
   <div class="bwrap">
   {#key remount}
     <ClassBoard

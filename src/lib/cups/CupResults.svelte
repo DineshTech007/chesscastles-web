@@ -14,7 +14,8 @@
   import { t } from '$lib/i18n';
   import Fireworks from '$lib/components/Fireworks.svelte';
   import { sounds } from '$lib/sound';
-  import { GROUP_NAME, MIN_GAMES, type CupGame, type CupView, type Standing } from './api';
+  import Pairings from './Pairings.svelte';
+  import { type CupGame, type CupView, type Standing } from './api';
 
   let { v, me, name }: { v: CupView; me: string; name: string } = $props();
 
@@ -22,16 +23,13 @@
   /** The kids' podium (as the server's kidsPodium). */
   const podium = $derived.by((): Standing[] => {
     const kids = st.filter((r) => !r.bot && !r.out && r.played > 0);
-    if (kids.length === 1) return kids[0].score * 2 >= kids[0].played ? kids : [];
-    // A medal needs at least a point.
-    return kids.filter((r) => r.score >= 1).slice(0, 3);
+    const won = (r: Standing) => r.real ?? r.score;
+    if (kids.length === 1) return won(kids[0]) * 2 >= kids[0].played ? kids : [];
+    // A medal needs at least a point won over the board (a bye alone is not enough).
+    return kids.filter((r) => won(r) >= 1).slice(0, 3);
   });
   const mine = $derived(st.find((r) => r.uid === me));
   const myMedal = $derived(podium.findIndex((r) => r.uid === me) + 1);
-  const groupBest = $derived.by(() => {
-    const seen = new Set<string>();
-    return st.filter((r) => !r.bot && !r.provisional && r.group !== 'open' && !seen.has(r.group) && seen.add(r.group));
-  });
   const rankOf = $derived(new Map(st.map((r) => [r.uid, r.rank])));
   const rounds = $derived(Array.from({ length: v.rounds }, (_, i) => i + 1));
   /** One player's result in a round: "W 3" (beat the player in 3rd place), "½ 5", "L 2", "+" (a bye), "–". */
@@ -92,10 +90,6 @@
     </div>
   {/if}
 
-  {#if groupBest.length}
-    <p class="groups">{#each groupBest as g (g.uid)}<span>🏅 {$t('cups.bestIn', { group: GROUP_NAME[g.group] })}: <b>{g.name}</b></span>{/each}</p>
-  {/if}
-
   <div class="acts">
     <a class="btn primary" href="/cups">{$t('cups.nextCups')}</a>
     <a class="btn ghost" href="/awards">{$t('cups.seeAwards')}</a>
@@ -121,8 +115,8 @@
           <tr class:me={r.uid === me} class:out={r.out}>
             <td class="num">{r.rank}</td>
             <td class="nm">
-              {r.name}
-              <span class="sub">{r.rating} · <span class="grp g-{r.group}" title={r.provisional ? $t('cups.provisional', { n: MIN_GAMES }) : ''}>{GROUP_NAME[r.group]}{r.provisional ? '?' : ''}</span></span>
+              {r.name}{#if r.bot} 🤖{/if}
+              <span class="sub">{r.rating}</span>
             </td>
             {#each rounds as rd (rd)}
               {@const c = cell(r.uid, rd)}
@@ -139,6 +133,11 @@
     </table>
   </div>
   <p class="label small">{$t('cups.resultsKey')}</p>
+</section>
+
+<section class="card pairs" aria-labelledby="pr-h">
+  <h3 id="pr-h">{$t('cux.pairsH')}</h3>
+  <Pairings {v} {me} />
 </section>
 
 {#if myGames.length}

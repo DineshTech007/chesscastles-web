@@ -15,6 +15,9 @@
   import { sounds } from '$lib/sound';
   import GameBoard from '$lib/classroom/GameBoard.svelte';
   import CupResults from '$lib/cups/CupResults.svelte';
+  import CupHero from '$lib/cups/CupHero.svelte';
+  import CupBoards from '$lib/cups/CupBoards.svelte';
+  import Pairings from '$lib/cups/Pairings.svelte';
   import { CupLive } from '$lib/cups/cup.svelte';
   import { countdown, cupTime, GROUP_NAME, joinCup, leaveCup, MIN_GAMES, parseCup, type CupGame } from '$lib/cups/api';
   import { forgetCup, rememberCup } from '$lib/cups/joined';
@@ -60,7 +63,32 @@
     const games = v.games.filter((g) => g.round === v.round && g.black && !g.reason.startsWith('Played'));
     return [...games].sort((a, b) => Number(!!a.result) - Number(!!b.result) || Math.min(rank.get(a.white) ?? 99, rank.get(a.black) ?? 99) - Math.min(rank.get(b.white) ?? 99, rank.get(b.black) ?? 99))[0];
   });
-  const shown = $derived(myGame ?? topGame);
+  // Any board can be put on the big one (owner, 2026-10-23): a tap on a board, or on a player's name in the standings or
+  // the pairings. It follows the round: when a new round starts, the player's own game (or the leaders') is back.
+  let boardEl: HTMLElement | undefined = $state();
+  // A game of mine begins (or a new round): the board comes into view, under the banner, ready for the first move.
+  let scrolledTo = '';
+  $effect(() => {
+    const id = myGame && !myGame.result ? myGame.id : '';
+    if (!id || id === scrolledTo || !boardEl) return;
+    scrolledTo = id;
+    boardEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+  let watchId = $state('');
+  const watched = $derived(v?.games.find((g) => g.id === watchId && g.round === v.round && !!g.black));
+  const shown = $derived(watched ?? myGame ?? topGame);
+  /** The engine bar is for games being watched, and never while the viewer has a game of their own going. */
+  const evalBar = $derived(!!shown && (!myGame || !!myGame.result || shown.id !== myGame.id));
+  function watchGame(g: CupGame) {
+    watchId = myGame && g.id === myGame.id ? '' : g.id;
+    pane = 'board';
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  /** A player's board: their game in the round being played. */
+  function watchPlayer(uid: string) {
+    const g = v?.games.find((x) => x.round === v.round && x.black && (x.white === uid || x.black === uid));
+    if (g) watchGame(g);
+  }
   const tag = (uid: string) => {
     const p = v?.players.find((x) => x.uid === uid);
     return p ? String(p.rating) : '';
@@ -82,7 +110,14 @@
     rememberCup({ id, name: info.name, startAt: Math.min(info.startAt, Date.now()) });
   });
   // Phones: the board or the standings, one tap apart (owner, 2026-10-23: "a proper link to the standings").
-  let pane = $state<'board' | 'table'>('board');
+  let pane = $state<'board' | 'boards' | 'table' | 'pairs'>('board');
+  /** What the right-hand side shows on a computer (a phone shows one thing at a time: pane). */
+  let side = $state<'boards' | 'table' | 'pairs'>('boards');
+  const sideShown = $derived(pane === 'board' ? side : pane);
+  const setSide = (s: 'boards' | 'table' | 'pairs') => {
+    side = s;
+    if (pane !== 'board') pane = s;
+  };
 
   // The countdown to the start and to each round: a tick a second for the last five seconds.
   let ticked = 0;
@@ -152,6 +187,8 @@
     {#if status === 'running' && v}<span class="pill live">● {$t('cups.round', { n: v.round, of: v.rounds })}</span>{/if}
   </header>
 
+  {#if info}<CupHero name={info.name} {status} rounds={v?.rounds ?? 0} players={v ? v.players.filter((p) => !p.bot && !p.out).length : 0} open={status === 'open' || !v} />{/if}
+
   {#if !info}
     <p class="note">{$t('cups.notFound')}</p>
   {:else if !me}
@@ -195,10 +232,12 @@
     {#if status === 'running' && v}
       <div class="panes" role="tablist" aria-label={info.name}>
         <button role="tab" aria-selected={pane === 'board'} class:on={pane === 'board'} onclick={() => (pane = 'board')}>♟ {myGame ? $t('cups.myBoard') : $t('cups.topBoard')}</button>
-        <button role="tab" aria-selected={pane === 'table'} class:on={pane === 'table'} onclick={() => (pane = 'table')}>🏆 {$t('cups.standingsH')}{#if myRank} · #{myRank.rank}{/if}</button>
+        <button role="tab" aria-selected={pane === 'boards'} class:on={pane === 'boards'} onclick={() => ((pane = 'boards'), (side = 'boards'))}>▦ {$t('cux.tabBoards')}</button>
+        <button role="tab" aria-selected={pane === 'table'} class:on={pane === 'table'} onclick={() => ((pane = 'table'), (side = 'table'))}>🏆 #{myRank?.rank ?? ''}</button>
+        <button role="tab" aria-selected={pane === 'pairs'} class:on={pane === 'pairs'} onclick={() => ((pane = 'pairs'), (side = 'pairs'))}>⚔ {$t('cux.tabPairs')}</button>
       </div>
       <div class="play">
-        <section class="board" class:away={pane !== 'board'}>
+        <section class="board" class:away={pane !== 'board'} bind:this={boardEl}>
           {#if v.nextAt}
             <p class="banner">⏳ {$t('cups.nextRound', { time: countdown(v.nextAt - now) })}</p>
           {:else if myGame && firstMoveLeft !== undefined}
@@ -210,17 +249,31 @@
             <p class="banner">{$t('cups.withdrawn')}</p>
           {/if}
           {#if shown && live}
-            {#if !myGame}<p class="label">{$t('cups.topBoard')}</p>{/if}
+            {#if watched}
+              <p class="watching">👁 {$t('cux.watching', { a: shown.whiteName, b: shown.blackName })}{#if myGame && !myGame.result} <button class="link" onclick={() => (watchId = '')}>{$t('cux.backMine')}</button>{/if}</p>
+            {:else if !myGame}<p class="label">{$t('cups.topBoard')}</p>{/if}
             {#key shown.id}
-              <GameBoard {live} game={shown} {tag} />
+              <GameBoard {live} game={shown} {tag} {evalBar} />
             {/key}
+            {#if evalBar}<p class="enote">{$t('cux.engineNote')}</p>{/if}
           {:else if !v.nextAt}
             <p class="muted center">{$t('cups.waitingGames')}</p>
           {/if}
           {#if canJoin}<button class="btn primary" onclick={join} disabled={busy}>{$t('cups.joinLate')}</button>{/if}
         </section>
-        <aside class="side" class:away={pane !== 'table'}>
-          {@render table()}
+        <aside class="side" class:away={pane === 'board'}>
+          <div class="sidetabs" role="tablist">
+            <button role="tab" aria-selected={sideShown === 'boards'} class:on={sideShown === 'boards'} onclick={() => setSide('boards')}>▦ {$t('cux.tabBoards')}</button>
+            <button role="tab" aria-selected={sideShown === 'table'} class:on={sideShown === 'table'} onclick={() => setSide('table')}>🏆 {$t('cux.tabStandings')}</button>
+            <button role="tab" aria-selected={sideShown === 'pairs'} class:on={sideShown === 'pairs'} onclick={() => setSide('pairs')}>⚔ {$t('cux.tabPairs')}</button>
+          </div>
+          {#if sideShown === 'boards'}
+            <section class="card"><CupBoards {v} {me} selected={shown?.id ?? ''} onpick={watchGame} /></section>
+          {:else if sideShown === 'table'}
+            {@render table()}
+          {:else}
+            <section class="card"><Pairings {v} {me} onwatch={watchPlayer} /></section>
+          {/if}
           {#if inCup}
             {#if confirmLeave}
               <span class="row"><button class="btn" onclick={leave} disabled={busy}>{$t('cups.leaveYes')}</button><button class="btn ghost" onclick={() => (confirmLeave = false)}>{$t('cups.no')}</button></span>
@@ -240,7 +293,7 @@
       <h2>{status === 'open' ? $t('cups.whoIn', { n: v.players.filter((p) => !p.bot && !p.out).length }) : $t('cups.standingsH')}</h2>
       <table>
         <thead>
-          <tr><th>#</th><th>{$t('cups.player')}</th><th>{$t('cups.group')}</th>{#if status !== 'open'}<th class="num">{$t('cups.points')}</th><th class="num tb">TB</th>{/if}</tr>
+          <tr><th>#</th><th>{$t('cups.player')}</th>{#if status !== 'open'}<th class="num">{$t('cups.points')}</th><th class="num tb">TB</th>{/if}</tr>
         </thead>
         <tbody>
           {#each standing as r (r.uid)}
@@ -249,10 +302,9 @@
               <td class="num">{status === 'open' ? '' : medal(r.rank) || r.rank}</td>
               <td class="nm">
                 <span class="dot" class:on={p?.online} aria-hidden="true"></span>
-                {r.name}
+                {#if status === 'running'}<button class="pl" onclick={() => watchPlayer(r.uid)} title={$t('cux.tapName')}>{r.name}{#if p?.bot} 🤖{/if}</button>{:else}{r.name}{#if p?.bot} 🤖{/if}{/if}
                 <span class="rt">{r.rating}</span>
               </td>
-              <td><span class="grp g-{r.group}" title={r.provisional ? $t('cups.provisional', { n: MIN_GAMES }) : ''}>{GROUP_NAME[r.group]}{r.provisional ? '?' : ''}</span></td>
               {#if status !== 'open'}<td class="num b">{r.score}</td><td class="num tb">{r.buch}</td>{/if}
             </tr>
           {/each}
@@ -353,6 +405,54 @@
   .panes {
     display: none;
   }
+  .watching {
+    margin: 0;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 14%, var(--raised));
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .enote {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .sidetabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+  .sidetabs button {
+    flex: 1;
+    border: 0;
+    border-radius: 8px;
+    padding: 7px 4px;
+    background: transparent;
+    color: var(--muted);
+    font: 800 12.5px var(--font-body);
+    cursor: pointer;
+  }
+  .sidetabs button.on {
+    background: var(--gold);
+    color: #1b1300;
+  }
+  .pl {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+  }
+  .pl:hover {
+    text-decoration: underline;
+  }
   .next-note {
     margin: 4px 0 0;
     font-weight: 800;
@@ -368,7 +468,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 640px;
+    /* No taller than the window, so the whole board is in view on a computer. */
+    max-width: min(640px, calc(100vh - 250px));
     width: 100%;
   }
   .side {
@@ -510,6 +611,10 @@
     }
     .away {
       display: none !important;
+    }
+    /* On a phone the bar above chooses the pane; the tabs inside the side column are for computers. */
+    .sidetabs {
+      display: none;
     }
     .board {
       max-width: none;

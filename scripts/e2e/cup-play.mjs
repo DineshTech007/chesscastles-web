@@ -119,6 +119,7 @@ function pickMove(pos) {
 /** Taps a square on the kid's board (as a child does: the piece, then where it goes). */
 async function tapSquare(page, sq, touch) {
   const board = page.locator('.play .board cg-board').first();
+  await board.scrollIntoViewIfNeeded();
   const box = await board.boundingBox();
   if (!box) throw new Error('no board on the page');
   const black = await page.locator('.play .board .cg-wrap').first().evaluate((el) => el.classList.contains('orientation-black'));

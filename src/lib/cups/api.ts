@@ -93,7 +93,10 @@ export interface Standing {
   score: number;
   buch: number;
   wins: number;
+  /** Real games played (a bye is not one). */
   played: number;
+  /** Points won in real games: a medal needs one. */
+  real?: number;
   rank: number;
   /** The rating the player played like in this cup. */
   perf?: number;
