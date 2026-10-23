@@ -29,6 +29,28 @@ function legacyOwner(uid: string | undefined): string | undefined {
 export const myRatingSet = writable<Partial<Record<KfideSpeed, RatingSet>>>({});
 /** This player's Chess Castles title, if the owner gave one. */
 export const myTitle = writable<string | undefined>();
+/**
+ * Banned from playing (an admin suspended the account), and why: their play pages show the notice instead. Kept in
+ * this browser too, so it holds from the first moment of the next visit, before the profile comes.
+ */
+const BAN_KEY = 'cc.banned';
+const savedBan = (): { fair: boolean } | undefined => {
+  try {
+    return JSON.parse(localStorage.getItem(BAN_KEY) ?? 'null') ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+export const myBan = writable<{ fair: boolean } | undefined>(typeof localStorage === 'undefined' ? undefined : savedBan());
+export function setMyBan(ban: { fair: boolean } | undefined) {
+  myBan.set(ban);
+  try {
+    if (ban) localStorage.setItem(BAN_KEY, JSON.stringify(ban));
+    else localStorage.removeItem(BAN_KEY);
+  } catch {
+    /* private mode */
+  }
+}
 
 export const kfideAll = derived([myGames, session, myRatingSet], ([list, s, sets]) => {
   const uid = s.status === 'in' ? s.uid : undefined;

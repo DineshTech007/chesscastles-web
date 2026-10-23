@@ -21,8 +21,8 @@
   let query = $state('');
   let library = $state<LibraryRow[]>([]);
   let voices = $state<{ name: string; lang: string }[]>([]);
-  /** The coach chooser: closed until asked for (Guru teaches by default), closed again once a coach is picked. */
-  let choosing = $state(false);
+  /** The coach chooser: closed until asked for (Guru teaches by default, or /coach?choose=1 from Home's promo), closed again once a coach is picked. */
+  let choosing = $state(typeof location !== 'undefined' && new URLSearchParams(location.search).has('choose'));
 
   // Chess Castles' natural voices (cloud): when on, they speak for every coach and the device's voice list is not needed.
   let cloudOn = $state(false);
@@ -133,6 +133,7 @@
               <span class="title">{a.name}</span>
               <span class="label">{a.about}</span>
               <span class="vtag">{a.voice === 'male' ? "Man's voice" : "Woman's voice"}</span>
+              {#if a.sarvam}<span class="vtag new">✨ New voice</span>{/if}
             </button>
           {/each}
         </div>
@@ -153,8 +154,13 @@
       <span class="label">Guru's voice</span>
       <div class="voice-row">
         {#if cloudOn}
-          {@const g = avatarInfo($coachAvatar).voice}
-          <span class="cloud-v">Natural voice: <strong>{CLOUD_NAMES[prefs.lang][g]}</strong> <span class="label">({g === 'male' ? "man's" : "woman's"} voice)</span></span>
+          {@const coach = avatarInfo($coachAvatar)}
+          {@const g = coach.voice}
+          {#if coach.sarvam}
+            <span class="cloud-v">New voice by <strong>Sarvam AI</strong> <span class="label">({g === 'male' ? "man's" : "woman's"} voice, made for Indian languages)</span></span>
+          {:else}
+            <span class="cloud-v">Natural voice: <strong>{CLOUD_NAMES[prefs.lang][g]}</strong> <span class="label">({g === 'male' ? "man's" : "woman's"} voice)</span></span>
+          {/if}
           <button class="btn ghost" onclick={() => speak(SAMPLE[prefs.lang], prefs.lang)}><Icon name="speaker" size={18} />Test</button>
         {:else if voices.length}
           <select value={chosenVoice} onchange={(e) => set({ voices: { ...prefs.voices, [prefs.lang]: (e.currentTarget as HTMLSelectElement).value } })} aria-label="Guru's voice">
@@ -348,6 +354,9 @@
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: var(--muted);
+  }
+  .vtag.new {
+    color: var(--gold);
   }
   .face {
     display: flex;

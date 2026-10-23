@@ -42,6 +42,10 @@ export interface Player {
   flair?: string;
   /** The Chess Castles team (owner, admins): messages from them show as the team's. */
   team?: boolean;
+  /** An admin suspended the account: banned from playing (shown to them and on their profile). */
+  banned?: boolean;
+  /** Their own profile only: a fair-play decision about them. */
+  fairPlay?: 'warned' | 'cheater';
   joined: number;
   /** False for a Lichess player who was sent a request but has not joined Chess Castles yet. */
   member?: boolean;

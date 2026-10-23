@@ -8,20 +8,22 @@ import { kidsClassWords } from './features/kidsclass';
 import { awardsWords } from './features/awards';
 import { cupsWords } from './features/cups';
 import { lookWords } from './features/look';
+import { gurusWords } from './features/gurus';
+import { banWords } from './features/ban';
 
 /**
  * The site's words in the chosen language (English by default). In a component: `{$t('nav.learn')}`, or with
  * values `{$t('home.streak', { n: 5 })}`. A missing translation falls back to English. The language is the
  * one choice shared by the whole site, the Chess Guide and the Blog (src/lib/contentLang.ts).
  */
-const FEATURES = [racerWords, kidsClassWords, awardsWords, cupsWords, lookWords];
+const FEATURES = [racerWords, kidsClassWords, awardsWords, cupsWords, lookWords, gurusWords, banWords];
 const DICT: Record<'en' | 'hi' | 'mr', Record<string, string>> = {
   en: Object.assign({}, en, ...FEATURES.map((f) => f.en)),
   hi: Object.assign({}, hi, ...FEATURES.map((f) => f.hi)),
   mr: Object.assign({}, mr, ...FEATURES.map((f) => f.mr)),
 };
 /** Every key: the site's (en.ts) and each feature's (features/*.ts). */
-type FeatureKey = keyof typeof racerWords.en | keyof typeof kidsClassWords.en | keyof typeof awardsWords.en | keyof typeof cupsWords.en | keyof typeof lookWords.en;
+type FeatureKey = keyof typeof racerWords.en | keyof typeof kidsClassWords.en | keyof typeof awardsWords.en | keyof typeof cupsWords.en | keyof typeof lookWords.en | keyof typeof gurusWords.en | keyof typeof banWords.en;
 type AnyKey = Key | FeatureKey;
 
 export const t = derived(contentLang, (lang) => (key: AnyKey, vars?: Record<string, string | number>): string => {

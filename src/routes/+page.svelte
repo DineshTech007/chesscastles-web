@@ -17,6 +17,7 @@
   import Landing from '$lib/components/home/Landing.svelte';
   import PlayCard from '$lib/components/home/PlayCard.svelte';
   import PuzzleLobby from '$lib/components/home/PuzzleLobby.svelte';
+  import GurusPromo from '$lib/components/home/GurusPromo.svelte';
   import CupsCard from '$lib/cups/CupsCard.svelte';
   import TodayRow from '$lib/components/home/TodayRow.svelte';
   import RatingTiles from '$lib/components/home/RatingTiles.svelte';
@@ -70,6 +71,8 @@
         <div class="o7"><MyInsightsCard /></div>
       </div>
       <div class="col side-col">
+        <!-- The three new Chess Gurus (owner, 2026-10-23): a Home promo, replacing it when the next feature comes. -->
+        <div class="o2"><GurusPromo /></div>
         <div class="o3"><RatingTiles /></div>
         {#if $session.status === 'in'}<div class="o4"><OnlineNow /></div>{/if}
         <section class="o6 games" aria-labelledby="games-h">

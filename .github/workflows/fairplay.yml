@@ -1,0 +1,40 @@
+# Automatic fair play: every 2 hours, the games won lately on Chess Castles are checked with Stockfish
+# (scripts/fairplay/watch.mjs) and the server applies the owner's rules: a kind warning for the first
+# engine-like game, a ban for a second within 30 days (server/api-worker src/fairwatch.ts). Needs the
+# FAIRPLAY_TOKEN secret (Settings → Secrets and variables → Actions). The log shows counts only.
+name: Fair play
+
+on:
+  schedule:
+    - cron: '41 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fairplay
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Only chessops is needed, at the version the site uses; Stockfish from Ubuntu.
+      - name: Install
+        run: |
+          npm install --no-save --no-package-lock chessops@$(node -p "require('./package.json').dependencies.chessops")
+          sudo apt-get install -y stockfish
+
+      - name: Check the games
+        env:
+          FAIRPLAY_TOKEN: ${{ secrets.FAIRPLAY_TOKEN }}
+          STOCKFISH: /usr/games/stockfish
+        run: node scripts/fairplay/watch.mjs

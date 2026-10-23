@@ -22,7 +22,8 @@
   import { myProfile, refreshBadge, saveProfile } from '$lib/social';
   import { poll } from '$lib/poll';
   import { session } from '$lib/auth';
-  import { kfide, kfideAll, myCountry, movePhotoOutOfFirebase, myFideId, myInitials, myPhoto, myRatingSet, myTitle, photoSrc, setAccountPhoto, setMyCountry, setMyName } from '$lib/stores/me';
+  import { kfide, kfideAll, myBan, myCountry, movePhotoOutOfFirebase, myFideId, myInitials, myPhoto, myRatingSet, myTitle, photoSrc, setAccountPhoto, setMyBan, setMyCountry, setMyName } from '$lib/stores/me';
+  import BanNotice from '$lib/components/BanNotice.svelte';
   import { fedName } from '$lib/fideFeds';
   import { goto } from '$app/navigation';
   import { gameEnded } from '$lib/stores/gameEnded';
@@ -241,6 +242,7 @@
           // The owner's rating changes first: the CC Ratings below already count from them.
           myRatingSet.set(p.ratingSet ?? {});
           myTitle.set(p.title);
+          setMyBan(p.banned ? { fair: !!p.fairPlay } : undefined);
           setAccountPhoto(s.uid, p.photo);
           void movePhotoOutOfFirebase(s.uid, !!p.photo).catch(() => {});
           myFideId.set(p.fideId ?? '');
@@ -497,7 +499,17 @@
       </a>
     {/if}
     <main id="content" class:focus={focusGame}>
-      {@render children()}
+      <!-- A banned account (an admin suspended it): a notice over every page, and none of the play pages. -->
+      {#if $session.status === 'in' && $myBan}
+        {#if /^\/(play|cups\/|puzzles\/racer)/.test(page.url.pathname)}
+          <BanNotice fair={$myBan.fair} big />
+        {:else}
+          <BanNotice fair={$myBan.fair} />
+          {@render children()}
+        {/if}
+      {:else}
+        {@render children()}
+      {/if}
     </main>
   </div>
 </div>

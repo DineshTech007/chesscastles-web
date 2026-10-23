@@ -105,7 +105,7 @@ let audio: HTMLAudioElement | undefined;
 const audioCache = new Map<string, string>();
 
 /** Plays text with the cloud voice, in pieces of up to ~900 characters; false if it could not (the device voice is used then). */
-async function speakCloud(text: string, lang: Lang, gender: 'male' | 'female', rate: number, token: number): Promise<boolean> {
+async function speakCloud(text: string, lang: Lang, gender: 'male' | 'female', rate: number, token: number, sarvam?: string): Promise<boolean> {
   const parts: string[] = [];
   let cur = '';
   for (const sentence of text.match(/[^.!?।]+[.!?।]?/g) ?? [text]) {
@@ -117,10 +117,12 @@ async function speakCloud(text: string, lang: Lang, gender: 'male' | 'female', r
   }
   if (cur.trim()) parts.push(cur);
   const fetchPart = async (t: string) => {
-    const k = `${lang}|${gender}|${rate}|${t}`;
+    const k = `${lang}|${gender}|${rate}|${sarvam ?? ''}|${t}`;
     const hit = audioCache.get(k);
     if (hit) return hit;
-    const res = await fetch(`${API}/tts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: t.trim(), lang, gender, rate }) });
+    // A Sarvam Guru: the server answers with the Azure voice of the same gender when Sarvam can't speak now.
+    const voice = sarvam ? `sarvam:${sarvam}` : undefined;
+    const res = await fetch(`${API}/tts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: t.trim(), lang, gender, rate, voice }) });
     if (!res.ok) throw new Error(String(res.status));
     const url = URL.createObjectURL(await res.blob());
     audioCache.set(k, url);
@@ -159,7 +161,7 @@ export async function speak(text: string, lang: Lang, voiceName?: string): Promi
   const coach = avatarInfo(get(coachAvatar));
   if (await cloud()) {
     const spokenCloud = /^(hi|mr)$/.test(lang) ? forIndianVoice(speakable(text)) : speakable(text);
-    const done = await speakCloud(spokenCloud, lang, coach.voice, coach.rate, token);
+    const done = await speakCloud(spokenCloud, lang, coach.voice, coach.rate, token, coach.sarvam);
     if (done) {
       if (token === speakToken) speaking.set(false);
       return;

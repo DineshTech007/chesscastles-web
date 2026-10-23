@@ -12,7 +12,7 @@
   import { track } from '$lib/analytics';
   import { t } from '$lib/i18n';
   import CupCard from '$lib/cups/CupCard.svelte';
-  import { cancelCup, joinCup, leaveCup, resetCups, startCup, testCup, todayCups, type CupSummary, type Today } from '$lib/cups/api';
+  import { cancelCup, flashCup, joinCup, leaveCup, resetCups, startCup, testCup, todayCups, type CupSummary, type Today } from '$lib/cups/api';
   import { forgetCup, rememberCup } from '$lib/cups/joined';
   import { API } from '$lib/api';
   import { token } from '$lib/classroom/api';
@@ -101,6 +101,29 @@
     error = '';
     try {
       made = [await testCup(tMin, tInc, tIn), ...made];
+    } catch (e) {
+      error = (e as Error).message;
+    }
+  }
+  // An on-demand cup for everyone (owner, 2026-10-23: "in case I see a lot of players online, put one tournament on
+  // the home page and all players can join it").
+  const FLASH = [
+    { minutes: 1, inc: 1, label: 'Bullet 1+1' },
+    { minutes: 2, inc: 1, label: 'Bullet 2+1' },
+    { minutes: 3, inc: 0, label: 'Blitz 3+0' },
+    { minutes: 3, inc: 2, label: 'Blitz 3+2' },
+    { minutes: 5, inc: 0, label: 'Blitz 5+0' },
+  ];
+  let fTc = $state(2);
+  let fIn = $state(10);
+  async function makeFlash() {
+    const tc = FLASH[fTc];
+    if (!confirm(`Put a ${tc.label} cup on Home for everyone, starting in ${fIn} minutes?`)) return;
+    error = '';
+    try {
+      await flashCup(tc.minutes, tc.inc, fIn);
+      error = `${tc.label} is on Home now, starting in ${fIn} minutes.`;
+      await load();
     } catch (e) {
       error = (e as Error).message;
     }
@@ -194,6 +217,18 @@
           </li>
         {/each}
       </ul>
+      <h3>On-demand cup (everyone)</h3>
+      <p class="muted">Many kids online? Put one more cup on Home: everyone can join, computer players fill the field, awards as in the day's cups.</p>
+      <div class="tc">
+        <span class="presets">
+          {#each FLASH as f, i (f.label)}<button class="btn small" class:primary={fTc === i} aria-pressed={fTc === i} onclick={() => (fTc = i)}>{f.label}</button>{/each}
+        </span>
+        <span class="presets">
+          Starts in
+          {#each [5, 10, 15, 30] as m (m)}<button class="btn small" class:primary={fIn === m} aria-pressed={fIn === m} onclick={() => (fIn = m)}>{m} min</button>{/each}
+        </span>
+        <button class="btn primary" onclick={makeFlash}>Put it on Home</button>
+      </div>
       <h3>Test cup (private)</h3>
       <p class="muted">Only people with its link can join; not on Home, no awards. Start it with "Start now" on its page, or it starts by itself.</p>
       <div class="tc">
@@ -335,6 +370,14 @@
     flex-wrap: wrap;
     gap: 8px;
     align-items: flex-end;
+  }
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
   }
   .tc label {
     display: flex;

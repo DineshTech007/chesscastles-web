@@ -9,6 +9,7 @@
   import MadeInIndia from '$lib/components/MadeInIndia.svelte';
   import PlayCard from './PlayCard.svelte';
   import RacerPromo from './RacerPromo.svelte';
+  import GurusPromo from './GurusPromo.svelte';
   import CupsCard from '$lib/cups/CupsCard.svelte';
   import { startSignIn } from '$lib/auth';
   import { betaOn } from '$lib/beta';
@@ -32,6 +33,7 @@
   <PlayCard />
   <CupsCard />
   <RacerPromo />
+  <GurusPromo />
 
   <div class="signin card">
     <p>{$t('home.land.signin.why')}{#if betaOn()}{' '}<strong>{$t('home.land.free')}</strong>{/if}</p>

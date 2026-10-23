@@ -22,13 +22,15 @@ export const SLOTS: Record<string, { name: string; minutes: number; inc: number;
 };
 /** A cup's day and slot from its id ("2026-10-23-u1"). */
 export function parseCup(id: string) {
-  // A test cup (admins): "t3p2-ab12cd" is 3+2; its start comes from the room.
-  const t = /^t(\d{1,2})p(\d{1,2})-[a-z0-9]{6}$/.exec(id);
+  // A test cup (admins): "t3p2-ab12cd" is 3+2; an on-demand cup for everyone: "f3p2-ab12cd". Their start comes from the room.
+  const t = /^([tf])(\d{1,2})p(\d{1,2})-[a-z0-9]{6}$/.exec(id);
   if (t) {
-    const minutes = Number(t[1]), inc = Number(t[2]);
+    const minutes = Number(t[2]), inc = Number(t[3]);
     const total = minutes * 60 + inc * 40;
     const kind = total < 180 ? 'Bullet' : total < 480 ? 'Blitz' : 'Rapid';
-    return { day: 'test', slot: 'test', name: `Test cup · ${kind} ${minutes}+${inc}`, minutes, inc, speed: (total < 180 ? 'bullet' : 'blitz') as 'bullet' | 'blitz', at: '', startAt: 0, test: true as const };
+    const speed = (total < 180 ? 'bullet' : 'blitz') as 'bullet' | 'blitz';
+    if (t[1] === 'f') return { day: 'flash', slot: 'flash', name: `${kind} ${minutes}+${inc}`, minutes, inc, speed, at: '', startAt: 0, flash: true as const };
+    return { day: 'test', slot: 'test', name: `Test cup · ${kind} ${minutes}+${inc}`, minutes, inc, speed, at: '', startAt: 0, test: true as const };
   }
   const m = /^(\d{4}-\d{2}-\d{2})-(b5|u1|b3|u0)$/.exec(id);
   if (!m) return undefined;
@@ -50,6 +52,8 @@ export interface CupSummary {
   uids: string[];
   round: number;
   rounds: number;
+  /** An on-demand cup (an admin added it for the kids online). */
+  flash?: boolean;
   /** The top board while it's on. */
   top?: { white: string; black: string; whiteName: string; blackName: string; root: string; moves: string[]; clock?: Game['clock']; result: string };
   podium?: { name: string; score: number }[];
@@ -133,6 +137,8 @@ export const cancelCup = (id: string) => call<{ ok: true }>('POST', `/${id}/canc
 export const startCup = (id: string) => call<{ ok: true }>('POST', `/${id}/start`);
 /** Admins: a private test cup (any time control, starting in `startIn` minutes): its link to share. */
 export const testCup = (minutes: number, inc: number, startIn: number) => call<{ id: string; startAt: number }>('POST', '/test', { minutes, inc, startIn });
+/** Admins: an on-demand cup for everyone (many kids online): on Home with the day's cups, starting in `startIn` minutes. */
+export const flashCup = (minutes: number, inc: number, startIn: number) => call<{ id: string; startAt: number }>('POST', '/flash', { minutes, inc, startIn });
 /** The owner: every cup's data wiped. */
 export const resetCups = () => call<{ ok: true; wiped: string[] }>('POST', '/reset');
 

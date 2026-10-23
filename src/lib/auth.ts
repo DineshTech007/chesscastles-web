@@ -233,6 +233,7 @@ export function lichessToken(): { token: string; username: string } | undefined 
 export async function signOut(): Promise<void> {
   try {
     localStorage.removeItem('k24.accountPhoto');
+    localStorage.removeItem('cc.banned');
     sessionStorage.removeItem('cc.adminMe');
   } catch {
     /* private mode */

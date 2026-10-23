@@ -22,6 +22,9 @@
   let offset = 0;
   let busy = $state(false);
   let error = $state('');
+  /** Within this of the start, a countdown; before it, the day and time. */
+  const SOON = 3 * 3600_000;
+  const indiaDay = (t: number) => new Date(t + 5.5 * 3600_000).toISOString().slice(0, 10);
 
   async function load() {
     try {
@@ -72,11 +75,12 @@
       <a class="all" href="/cups">{$t('cups.allRules')}</a>
     </header>
     <p class="tag">{$t('cups.homeLine')}</p>
-    <nav class="chips" aria-label={$t('cups.todayH')}>
+    <!-- An on-demand cup (an admin added it) makes a fifth chip, marked ✨; more wrap to a second row. -->
+    <nav class="chips" style="--n: {Math.min(today.cups.length, 5)}" aria-label={$t('cups.todayH')}>
       {#each today.cups as c (c.id)}
-        <a class="chip" class:upnext={c.id === next?.id} class:live={c.status === 'running'} class:done={c.status !== 'open' && c.status !== 'running'} href="/cups/{c.id}">
-          <span class="ct num">{cupTime(c.startAt, $contentLang)}</span>
-          <span class="cn">{c.speed === 'bullet' ? '⚡' : '🔥'} {c.minutes}+{c.inc}</span>
+        <a class="chip" class:upnext={c.id === next?.id} class:live={c.status === 'running'} class:done={c.status !== 'open' && c.status !== 'running'} class:flash={c.flash} href="/cups/{c.id}" title={c.flash ? $t('cups.flashTag') : undefined}>
+          <span class="ct num">{#if c.flash}<span aria-hidden="true">✨</span>{/if}{cupTime(c.startAt, $contentLang)}</span>
+          <span class="cn"><span class="ic" aria-hidden="true">{c.speed === 'bullet' ? '⚡' : '🔥'}</span>{c.minutes}+{c.inc}</span>
         </a>
       {/each}
     </nav>
@@ -90,8 +94,14 @@
             <span class="sub">{$t('cups.round', { n: next.round, of: next.rounds })} · 👥 {$t('cups.joined', { n: next.entries })}</span>
           {:else}
             <strong class="big">{next.name}</strong>
-            <span class="countdown num">{next.startAt > now ? countdown(next.startAt - now) : '0:00'}</span>
-            <span class="sub">{$t('cups.untilStart')} · 👥 {$t('cups.joined', { n: next.entries })}</span>
+            {#if next.startAt - now > SOON}
+              <!-- More than 3 hours away: the day and time, not a long timer ("38:00:49" read as a clock). -->
+              <span class="countdown when">{$t(indiaDay(next.startAt) === indiaDay(now) ? 'cups.todayAt' : 'cups.tomorrowAt', { time: cupTime(next.startAt, $contentLang) })}</span>
+              <span class="sub">👥 {$t('cups.joined', { n: next.entries })}</span>
+            {:else}
+              <span class="countdown num">{next.startAt > now ? countdown(next.startAt - now) : '0:00'}</span>
+              <span class="sub">{$t('cups.untilStart')} · 👥 {$t('cups.joined', { n: next.entries })}</span>
+            {/if}
           {/if}
           {#if error}<span class="err">{error}</span>{/if}
           <span class="acts">
@@ -161,7 +171,7 @@
   }
   .chips {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
     gap: 6px;
   }
   .chip {
@@ -185,14 +195,28 @@
   .chip.done {
     opacity: 0.55;
   }
+  .chip.flash:not(.upnext) {
+    border-color: color-mix(in srgb, var(--gold) 45%, transparent);
+  }
   .ct {
     font: 800 14px var(--font-title);
     white-space: nowrap;
   }
   .cn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     font-size: 12px;
     font-weight: 700;
     color: var(--muted);
+    white-space: nowrap;
+  }
+  /* The emoji gets its own box (it drew over the "5" in "5+0"). */
+  .ic {
+    display: inline-block;
+    width: 1.2em;
+    text-align: center;
+    line-height: 1;
   }
   .next {
     display: flex;
@@ -213,6 +237,9 @@
     font: 800 34px var(--font-title);
     line-height: 1;
     color: var(--gold);
+  }
+  .countdown.when {
+    font-size: 26px;
   }
   .sub {
     font-size: 13px;

@@ -658,6 +658,26 @@ async function run(name, options) {
     return 'no skip';
   });
 
+  // 4t. The three new Chess Gurus (owner, 2026-10-23): Home's promo shows them taking turns talking, a tap makes one
+  // the child's Guru, and the coach chooser (opened from the promo) lists all ten.
+  await check(name, page, 'gurus: the new Gurus on Home and in the chooser', async () => {
+    await open(page, '/');
+    await page.locator('.gurus.card').waitFor({ timeout: 15000 });
+    const faces = await page.locator('.gurus .face').count();
+    expect(faces === 3, `${faces} new Gurus on Home`);
+    await page.locator('.gurus video.talk').first().waitFor({ state: 'attached', timeout: 8000 });
+    await tap(page.locator('.gurus .face', { hasText: 'Sheru' }));
+    await page.waitForURL(/\/coach/, { timeout: 15000 });
+    await page.locator('[aria-label="Sheru, your coach"]').first().waitFor({ timeout: 15000 });
+    await open(page, '/coach?choose=1');
+    await page.locator('.chooser .face').first().waitFor({ timeout: 15000 });
+    const all = await page.locator('.chooser .face').count();
+    expect(all === 10, `${all} Gurus in the chooser`);
+    const fresh = await page.locator('.chooser .vtag.new').count();
+    expect(fresh === 3, `${fresh} marked with the new voice`);
+    return '3 on Home, Sheru chosen, 10 in the chooser';
+  });
+
   // 4m. My awards (owner, 2026-10-22): the profile's trophy cabinet shows, every medal held to its box (a tall trophy
   // picture once ran over its name).
   await check(name, page, 'profile: My awards', async () => {

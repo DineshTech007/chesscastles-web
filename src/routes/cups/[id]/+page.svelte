@@ -147,7 +147,7 @@
     <a class="back" href="/cups" aria-label={$t('cups.allCups')}>‹</a>
     <div class="ttl">
       <h1>🏆 {info?.name ?? 'Castle Cup'}</h1>
-      <span class="sub">{info ? cupTime(v?.startAt || info.startAt, $contentLang) : ''} · {info?.test ? $t('cups.testTag') : (info?.day ?? '')}</span>
+      <span class="sub">{info ? cupTime(v?.startAt || info.startAt, $contentLang) : ''} · {info?.test ? $t('cups.testTag') : info?.flash ? $t('cups.flashTag') : (info?.day ?? '')}</span>
     </div>
     {#if status === 'running' && v}<span class="pill live">● {$t('cups.round', { n: v.round, of: v.rounds })}</span>{/if}
   </header>
