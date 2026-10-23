@@ -6,6 +6,7 @@
    */
   import { t } from '$lib/i18n';
   import Board from '$lib/components/Board.svelte';
+  import EvalBar from './EvalBar.svelte';
   import { lineAt } from '$lib/classroom/tasks';
   import type { CupGame, CupView } from './api';
 
@@ -32,6 +33,7 @@
       {@const mine = g.white === me || g.black === me}
       <button class="card" class:on={g.id === selected} class:mine onclick={() => onpick(g)} aria-pressed={g.id === selected}>
         <span class="nm">{g.blackName}{tag(g.black)}<i class="rk">{rank.get(g.black) ?? ''}</i></span>
+        {#if !g.result && !mine}<EvalBar fen={at.fen} thin />{/if}
         <span class="mini"><Board fen={at.fen} lastMove={at.last as never} orientation="white" viewOnly coordinates={false} label={`${g.whiteName} vs ${g.blackName}`} /></span>
         <span class="nm">{g.whiteName}{tag(g.white)}<i class="rk">{rank.get(g.white) ?? ''}</i></span>
         <span class="foot">

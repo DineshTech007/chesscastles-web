@@ -18,7 +18,7 @@
   import { PremoveQueue } from '$lib/game/premoves';
   import { premovesOn } from '$lib/preferences';
   import { t } from '$lib/i18n';
-  import GameEval from '$lib/cups/GameEval.svelte';
+  import EvalBar from '$lib/cups/EvalBar.svelte';
 
   let { live, game, coordinates = true, tag, evalBar = false }: { live: GameHost; game: Game; coordinates?: boolean; tag?: (uid: string) => string; /** A little engine bar between the players (never in a game of the viewer's own). */ evalBar?: boolean } = $props();
 
@@ -165,7 +165,7 @@
     <span class="nm">{top === 'white' ? '♔' : '♚'} {nameOf(top)}{#if tagOf(top)} <span class="tag">{tagOf(top)}</span>{/if}</span>
     {#if game.clock}<span class="clk num" class:low={(left(top) ?? 1) < 20_000}>{fmt(left(top))}</span>{/if}
   </div>
-  {#if evalBar && !mine}<GameEval fen={shownFen} />{/if}
+  {#if evalBar && !mine}<EvalBar fen={shownFen} />{/if}
   <div class="bwrap">
   {#key remount}
     <ClassBoard
@@ -199,20 +199,26 @@
   {#if game.result}
     <div class="result {won}">{won === 'win' ? $t('kidsclass.gb.youWon') : won === 'loss' ? $t('kidsclass.gb.youLost') : won === 'draw' ? '🤝 Draw' : RESULT[game.result]} · {reasonText(game.reason)}</div>
   {:else if mine}
+    <!-- Two rows of a fixed height, whatever happens (owner, 2026-10-23: "the screen moves up and down for each move"):
+         the line saying whose move it is (with the premove button at its end), then the draw and resign buttons. -->
     <div class="acts">
-      {#if myTurn}<span class="your">{$t('kidsclass.gb.yourMove')}</span>{:else}<span class="muted">{$t('kidsclass.gb.toMove', { name: nameOf(at.turn) })}</span>{/if}
-      {#if queued.length}<button class="btn ghost" onclick={clearPremoves}>{$t('kidsclass.gb.cancelPremoves', { n: queued.length / 2 })}</button>{/if}
-      {#if game.draw && game.draw !== me}
-        <button class="btn primary" onclick={() => live.offerDraw(game.id)}>{$t('kidsclass.gb.acceptDraw')}</button>
-      {:else}
-        <button class="btn ghost" onclick={() => live.offerDraw(game.id)} disabled={game.draw === me}>{game.draw === me ? $t('kidsclass.gb.drawOffered') : $t('kidsclass.gb.offerDraw')}</button>
-      {/if}
-      {#if confirm}
-        <button class="btn" onclick={() => live.resign(game.id)}>{$t('kidsclass.gb.yesResign')}</button>
-        <button class="btn ghost" onclick={() => (confirm = false)}>{$t('kidsclass.gb.no')}</button>
-      {:else}
-        <button class="btn ghost" onclick={() => (confirm = true)}>🏳 Resign</button>
-      {/if}
+      <div class="st">
+        {#if myTurn}<span class="your">{$t('kidsclass.gb.yourMove')}</span>{:else}<span class="muted">{$t('kidsclass.gb.toMove', { name: nameOf(at.turn) })}</span>{/if}
+        {#if queued.length}<button class="btn ghost small" onclick={clearPremoves}>{$t('kidsclass.gb.cancelPremoves', { n: queued.length / 2 })}</button>{/if}
+      </div>
+      <div class="btns">
+        {#if game.draw && game.draw !== me}
+          <button class="btn primary" onclick={() => live.offerDraw(game.id)}>{$t('kidsclass.gb.acceptDraw')}</button>
+        {:else}
+          <button class="btn ghost" onclick={() => live.offerDraw(game.id)} disabled={game.draw === me}>{game.draw === me ? $t('kidsclass.gb.drawOffered') : $t('kidsclass.gb.offerDraw')}</button>
+        {/if}
+        {#if confirm}
+          <button class="btn" onclick={() => live.resign(game.id)}>{$t('kidsclass.gb.yesResign')}</button>
+          <button class="btn ghost" onclick={() => (confirm = false)}>{$t('kidsclass.gb.no')}</button>
+        {:else}
+          <button class="btn ghost" onclick={() => (confirm = true)}>🏳 Resign</button>
+        {/if}
+      </div>
     </div>
   {/if}
 </div>
@@ -318,17 +324,40 @@
   }
   .acts {
     display: flex;
+    flex-direction: column;
     gap: 6px;
+  }
+  .st {
+    display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 38px;
+  }
+  .btns {
+    display: flex;
+    gap: 6px;
+    min-height: 44px;
+  }
+  .btns .btn {
+    flex: 1;
+    min-width: 0;
+    padding-left: 6px;
+    padding-right: 6px;
+    white-space: nowrap;
+  }
+  .your,
+  .muted {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .your {
     color: var(--win);
     font-weight: 700;
-    flex: 1;
   }
   .muted {
     color: var(--muted);
-    flex: 1;
   }
 </style>

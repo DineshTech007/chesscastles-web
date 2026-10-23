@@ -238,16 +238,19 @@
       </div>
       <div class="play">
         <section class="board" class:away={pane !== 'board'} bind:this={boardEl}>
-          {#if v.nextAt}
-            <p class="banner">⏳ {$t('cups.nextRound', { time: countdown(v.nextAt - now) })}</p>
-          {:else if myGame && firstMoveLeft !== undefined}
-            <p class="banner warn">{$t('cups.firstMove', { s: Math.ceil(firstMoveLeft / 1000) })}</p>
-          {:else if !myGame && inCup}
-            {@const bye = v.games.some((g) => g.round === v.round && !g.black && g.white === me)}
-            <p class="banner">{bye ? $t('cups.bye') : $t('cups.sitOut')}</p>
-          {:else if myPlayer?.out}
-            <p class="banner">{$t('cups.withdrawn')}</p>
-          {/if}
+          <!-- A slot of its own: a note coming and going (the first-move countdown) must not push the board up and down. -->
+          <div class="slot" class:hold={!!myGame && !myGame.result}>
+            {#if v.nextAt}
+              <p class="banner">⏳ {$t('cups.nextRound', { time: countdown(v.nextAt - now) })}</p>
+            {:else if myGame && firstMoveLeft !== undefined}
+              <p class="banner warn">{$t('cups.firstMove', { s: Math.ceil(firstMoveLeft / 1000) })}</p>
+            {:else if !myGame && inCup}
+              {@const bye = v.games.some((g) => g.round === v.round && !g.black && g.white === me)}
+              <p class="banner">{bye ? $t('cups.bye') : $t('cups.sitOut')}</p>
+            {:else if myPlayer?.out}
+              <p class="banner">{$t('cups.withdrawn')}</p>
+            {/if}
+          </div>
           {#if shown && live}
             {#if watched}
               <p class="watching">👁 {$t('cux.watching', { a: shown.whiteName, b: shown.blackName })}{#if myGame && !myGame.result} <button class="link" onclick={() => (watchId = '')}>{$t('cux.backMine')}</button>{/if}</p>
@@ -405,6 +408,14 @@
   .panes {
     display: none;
   }
+  .slot {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .slot.hold {
+    min-height: 46px;
+  }
   .watching {
     margin: 0;
     padding: 6px 10px;
@@ -469,7 +480,8 @@
     flex-direction: column;
     gap: 8px;
     /* No taller than the window, so the whole board is in view on a computer. */
-    max-width: min(640px, calc(100vh - 250px));
+    /* svh: the small viewport, which does not change when a phone's address bar slides away (that made the board grow and shrink). */
+    max-width: clamp(380px, calc(100svh - 340px), 640px);
     width: 100%;
   }
   .side {

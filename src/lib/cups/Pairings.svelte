@@ -5,6 +5,8 @@
    * and a tap on a name opens that player's board while the cup is on (onwatch).
    */
   import { t } from '$lib/i18n';
+  import { lineAt } from '$lib/classroom/tasks';
+  import EvalBar from './EvalBar.svelte';
   import type { CupView } from './api';
 
   let { v, me, onwatch }: { v: CupView; me: string; onwatch?: (uid: string) => void } = $props();
@@ -26,9 +28,12 @@
     <h4>{$t('cux.round', { n: r })}</h4>
     <ul>
       {#each list as g (g.id)}
-        <li class:mine={g.white === me || g.black === me}>
+        {@const live = !g.result && !!g.black && g.round === v.round && v.status === 'running'}
+        {@const mine = g.white === me || g.black === me}
+        <li class:mine>
           {#if onwatch}<button class="who w" onclick={() => onwatch(g.white)}>{g.whiteName}{#if bot(g.white)} 🤖{/if}</button>{:else}<span class="who w">{g.whiteName}{#if bot(g.white)} 🤖{/if}</span>{/if}
           <b class="res num" class:live={!g.result && !!g.black}>{g.black ? res(g.result) : '+'}</b>
+          {#if live && !mine}<span class="eval"><EvalBar fen={lineAt(g.root, g.moves, g.moves.length).fen} /></span>{/if}
           {#if g.black}{#if onwatch}<button class="who b" onclick={() => onwatch(g.black)}>{g.blackName}{#if bot(g.black)} 🤖{/if}</button>{:else}<span class="who b">{g.blackName}{#if bot(g.black)} 🤖{/if}</span>{/if}{:else}<span class="who b muted">{$t('cups.bye')}</span>{/if}
         </li>
       {/each}
@@ -90,6 +95,11 @@
   }
   .b {
     text-align: left;
+  }
+  /* The engine bar under the two names, across the row. */
+  .eval {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
   .res {
     font-variant-numeric: tabular-nums;
