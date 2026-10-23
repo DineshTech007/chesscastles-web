@@ -2,7 +2,13 @@
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
   import GuruAvatar from '$lib/coach/GuruAvatar.svelte';
-  import { AVATARS, chooseAvatar, coachAvatar } from '$lib/coach/avatar';
+  import { AVATARS, chooseAvatar, coachAvatar, guruItem, guruOpen } from '$lib/coach/avatar';
+  import { goto } from '$app/navigation';
+  import { t } from '$lib/i18n';
+  import { ITEM, priceOf } from '$lib/economy/core';
+  import { today, wallet } from '$lib/economy/wallet';
+  import Coin from '$lib/economy/Coin.svelte';
+  import Gem from '$lib/economy/Gem.svelte';
   import { CATALOG } from '$lib/coach/catalog';
   import { loadLibrary, type LibraryRow } from '$lib/coach/content/openings';
   import { LEGENDS } from '$lib/coach/content/legends';
@@ -102,11 +108,13 @@
   );
   const doneCount = $derived(CATALOG.filter((l) => prefs.done[l.id]).length);
   const legendNames = (ids?: string[]) => (ids ?? []).slice(0, 4).map((k) => LEGENDS[k]?.name.split(' ')[0] ?? k);
+  import EarnHint from '$lib/economy/EarnHint.svelte';
 </script>
 
 <svelte:head><title>Coach · Chess Castles</title></svelte:head>
 
 <div class="page">
+  <EarnHint kinds={['lesson']} note="Pay once you have read the lesson: a lesson you only tap through pays nothing." />
   <section class="hero card">
     <button class="guru-tap" onclick={hello} aria-label={$speaking ? 'Stop Guru' : 'Hear Guru say hello'} title="Tap Guru">
       <GuruAvatar size={104} talking={$speaking || waving} />
@@ -128,12 +136,15 @@
         <h3 class="group-h">{group.title} <span class="label">{group.note}</span></h3>
         <div class="faces" class:kids={group.kids}>
           {#each AVATARS.filter((a) => !!a.kids === group.kids) as a (a.id)}
-            <button class="face" class:on={$coachAvatar === a.id} aria-pressed={$coachAvatar === a.id} onclick={() => { chooseAvatar(a.id); prefs = loadCoach(); refreshVoices(); choosing = false; }}>
+            {@const open = guruOpen(a.id, $wallet.owned, $coachAvatar)}
+            {@const price = ITEM[guruItem(a.id)] ? priceOf(ITEM[guruItem(a.id)], today()) : undefined}
+            <button class="face" class:on={$coachAvatar === a.id} class:locked={!open} aria-pressed={$coachAvatar === a.id} onclick={() => { if (!open) return void goto(`/shop?tab=gurus&item=${guruItem(a.id)}`); chooseAvatar(a.id); prefs = loadCoach(); refreshVoices(); choosing = false; }}>
               <GuruAvatar id={a.id} size={group.kids ? 92 : 108} talking={$coachAvatar === a.id} />
               <span class="title">{a.name}</span>
               <span class="label">{a.about}</span>
               <span class="vtag">{a.voice === 'male' ? "Man's voice" : "Woman's voice"}</span>
               {#if a.sarvam}<span class="vtag new">✨ New voice</span>{/if}
+              {#if !open && price}<span class="vtag lock">🔒 {#if price.currency === 'gold'}<Coin size={13} />{:else}<Gem size={12} />{/if} {price.amount} · {$t('eco.guru.locked')}</span>{/if}
             </button>
           {/each}
         </div>
@@ -354,6 +365,19 @@
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: var(--muted);
+  }
+  .face.locked {
+    opacity: 0.85;
+  }
+  .face.locked :global(img),
+  .face.locked :global(video) {
+    filter: grayscale(0.55);
+  }
+  .vtag.lock {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 800;
   }
   .vtag.new {
     color: var(--gold);

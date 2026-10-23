@@ -56,6 +56,7 @@
   import { consentNeeded, consentSynced, hasConsent, markConsentSynced, readConsent } from '$lib/consent';
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import WelcomeSheet from '$lib/components/WelcomeSheet.svelte';
+  import ShopAd from '$lib/economy/ShopAd.svelte';
   import FeatureVideo from '$lib/components/FeatureVideo.svelte';
   import BoardThemeModal from '$lib/components/BoardThemeModal.svelte';
   import { boardThemeOpen } from '$lib/boardTheme';
@@ -598,6 +599,7 @@
 {/if}
 <InstallPrompt />
 <WelcomeSheet />
+<ShopAd />
 <BoardThemeModal bind:open={$boardThemeOpen} />
 <RewardToasts />
 <DailyChest />

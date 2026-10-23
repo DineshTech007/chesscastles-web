@@ -21,6 +21,8 @@ import {
   cleanWallet,
   cupSync,
   historySync,
+  GEMS_PER_DAY,
+  OVER_CAP_TIMES,
   HISTORY_MAX,
   dealsFor,
   earn,
@@ -287,5 +289,31 @@ describe('the server’s extras', () => {
     const big = historySync(w0, { ...h, puzzles: 100_000 }, NOW);
     if (!big.ok) throw new Error(big.error);
     expect(big.grants.find((g) => g.why === 'history')?.gold).toBe(HISTORY_MAX.gold);
+  });
+
+  it('pays gems for steady work: every N-th one of the day, up to a daily limit; past the cap only a coin', () => {
+    let w = newWallet(NOW).wallet;
+    const day = '2026-10-23';
+    // 10 clean puzzles: one gem, at the tenth.
+    for (let i = 1; i <= 10; i++) {
+      const g0 = w.gems;
+      w = ok(earn(w, { kind: 'puzzleClean', ref: `p${i}` }, day, NOW)).wallet;
+      expect(w.gems - g0).toBe(i === 10 ? 1 : 0);
+    }
+    // Past the cap (40 a day): a coin each, up to three times the cap, then nothing.
+    for (let i = 11; i <= EARN.puzzleClean.cap; i++) w = ok(earn(w, { kind: 'puzzleClean', ref: `p${i}` }, day, NOW)).wallet;
+    const before = w.gold;
+    w = ok(earn(w, { kind: 'puzzleClean', ref: 'over1' }, day, NOW)).wallet;
+    expect(w.gold - before).toBe(1);
+    for (let i = EARN.puzzleClean.cap + 2; i <= EARN.puzzleClean.cap * OVER_CAP_TIMES + 1; i++) w = ok(earn(w, { kind: 'puzzleClean', ref: `over${i}` }, day, NOW)).wallet;
+    const end = w.gold;
+    w = ok(earn(w, { kind: 'puzzleClean', ref: 'far' }, day, NOW)).wallet;
+    expect(w.gold).toBe(end);
+    // The day's gems from steady work stop at the limit (and a new day starts again).
+    let v = newWallet(NOW).wallet;
+    for (let i = 0; i < 200; i++) v = ok(earn(v, { kind: i % 2 ? 'vision' : 'lesson', ref: `v${i}` }, day, NOW)).wallet;
+    expect(v.today.gems).toBeLessThanOrEqual(GEMS_PER_DAY);
+    const tomorrow = ok(earn(v, { kind: 'vision', ref: 'next' }, '2026-10-24', NOW)).wallet;
+    expect(tomorrow.today.gems).toBe(0);
   });
 });

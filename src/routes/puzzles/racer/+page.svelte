@@ -44,11 +44,13 @@
       () => {},
     );
   });
+  import EarnHint from '$lib/economy/EarnHint.svelte';
 </script>
 
 <svelte:head><title>Puzzle Racer · Chess Castles</title></svelte:head>
 
 <div class="page">
+  <EarnHint kinds={['race', 'raceWin']} />
   <a class="back" href="/puzzles">← Puzzles</a>
 
   <section class="hero">

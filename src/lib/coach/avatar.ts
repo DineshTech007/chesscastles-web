@@ -49,6 +49,15 @@ const initial = (): AvatarId => {
   return AVATARS.some((x) => x.id === a) ? (a as AvatarId) : (RENAMED[a] ?? 'guruji');
 };
 
+/** The Guru everyone has; the others are Shop items ("g-<id>", src/lib/economy/core.ts) that a player unlocks. */
+export const FREE_GURU: AvatarId = 'guruji';
+export const guruItem = (id: AvatarId) => `g-${id}`;
+/**
+ * Whether a Guru may be used: the free one, one in the player's treasury, or the one already chosen (players who had
+ * chosen a Guru before the unlocks keep it). `owned` is the treasury's items.
+ */
+export const guruOpen = (id: AvatarId, owned: string[], current: AvatarId): boolean => id === FREE_GURU || owned.includes(guruItem(id)) || id === current;
+
 export const avatarInfo = (id: AvatarId) => AVATARS.find((a) => a.id === id) ?? AVATARS[0];
 
 /** The chosen look, kept with the coach settings in this browser. */

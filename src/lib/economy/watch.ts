@@ -49,7 +49,7 @@ export function studyEvent(a: Activity): EarnEvent | undefined {
   const ref = `s:${a.at}`;
   if (a.kind === 'puzzle') {
     if (a.label === 'Puzzle Rush' || a.label === 'Puzzle Racer') return undefined;
-    if (/^(Vision|Move Memory)/.test(a.label)) return { kind: 'vision', ref };
+    if (/^(Vision|Move Memory|Piece Sight)/.test(a.label)) return { kind: 'vision', ref };
     // The puzzle of the day logs "Puzzle <id>" (DailyPuzzle.svelte).
     if (/^Puzzle \S+$/.test(a.label)) return { kind: 'daily', ref };
     return { kind: a.points >= POINTS.puzzleSolved ? 'puzzleClean' : 'puzzle', ref };

@@ -99,6 +99,8 @@ export interface UserDetail {
   invitedBy?: string;
   students: number;
   coaches: string[];
+  /** Gold and gems (admins only). */
+  treasury?: { gold: number; gems: number; xp: number; owned: number };
 }
 
 type Me = { role: Role; can: Can[] };
@@ -141,6 +143,8 @@ export const overview = (days: number) => call<Overview>('GET', `admin/overview?
 export const users = (q: string, filter: string) => call<{ users: AdminUser[] }>('GET', `admin/users?q=${encodeURIComponent(q)}&filter=${filter}`).then((r) => r.users);
 export const userDetail = (uid: string) => call<UserDetail>('GET', `admin/user/${encodeURIComponent(uid)}`);
 export const grant = (uid: string, plan: Plan, days: number, note: string) => call<{ ok: true }>('POST', 'admin/grant', { uid, plan, days, note });
+/** Rewards a player with gold and gems (owner, 2026-10-23); the server allows admins only. */
+export const giveTreasure = (to: string, gold: number, gems: number) => call<{ ok: true }>('POST', 'wallet/give', { to, gold, gems });
 export const revoke = (id: number) => call<{ ok: true }>('POST', 'admin/revoke', { id });
 export const userAction = (uid: string, action: 'suspend' | 'unsuspend' | 'reset_rating' | 'delete', reason: string) => call<{ ok: true }>('POST', 'admin/user', { uid, action, reason });
 /** Gives a Chess Castles title ('' takes it away). Owner only. */

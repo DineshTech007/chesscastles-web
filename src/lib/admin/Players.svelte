@@ -2,7 +2,7 @@
   /** Admin: find players, see their plan, usage and reports, give plans, suspend. */
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import { featureName, grant, revoke, setRating, setTitle, userAction, userDetail, users, type AdminUser, type Can, type UserDetail } from '$lib/admin';
+  import { featureName, giveTreasure, grant, revoke, setRating, setTitle, userAction, userDetail, users, type AdminUser, type Can, type UserDetail } from '$lib/admin';
   import TitleBadge from '$lib/components/TitleBadge.svelte';
   import { TITLES, TITLE_NAME } from '$lib/titles';
   import { KFIDE_SPEEDS, SPEED_LABEL, type KfideSpeed } from '$lib/kfide';
@@ -50,6 +50,8 @@
   let gPlan = $state<Plan>('premium');
   let gDays = $state(30);
   let gNote = $state('');
+  let tGold = $state(0);
+  let tGems = $state(10);
   // Title and rating (owner).
   let tTitle = $state('');
   let rSpeed = $state<KfideSpeed>('rapid');
@@ -244,6 +246,17 @@
           {/each}
         </ul>
       {/if}
+      {#if open.treasury}
+        <p class="label">Treasury: <strong class="num">{open.treasury.gold.toLocaleString('en-IN')}</strong> gold · <strong class="num">{open.treasury.gems.toLocaleString('en-IN')}</strong> gems · {open.treasury.owned} items · {open.treasury.xp.toLocaleString('en-IN')} gold earned in all</p>
+      {/if}
+      <form class="give" onsubmit={(e) => (e.preventDefault(), act(() => giveTreasure(u.uid, tGold, tGems), `Gave ${tGold} gold and ${tGems} gems.`))}>
+        <span class="label">Reward</span>
+        <input type="number" min="0" max="50000" bind:value={tGold} aria-label="Gold" />
+        <span class="label">gold</span>
+        <input type="number" min="0" max="1000" bind:value={tGems} aria-label="Gems" />
+        <span class="label">gems</span>
+        <button class="btn primary" disabled={busy || (!tGold && !tGems)}>Give</button>
+      </form>
       {#if can.includes('grant')}
         <form class="give" onsubmit={(e) => (e.preventDefault(), act(() => grant(u.uid, gPlan, gDays, gNote), `${PLAN_INFO[gPlan].name} given for ${gDays} days.`))}>
           <select bind:value={gPlan} aria-label="Plan">{#each PLANS.filter((p) => p !== 'free') as p (p)}<option value={p}>{PLAN_INFO[p].name}</option>{/each}</select>

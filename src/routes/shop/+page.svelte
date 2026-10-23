@@ -21,9 +21,10 @@
   import Banner from '$lib/economy/Banner.svelte';
   import NameFx from '$lib/economy/NameFx.svelte';
   import { ITEMS, ITEM, MAX_SHIELDS, RARITIES, dealsFor, levelOf, owns, priceOf, rankOf, unlocked, type Item, type Slot, type WearSlot } from '$lib/economy/core';
-  import { purchase, today, wallet, walletMode, wear } from '$lib/economy/wallet';
+  import { adminTester, purchase, today, wallet, walletMode, wear } from '$lib/economy/wallet';
   import { fmt } from '$lib/economy/ui';
   import { previewTheme, rewardSound, type SoundTheme } from '$lib/sound';
+  import { chooseAvatar, coachAvatar, type AvatarId } from '$lib/coach/avatar';
 
   /**
    * The Shop's sections (owner, 2026-10-23: "sections for chess board themes, chess pieces skins, photo frames to buy,
@@ -37,6 +38,7 @@
   const SECTIONS: Section[] = [
     { id: 'board', icon: '♟️', slots: ['board'] },
     { id: 'pieces', icon: '♞', slots: ['pieces', 'finish'] },
+    { id: 'gurus', icon: '🎓', slots: ['guru'] },
     { id: 'frame', icon: '🖼️', slots: ['frame'] },
     { id: 'banner', icon: '🚩', slots: ['banner'] },
     { id: 'sound', icon: '🔊', slots: ['sound'] },
@@ -53,6 +55,14 @@
   let busy = $state(false);
   let error = $state('');
   let justBought = $state('');
+  // A link to one item (a locked Guru in the coach chooser): its sheet opens.
+  let linked = false;
+  $effect(() => {
+    const id = page.url.searchParams.get('item');
+    if (linked || !id || !ITEM[id]) return;
+    linked = true;
+    show(ITEM[id]);
+  });
 
   const day = today();
   const deals = dealsFor(day);
@@ -65,7 +75,7 @@
   const wearing = (i: Item) => i.slot !== 'shield' && $wallet.equipped[i.slot as WearSlot] === i.id;
   const canPay = (i: Item) => {
     const p = priceOf(i, day);
-    return !!p && $wallet[p.currency] >= p.amount;
+    return !!p && ($adminTester || $wallet[p.currency] >= p.amount);
   };
   /** A slot's items, with the filters, cheapest first within each rarity. */
   const itemsOf = (slot: Slot) =>
@@ -127,14 +137,32 @@
       rewardSound('buy');
     } else error = r.error === 'short' ? $t('eco.err.short') : r.error === 'signin' ? $t('eco.signinBuy') : r.error;
   }
+  /** A Guru bought: chosen as the player's Guru, and the note says where to meet them. */
+  function chooseGuru(i: Item) {
+    chooseAvatar(i.id.slice(2) as AvatarId);
+    worn = i;
+    clearTimeout(wornTimer);
+    wornTimer = setTimeout(() => (worn = undefined), 7000);
+  }
   async function wearIt(i: Item, off = false) {
-    if (i.slot === 'shield') return;
+    if (i.slot === 'shield' || i.slot === 'guru') return;
     busy = true;
     const r = await wear(i.slot as WearSlot, off ? '' : i.id);
     busy = false;
     if (!r.ok) error = r.error;
     else if (i.slot === 'sound' && !off) previewTheme(i.id as SoundTheme);
+    // Where it shows (owner, 2026-10-23: "I wore the gold chain but I am not sure where it is added"): a note in the middle.
+    if (r.ok && !off) {
+      worn = i;
+      clearTimeout(wornTimer);
+      wornTimer = setTimeout(() => (worn = undefined), 7000);
+    }
   }
+  /** The item just put on: the note in the middle says where to see it. */
+  let worn = $state<Item | undefined>();
+  let wornTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Where each kind of item shows, and a page to see it. */
+  const SEE: Partial<Record<Slot, string>> = { guru: '/coach',  frame: '/profile', name: '/profile', banner: '/profile', board: '/play', pieces: '/play', finish: '/play' };
   const slotKey = (s: Slot | 'all') => `eco.slot.${s}` as Key;
   const secKey = (id: string, sub = false) => `eco.sec.${id}${sub ? '.b' : ''}` as Key;
   const left = $derived.by(() => {
@@ -321,10 +349,21 @@
         <div class="bought" in:scale={{ start: 0.6, duration: 400, easing: backOut }}>🎉 {$t('eco.bought')}</div>
       {/if}
 
+      {#if i.rarity === 'royal' && !got && $adminTester}
+        <button class="btn primary" disabled={busy} onclick={buyIt}>Unlock it (admin test)</button>
+      {/if}
       {#if i.rarity === 'royal' && !got}
         <div class="royal">
           <span><Icon name="lock" size={15} /> {$t('eco.royalHow', { how: how(i) })}</span>
           <span class="bar"><span style="width: {progress(i) * 100}%"></span></span>
+        </div>
+      {:else if got && i.slot === 'guru'}
+        <div class="s-actions">
+          {#if $coachAvatar === i.id.slice(2)}
+            <span class="state ok big"><Icon name="check" size={18} />{$t('eco.guru.mine')}</span>
+          {:else}
+            <button class="btn primary big block" onclick={() => chooseGuru(i)}>{$t('eco.guru.choose')}</button>
+          {/if}
         </div>
       {:else if got && i.slot !== 'shield'}
         <div class="s-actions">
@@ -370,7 +409,69 @@
   </div>
 {/if}
 
+{#if worn}
+  <div class="worn" role="status" transition:scale={{ start: 0.85, duration: 220, easing: backOut }}>
+    <button class="w-x" onclick={() => (worn = undefined)} aria-label="Close"><Icon name="close" size={16} /></button>
+    <div class="w-art"><ItemArt id={worn.id} {photo} {name} /></div>
+    <div class="w-text">
+      <strong>✓ {$t('eco.where.on', { name: worn.name })}</strong>
+      <span>{$t(`eco.where.${worn.slot}` as Key)}</span>
+      {#if SEE[worn.slot]}<a class="btn small" href={SEE[worn.slot]}>{$t('eco.where.see')} →</a>{/if}
+    </div>
+  </div>
+{/if}
+
 <style>
+  .worn {
+    position: fixed;
+    z-index: 980;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(360px, calc(100vw - 32px));
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 16px 16px 16px 14px;
+    border-radius: 20px;
+    border: 2px solid var(--gold);
+    background: var(--card);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  }
+  .w-art {
+    flex: none;
+    width: 92px;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .w-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    min-width: 0;
+  }
+  .w-text strong {
+    font-size: 16px;
+  }
+  .w-text span {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  .w-x {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
   .shop {
     max-width: 1180px;
     margin: 0 auto;

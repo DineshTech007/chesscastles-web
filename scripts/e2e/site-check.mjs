@@ -735,15 +735,17 @@ async function run(name, options) {
     expect(faces === 3, `${faces} new Gurus on Home`);
     await page.locator('.gurus video.talk').first().waitFor({ state: 'attached', timeout: 8000 });
     await tap(page.locator('.gurus .face', { hasText: 'Sheru' }));
-    await page.waitForURL(/\/coach/, { timeout: 15000 });
-    await page.locator('[aria-label="Sheru, your coach"]').first().waitFor({ timeout: 15000 });
+    // A Guru not unlocked yet (owner, 2026-10-23: only Guruji is free): the tap leads to the Shop, on that Guru.
+    await page.waitForURL(/\/shop\?tab=gurus&item=g-sheru/, { timeout: 15000 });
     await open(page, '/coach?choose=1');
     await page.locator('.chooser .face').first().waitFor({ timeout: 15000 });
     const all = await page.locator('.chooser .face').count();
     expect(all === 10, `${all} Gurus in the chooser`);
     const fresh = await page.locator('.chooser .vtag.new').count();
     expect(fresh === 3, `${fresh} marked with the new voice`);
-    return '3 on Home, Sheru chosen, 10 in the chooser';
+    const locked = await page.locator('.chooser .vtag.lock').count();
+    expect(locked === 9, `${locked} locked Gurus in the chooser (want 9: only Guruji is free)`);
+    return '3 on Home, a locked one leads to the Shop, 10 in the chooser, 9 locked';
   });
 
   // 4m. My awards (owner, 2026-10-22): the profile's trophy cabinet shows, every medal held to its box (a tall trophy

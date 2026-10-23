@@ -312,6 +312,7 @@
     ];
   });
   const dueTotal = $derived(dueOpenings.reduce((s, d) => s + d.due, 0));
+  import EarnHint from '$lib/economy/EarnHint.svelte';
 </script>
 
 <svelte:head><title>Learn · Chess Castles</title></svelte:head>
@@ -371,6 +372,7 @@
       <a class="btn primary" href="/puzzles"><Icon name="puzzle" size={18} />Rated puzzles</a>
     </span>
   </header>
+  <EarnHint kinds={['lesson', 'line', 'review']} />
 
   {#if tab !== 'plan'}
     <section class="today-bar card" aria-label="Today">

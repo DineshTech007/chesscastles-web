@@ -17,7 +17,7 @@
 export type Currency = 'gold' | 'gems';
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'royal';
 /** Where an item goes. `shield` is a consumable (Streak Shields), not something worn. */
-export type Slot = 'board' | 'pieces' | 'finish' | 'frame' | 'name' | 'banner' | 'victory' | 'sound' | 'shield';
+export type Slot = 'board' | 'pieces' | 'finish' | 'frame' | 'name' | 'banner' | 'victory' | 'sound' | 'shield' | 'guru';
 export const WEAR_SLOTS = ['board', 'pieces', 'finish', 'frame', 'name', 'banner', 'victory', 'sound'] as const;
 export type WearSlot = (typeof WEAR_SLOTS)[number];
 
@@ -113,6 +113,17 @@ export const ITEMS: Item[] = [
   { id: 'smarble', slot: 'sound', name: 'Marble Hall', rarity: 'rare', gold: 1800, blurb: 'Stone clicks that echo round a great hall.' },
   { id: 'sroyal', slot: 'sound', name: 'Royal Court', rarity: 'epic', gold: 4500, blurb: 'Harp strings, and trumpets when you win.' },
   { id: 'sdrums', slot: 'sound', name: 'Dragon Drums', rarity: 'legendary', gems: 150, blurb: 'War drums, thunder on captures and a gong for victory.' },
+  // ---- Gurus (owner, 2026-10-23: "one Guru is free; the others are unlocked, and teach in their own way"): Guruji is
+  // everyone's; each of these opens one more (src/lib/coach/avatar.ts: the id after "g-" is the Guru's).
+  { id: 'g-hoot', slot: 'guru', name: 'Professor Hoot', rarity: 'common', gold: 300, blurb: 'A wise owl who explains slowly, for young players.' },
+  { id: 'g-gaja', slot: 'guru', name: 'Gaja', rarity: 'common', gold: 300, blurb: 'A gentle elephant from chaturanga, the first chess.' },
+  { id: 'g-robo', slot: 'guru', name: 'Robo', rarity: 'common', gold: 350, blurb: 'A friendly chess robot with a quick, cheerful voice.' },
+  { id: 'g-knight', slot: 'guru', name: 'Knight Guru', rarity: 'common', gold: 400, blurb: 'The Chess Castles knight, the very first Guru.' },
+  { id: 'g-rohan', slot: 'guru', name: 'Coach Rohan', rarity: 'rare', gold: 800, blurb: 'A young titled coach: clear, quick and energetic.' },
+  { id: 'g-meera', slot: 'guru', name: 'Coach Meera', rarity: 'rare', gold: 800, blurb: 'A patient coach who explains every idea step by step.' },
+  { id: 'g-sheru', slot: 'guru', name: 'Sheru', rarity: 'epic', gems: 45, blurb: 'A playful tiger cub who roars at every good move.' },
+  { id: 'g-anjali', slot: 'guru', name: 'Coach Anjali', rarity: 'epic', gems: 50, blurb: 'A warm, experienced coach with a lifelike voice.' },
+  { id: 'g-arjun', slot: 'guru', name: 'Coach Arjun', rarity: 'epic', gems: 50, blurb: 'A calm, cheerful coach with a lifelike voice who loves a plan.' },
   // ---- Streak Shield: saves the streak on a missed day (at most 2 held)
   { id: 'shield', slot: 'shield', name: 'Streak Shield', rarity: 'common', gold: 250, blurb: 'Missed a day? A shield keeps your streak going.' },
 ];
@@ -156,6 +167,31 @@ export const EARN = {
   cupWin: { gold: 200, gems: 10, cap: 5 },
 } as const;
 export type EarnKind = keyof typeof EARN;
+
+/**
+ * Gems for steady work (owner, 2026-10-23: "give gems in every feature, but make sure they do not take advantage"):
+ * every N-th thing of a kind done in a day, within that kind's gold cap, pays gems, and all of a day's gems from this
+ * are capped (GEMS_PER_DAY). Doing more than the cap pays only a coin, so there is nothing to gain from grinding one thing.
+ * The milestone gems (levels, streaks, awards, quests, cups) are separate and not counted here.
+ */
+export const GEM_EVERY: Partial<Record<EarnKind, { every: number; gems: number }>> = {
+  win: { every: 5, gems: 1 },
+  winOnline: { every: 3, gems: 1 },
+  puzzleClean: { every: 10, gems: 1 },
+  puzzle: { every: 15, gems: 1 },
+  daily: { every: 1, gems: 1 },
+  vision: { every: 4, gems: 1 },
+  line: { every: 5, gems: 1 },
+  lesson: { every: 2, gems: 1 },
+  review: { every: 3, gems: 1 },
+  rush: { every: 3, gems: 1 },
+  race: { every: 5, gems: 1 },
+  raceWin: { every: 3, gems: 1 },
+};
+/** The most gems a day's play and study can pay (the Shop's cheapest gem item costs 60). */
+export const GEMS_PER_DAY = 12;
+/** Past a kind's cap, up to this many times the cap, each one still pays a single coin (so a keen player sees it count). */
+export const OVER_CAP_TIMES = 3;
 /** The kinds a browser may send (the cup ones come from the server's own results). */
 export const CLIENT_KINDS: EarnKind[] = ['win', 'winOnline', 'draw', 'loss', 'puzzle', 'puzzleClean', 'daily', 'vision', 'line', 'lesson', 'review', 'rush', 'race', 'raceWin', 'award'];
 
@@ -274,7 +310,7 @@ export interface Wallet {
   /** Streak milestones paid (days). */
   milestones: number[];
   /** Today: how many of each kind (for the caps and the quests) and the quests claimed. */
-  today: { day: string; counts: Partial<Record<EarnKind, number>>; quests: string[]; bonus: boolean };
+  today: { day: string; counts: Partial<Record<EarnKind, number>>; quests: string[]; bonus: boolean; /** Gems paid today for steady work (GEMS_PER_DAY). */ gems?: number };
   /** Recent refs, so a game or a puzzle pays once (the newest last). */
   refs: string[];
   /** Recent rewards and purchases, newest first. */
@@ -340,7 +376,7 @@ export function cleanWallet(v: unknown, now: number): Wallet {
     shields: Math.min(n(o.shields), MAX_SHIELDS),
     login: { last: day(o.login?.last), streak: n(o.login?.streak, 100_000), best: n(o.login?.best, 100_000), total: n(o.login?.total, 100_000), saved: n(o.login?.saved, 100_000) },
     milestones: Array.isArray(o.milestones) ? o.milestones.filter((m): m is number => MILESTONES.some((x) => x.days === m)) : [],
-    today: { day: day(o.today?.day), counts, quests: Array.isArray(o.today?.quests) ? o.today.quests.filter((q): q is string => QUESTS.some((x) => x.id === q)) : [], bonus: !!o.today?.bonus },
+    today: { day: day(o.today?.day), counts, quests: Array.isArray(o.today?.quests) ? o.today.quests.filter((q): q is string => QUESTS.some((x) => x.id === q)) : [], bonus: !!o.today?.bonus, gems: n(o.today?.gems, 1000) },
     refs: Array.isArray(o.refs) ? o.refs.filter((r): r is string => typeof r === 'string').slice(-MAX_REFS) : [],
     log: Array.isArray(o.log)
       ? o.log
@@ -398,7 +434,7 @@ function settle(w: Wallet, grants: Grant[], now: number) {
 /** A new day: today's counts and quests start again (a day earlier than the last one seen counts as the same day). */
 function roll(w: Wallet, day: string) {
   if (w.today.day === day || (w.today.day && day < w.today.day)) return;
-  w.today = { day, counts: {}, quests: [], bonus: false };
+  w.today = { day, counts: {}, quests: [], bonus: false, gems: 0 };
 }
 
 export type Result = { ok: true; wallet: Wallet; grants: Grant[] } | { ok: false; wallet: Wallet; error: string };
@@ -420,7 +456,16 @@ export function earn(w0: Wallet, ev: EarnEvent, day: string, now: number): Resul
   const grants: Grant[] = [];
   if (count <= rule.cap) {
     const bonus = ev.kind === 'rush' ? Math.min(30, Math.floor(Math.max(0, Number(ev.score) || 0) / 2)) : 0;
-    give(w, grants, { why: ev.kind, gold: rule.gold + bonus, gems: 'gems' in rule ? rule.gems : 0 }, now);
+    let gems = 'gems' in rule ? rule.gems : 0;
+    // Steady work: every N-th one of the day pays gems (up to the day's limit).
+    const every = GEM_EVERY[ev.kind];
+    if (every && count % every.every === 0 && (w.today.gems ?? 0) < GEMS_PER_DAY) {
+      gems += every.gems;
+      w.today.gems = (w.today.gems ?? 0) + every.gems;
+    }
+    give(w, grants, { why: ev.kind, gold: rule.gold + bonus, gems }, now);
+  } else if (rule.cap >= 10 && count <= rule.cap * OVER_CAP_TIMES) {
+    give(w, grants, { why: ev.kind, gold: 1, gems: 0 }, now);
   }
   settle(w, grants, now);
   return { ok: true, wallet: w, grants };
@@ -636,6 +681,31 @@ export function historySync(w0: Wallet, h: History, now: number): Result {
   give(w, grants, { why: 'history', gold, gems }, now, true);
   settle(w, grants, now);
   return { ok: true, wallet: w, grants };
+}
+
+/** Gems for each friend who joins with a player's invite link (owner, 2026-10-23: "give 3 diamonds, so they add their parents and friends"), for the first INVITE_MAX friends. */
+export const INVITE_REWARD = { gems: 3 };
+export const INVITE_MAX = 20;
+
+/** A gift of gold and gems from an admin (owner, 2026-10-23: "reward some gems if I want"; also an admin's top-up to test the Shop): no caps, no level XP. */
+export function gift(w0: Wallet, gold: number, gems: number, now: number, why = 'gift'): Result {
+  const w = structuredClone(w0);
+  const grants: Grant[] = [];
+  const g = Math.max(0, Math.min(1_000_000, Math.floor(Number(gold)) || 0));
+  const m = Math.max(0, Math.min(100_000, Math.floor(Number(gems)) || 0));
+  give(w, grants, { why, gold: g, gems: m }, now, false);
+  return { ok: true, wallet: w, grants };
+}
+/** An admin takes any item, Royal ones too (to test what each looks like): the item is owned, nothing is spent. */
+export function adminOwn(w0: Wallet, id: string, now: number): Result {
+  const item = ITEM[id];
+  if (!item) return { ok: false, wallet: w0, error: 'unknown' };
+  if (item.slot === 'shield' || owns(w0, id)) return { ok: false, wallet: w0, error: 'owned' };
+  const w = structuredClone(w0);
+  w.owned.push(id);
+  w.log.unshift({ at: now, why: 'gift', gold: 0, gems: 0, item: id });
+  if (w.log.length > MAX_LOG) w.log.length = MAX_LOG;
+  return { ok: true, wallet: w, grants: [] };
 }
 
 /** What everyone may see of a player's treasury: what they wear, and their level. */

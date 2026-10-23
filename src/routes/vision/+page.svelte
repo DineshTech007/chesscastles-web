@@ -55,11 +55,13 @@
     { id: 'today', label: "Today's sprint", unit: 'points' },
     { id: 'sprint', label: 'Best sprint', unit: 'points' },
   ];
+  import EarnHint from '$lib/economy/EarnHint.svelte';
 </script>
 
 <svelte:head><title>Blindfold Gym · Chess Castles</title></svelte:head>
 
 <div class="page">
+  <EarnHint kinds={['vision']} />
   <section class="hero card">
     <div class="intro">
       <span class="label eyebrow">Train the skill strong players have</span>

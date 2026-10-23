@@ -142,6 +142,7 @@
       2200,
     );
   }
+  import EarnHint from '$lib/economy/EarnHint.svelte';
 </script>
 
 {#snippet bold(parts: string[])}{#each parts as part, i (i)}{#if i % 2}<b>{part}</b>{:else}{part}{/if}{/each}{/snippet}
@@ -166,6 +167,7 @@
 <svelte:head><title>Puzzle Rush · Chess Castles</title></svelte:head>
 
 <div class="page">
+  <EarnHint kinds={['rush']} />
   <a class="back" href="/puzzles"><Icon name="back" size={16} />Puzzles</a>
 
   {#if phase === 'ready'}

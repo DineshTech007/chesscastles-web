@@ -71,8 +71,6 @@
     racer: ['No Puzzle Racer scores yet. Win the first race!', 'Race now', '/puzzles/racer'],
     rush: ['No Puzzle Rush scores yet. Be the first!', 'Play Puzzle Rush', '/puzzles/rush'],
     endless: ['No Rush Unlimited scores yet. Be the first!', 'Play Rush Unlimited', '/puzzles/rush?mode=unlimited'],
-    gold: ['No gold earned yet.', 'Play and learn to earn gold', '/play'],
-    gems: ['No gems yet.', 'See how to earn gems', '/rewards'],
     vision: ['No one on this board yet.', 'Train in the Blindfold Gym', '/vision'],
     study: ['No one has studied yet this week.', 'Study now', '/learn'],
     books: ['No one has finished a chapter yet.', 'Open the library', '/books'],

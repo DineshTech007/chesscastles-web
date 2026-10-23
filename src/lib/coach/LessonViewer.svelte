@@ -12,6 +12,7 @@
   import { LANGS, tr, type Lang } from '$lib/coach/i18n';
   import { loadCoach, markDone, updateCoach } from '$lib/coach/progress';
   import { slideSeconds } from '$lib/coach/reading';
+  import EarnHint from '$lib/economy/EarnHint.svelte';
   import { POINTS, study } from '$lib/study/progress';
   import type { Lesson, Slide } from '$lib/coach/types';
   import { speak, speaking, stopSpeaking, voicesReady } from '$lib/coach/voice';
@@ -252,6 +253,7 @@
         </p>
       {/if}
       <p class="keys label">Keys: ← → move between slides.</p>
+      {#if !repeat}<EarnHint kinds={['lesson']} />{/if}
     </section>
   </div>
 

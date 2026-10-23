@@ -125,6 +125,7 @@
     const n = THEME_NAMES[t] ?? t;
     return n[0].toUpperCase() + n.slice(1);
   };
+  import EarnHint from '$lib/economy/EarnHint.svelte';
 </script>
 
 <svelte:head><title>{nameOf(theme)} puzzles · Chess Castles</title></svelte:head>
@@ -138,6 +139,7 @@
     </div>
     <div class="stat card"><span class="label">Your puzzle rating</span><strong class="display num">{$puzzleProvisional ? '?' : $puzzleRating}{#if change && !placing}<span class="chg" class:up={change > 0}>{change > 0 ? '+' : ''}{change}</span>{/if}</strong>{#if $puzzleProvisional}<span class="label">Finding your level: {$puzzlePlaced} of {PLACEMENT}</span>{/if}{#if goal}<span class="label">{Math.min(solvedNow, goal)} of {goal} for your plan</span>{/if}</div>
   </header>
+  <EarnHint kinds={['puzzleClean', 'puzzle']} />
 
   <div class="chips" role="group" aria-label="Theme">
     {#each THEMES as t (t)}

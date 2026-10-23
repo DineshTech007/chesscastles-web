@@ -33,6 +33,7 @@
       .slice(0, 3),
   );
   const pct = (b: BookMeta) => Math.round(((progress[b.slug]?.read.length ?? 0) / b.chapters) * 100);
+  import EarnHint from '$lib/economy/EarnHint.svelte';
 </script>
 
 <svelte:head><title>Audio Books · Chess Castles</title></svelte:head>
@@ -47,6 +48,7 @@
 {/snippet}
 
 <h1 class="display h">Audio Books</h1>
+  <EarnHint kinds={['lesson']} note="A chapter pays once you have taken the time to read it." />
 <p class="lead">
   Classic chess books by champions and masters, free to read or listen to. Tap <strong>Listen</strong> on any book and
   Chess Castles reads it aloud to you, chess moves included. Every book here is in the public domain.

@@ -10,6 +10,7 @@
 import { get, writable } from 'svelte/store';
 import { session } from '$lib/auth';
 import { call } from '$lib/social';
+import { adminMe } from '$lib/admin';
 import {
   ITEM,
   STARTER_BOARDS,
@@ -40,6 +41,8 @@ export function today(now = Date.now()): string {
 const blank = () => newWallet(Date.now()).wallet;
 export const wallet = writable<Wallet>(blank());
 export const walletMode = writable<Mode>('loading');
+/** An admin (owner, 2026-10-23): buys anything, Royal items too, with no gold or gems needed, to test every wearable. */
+export const adminTester = writable(false);
 /** Whose treasury is shown: a uid, or 'guest'. */
 let who = '';
 /** Where this browser keeps it: 'guest', the account's copy of the server's (its uid), or 'local:<uid>' (no server). */
@@ -124,6 +127,10 @@ async function loadServer(uid: string) {
     walletMode.set('server');
     storeKey = uid;
     adopt(r);
+    adminMe().then(
+      () => who === uid && adminTester.set(true),
+      () => adminTester.set(false),
+    );
     show(r.grants ?? []);
     await carryIn(uid);
     applyLooks();
@@ -262,9 +269,20 @@ export const claimQuestReward = (id: string) => {
   return act((w) => claimQuest(w, id, day, Date.now()), 'quest', { day, id });
 };
 /** Buying needs an account (so the item is never lost with a browser's data). */
-export const purchase = (id: string) => {
-  if (get(walletMode) === 'guest') return Promise.resolve<Outcome>({ ok: false, error: 'signin' });
+export const purchase = async (id: string): Promise<Outcome> => {
+  if (get(walletMode) === 'guest') return { ok: false, error: 'signin' };
   const day = today();
+  // An admin: the server tops up the price, so it is asked directly (the browser's own check would say "short").
+  if (get(adminTester) && get(walletMode) === 'server') {
+    const uid = who;
+    try {
+      const reply = await serial(() => call<Reply>('POST', 'wallet/buy', { item: id, day }));
+      if (who === uid) adopt(reply);
+      return { ok: true, grants: [] };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : 'error' };
+    }
+  }
   return act((w) => buy(w, id, day, Date.now()), 'buy', { item: id, day }, true);
 };
 /** Wears an item (or takes it off with ''): the board, pieces and finish change at once on every board. */

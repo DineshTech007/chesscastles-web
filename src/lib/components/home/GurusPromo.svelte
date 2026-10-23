@@ -7,7 +7,8 @@
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import GuruAvatar from '$lib/coach/GuruAvatar.svelte';
-  import { chooseAvatar, type AvatarId } from '$lib/coach/avatar';
+  import { chooseAvatar, coachAvatar, guruItem, guruOpen, type AvatarId } from '$lib/coach/avatar';
+  import { wallet } from '$lib/economy/wallet';
   import { t } from '$lib/i18n';
 
   const NEW: { id: AvatarId; name: string }[] = [
@@ -23,6 +24,8 @@
   });
 
   function pick(id: AvatarId) {
+    // A Guru not unlocked yet: the Shop, on that Guru.
+    if (!guruOpen(id, $wallet.owned, $coachAvatar)) return void goto(`/shop?tab=gurus&item=${guruItem(id)}`);
     chooseAvatar(id);
     void goto('/coach');
   }

@@ -68,12 +68,23 @@
       <span class="trophy">🏆</span>
       {#each Array(12) as _, i (i)}<span class="p" style="--i: {i}"></span>{/each}
     </span>
+  {:else if item?.slot === 'guru'}
+    <span class="stage guru"><img src="/coach/{id.slice(2)}.webp" alt="" loading="lazy" /></span>
   {:else if item?.slot === 'shield'}
     <span class="stage"><span class="shield">🛡️</span></span>
   {/if}
 </div>
 
 <style>
+  .stage.guru {
+    background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--gold) 30%, #16224a), #0f1733 75%);
+  }
+  .stage.guru img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 20%;
+  }
   .art {
     position: relative;
     width: 100%;

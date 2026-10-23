@@ -17,11 +17,13 @@
     else u.searchParams.delete('tab');
     void goto(u, { replaceState: true, noScroll: true, keepFocus: true });
   }
+  import EarnHint from '$lib/economy/EarnHint.svelte';
 </script>
 
 <svelte:head><title>{tab === 'daily' ? 'Puzzle of the day' : 'Puzzles'} · Chess Castles</title></svelte:head>
 
 <div class="page">
+  <EarnHint kinds={['puzzleClean', 'puzzle', 'daily']} />
   <div class="bar">
     <div class="segmented tabs" role="group" aria-label="Puzzles">
       <button aria-pressed={tab === 'rated'} onclick={() => show('rated')}>Rated puzzles</button>
