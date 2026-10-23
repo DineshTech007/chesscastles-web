@@ -23,6 +23,7 @@
   import RatingTiles from '$lib/components/home/RatingTiles.svelte';
   import ExploreIcons from '$lib/components/home/ExploreIcons.svelte';
   import TreasuryCard from '$lib/economy/TreasuryCard.svelte';
+  import TreasuryBoards from '$lib/economy/TreasuryBoards.svelte';
   import { t } from '$lib/i18n';
   import { session } from '$lib/auth';
   import { myName, myTitle, shownGames } from '$lib/stores/me';
@@ -72,6 +73,8 @@
       <div class="col side-col">
         <!-- The Castle Treasury (owner, 2026-10-23): level, streak, today's reward and quests, and a Shop deal. -->
         <div class="o0"><TreasuryCard /></div>
+        <!-- The richest castles (gold earned, gems) and the player's Shop progress (owner, 2026-10-23). -->
+        {#if $session.status === 'in'}<div class="o1"><TreasuryBoards /></div>{/if}
         <!-- The three new Chess Gurus (owner, 2026-10-23): a Home promo, replacing it when the next feature comes. -->
         <div class="o2"><GurusPromo /></div>
         <div class="o3"><RatingTiles /></div>

@@ -34,6 +34,8 @@
     racer: 'No Puzzle Racer scores yet: win the first race!',
     rush: 'No Puzzle Rush scores yet: be the first!',
     endless: 'No Rush Unlimited scores yet: be the first!',
+    gold: 'No gold earned yet: play, solve puzzles and learn to start.',
+    gems: 'No gems yet: streaks, levels and awards pay gems.',
     vision: 'No one here yet: try the Blindfold Gym.',
     study: 'No one has studied this week yet.',
     books: 'No chapters read yet.',

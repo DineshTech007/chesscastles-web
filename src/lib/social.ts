@@ -229,7 +229,7 @@ export interface KfideLeader {
 /** Chess Castles' CC Rating leaderboard (signed-in players), overall ('main') or at one speed. */
 export const kfideLeaders = (speed: 'main' | KfideSpeed) => call<{ players: KfideLeader[] }>('GET', `leaders?speed=${speed}`).then((r) => r.players);
 /** Study points this week, book chapters read, or (members) everyone, for the Lichess boards. `rating` holds the number. */
-export const boardOf = (kind: 'study' | 'books' | 'members' | 'puzzles' | 'puzzles_solved' | 'rush' | 'endless' | 'racer', week = '') =>
+export const boardOf = (kind: 'study' | 'books' | 'members' | 'puzzles' | 'puzzles_solved' | 'rush' | 'endless' | 'racer' | 'gold' | 'gems', week = '') =>
   call<{ players: KfideLeader[] }>('GET', `leaders?speed=${kind}&week=${encodeURIComponent(week)}`).then((r) => r.players);
 
 export type ReportReason = 'cheating' | 'abuse' | 'profile' | 'sandbagging' | 'other';
