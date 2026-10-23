@@ -124,7 +124,10 @@ async function run(name, options) {
       await page.locator('aside.drawer').waitFor({ timeout: TAP_MS });
       await tap(page.locator('aside.drawer a.row', { hasText: /^\s*Learn\s*$/ }).first());
       await page.waitForURL(/\/learn/, { timeout: TAP_MS });
-      expect((await page.locator('aside.drawer').count()) === 0, 'the menu stayed open');
+      // It slides away (a short transition) once the page has changed.
+      await page.locator('aside.drawer').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {
+        throw new Error('the menu stayed open after a page was chosen');
+      });
       return `${Date.now() - t0} ms`;
     });
   } else {
