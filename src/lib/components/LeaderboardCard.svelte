@@ -33,6 +33,7 @@
     puzzles: 'No puzzle ratings yet.',
     racer: 'No Puzzle Racer scores yet: win the first race!',
     rush: 'No Puzzle Rush scores yet: be the first!',
+    endless: 'No Rush Unlimited scores yet: be the first!',
     vision: 'No one here yet: try the Blindfold Gym.',
     study: 'No one has studied this week yet.',
     books: 'No chapters read yet.',

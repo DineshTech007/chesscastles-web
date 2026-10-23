@@ -18,7 +18,8 @@
   import Celebrations from '$lib/puzzles/Celebrations.svelte';
   import Medal from '$lib/puzzles/Medal.svelte';
   import { puzzleSounds } from '$lib/puzzles/puzzleSounds';
-  import { BADGES, nextRushTitle, recordRush, rewards, RUSH_TITLES, rushTitle } from '$lib/puzzles/rewards';
+  import { BADGES, nextRushTitle, recordEndless, recordRush, rewards, RUSH_TITLES, rushTitle } from '$lib/puzzles/rewards';
+  import { page } from '$app/state';
   import RushReview, { type RushPuzzle } from '$lib/puzzles/RushReview.svelte';
   import RushStanding from '$lib/puzzles/RushStanding.svelte';
   import { t } from '$lib/i18n';
@@ -28,6 +29,14 @@
   /** The difficulty after `solved` puzzles: easy at first, 60 points harder after each solve. */
   const levelAt = (solved: number) => Math.min(2600, 500 + solved * 60);
 
+  /**
+   * The 3-minute Rush, or Rush Unlimited (owner, 2026-10-23: "unlimited puzzle rush… its standing will be separate"):
+   * no clock, 3 mistakes end it; its own best and leaderboard, and the 3-minute titles stay the 3-minute Rush's.
+   */
+  let mode = $state<'timed' | 'endless'>(page.url.searchParams.get('mode') === 'unlimited' ? 'endless' : 'timed');
+  const endless = $derived(mode === 'endless');
+  const bestNow = $derived(endless ? $rewards.endlessBest : $rewards.rushBest);
+  const runs = $derived(endless ? $rewards.endlessRuns : $rewards.rushRuns);
   let phase = $state<'ready' | 'run' | 'over'>('ready');
   let current = $state<BandPuzzle | undefined>();
   let round = $state(0);
@@ -58,7 +67,7 @@
 
   // The clock: ticks in the last 10 seconds, then the end.
   $effect(() => {
-    if (phase !== 'run' || !deadline) return;
+    if (phase !== 'run' || !deadline || endless) return;
     const l = left;
     if (l <= 10 && l > 0 && l !== lastTick) {
       lastTick = l;
@@ -83,8 +92,8 @@
       lastTick = 0;
       phase = 'run';
       await load();
-      // The clock starts with the first puzzle on the board.
-      deadline = Date.now() + SECONDS * 1000 + 600;
+      // The clock starts with the first puzzle on the board (Rush Unlimited has none).
+      deadline = endless ? 0 : Date.now() + SECONDS * 1000 + 600;
     } finally {
       starting = false;
     }
@@ -123,7 +132,7 @@
     phase = 'over';
     ended = why;
     current = undefined;
-    const r = recordRush(score, log.length);
+    const r = endless ? recordEndless(score, log.length) : recordRush(score, log.length);
     best = { best: r.best, newBest: r.newBest && score > 0 };
     shownScore.target = score;
     if (best.newBest) puzzleSounds.levelUp();
@@ -163,21 +172,26 @@
     <section class="card ready">
       <img class="hero" src="/puzzles/rush-hero.webp" alt="" width="200" height="200" />
       <h1 class="display">Puzzle Rush</h1>
-      <p class="lead">{@render bold(rich($t('awards.rush.lead')))}</p>
-      <div class="facts">
-        <span><Icon name="trophy" size={18} />{$t('awards.rush.yourbest')} <b class="num">{$rewards.rushBest}</b></span>
-        {#if rushTitle($rewards.rushBest)}<span class="rtitle">🚀 {rushTitle($rewards.rushBest)}</span>{/if}
-        {#if $rewards.rushRuns.length}<span class="label">{$t('awards.rush.last', { list: $rewards.rushRuns.slice(-5).join(', ') })}</span>{/if}
-        <a class="board" href="/leaderboard#rush">{$t('awards.rush.board')}</a>
+      <div class="modes" role="group" aria-label="Puzzle Rush">
+        <button class:on={!endless} aria-pressed={!endless} onclick={() => (mode = 'timed')}>{$t('awards.rush.mode3')}</button>
+        <button class:on={endless} aria-pressed={endless} onclick={() => (mode = 'endless')}>{$t('awards.rush.modeU')}</button>
       </div>
-      <button class="btn primary go" onclick={start} disabled={starting}>{$t('awards.rush.start')}</button>
-      {#if $rewards.rushBest}<RushStanding best={$rewards.rushBest} />{/if}
+      <p class="lead">{@render bold(rich($t(endless ? 'awards.rush.leadU' : 'awards.rush.lead')))}</p>
+      {#if endless}<p class="label small">{$t('awards.rush.ownBoard')}</p>{/if}
+      <div class="facts">
+        <span><Icon name="trophy" size={18} />{$t('awards.rush.yourbest')} <b class="num">{bestNow}</b></span>
+        {#if !endless && rushTitle(bestNow)}<span class="rtitle">🚀 {rushTitle(bestNow)}</span>{/if}
+        {#if runs.length}<span class="label">{$t('awards.rush.last', { list: runs.slice(-5).join(', ') })}</span>{/if}
+        <a class="board" href={endless ? '/leaderboard#endless' : '/leaderboard#rush'}>{$t(endless ? 'awards.rush.boardU' : 'awards.rush.board')}</a>
+      </div>
+      <button class="btn primary go" onclick={start} disabled={starting}>{$t(endless ? 'awards.rush.startU' : 'awards.rush.start')}</button>
+      {#key mode}{#if bestNow}<RushStanding best={bestNow} board={endless ? 'endless' : 'rush'} />{/if}{/key}
       <p class="label small">{$t('awards.rush.onetry')}</p>
-      {@render titles($rewards.rushBest)}
+      {#if !endless}{@render titles(bestNow)}{/if}
     </section>
   {:else if phase === 'run'}
     <div class="hud" class:ok={flash === 'ok'} class:bad={flash === 'bad'}>
-      <span class="time num" class:low={left <= 20}>⏱ {clock}</span>
+      {#if endless}<span class="time">♾️ {$t('awards.rush.noclock')}</span>{:else}<span class="time num" class:low={left <= 20}>⏱ {clock}</span>{/if}
       <span class="score num" aria-label={$t('awards.rush.solved')}>{score}</span>
       <span class="lives" aria-label={$t('awards.rush.lives', { n: LIVES - misses })}>
         {#each Array.from({ length: LIVES }) as _, i (i)}<i class:used={i < misses}>✕</i>{/each}
@@ -212,16 +226,16 @@
       {:else if best}
         <span class="label">{$t('awards.rush.yourbest')} <b class="num">{best.best}</b></span>
       {/if}
-      {#if best && rushTitle(best.best)}<span class="rtitle">🚀 {rushTitle(best.best)}</span>{/if}
+      {#if best && !endless && rushTitle(best.best)}<span class="rtitle">🚀 {rushTitle(best.best)}</span>{/if}
       {#if hardest}<span class="label">{$t('awards.rush.hardest')} <b class="num">{hardest}</b></span>{/if}
-      {#if best}{@render titles(best.best)}{/if}
+      {#if best && !endless}{@render titles(best.best)}{/if}
       {#if log.length}
         <p class="label small tap">{$t('awards.rush.tap')}{log.some((x) => !x.ok) ? $t('awards.rush.tap.red') : ''}</p>
         <ol class="trail end">
           {#each log as x, i (i)}<li class:ok={x.ok}><button onclick={() => (reviewing = i)} title={x.ok ? $t('awards.rush.tip.ok', { r: x.r }) : $t('awards.rush.tip.bad', { r: x.r })}>{x.r}</button></li>{/each}
         </ol>
       {/if}
-      {#if best}<RushStanding best={best.best} />{/if}
+      {#if best}<RushStanding best={best.best} board={endless ? 'endless' : 'rush'} />{/if}
       <div class="actions">
         <button class="btn primary go" onclick={start} disabled={starting}>{$t('awards.rush.again')}</button>
         <a class="btn" href="/puzzles">Rated puzzles</a>
@@ -285,6 +299,28 @@
     font-size: 44px;
     line-height: 1;
     color: var(--gold);
+  }
+  /* 3 minutes or Unlimited: two big buttons, the chosen one in gold. */
+  .modes {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--raised);
+  }
+  .modes button {
+    min-height: 44px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: var(--text-2);
+    font: 800 15px var(--font-body);
+    cursor: pointer;
+  }
+  .modes button.on {
+    background: var(--gold);
+    color: #1a1300;
   }
   .lead {
     margin: 0;

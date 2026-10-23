@@ -22,8 +22,8 @@
   import { installOpen } from '$lib/install';
   import { myWhatsapp, normalizePhone, saveWhatsapp } from '$lib/social';
   import { remindersOn, reminderSupport, turnOnReminders } from '$lib/study/reminders';
+  import { busyPage } from '$lib/busy';
 
-  const BUSY = /^\/(play|watch|analysis|puzzles)\/./;
   const WEEK = 7 * 86_400_000;
   type Step = 'lang' | 'stay' | 'done';
   let step = $state<Step | undefined>();
@@ -81,7 +81,7 @@
     }
   });
 
-  const open = $derived(!!step && step !== 'done' && !$installOpen && !$consentNeeded && !BUSY.test(page.url.pathname));
+  const open = $derived(!!step && step !== 'done' && !$installOpen && !$consentNeeded && !busyPage(page.url.pathname));
 
   const minor = readConsent()?.age === 'minor';
   let whose = $state<'self' | 'parent'>(minor ? 'parent' : 'self');

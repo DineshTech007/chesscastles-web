@@ -403,6 +403,36 @@ async function run(name, options) {
     return `puzzle ${r}`;
   });
 
+  // 4u. Rated puzzles' Start (owner, 2026-10-23): the first puzzle waits under Start, its clock still, then runs.
+  await check(name, page, 'rated puzzles: the clock waits for Start', async () => {
+    await open(page, '/puzzles');
+    await page.locator('.start-cover').waitFor({ timeout: 20000 });
+    const secs = async () => Number((await page.locator('.pclock').first().innerText().catch(() => '')).replace(/\D/g, '')) || 0;
+    const a = await secs();
+    await page.waitForTimeout(2500);
+    expect((await secs()) === a, `the clock ran before Start (${a} → ${await secs()})`);
+    await tap(page.locator('.start-cover'));
+    await page.locator('.start-cover').waitFor({ state: 'detached', timeout: 5000 });
+    await page.waitForTimeout(2500);
+    const b = await secs();
+    expect(b < a, `the clock didn't start after Start (${a} → ${b})`);
+    return `${a}s, then ${b}s`;
+  });
+
+  // 4v. Rush Unlimited (owner, 2026-10-23): no clock, its own best and board.
+  await check(name, page, 'puzzle rush: Unlimited has no clock and its own board', async () => {
+    await open(page, '/puzzles/rush');
+    await tap(page.locator('.modes button').nth(1));
+    expect((await page.locator('.ready .lead').innerText()).includes('No clock'), 'the Unlimited words are missing');
+    expect((await page.locator('.ready a.board').getAttribute('href')) === '/leaderboard#endless', 'not its own leaderboard');
+    await tap(page.locator('.ready .go'));
+    await page.locator('.hud .time').waitFor({ timeout: 20000 });
+    expect((await page.locator('.hud .time').innerText()).includes('♾️'), 'a clock shows in Unlimited');
+    await tap(page.locator('.btn.stop'));
+    await page.locator('.over').waitFor({ timeout: 10000 });
+    return 'no clock, own board';
+  });
+
   // 4f. Puzzle Rush: it starts, the clock runs, and ending it shows the score.
   await check(name, page, 'puzzle rush: start, clock, end', async () => {
     await open(page, '/puzzles/rush');

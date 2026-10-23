@@ -10,9 +10,8 @@
   import { initInstall, installNow, installOpen, installQuiet, installWay, snoozeInstall } from '$lib/install';
   import { track } from '$lib/analytics';
   import Icon from './Icon.svelte';
+  import { busyPage } from '$lib/busy';
 
-  /** Pages where a popup would get in the way: a game being played. */
-  const BUSY = /^\/play\/./;
   const KEY = 'cc.installAsked';
   let ready = $state(false);
   let installed = $state(false);
@@ -35,7 +34,7 @@
 
   // Once a visit, on a page that isn't busy, when this browser can install.
   $effect(() => {
-    if (!ready || BUSY.test(page.url.pathname) || $installWay === 'none' || $installWay === 'installed' || installQuiet()) return;
+    if (!ready || busyPage(page.url.pathname) || $installWay === 'none' || $installWay === 'installed' || installQuiet()) return;
     try {
       if (sessionStorage.getItem(KEY)) return;
       sessionStorage.setItem(KEY, '1');

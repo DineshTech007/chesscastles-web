@@ -23,7 +23,8 @@
   const podium = $derived.by((): Standing[] => {
     const kids = st.filter((r) => !r.bot && !r.out && r.played > 0);
     if (kids.length === 1) return kids[0].score * 2 >= kids[0].played ? kids : [];
-    return kids.slice(0, 3);
+    // A medal needs at least a point.
+    return kids.filter((r) => r.score >= 1).slice(0, 3);
   });
   const mine = $derived(st.find((r) => r.uid === me));
   const myMedal = $derived(podium.findIndex((r) => r.uid === me) + 1);

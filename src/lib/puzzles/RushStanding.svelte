@@ -12,14 +12,15 @@
   import type { KfideLeader } from '$lib/social';
   import { t } from '$lib/i18n';
 
-  let { best }: { best: number } = $props();
+  /** `board`: the 3-minute Rush, or Rush Unlimited ('endless', its own board; owner, 2026-10-23). */
+  let { best, board = 'rush' }: { best: number; board?: 'rush' | 'endless' } = $props();
 
   let rows = $state<KfideLeader[] | undefined>();
   let failed = $state(false);
   const signedIn = $derived($session.status === 'in');
   onMount(() => {
     if ($session.status !== 'in') return;
-    boardOf('rush').then(
+    boardOf(board).then(
       (r) => (rows = r),
       () => (failed = true),
     );
@@ -71,14 +72,14 @@
           <li class:me={r.me}>
             <span class="pos num">{['🥇', '🥈', '🥉'][k] ?? `#${k + 1}`}</span>
             <span class="who">{r.me ? $t('awards.stand.me', { name: r.name }) : r.name}</span>
-            {#if rushTitle(r.rating)}<span class="t">{rushTitle(r.rating)}</span>{/if}
+            {#if board === 'rush' && rushTitle(r.rating)}<span class="t">{rushTitle(r.rating)}</span>{/if}
             <b class="num">{r.rating}</b>
           </li>
         {/each}
       </ol>
     {/if}
   {/if}
-  <a class="all" href="/leaderboard#rush">{$t('awards.stand.all')}</a>
+  <a class="all" href={board === 'endless' ? '/leaderboard#endless' : '/leaderboard#rush'}>{$t('awards.stand.all')}</a>
 </section>
 
 <style>

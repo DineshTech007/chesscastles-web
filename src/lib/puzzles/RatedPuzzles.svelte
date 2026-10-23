@@ -131,6 +131,20 @@
   }
   onMount(() => void settleLeft().then(next));
 
+  /**
+   * Start (owner, 2026-10-23: "add a start button in puzzles so only then the timer starts"): with the timer on, the
+   * visit's first puzzle waits under a Start button, its board hidden and its clock still; after that, asking for the
+   * next puzzle is being ready, and its clock starts at once.
+   */
+  let started = $state(false);
+  const begun = () => started || !timerOn;
+  function startNow() {
+    if (!current) return;
+    started = true;
+    pending([current[0], current[3], current[4][0] ?? 'mix']);
+    startedAt = Date.now() + 300;
+  }
+
   async function next() {
     if (loading) return;
     loading = true;
@@ -154,7 +168,8 @@
         return;
       }
       markSeen(p[0]);
-      pending([p[0], p[3], p[4][0] ?? 'mix']);
+      // A puzzle not started yet (behind Start) was never seen: leaving it is not a miss.
+      if (begun()) pending([p[0], p[3], p[4][0] ?? 'mix']);
       current = p;
       result = undefined;
       change = undefined;
@@ -165,8 +180,8 @@
       placing = count < PLACEMENT;
       // This visit's rating change counts from the first puzzle after placement.
       if (!placing) visitStart ??= before;
-      // The clock starts once the opponent's move is on the board.
-      startedAt = Date.now() + 600;
+      // The clock starts once the opponent's move is on the board, or, behind Start, when the player taps it.
+      startedAt = begun() ? Date.now() + 600 : 0;
       stoppedAt = 0;
       round++;
     } catch {
@@ -236,6 +251,12 @@
         {#key round}
           <PuzzleBoard fen={current[1]} moves={current[2].split(' ')} tries={2} onresult={done} onfirst={rate} hintButton />
         {/key}
+        {#if !begun() && result === undefined}
+          <button class="start-cover" onclick={startNow}>
+            <span class="go">▶ Start</span>
+            <span class="why">The clock starts when you tap: {limit} seconds for this puzzle</span>
+          </button>
+        {/if}
       {:else}
         <div class="placeholder">{error || 'Finding a puzzle at your level…'}</div>
       {/if}
@@ -454,6 +475,39 @@
   }
   .board-wrap {
     position: relative;
+  }
+  /* Before Start: the board hidden (no peeking before the clock runs), one big button. */
+  .start-cover {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    border: none;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .start-cover .go {
+    padding: 14px 40px;
+    border-radius: 999px;
+    background: var(--gold);
+    color: #1a1300;
+    font: 800 24px var(--font-title);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  }
+  .start-cover .why {
+    max-width: 260px;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
   }
   .placeholder {
     aspect-ratio: 1;

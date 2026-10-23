@@ -320,8 +320,11 @@
   // Phones: a game in progress gets the whole screen (no bottom bar) until it ends.
   const focusGame = $derived(phone && !$gameEnded && /^\/(play\/(fide|computer|online\/|tournament\/game)|watch\/(live|friend)\/)/.test(page.url.pathname));
   const collapsed = $derived(width < 960);
-  /** No friend-request popup over a game, or on the Friends page (which lists the requests itself). */
-  const noPopups = $derived(/^\/(friends|play\/(fide|computer|online\/|tournament\/game|tournament\/club\/[^/]+\/game))/.test(page.url.pathname));
+  /**
+   * No friend-request popup over a game, a cup round or a live class (2026-10-23: a popup over a cup game's board lost
+   * the game on time), or on the Friends page (which lists the requests itself).
+   */
+  const noPopups = $derived(/^\/(friends|play\/(fide|computer|online\/|tournament\/game|tournament\/club\/[^/]+\/game)|cups\/.|castleclass\/.|classroom\/.)/.test(page.url.pathname));
 
   // A club tournament (with friends) waiting for your game: a bar to it, checked once a visit after signing in.
   let clubTurn = $state<{ id: string; name: string; round: number } | undefined>();

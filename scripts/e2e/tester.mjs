@@ -550,6 +550,8 @@ async function learnMore(which) {
     await shot(page, 'learn-plan');
   } else if (which === 'puzzles') {
     await open('/puzzles', 'Rated puzzles');
+    // The first puzzle waits under Start (2026-10-23): a child taps it to begin.
+    await page.locator('.start-cover').click({ timeout: 15000 }).catch(() => {});
     const before = (await page.locator('main').innerText().catch(() => '')).match(/(\d{3,4})/)?.[1];
     const results = [];
     for (let i = 0; i < 4; i++) {
