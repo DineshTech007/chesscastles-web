@@ -10,6 +10,7 @@
   import PlayCard from './PlayCard.svelte';
   import RacerPromo from './RacerPromo.svelte';
   import GurusPromo from './GurusPromo.svelte';
+  import ShopPromo from '$lib/economy/ShopPromo.svelte';
   import CupsCard from '$lib/cups/CupsCard.svelte';
   import { startSignIn } from '$lib/auth';
   import { betaOn } from '$lib/beta';
@@ -34,6 +35,7 @@
   <CupsCard />
   <RacerPromo />
   <GurusPromo />
+  <ShopPromo />
 
   <div class="signin card">
     <p>{$t('home.land.signin.why')}{#if betaOn()}{' '}<strong>{$t('home.land.free')}</strong>{/if}</p>

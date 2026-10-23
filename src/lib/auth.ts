@@ -248,6 +248,16 @@ export async function signOut(): Promise<void> {
 
 /** Keeps `session` in step with Firebase and loads the profile. */
 export function watchSession(): () => void {
+  // On a developer's computer: http://localhost:5173/?devUid=lichess:someone signs in that test player (with a local
+  // API worker, whose sign-in check takes the uid as the token; see server/api-worker/test/dev-local.mjs).
+  if (import.meta.env.DEV && typeof location !== 'undefined') {
+    const asked = new URLSearchParams(location.search).get('devUid');
+    try {
+      if (asked) localStorage.setItem('cc.devUid', asked);
+    } catch {
+      /* blocked */
+    }
+  }
   return onAuthStateChanged(auth, async (user) => {
     // A hint for the first screen in app.html (shown before the app loads).
     try {

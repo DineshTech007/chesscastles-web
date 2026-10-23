@@ -22,12 +22,12 @@
   import TodayRow from '$lib/components/home/TodayRow.svelte';
   import RatingTiles from '$lib/components/home/RatingTiles.svelte';
   import ExploreIcons from '$lib/components/home/ExploreIcons.svelte';
+  import TreasuryCard from '$lib/economy/TreasuryCard.svelte';
   import { t } from '$lib/i18n';
   import { session } from '$lib/auth';
-  import { myCountry, myName, myTitle, shownGames } from '$lib/stores/me';
+  import { myName, myTitle, shownGames } from '$lib/stores/me';
   import { KIND_LABEL, opponentOf, outcome } from '$lib/stores/myGames';
   import { formatDate } from '$lib/format';
-  import { fedName } from '$lib/fideFeds';
   import { streak, study } from '$lib/study/progress';
 
   /** Visitors see the landing; a browser that was signed in before skips it while the sign-in loads. */
@@ -52,7 +52,6 @@
       </h1>
       <span class="hello-side">
         {#if days > 0}<a class="streak" href="/learn" title={$t('home.streak.short', { n: days })}><Icon name="flame" size={16} />{days}</a>{/if}
-        {#if $myCountry}<img class="flag" src="/flags/{$myCountry}.svg" alt={fedName($myCountry)} title={fedName($myCountry)} width="27" height="18" />{/if}
       </span>
     </header>
 
@@ -61,7 +60,7 @@
 
     <div class="cols">
       <div class="col main-col">
-        <div class="o1"><PlayCard /></div>
+        <div class="o0"><PlayCard /></div>
         <!-- Castle Cups (owner, 2026-10-22): tonight's tournaments, the next one's countdown, the top board. -->
         <div class="o1"><CupsCard /></div>
         <!-- The Puzzle Lobby (owner, 2026-10-22): races and battles to join in a tap. -->
@@ -71,6 +70,8 @@
         <div class="o7"><MyInsightsCard /></div>
       </div>
       <div class="col side-col">
+        <!-- The Castle Treasury (owner, 2026-10-23): level, streak, today's reward and quests, and a Shop deal. -->
+        <div class="o0"><TreasuryCard /></div>
         <!-- The three new Chess Gurus (owner, 2026-10-23): a Home promo, replacing it when the next feature comes. -->
         <div class="o2"><GurusPromo /></div>
         <div class="o3"><RatingTiles /></div>

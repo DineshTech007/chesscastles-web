@@ -1,0 +1,283 @@
+/*
+ * The Treasury's looks (src/lib/economy/core.ts ITEMS): the Shop's boards, piece finishes, avatar frames and name
+ * styles, for every board and avatar on the site. Boards follow app.css: --board-light/--board-dark on <html>
+ * (data-board), plus a texture; a moving shine sits in cg-board::before, under the highlights and the pieces. Every
+ * animation here stops with prefers-reduced-motion (app.css).
+ */
+
+/* ---------- boards ---------- */
+:root[data-board='tourney'] { --board-light: #f3f0e2; --board-dark: #2f7d4f; }
+:root[data-board='moat'] { --board-light: #e3edf2; --board-dark: #4f7a96; }
+:root[data-board='rosewood'] { --board-light: #f2d7c2; --board-dark: #94443a; }
+:root[data-board='amethyst'] { --board-light: #efe6fb; --board-dark: #7b55b8; }
+:root[data-board='monsoon'] { --board-light: #dbe7e2; --board-dark: #3e6b6a; }
+:root[data-board='sakura'] { --board-light: #fff0f4; --board-dark: #e48aa4; }
+:root[data-board='sandfort'] { --board-light: #f3dfb4; --board-dark: #bf8640; }
+:root[data-board='icepalace'] { --board-light: #eef7ff; --board-dark: #79acd6; }
+:root[data-board='neon'] { --board-light: #6874a8; --board-dark: #262b55; --board-coord: rgba(170, 245, 255, 0.85); }
+:root[data-board='hoard'] { --board-light: #e8cf8f; --board-dark: #2e241a; --board-coord: rgba(60, 40, 10, 0.85); }
+:root[data-board='lavakeep'] { --board-light: #cbb9a8; --board-dark: #3a1f19; --board-coord: rgba(70, 20, 10, 0.85); }
+:root[data-board='coronation'] { --board-light: #f6e5c4; --board-dark: #8f1d2c; }
+
+/* A board's preview in the Shop (ItemArt.svelte): the checkerboard of its colours, then its texture below. */
+.bprev {
+  background-image: repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 25% 25%;
+}
+.bprev::before {
+  border-radius: inherit;
+}
+
+/* Tournament Hall: a soft vinyl sheen. */
+:root[data-board='tourney'] .cg-wrap cg-board,
+.bprev[data-b='tourney'] {
+  background-image:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.16), transparent 40%, rgba(0, 0, 0, 0.06)),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 100% 100%, 25% 25%;
+}
+/* Moat Blue: slow ripples. */
+:root[data-board='moat'] .cg-wrap cg-board,
+.bprev[data-b='moat'] {
+  background-image:
+    repeating-radial-gradient(circle at 30% 120%, rgba(255, 255, 255, 0.07) 0 3px, transparent 3px 14px),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 100% 100%, 25% 25%;
+}
+/* Rosewood: a fine grain. */
+:root[data-board='rosewood'] .cg-wrap cg-board,
+.bprev[data-b='rosewood'] {
+  background-image:
+    repeating-linear-gradient(88deg, rgba(60, 10, 0, 0.07) 0 1px, transparent 1px 5px, rgba(60, 10, 0, 0.04) 5px 7px, transparent 7px 13px),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: auto, 25% 25%;
+}
+/* Royal Amethyst: a crystal glint across the stone. */
+:root[data-board='amethyst'] .cg-wrap cg-board,
+.bprev[data-b='amethyst'] {
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 35%, transparent 65%, rgba(255, 255, 255, 0.1)),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 100% 100%, 25% 25%;
+}
+/* Monsoon Courtyard: rain on slate. */
+:root[data-board='monsoon'] .cg-wrap cg-board,
+.bprev[data-b='monsoon'] {
+  background-image:
+    repeating-linear-gradient(105deg, rgba(255, 255, 255, 0.09) 0 1px, transparent 1px 9px),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: auto, 25% 25%;
+}
+/* Sakura Garden: petals. */
+:root[data-board='sakura'] .cg-wrap cg-board,
+.bprev[data-b='sakura'] {
+  background-image:
+    radial-gradient(ellipse 5px 3px at 20% 30%, rgba(255, 255, 255, 0.75), transparent 70%),
+    radial-gradient(ellipse 4px 3px at 70% 65%, rgba(255, 182, 203, 0.9), transparent 70%),
+    radial-gradient(ellipse 3px 2px at 45% 85%, rgba(255, 255, 255, 0.6), transparent 70%),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 23% 21%, 19% 23%, 29% 27%, 25% 25%;
+}
+/* Sandstone Fort: jaali lattice. */
+:root[data-board='sandfort'] .cg-wrap cg-board,
+.bprev[data-b='sandfort'] {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(90, 50, 10, 0.12) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(-45deg, rgba(90, 50, 10, 0.12) 0 1px, transparent 1px 8px),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: auto, auto, 25% 25%;
+}
+/* Ice Palace: frost sparkles and a cold light. */
+:root[data-board='icepalace'] .cg-wrap cg-board,
+.bprev[data-b='icepalace'] {
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.95) 0.8px, transparent 1.4px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.7) 0.8px, transparent 1.3px),
+    linear-gradient(170deg, rgba(255, 255, 255, 0.25), transparent 50%),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 19px 19px, 13px 13px, 100% 100%, 25% 25%;
+  background-position: 0 0, 7px 5px, 0 0, 0 0;
+}
+/* Neon Joust: glowing lines between the squares. */
+:root[data-board='neon'] .cg-wrap cg-board,
+.bprev[data-b='neon'] {
+  background-image:
+    linear-gradient(to right, rgba(34, 238, 255, 0.55) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 64, 214, 0.45) 1px, transparent 1px),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 12.5% 12.5%, 12.5% 12.5%, 25% 25%;
+  box-shadow: 0 0 0 2px rgba(34, 238, 255, 0.5), 0 0 24px rgba(34, 238, 255, 0.35);
+}
+/* Dragon's Hoard: coins glinting in the gold squares. */
+:root[data-board='hoard'] .cg-wrap cg-board,
+.bprev[data-b='hoard'] {
+  background-image:
+    radial-gradient(circle at 30% 30%, rgba(255, 250, 220, 0.28) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 60% 70%, rgba(255, 220, 120, 0.2) 0 2px, transparent 3px),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 19px 19px, 29px 29px, 25% 25%;
+  box-shadow: 0 0 0 2px #b8892c, 0 0 22px rgba(240, 190, 80, 0.35);
+}
+/* Dragonfire Keep: lava between obsidian squares. */
+:root[data-board='lavakeep'] .cg-wrap cg-board,
+.bprev[data-b='lavakeep'] {
+  background-image:
+    linear-gradient(to right, rgba(255, 110, 20, 0.6) 1.5px, transparent 1.5px),
+    linear-gradient(to bottom, rgba(255, 70, 0, 0.55) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 50% 50%, rgba(255, 120, 40, 0.18), transparent 60%),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 12.5% 12.5%, 12.5% 12.5%, 25% 25%, 25% 25%;
+  box-shadow: 0 0 0 2px #7a2a10, 0 0 26px rgba(255, 90, 20, 0.4);
+}
+/* Coronation Hall: gold lines on crimson and cream. */
+:root[data-board='coronation'] .cg-wrap cg-board,
+.bprev[data-b='coronation'] {
+  background-image:
+    linear-gradient(to right, rgba(214, 170, 70, 0.6) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(214, 170, 70, 0.6) 1px, transparent 1px),
+    repeating-conic-gradient(var(--board-dark) 0 25%, var(--board-light) 0 50%);
+  background-size: 12.5% 12.5%, 12.5% 12.5%, 25% 25%;
+  box-shadow: 0 0 0 3px #c9a04a;
+}
+/* The moving shine of the animated boards (under the squares' highlights and the pieces). */
+:root[data-board='neon'] .cg-wrap cg-board::before,
+.bprev[data-b='neon']::before,
+:root[data-board='hoard'] .cg-wrap cg-board::before,
+.bprev[data-b='hoard']::before,
+:root[data-board='lavakeep'] .cg-wrap cg-board::before,
+.bprev[data-b='lavakeep']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+:root[data-board='hoard'] .cg-wrap cg-board::before,
+.bprev[data-b='hoard']::before {
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 236, 170, 0.32) 48%, transparent 60%);
+  background-size: 250% 100%;
+  animation: cc-shine 5.5s ease-in-out infinite;
+}
+:root[data-board='neon'] .cg-wrap cg-board::before,
+.bprev[data-b='neon']::before {
+  background: radial-gradient(circle at 50% 50%, rgba(34, 238, 255, 0.12), transparent 70%);
+  animation: cc-pulse 3.2s ease-in-out infinite;
+}
+:root[data-board='lavakeep'] .cg-wrap cg-board::before,
+.bprev[data-b='lavakeep']::before {
+  background: radial-gradient(circle at 50% 110%, rgba(255, 90, 20, 0.28), transparent 60%);
+  animation: cc-pulse 2.6s ease-in-out infinite;
+}
+@keyframes cc-shine {
+  0% { background-position: 120% 0; }
+  60%, 100% { background-position: -120% 0; }
+}
+@keyframes cc-pulse {
+  50% { opacity: 0.35; }
+}
+
+/* ---------- piece finishes (data-finish on <html>, over any piece set; ItemArt previews use .finish-<id>) ---------- */
+/* Black pieces are lifted a little (invert) before they are tinted, so their colour shows. */
+:root[data-finish='gilded'] .cg-wrap piece.white,
+.finish-gilded .pw { filter: brightness(0.82) sepia(1) saturate(3.6) hue-rotate(-8deg) contrast(1.05) drop-shadow(0 1px 1px rgba(80, 50, 0, 0.55)); }
+:root[data-finish='gilded'] .cg-wrap piece.black,
+.finish-gilded .pb { filter: drop-shadow(0 0 1.5px rgba(237, 176, 64, 0.95)) drop-shadow(0 0 1px rgba(237, 176, 64, 0.8)); }
+
+:root[data-finish='onyx'] .cg-wrap piece.white,
+.finish-onyx .pw { filter: sepia(0.3) hue-rotate(170deg) saturate(1.6) brightness(1.05) drop-shadow(0 0 2px rgba(220, 235, 255, 0.95)); }
+:root[data-finish='onyx'] .cg-wrap piece.black,
+.finish-onyx .pb { filter: contrast(1.25) drop-shadow(0 1px 0 rgba(255, 255, 255, 0.55)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.7)); }
+
+:root[data-finish='ruby'] .cg-wrap piece.white,
+.finish-ruby .pw { filter: brightness(0.58) sepia(1) saturate(12) hue-rotate(-48deg) contrast(1.2) drop-shadow(0 0 1.5px rgba(255, 40, 80, 0.75)); }
+:root[data-finish='ruby'] .cg-wrap piece.black,
+.finish-ruby .pb { filter: invert(0.14) sepia(1) saturate(6) hue-rotate(185deg) brightness(0.72) drop-shadow(0 0 2px rgba(80, 140, 255, 0.9)); }
+
+:root[data-finish='emerald'] .cg-wrap piece.white,
+.finish-emerald .pw { filter: brightness(0.8) sepia(1) saturate(4) hue-rotate(85deg) drop-shadow(0 0 1.5px rgba(50, 220, 140, 0.7)); }
+:root[data-finish='emerald'] .cg-wrap piece.black,
+.finish-emerald .pb { filter: invert(0.14) sepia(1) saturate(5) hue-rotate(105deg) brightness(0.62) drop-shadow(0 0 2px rgba(52, 211, 153, 0.9)); }
+
+:root[data-finish='shadow'] .cg-wrap piece.white,
+.finish-shadow .pw { filter: brightness(0.9) sepia(0.6) hue-rotate(220deg) saturate(2) drop-shadow(0 0 3px rgba(168, 85, 247, 0.95)); }
+:root[data-finish='shadow'] .cg-wrap piece.black,
+.finish-shadow .pb { filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 1px rgba(192, 132, 252, 0.95)); }
+
+:root[data-finish='crystal'] .cg-wrap piece.white,
+.finish-crystal .pw { opacity: 0.85; filter: sepia(1) hue-rotate(160deg) saturate(2.4) brightness(1.18) drop-shadow(0 0 3px rgba(150, 220, 255, 0.95)) drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)); }
+:root[data-finish='crystal'] .cg-wrap piece.black,
+.finish-crystal .pb { opacity: 0.9; filter: invert(0.2) sepia(1) hue-rotate(185deg) saturate(3.5) brightness(0.85) drop-shadow(0 0 3px rgba(150, 210, 255, 0.95)); }
+/* The ghost of a dragged piece stays plain. */
+:root[data-finish] .cg-wrap piece.ghost { filter: none; }
+
+/* ---------- avatar frames (src/lib/economy/Avatar.svelte: .ccav > .ring + .pic) ---------- */
+.ccav[data-frame] .ring { display: block; }
+.ccav[data-frame='bronze'] .ring { background: conic-gradient(from 200deg, #8a5a2b, #e2a86b, #8a5a2b, #c48a52, #8a5a2b); }
+.ccav[data-frame='oak'] .ring { background: repeating-conic-gradient(from 0deg, #6b4423 0 10deg, #8b5a2b 10deg 20deg); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35); }
+.ccav[data-frame='silver'] .ring {
+  background: conic-gradient(from 0deg, #cfd6e0, #f8fafc, #9aa5b5, #f1f5f9, #cfd6e0);
+  /* Battlements: notches cut into the ring. */
+  -webkit-mask: radial-gradient(circle, transparent calc(50% - var(--ring)), #000 calc(50% - var(--ring) + 0.5px)), repeating-conic-gradient(#000 0 14deg, transparent 14deg 22.5deg);
+  -webkit-mask-composite: source-in;
+  mask: radial-gradient(circle, transparent calc(50% - var(--ring)), #000 calc(50% - var(--ring) + 0.5px)) intersect, repeating-conic-gradient(#000 0 14deg, transparent 14deg 22.5deg);
+}
+.ccav[data-frame='silver'] .ring::after { content: ''; position: absolute; inset: calc(var(--ring) * 0.55); border-radius: 50%; background: conic-gradient(from 90deg, #b8c1cf, #eef2f7, #b8c1cf); -webkit-mask: radial-gradient(circle, transparent calc(50% - var(--ring) * 0.45), #000 calc(50% - var(--ring) * 0.45 + 0.5px)); mask: radial-gradient(circle, transparent calc(50% - var(--ring) * 0.45), #000 calc(50% - var(--ring) * 0.45 + 0.5px)); }
+.ccav[data-frame='laurel'] .ring { background: conic-gradient(from 0deg, #f7d27a, #b88a1c, #fff1b8, #c99a2e, #f7d27a); }
+.ccav[data-frame='laurel'] .orn::before,
+.ccav[data-frame='laurel'] .orn::after { content: '🌿'; position: absolute; bottom: -8%; font-size: calc(var(--s) * 0.32); filter: hue-rotate(10deg) saturate(1.3) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)); }
+.ccav[data-frame='laurel'] .orn::before { left: -14%; transform: rotate(-35deg); }
+.ccav[data-frame='laurel'] .orn::after { right: -14%; transform: scaleX(-1) rotate(-35deg); }
+.ccav[data-frame='frostring'] .ring { background: conic-gradient(from 0deg, #bfe6ff, #ffffff, #7cc4f5, #e0f4ff, #9fd8ff, #bfe6ff); box-shadow: 0 0 calc(var(--s) * 0.12) rgba(140, 210, 255, 0.75); }
+.ccav[data-frame='frostring'] .orn::before { content: '❄'; position: absolute; top: -12%; right: -6%; font-size: calc(var(--s) * 0.3); color: #dff3ff; text-shadow: 0 0 6px #7cc4f5; }
+.ccav[data-frame='crownring'] .ring { background: conic-gradient(from 0deg, #f7d27a, #edb040, #fff3c4, #c98a1b, #f7d27a); box-shadow: 0 0 calc(var(--s) * 0.1) rgba(237, 176, 64, 0.6); }
+.ccav[data-frame='crownring'] .orn::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -26%;
+  width: 52%;
+  height: 34%;
+  transform: translateX(-50%);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 26'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fff1b8'/%3E%3Cstop offset='.5' stop-color='%23edb040'/%3E%3Cstop offset='1' stop-color='%23b87a12'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M3 24 1 6l10 8 9-13 9 13 10-8-2 18z' fill='url(%23g)' stroke='%237a4f08' stroke-width='1.2' stroke-linejoin='round'/%3E%3Ccircle cx='20' cy='17' r='2.6' fill='%23e11d48'/%3E%3Ccircle cx='10' cy='19' r='1.8' fill='%2338bdf8'/%3E%3Ccircle cx='30' cy='19' r='1.8' fill='%2338bdf8'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+.ccav[data-frame='ember'] .ring { background: conic-gradient(from 0deg, #ff3d00, #ffb300, #ff6d00, #ffd54f, #ff3d00); box-shadow: 0 0 calc(var(--s) * 0.18) rgba(255, 110, 20, 0.85); animation: cc-spin 3s linear infinite; }
+.ccav[data-frame='aurora'] .ring { background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #f472b6, #34d399, #22d3ee); box-shadow: 0 0 calc(var(--s) * 0.16) rgba(167, 139, 250, 0.7); animation: cc-spin 6s linear infinite; }
+.ccav[data-frame='dragonhalo'] .ring { background: conic-gradient(from 0deg, #fde68a, #f59e0b, #dc2626, #f59e0b, #fde68a, #b45309, #fde68a); box-shadow: 0 0 calc(var(--s) * 0.2) rgba(245, 120, 20, 0.85); animation: cc-spin 4s linear infinite; }
+.ccav[data-frame='dragonhalo'] .orn::before { content: '🐉'; position: absolute; bottom: -10%; left: -14%; font-size: calc(var(--s) * 0.34); filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+.ccav[data-frame='founder'] .ring { background: conic-gradient(from 0deg, #edb040, #1e3a8a, #edb040, #1e3a8a, #edb040); box-shadow: 0 0 0 1px rgba(237, 176, 64, 0.6); }
+.ccav[data-frame='founder'] .orn::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -18%;
+  width: 34%;
+  height: 34%;
+  transform: translateX(-50%);
+  background: url('/brand/chesscastles-crest-dark.svg') center / contain no-repeat;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.ccav[data-frame='centurion'] .ring { background: conic-gradient(from 0deg, #e5e7eb, #edb040, #e5e7eb, #b91c1c, #e5e7eb); box-shadow: 0 0 calc(var(--s) * 0.12) rgba(185, 28, 28, 0.6); }
+.ccav[data-frame='centurion'] .orn::before { content: '💯'; position: absolute; top: -14%; right: -10%; font-size: calc(var(--s) * 0.28); }
+.ccav[data-frame='champion'] .ring { background: conic-gradient(from 0deg, #fde047, #f59e0b, #fff7ae, #eab308, #fde047); box-shadow: 0 0 calc(var(--s) * 0.18) rgba(250, 204, 21, 0.8); animation: cc-glow 2.2s ease-in-out infinite; }
+.ccav[data-frame='champion'] .orn::before { content: '🏆'; position: absolute; top: -18%; right: -12%; font-size: calc(var(--s) * 0.32); filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+@keyframes cc-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes cc-glow {
+  50% { box-shadow: 0 0 calc(var(--s) * 0.3) rgba(250, 204, 21, 1); }
+}
+
+/* ---------- name styles (src/lib/economy/NameFx.svelte) ---------- */
+.nfx { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.nfx-ngold { background-image: linear-gradient(180deg, #fff1b8, #edb040 55%, #b87a12); }
+.nfx-nember { background-image: linear-gradient(180deg, #ffd54f, #ff6d00 60%, #d84315); text-shadow: 0 0 12px rgba(255, 109, 0, 0.35); }
+.nfx-nfrost { background-image: linear-gradient(180deg, #ffffff, #9fd8ff 55%, #4aa3e0); }
+.nfx-nroyal { background-image: linear-gradient(180deg, #e9d5ff, #a855f7 55%, #6d28d9); }
+.nfx-nrainbow { background-image: linear-gradient(90deg, #f87171, #fbbf24, #34d399, #22d3ee, #a78bfa, #f472b6, #f87171); background-size: 200% 100%; animation: cc-rainbow 4s linear infinite; }
+.nfx-nsovereign { background-image: linear-gradient(180deg, #fde68a, #edb040 45%, #b91c1c); }
+:root[data-theme='light'] .nfx-nfrost { background-image: linear-gradient(180deg, #4aa3e0, #1d6fa8); }
+:root[data-theme='light'] .nfx-ngold { background-image: linear-gradient(180deg, #c98a1b, #8a5a12); }
+@keyframes cc-rainbow {
+  to { background-position: 200% 0; }
+}

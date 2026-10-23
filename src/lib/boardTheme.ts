@@ -17,6 +17,9 @@ export interface BoardThemeDef {
   dark: string;
   /** Premium boards: a real material, as a picture of the whole board (static/boards, scripts/boards). */
   image?: string;
+  /** A Treasury board (src/lib/economy/core.ts ITEMS): bought in the Shop with gold or gems, or won; its texture and
+   *  any glow are in src/lib/economy/cosmetics.css. */
+  shop?: true;
 }
 
 export const BOARD_THEMES: BoardThemeDef[] = [
@@ -34,6 +37,19 @@ export const BOARD_THEMES: BoardThemeDef[] = [
   { id: 'midnight', name: 'Midnight', emoji: '🌙', light: '#4a5068', dark: '#2b2f42' },
   { id: 'space', name: 'Space', emoji: '🚀', light: '#cfd6e8', dark: '#2a2f5c' },
   { id: 'jungle', name: 'Jungle', emoji: '🦕', light: '#eaf4df', dark: '#3f6b3a' },
+  // The Shop's boards (owner, 2026-10-23): won with gold and gems. Same names as the Shop (economy/core.ts).
+  { id: 'tourney', name: 'Tournament Hall', emoji: '🏁', light: '#f3f0e2', dark: '#2f7d4f', shop: true },
+  { id: 'moat', name: 'Moat Blue', emoji: '🏰', light: '#e3edf2', dark: '#4f7a96', shop: true },
+  { id: 'rosewood', name: 'Rosewood', emoji: '🌹', light: '#f2d7c2', dark: '#94443a', shop: true },
+  { id: 'amethyst', name: 'Royal Amethyst', emoji: '💜', light: '#efe6fb', dark: '#7b55b8', shop: true },
+  { id: 'monsoon', name: 'Monsoon Courtyard', emoji: '🌧️', light: '#dbe7e2', dark: '#3e6b6a', shop: true },
+  { id: 'sakura', name: 'Sakura Garden', emoji: '🌸', light: '#fff0f4', dark: '#e48aa4', shop: true },
+  { id: 'sandfort', name: 'Sandstone Fort', emoji: '🏯', light: '#f3dfb4', dark: '#bf8640', shop: true },
+  { id: 'icepalace', name: 'Ice Palace', emoji: '❄️', light: '#eef7ff', dark: '#79acd6', shop: true },
+  { id: 'neon', name: 'Neon Joust', emoji: '⚡', light: '#6874a8', dark: '#262b55', shop: true },
+  { id: 'hoard', name: 'Dragon’s Hoard', emoji: '🐉', light: '#e8cf8f', dark: '#2e241a', shop: true },
+  { id: 'lavakeep', name: 'Dragonfire Keep', emoji: '🌋', light: '#cbb9a8', dark: '#3a1f19', shop: true },
+  { id: 'coronation', name: 'Coronation Hall', emoji: '👑', light: '#f6e5c4', dark: '#8f1d2c', shop: true },
 ];
 
 const KEY = 'k24.board';

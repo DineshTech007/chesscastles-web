@@ -21,6 +21,12 @@
   import AwardsCabinet from '$lib/awards/AwardsCabinet.svelte';
   import LookCard from '$lib/look/LookCard.svelte';
   import Flair from '$lib/look/Flair.svelte';
+  import Avatar from '$lib/economy/Avatar.svelte';
+  import Banner from '$lib/economy/Banner.svelte';
+  import NameFx from '$lib/economy/NameFx.svelte';
+  import { levelOf, rankOf } from '$lib/economy/core';
+  import { wallet } from '$lib/economy/wallet';
+  import { t } from '$lib/i18n';
   import { earnedNow } from '$lib/awards/awards';
   import { rewards } from '$lib/puzzles/rewards';
   import { puzzleRating } from '$lib/puzzles/rating';
@@ -165,19 +171,15 @@
 <svelte:head><title>Profile · Chess Castles</title></svelte:head>
 
 <div class="page">
-  <section class="card head">
+  <section class="card head" class:bannered={!!$wallet.equipped.banner}>
+    {#if $wallet.equipped.banner}<div class="hb"><Banner id={$wallet.equipped.banner} /></div>{/if}
     <div class="photo">
-      {#if $myPhoto}
-        <img src={photoSrc($myPhoto)} alt="Your profile" />
-      {:else if details?.avatar}
-        <img src="/avatars/{details.avatar}.webp" alt="Your avatar" />
-      {:else}
-        <span class="initials display">{initials}</span>
-      {/if}
+      <Avatar src={$myPhoto ? photoSrc($myPhoto) : details?.avatar ? `/avatars/${details.avatar}.webp` : ''} text={initials} size={112} frame={$wallet.equipped.frame ?? ''} level={levelOf($wallet.xp)} border="3px solid var(--gold)" />
     </div>
     <div class="who">
-      <h1 class="display">{#if $session.status === 'in'}<TitleBadge title={myTitleNow} size={24} />{/if}{name}{#if details?.flair} <Flair id={details.flair} size={26} />{/if}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'free'} size={30} />{/if}</h1>
+      <h1 class="display">{#if $session.status === 'in'}<TitleBadge title={myTitleNow} size={24} />{/if}<NameFx style={$wallet.equipped.name ?? ''}>{name}</NameFx>{#if details?.flair} <Flair id={details.flair} size={26} />{/if}{#if $session.status === 'in'} <PlanBadge plan={$myPlan?.plan ?? 'free'} size={30} />{/if}</h1>
       {#if $session.status === 'in' && myTitleNow}<div class="title-banner"><TitleBadge title={myTitleNow} full size={14} /></div>{/if}
+      <p class="castle-rank"><a href="/rewards">🏰 {$t('eco.level', { n: levelOf($wallet.xp) })} · {rankOf(levelOf($wallet.xp))}</a> · <a href="/shop">✨ {$t('eco.shop.h')}</a></p>
       <p class="label">
         {#if $session.status === 'in'}{$session.uid.startsWith('lichess:') ? `Signed in with Lichess as ${$session.username}` : 'Signed in with Google'}{:else}Not signed in: your photo and games stay on this device.{/if}
       </p>
@@ -356,24 +358,33 @@
     flex-wrap: wrap;
   }
   .photo {
-    width: 112px;
-    height: 112px;
-    border-radius: 50%;
-    overflow: hidden;
+    position: relative;
     flex: none;
-    background: #5a3a1c;
-    display: grid;
-    place-items: center;
-    box-shadow: 0 0 0 3px var(--gold);
   }
-  .photo img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+  .head {
+    position: relative;
+    overflow: hidden;
   }
-  .initials {
-    color: #eef3ff;
-    font-size: 40px;
+  .head.bannered {
+    padding-top: 104px;
+  }
+  .hb {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 120px;
+  }
+  .bannered .photo {
+    margin-top: -50px;
+  }
+  .who {
+    position: relative;
+  }
+  .castle-rank {
+    margin: 6px 0 0;
+    font-weight: 700;
+    font-size: 14px;
   }
   .who {
     flex: 1;

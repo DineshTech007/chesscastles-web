@@ -1,4 +1,5 @@
 <script lang="ts">
+  import NameFx from '$lib/economy/NameFx.svelte';
   /**
    * The home page's "Online now": the player's friends who are on Chess Castles or on Lichess right now (Watch when
    * they play), then the other players on Chess Castles now, with Add friend (the other player accepts or not;
@@ -81,7 +82,7 @@
           <li>
             <a class="who" href="/players/{encodeURIComponent(r.player.uid)}">
               {#if flag(r.player.country)}<img src={flag(r.player.country)} alt="" width="18" height="12" />{/if}
-              <TitleBadge title={r.player.title} size={12} /><strong>{r.player.name}</strong>
+              <TitleBadge title={r.player.title} size={12} /><strong><NameFx style={r.player.cos?.name ?? ''}>{r.player.name}</NameFx></strong>
               {#if r.player.kfide}<span class="num label">{r.player.kfide}</span>{/if}
             </a>
             <span class="where label">
@@ -108,7 +109,7 @@
           <li>
             <a class="who" href="/players/{encodeURIComponent(p.uid)}">
               {#if flag(p.country)}<img src={flag(p.country)} alt="" width="18" height="12" />{/if}
-              <TitleBadge title={p.title} size={12} /><strong>{p.name}</strong>
+              <TitleBadge title={p.title} size={12} /><strong><NameFx style={p.cos?.name ?? ''}>{p.name}</NameFx></strong>
               {#if p.kfide}<span class="num label">{p.kfide}</span>{/if}
             </a>
             {#if p.playing}<span class="where label">{$t('online.playing')}</span>{:else if lichessId(p.uid)}<button class="btn small" onclick={() => (inviting = p)}>{$t('online.play')}</button>{/if}

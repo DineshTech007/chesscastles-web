@@ -4,19 +4,20 @@
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { fedName } from '$lib/fideFeds';
   import { initialsOf, playerPhoto, type Player } from '$lib/social';
+  import Avatar from '$lib/economy/Avatar.svelte';
+  import NameFx from '$lib/economy/NameFx.svelte';
 
   let { p, note = '', lichess = '' }: { p: Player; note?: string; /** Their Lichess ratings, e.g. "Blitz 1850 · Rapid 1902". */ lichess?: string } = $props();
   const photo = $derived(playerPhoto(p));
 </script>
 
 <a class="pc" href="/players/{encodeURIComponent(p.uid)}">
-  <span class="av">
-    {#if photo}<img src={photo} alt="" />{:else}{initialsOf(p.name)}{/if}
+  <Avatar src={photo ?? ''} text={initialsOf(p.name)} size={46} frame={p.cos?.frame ?? ''} level={p.cos?.level && p.cos.level > 1 ? p.cos.level : 0}>
     {#if p.online}<span class="dot" title="Online now"></span>{/if}
     {#if p.playing}<span class="live" title="Playing now">LIVE</span>{/if}
-  </span>
+  </Avatar>
   <span class="text">
-    <span class="name"><span><TitleBadge title={p.title} size={12} />{p.name}</span>{#if p.plan && p.member !== false}<PlanBadge plan={p.plan} />{/if}{#if p.country}<img class="flag" src="/flags/{p.country}.svg" alt={fedName(p.country)} title={fedName(p.country)} width="18" height="12" />{/if}</span>
+    <span class="name"><span><TitleBadge title={p.title} size={12} /><NameFx style={p.cos?.name ?? ''}>{p.name}</NameFx></span>{#if p.plan && p.member !== false}<PlanBadge plan={p.plan} />{/if}{#if p.country}<img class="flag" src="/flags/{p.country}.svg" alt={fedName(p.country)} title={fedName(p.country)} width="18" height="12" />{/if}</span>
     {#if p.status}<span class="label status">“{p.status}”</span>{/if}
     <span class="label">{[p.kfide && p.kfideGames ? `CC Rating ${p.kfide}` : 'CC Rating: not rated yet', p.fideRating ? `FIDE ${p.fideRating}` : ''].filter(Boolean).join(' · ')}</span>
     {#if lichess}<span class="label lich">Lichess {lichess}</span>{/if}
@@ -26,6 +27,7 @@
 
 <style>
   .live {
+    z-index: 2;
     position: absolute;
     left: 50%;
     bottom: -6px;
@@ -54,28 +56,11 @@
     outline: 1px solid var(--brand);
     text-decoration: none;
   }
-  .av {
-    position: relative;
-    width: 46px;
-    height: 46px;
-    flex: none;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: #5a3a1c;
-    color: #eef3ff;
-    font-weight: 700;
-  }
-  .av img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-  }
   .dot {
+    z-index: 2;
     position: absolute;
     right: 0;
-    bottom: 0;
+    top: 0;
     width: 12px;
     height: 12px;
     border-radius: 50%;

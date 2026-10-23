@@ -6,10 +6,20 @@
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { session, signOut, startSignIn } from '$lib/auth';
   import { myName } from '$lib/stores/me';
-  import { setSound, setSoundTheme, sounds, soundOn, soundTheme } from '$lib/sound';
+  import { previewTheme, setSound, setSoundTheme, soundOn, soundTheme, type SoundTheme } from '$lib/sound';
+  import { ITEMS, owns } from '$lib/economy/core';
+  import { wallet, wear } from '$lib/economy/wallet';
   import { autoQueen, opponentPace, premovesOn } from '$lib/preferences';
   import { boardThemeOpen } from '$lib/boardTheme';
   import { currentPlan, PLAN_INFO, PLANS_ON } from '$lib/plans';
+
+  /** Wood and Fun, then the Shop's sound packs this player owns (src/lib/economy). */
+  const shopPacks = $derived(ITEMS.filter((i) => i.slot === 'sound' && owns($wallet, i.id)));
+  function pickTheme(v: string) {
+    setSoundTheme(v as SoundTheme);
+    void wear('sound', v);
+    previewTheme(v as SoundTheme);
+  }
 
   let theme = $state<'dark' | 'light'>('dark');
   onMount(() => (theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'));
@@ -58,13 +68,14 @@
       <input type="checkbox" checked={$soundOn} onchange={(e) => setSound(e.currentTarget.checked)} />
     </label>
     <div class="row sound-theme">
-      <span><strong>Sound theme</strong><span class="label sub">Wood is the classic knock. Fun is brighter and bouncier, for kids.</span></span>
+      <span><strong>Sound theme</strong><span class="label sub">Wood is the classic knock. Fun is brighter and bouncier, for kids. More in the <a href="/shop?tab=sound">Shop</a>.</span></span>
       <div class="sound-pick">
-        <select value={$soundTheme} onchange={(e) => setSoundTheme(e.currentTarget.value === 'fun' ? 'fun' : 'wood')}>
+        <select value={$soundTheme} onchange={(e) => pickTheme(e.currentTarget.value)}>
           <option value="wood">Wood</option>
           <option value="fun">Fun</option>
+          {#each shopPacks as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
         </select>
-        <button class="btn icon-only" onclick={() => sounds.capture()} aria-label="Preview this sound" title="Preview"><Icon name="speaker" size={16} /></button>
+        <button class="btn icon-only" onclick={() => previewTheme($soundTheme)} aria-label="Preview this sound" title="Preview"><Icon name="speaker" size={16} /></button>
       </div>
     </div>
     <label class="row">

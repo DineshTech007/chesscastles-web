@@ -4,6 +4,15 @@
   import { betaOn } from '$lib/beta';
   import '../fonts.css';
   import '../app.css';
+  import '$lib/economy/cosmetics.css';
+  import WalletChip from '$lib/economy/WalletChip.svelte';
+  import RewardToasts from '$lib/economy/RewardToasts.svelte';
+  import DailyChest from '$lib/economy/DailyChest.svelte';
+  import Avatar from '$lib/economy/Avatar.svelte';
+  import { canClaim } from '$lib/economy/core';
+  import { setToastHold, startWallet, today, wallet, walletMode } from '$lib/economy/wallet';
+  import { startEarning } from '$lib/economy/watch';
+  import { dailyOpen, dailyShownToday, markDailyShown } from '$lib/economy/ui';
   import { navigating, page, updated } from '$app/state';
   import { onMount } from 'svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
@@ -341,6 +350,40 @@
       .catch(() => {});
   });
 
+  // The Castle Treasury (owner, 2026-10-23: gold and gems for playing, studying and coming back; src/lib/economy):
+  // whoever is signed in (or the visitor), and the rewards from what the site already records.
+  onMount(() => {
+    const stopWallet = startWallet();
+    const stopEarning = startEarning();
+    return () => {
+      stopWallet();
+      stopEarning();
+    };
+  });
+  // Rewards wait while a game fills a phone's screen; they show when it ends.
+  $effect(() => setToastHold(focusGame));
+  // Today's reward opens by itself once a day, for a signed-in player, on a page that is not a game, after the
+  // first-visit questions (language, consent) are answered.
+  let scrolled = $state(false);
+  $effect(() => {
+    if ($walletMode !== 'server' && $walletMode !== 'local') return;
+    if (noPopups || focusGame || $consentNeeded || $dailyOpen) return;
+    const day = today();
+    if (!canClaim($wallet, day) || dailyShownToday(day)) return;
+    let welcomed = false;
+    try {
+      welcomed = localStorage.getItem('cc.lang') !== null && !navigator.webdriver;
+    } catch {
+      welcomed = false;
+    }
+    if (!welcomed) return;
+    const id = setTimeout(() => {
+      markDailyShown(day);
+      dailyOpen.set(true);
+    }, 1800);
+    return () => clearTimeout(id);
+  });
+
   // The chosen piece set (pieceSets.ts), on every board.
   onMount(() => {
     void import('$lib/pieceSets').then((m) => m.applyPieceSet(m.loadPieceSet(), false));
@@ -409,7 +452,7 @@
   const tabOn = (href: string) => (href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href));
 </script>
 
-<svelte:window bind:innerWidth={width} />
+<svelte:window bind:innerWidth={width} onscroll={() => (scrolled = scrollY > 8)} />
 
 {#if navigating.to}<div class="nav-progress" role="progressbar" aria-label="Opening the page"></div>{/if}
 <div class="shell">
@@ -428,7 +471,7 @@
         </span>
       </div>
     {:else}
-    <header class="top">
+    <header class="top" class:scrolled>
       {#if phone}
         <a class="phone-brand" href="/" title="Chess Castles: Learn, Play, Conquer (home)">
           <img class="logo-dark" src="/brand/chesscastles-crest-dark.svg" alt="" width="32" height="36" />
@@ -440,7 +483,9 @@
           </span>
         </a>
       {/if}
+      {#if phone}<WalletChip compact />{/if}
       <div class="grow"></div>
+      {#if !phone}<WalletChip />{/if}
       <FeatureVideo />
       <button class="icon-btn snd" onclick={() => setSound(!$soundOn)} aria-label={$soundOn ? 'Turn move sounds off' : 'Turn move sounds on'} title={$soundOn ? 'Move sounds on' : 'Move sounds off'}>
         <Icon name={$soundOn ? 'speaker' : 'mute'} size={20} />
@@ -451,9 +496,9 @@
       <QuickSettings />
       <LangMenu />
       <a class="top-me" href="/profile" title="Your profile" aria-label="Your profile">
-        <span class="top-av">
-          {#if $myPhoto}<img src={photoSrc($myPhoto)} alt="" />{:else if $session.status === 'in'}{$myInitials}{:else}<Icon name="users" size={18} />{/if}
-        </span>
+        <Avatar src={$myPhoto ? photoSrc($myPhoto) : ''} text={$session.status === 'in' ? $myInitials : ''} size={phone ? 36 : 40} frame={$wallet.equipped.frame ?? ''} border="2px solid var(--gold)">
+          {#if $session.status !== 'in' && !$myPhoto}<span class="guest-ico"><Icon name="users" size={18} /></span>{/if}
+        </Avatar>
         {#if $myCountry}<img class="top-flag" src="/flags/{$myCountry}.svg" alt={fedName($myCountry)} title={fedName($myCountry)} width="18" height="12" />{/if}
       </a>
     </header>
@@ -532,6 +577,8 @@
 <InstallPrompt />
 <WelcomeSheet />
 <BoardThemeModal bind:open={$boardThemeOpen} />
+<RewardToasts />
+<DailyChest />
 
 {#if phone && !focusGame}
   <nav class="tabs" aria-label="Main">
@@ -611,7 +658,7 @@
   /* A Lichess game in progress: always in sight, pinned while the page scrolls. */
   .resume-bar.live {
     position: sticky;
-    top: 8px;
+    top: 74px;
     z-index: 19;
     border-width: 2px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
@@ -645,23 +692,12 @@
     flex: none;
     text-decoration: none;
   }
-  .top-av {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
+  .guest-ico {
+    position: absolute;
+    inset: 0;
     display: grid;
     place-items: center;
-    background: var(--raised);
-    border: 2px solid var(--gold);
-    color: var(--text);
-    font-weight: 800;
-    font-size: 14px;
-  }
-  .top-av img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    color: var(--text-2);
   }
   .top-flag {
     position: absolute;
@@ -680,11 +716,27 @@
     display: flex;
     flex-direction: column;
   }
+  /* The top bar stays in sight (the Treasury in its corner), frosted over the page as it scrolls. */
   .top {
+    position: sticky;
+    top: 0;
+    z-index: 30;
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 24px 0;
+    padding: 12px 24px 10px;
+    border-bottom: 1px solid transparent;
+    transition:
+      background 0.2s,
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+  .top.scrolled {
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(1.3);
+    backdrop-filter: blur(12px) saturate(1.3);
+    border-bottom-color: var(--border-soft);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   }
   .grow {
     flex: 1;
@@ -794,6 +846,15 @@
       display: none;
     }
   }
+  /* Small phones: the crest alone, so the Treasury fits in the corner beside the settings, language and profile. */
+  @media (max-width: 480px) {
+    .pb-text {
+      display: none;
+    }
+    .top :global(.lm-btn .code) {
+      display: none;
+    }
+  }
   /* The sound button is also in each game's own bar: on phones the logo keeps its room. */
   @media (max-width: 480px) {
     .top :global(.icon-btn.snd) {
@@ -802,7 +863,10 @@
   }
   @media (max-width: 767px) {
     .top {
-      padding: 10px 16px 0;
+      padding: 8px 12px;
+    }
+    .resume-bar.live {
+      top: 62px;
     }
     main {
       padding: 8px 16px 96px;

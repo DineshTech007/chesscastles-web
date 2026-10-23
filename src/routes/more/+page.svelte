@@ -26,6 +26,9 @@
   /** Account and policy pages; everything else comes from the shared menu list (src/lib/nav.ts). */
   const links = $derived<{ href: string; label: string; icon: IconName }[]>([
     { href: '/profile', label: $t('more.profile'), icon: 'users' },
+    // The Castle Treasury (2026-10-23): the Shop and Rewards, near the top.
+    { href: '/shop', label: `${$t('nav.new')} · ${$t('eco.nav.shop')}: ${$t('eco.nav.shop.b')}`, icon: 'sparkle' as IconName },
+    { href: '/rewards', label: `${$t('eco.nav.rewards')}: ${$t('eco.nav.rewards.b')}`, icon: 'star' as IconName },
     ...(PLANS_ON ? [{ href: '/plans', label: 'Plans: Free, Premium, Elite', icon: 'crown' as IconName }] : []),
     // Puzzle Rush: new and a must-try (owner, 2026-10-22), near the top.
     { href: '/puzzles/racer', label: `${$t('nav.new')} · Puzzle Racer: race other players through the same puzzles`, icon: 'trophy' as IconName },

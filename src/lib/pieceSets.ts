@@ -9,6 +9,8 @@ export interface PieceSetDef {
   /** For young players: friendly, rounder shapes. */
   kids?: boolean;
   credit: string;
+  /** A Shop set (src/lib/economy/core.ts ITEMS): worn only once bought. */
+  shop?: true;
 }
 
 export const PIECE_SETS: PieceSetDef[] = [
@@ -22,6 +24,12 @@ export const PIECE_SETS: PieceSetDef[] = [
   { id: 'papercut', name: 'Papercut', kids: true, credit: 'Nikolay Anzarov, CC BY 4.0' },
   { id: 'totoy', name: 'Totoy', kids: true, credit: 'Kosal Sen, CC BY 4.0' },
   { id: 'pixel', name: 'Pixel', kids: true, credit: 'therealqtpi, AGPLv3+' },
+  // The Shop's sets (owner, 2026-10-23: "chess pieces skins" to buy), from Lichess's collection, licences that allow it.
+  { id: 'mpchess', name: 'Classic Staunton', credit: 'Maxime Chupin, GPLv3+', shop: true },
+  { id: 'shapes', name: 'Abstract Shapes', credit: 'flugsio, CC BY-SA 4.0', shop: true },
+  { id: 'rhosgfx', name: 'Terracotta', credit: 'RhosGFX, CC0 1.0', shop: true },
+  { id: 'kiwen-suwi', name: 'Bubble Court', kids: true, credit: 'neverRare, CC BY 4.0', shop: true },
+  { id: 'firi', name: 'Golden Pagoda', credit: 'James Faure, CC BY 4.0', shop: true },
 ];
 
 const KEY = 'cc.pieces';

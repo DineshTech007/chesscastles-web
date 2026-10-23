@@ -49,6 +49,8 @@ Chess Castles' website is free software under the **GNU Affero General Public Li
 - chessground and chessops (GPL-3.0-or-later), Stockfish (GPL-3.0), Maia-3 (AGPL-3.0), the Maia Chess platform
   worker (GPL-3.0), ONNX Runtime Web (MIT), Svelte and SvelteKit (MIT), Firebase (Apache-2.0);
 - the cburnett chess pieces by Colin M.L. Burnett (GPL);
+- the other piece sets from Lichess's collection, each by its author under its own free licence (credited in the board
+  picker, src/lib/pieceSets.ts);
 - Lichess's chess-openings names and puzzle database (CC0);
 - public-domain books from Project Gutenberg and Wikisource.
 

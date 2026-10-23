@@ -16,6 +16,10 @@
   import { adminMe } from '$lib/admin';
   import { installOpen, installWay } from '$lib/install';
   import { checkClassroom, classroomShown } from '$lib/classroom/visible';
+  import Avatar from '$lib/economy/Avatar.svelte';
+  import Gem from '$lib/economy/Gem.svelte';
+  import { levelOf, rankOf, xpFor } from '$lib/economy/core';
+  import { wallet } from '$lib/economy/wallet';
 
   /** Admins see a link to the admin page (asked once per sign-in). */
   let isAdmin = $state(false);
@@ -31,6 +35,9 @@
   // CastlesClass: admins, coaches, and students once a coach enrols them (src/lib/classroom/visible.ts).
   $effect(() => checkClassroom($session.status === 'in' ? $session.uid : undefined));
   const classroom = { href: '/castleclass', label: 'CastlesClass', icon: 'coach' as IconName, match: ['/castleclass'] };
+  const rewardsItem = { href: '/rewards', label: 'Rewards', icon: 'star' as IconName, match: ['/rewards'], key: 'eco.nav.rewards' as Key };
+  const lvl = $derived(levelOf($wallet.xp));
+  const lvlPct = $derived(Math.min(100, ((($wallet.xp - xpFor(lvl)) / (xpFor(lvl + 1) - xpFor(lvl))) * 100) || 0));
 
   type Item = { href: string; label: string; icon: IconName; match: string[]; not?: string[]; badge?: string; key?: Key };
   /** Home, then the five features only Chess Castles has (in gold), then the everyday pages (src/lib/nav.ts). */
@@ -83,6 +90,12 @@
       <span class="rchip"><Icon name="flame" size={16} color="#fff" /></span>
       {#if !collapsed}<span>{$t('home.rush.h')}</span>{/if}
     </a>
+    <!-- The Castle Shop (2026-10-23): boards, frames and more for the gold and gems a player wins. -->
+    <a class="item rushnav shopnav" class:on={page.url.pathname.startsWith('/shop')} href="/shop" title={collapsed ? $t('eco.nav.shop') : $t('eco.nav.shop.b')}>
+      <span class="rchip"><Gem size={17} /></span>
+      {#if !collapsed}<span>{$t('eco.nav.shop')}</span><span class="newtag hot">{$t('nav.new')}</span>{:else}<span class="rdot" aria-hidden="true"></span>{/if}
+    </a>
+    {@render link(rewardsItem)}
     {#if $classroomShown}{@render link(classroom)}{/if}
     {#each groups as group, gi (gi)}
       {#if gi}<hr class="sep" />{/if}
@@ -103,7 +116,7 @@
   <div class="account">
     {#if $session.status === 'in'}
       <a class="me" href="/profile" title="Your profile">
-        <span class="avatar">{#if $myPhoto}<img src={photoSrc($myPhoto)} alt="" />{:else}{$myInitials}{/if}</span>
+        <Avatar src={$myPhoto ? photoSrc($myPhoto) : ''} text={$myInitials} size={collapsed ? 40 : 38} frame={$wallet.equipped.frame ?? ''} level={lvl} border="2px solid var(--gold)" />
         {#if !collapsed}
           <span class="me-text">
             <span class="me-name"><TitleBadge title={$myTitle} size={11} />{$myName} <PlanBadge plan={$currentPlan} /></span>
@@ -113,6 +126,11 @@
           </span>
         {/if}
       </a>
+      {#if !collapsed}
+        <a class="xpline" href="/rewards" title="{$t('eco.level', { n: lvl })} · {rankOf(lvl)}">
+          <span class="xpl">{rankOf(lvl)}</span><span class="xpb"><span style="width: {lvlPct}%"></span></span>
+        </a>
+      {/if}
       {#if !collapsed}
         <div class="acct-links">
           {#if PLANS_ON}<a class="plan-chip" href="/plans" title="Your plan">{PLAN_INFO[$currentPlan].name} plan</a>{/if}
@@ -247,6 +265,54 @@
   }
   .item.cupnav {
     background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 24%, transparent), color-mix(in srgb, #ef4444 12%, transparent));
+  }
+  .item.shopnav {
+    border-color: color-mix(in srgb, #8b5cf6 60%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, #8b5cf6 24%, transparent), color-mix(in srgb, #22d3ee 14%, transparent));
+    animation-name: shopglow;
+  }
+  .item.shopnav:hover,
+  .item.shopnav.on {
+    background: linear-gradient(135deg, color-mix(in srgb, #8b5cf6 36%, transparent), color-mix(in srgb, #22d3ee 22%, transparent));
+  }
+  .shopnav .rchip {
+    background: linear-gradient(135deg, #1e1b4b, #4c1d95);
+    animation: none;
+  }
+  @keyframes shopglow {
+    50% {
+      box-shadow: 0 0 14px color-mix(in srgb, #8b5cf6 50%, transparent);
+    }
+  }
+  .xpline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 6px 2px 8px;
+    text-decoration: none;
+  }
+  .xpline:hover {
+    text-decoration: none;
+  }
+  .xpl {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .xpb {
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  .xpb span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #f7d27a, #edb040);
   }
   .cupnav .rchip {
     background: linear-gradient(135deg, #fde68a, var(--gold) 55%, #d97706);

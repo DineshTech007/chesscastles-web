@@ -40,6 +40,8 @@ export interface Player {
   /** The picture everyone sees (src/lib/look/avatars.ts) and the award worn beside the name. */
   avatar?: string;
   flair?: string;
+  /** What they wear from the Castle Shop and their Treasury level (src/lib/economy: frame, name style, banner, board). */
+  cos?: import('$lib/economy/core').PublicLook;
   /** The Chess Castles team (owner, admins): messages from them show as the team's. */
   team?: boolean;
   /** An admin suspended the account: banned from playing (shown to them and on their profile). */

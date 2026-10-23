@@ -8,6 +8,11 @@
   import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
   import Fireworks from './Fireworks.svelte';
+  import VictoryFx from '$lib/economy/VictoryFx.svelte';
+  import Coin from '$lib/economy/Coin.svelte';
+  import Gem from '$lib/economy/Gem.svelte';
+  import { today, wallet } from '$lib/economy/wallet';
+  import { questProgress, questsFor } from '$lib/economy/core';
 
   type Side = { name: string; initials: string; photo?: string; rating?: string };
   let {
@@ -74,6 +79,15 @@
 
   let box = $state<HTMLDivElement | undefined>();
   onMount(() => box?.focus());
+  // The Treasury (src/lib/economy): what this game paid (it is counted when the game is saved, a moment before or
+  // after this opens), and a quest it finished.
+  const opened = Date.now();
+  const paid = $derived($wallet.log.find((e) => Math.abs(e.at - opened) < 20_000 && ['win', 'winOnline', 'draw', 'loss'].includes(e.why)));
+  const questReady = $derived.by(() => {
+    const day = today();
+    return questsFor(day).some((q) => q.group === 'play' && !$wallet.today.quests.includes(q.id) && questProgress($wallet, q, day) >= q.need);
+  });
+  const victory = $derived($wallet.equipped.victory);
 </script>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && onclose()} />
@@ -92,7 +106,7 @@
   </div>
 {/snippet}
 
-{#if outcome === 'won'}<Fireworks />{/if}
+{#if outcome === 'won'}{#if victory}<VictoryFx kind={victory} />{:else}<Fireworks />{/if}{/if}
 <div class="scrim" role="presentation" onclick={onclose}></div>
 <div class="sheet {outcome}" role="dialog" aria-modal="true" aria-labelledby="go-h" tabindex="-1" bind:this={box}>
   {#if confetti.length}
@@ -108,6 +122,12 @@
     <img class="art" src="/art/{ART[outcome]}-256.webp" srcset="/art/{ART[outcome]}-256.webp 256w, /art/{ART[outcome]}.webp 512w" sizes="120px" alt="" width="120" height="120" />
     <h2 id="go-h" class="display head">{HEAD[outcome]}</h2>
     <p class="reason">{reason}</p>
+    {#if paid}
+      <a class="earned" href="/rewards">
+        <span class="e-amt"><Coin size={18} />+{paid.gold}{#if paid.gems}<Gem size={16} />+{paid.gems}{/if}</span>
+        {#if questReady}<span class="e-q">📜 A quest is ready to claim</span>{/if}
+      </a>
+    {/if}
   </div>
 
   <div class="vs">
@@ -158,6 +178,44 @@
 </div>
 
 <style>
+  .earned {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+    background: color-mix(in srgb, var(--gold) 14%, transparent);
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 800;
+    animation: earnpop 0.5s 0.3s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  }
+  .earned:hover {
+    text-decoration: none;
+  }
+  .e-amt {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-title);
+    font-size: 18px;
+    color: #ffd76a;
+  }
+  :global(:root[data-theme='light']) .e-amt {
+    color: #8a5a12;
+  }
+  .e-q {
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  @keyframes earnpop {
+    from {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+  }
   .scrim {
     position: fixed;
     inset: 0;

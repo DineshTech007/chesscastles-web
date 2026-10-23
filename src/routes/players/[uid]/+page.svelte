@@ -14,6 +14,12 @@
   import { friendAction, getPlayer, initialsOf, playerPhoto, type Player, type Relation } from '$lib/social';
   import AwardsCabinet from '$lib/awards/AwardsCabinet.svelte';
   import Flair from '$lib/look/Flair.svelte';
+  import Avatar from '$lib/economy/Avatar.svelte';
+  import Banner from '$lib/economy/Banner.svelte';
+  import NameFx from '$lib/economy/NameFx.svelte';
+  import ItemArt from '$lib/economy/ItemArt.svelte';
+  import { ITEM, rankOf } from '$lib/economy/core';
+  import { BOARD_THEMES } from '$lib/boardTheme';
   import { t } from '$lib/i18n';
 
   const uid = decodeURIComponent(page.params.uid!);
@@ -139,11 +145,13 @@
   {:else if !player}
     <div class="card skel"></div>
   {:else}
-    <section class="card hero">
-      <span class="av">{#if photo}<img src={photo} alt="" />{:else}{initialsOf(player.name)}{/if}{#if player.online}<span class="dot" title="Online now"></span>{/if}</span>
+    <section class="card hero" class:bannered={!!player.cos?.banner}>
+      {#if player.cos?.banner}<div class="hb"><Banner id={player.cos.banner} /></div>{/if}
+      <span class="avw"><Avatar src={photo ?? ''} text={initialsOf(player.name)} size={96} frame={player.cos?.frame ?? ''} level={player.cos?.level ?? 0} border="3px solid var(--gold)">{#if player.online}<span class="dot" title="Online now"></span>{/if}</Avatar></span>
       <div class="who">
-        <h1 class="display"><TitleBadge title={player.title} size={22} />{player.name}{#if player.flair} <Flair id={player.flair} size={24} />{/if}{#if player.team} <span class="team">✓ {$t('msg.team')}</span>{/if}{#if player.banned} <span class="banned">🚫 {$t('ban.badge')}</span>{/if}{#if player.plan} <PlanBadge plan={player.plan} size={30} />{/if}</h1>
+        <h1 class="display"><TitleBadge title={player.title} size={22} /><NameFx style={player.cos?.name ?? ''}>{player.name}</NameFx>{#if player.flair} <Flair id={player.flair} size={24} />{/if}{#if player.team} <span class="team">✓ {$t('msg.team')}</span>{/if}{#if player.banned} <span class="banned">🚫 {$t('ban.badge')}</span>{/if}{#if player.plan} <PlanBadge plan={player.plan} size={30} />{/if}</h1>
         {#if player.title}<div class="title-banner"><TitleBadge title={player.title} full size={14} /></div>{/if}
+        {#if player.cos?.level}<p class="castle-rank">🏰 {$t('eco.level', { n: player.cos.level })} · {rankOf(player.cos.level)}</p>{/if}
         {#if player.first || player.last}<p class="label">{[player.first, player.last].filter(Boolean).join(' ')}</p>{/if}
         {#if player.status}<p class="status">“{player.status}”</p>{/if}
         <p class="label">
@@ -184,6 +192,19 @@
       {/if}
       <div class="card tile"><span class="label">FIDE rating</span><strong class="display num">{player.fideRating ?? '—'}</strong>{#if player.fideId}<a class="label" href="/ratings/player/{player.fideId}">FIDE profile</a>{/if}</div>
     </section>
+
+    <!-- Their showcase from the Castle Shop (2026-10-23): the board and pieces they play with. -->
+    {#if player.cos?.board && (ITEM[player.cos.board] || player.cos.finish)}
+      {@const b = player.cos.board}
+      <section class="card showcase">
+        <span class="sc-art"><ItemArt id={b} finish={player.cos.finish ?? ''} /></span>
+        <span class="sc-t">
+          <span class="label">{$t('eco.showcase')}</span>
+          <strong>{BOARD_THEMES.find((x) => x.id === b)?.name ?? ''}{#if player.cos.finish && ITEM[player.cos.finish]} · {ITEM[player.cos.finish].name}{/if}</strong>
+          <a href="/shop" class="label">{$t('eco.home.shop')} →</a>
+        </span>
+      </section>
+    {/if}
 
     <!-- The awards they won (everyone signed in sees them). -->
     {#if player.awards?.ids.length}
@@ -318,6 +339,8 @@
     margin: 0 0 8px;
   }
   .hero {
+    position: relative;
+    overflow: hidden;
     padding: 18px 20px;
     display: flex;
     gap: 18px;
@@ -338,16 +361,11 @@
     font-weight: 700;
     box-shadow: 0 0 0 3px var(--gold);
   }
-  .av img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-  }
   .dot {
+    z-index: 2;
     position: absolute;
     right: 4px;
-    bottom: 4px;
+    top: 4px;
     width: 16px;
     height: 16px;
     border-radius: 50%;
@@ -355,8 +373,55 @@
     border: 3px solid var(--card);
   }
   .who {
+    position: relative;
     flex: 1;
     min-width: 220px;
+  }
+  /* A banner from the Shop across the top of the card, the picture over its edge. */
+  .hero.bannered {
+    padding-top: 104px;
+  }
+  .hb {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 120px;
+  }
+  .avw {
+    position: relative;
+    flex: none;
+  }
+  .bannered .avw {
+    margin-top: -46px;
+  }
+  .bannered .actions {
+    position: relative;
+  }
+  .castle-rank {
+    margin: 4px 0 0;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--gold);
+  }
+  .showcase {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+  }
+  .sc-art {
+    width: 96px;
+    flex: none;
+  }
+  .sc-t {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sc-t strong {
+    font-family: var(--font-title);
+    font-size: 19px;
   }
   .who h1 {
     margin: 0;
