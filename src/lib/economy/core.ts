@@ -322,6 +322,8 @@ export interface Wallet {
   cups?: { played: number; podiums: number; wins: number };
   /** What was done before the Treasury began has been paid (once: see historySync). */
   history?: true;
+  /** The player's time zone as the server keeps it (minutes east of UTC) and when it was set: the server decides the day from its own clock and this, never from the device's date (see serverDay). */
+  tz?: { off: number; at: number };
 }
 
 const MAX_REFS = 400;
@@ -388,6 +390,7 @@ export function cleanWallet(v: unknown, now: number): Wallet {
     carried: !!o.carried,
     cups: o.cups && typeof o.cups === 'object' ? { played: n(o.cups.played), podiums: n(o.cups.podiums), wins: n(o.cups.wins) } : undefined,
     ...(o.history === true ? { history: true as const } : {}),
+    ...(o.tz && Number.isFinite(o.tz.off) && o.tz.off >= TZ_MIN && o.tz.off <= TZ_MAX ? { tz: { off: Math.round(o.tz.off), at: n(o.tz.at, 1e15) } } : {}),
   };
 }
 
@@ -474,6 +477,26 @@ export function earn(w0: Wallet, ev: EarnEvent, day: string, now: number): Resul
 const dayNumber = (day: string) => Math.round(Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10)) / 86_400_000);
 /** Days from one date to another ("2026-10-22" to "2026-10-23": 1). */
 export const daysBetween = (a: string, b: string) => dayNumber(b) - dayNumber(a);
+
+/** Time zones run from UTC−12:00 to UTC+14:00 (minutes). */
+const TZ_MIN = -720;
+const TZ_MAX = 840;
+/** Kolkata, for a browser that does not say (the players are mostly in India). */
+const TZ_DEFAULT = 330;
+/** A player may move their time zone this seldom (a flight is fine; flipping zones to claim early is not). */
+const TZ_EVERY_MS = 7 * 86_400_000;
+/**
+ * Today's date for a player, from the SERVER's clock and the player's time zone: the device's own date is never
+ * trusted (owner, 2026-10-24: "kids change the date on their phone and claim future gems"). The zone the browser
+ * reports is pinned the first time and changes at most once a week.
+ */
+export function serverDay(w: Wallet, claimed: unknown, now: number): { wallet: Wallet; day: string } {
+  const said = typeof claimed === 'number' && Number.isFinite(claimed) && claimed >= TZ_MIN && claimed <= TZ_MAX ? Math.round(claimed) : undefined;
+  let wallet = w;
+  if (said !== undefined && (!w.tz || (said !== w.tz.off && now - w.tz.at >= TZ_EVERY_MS))) wallet = { ...w, tz: { off: said, at: now } };
+  const off = wallet.tz?.off ?? said ?? TZ_DEFAULT;
+  return { wallet, day: new Date(now + off * 60_000).toISOString().slice(0, 10) };
+}
 
 /** Whether today's visit reward is waiting. */
 export const canClaim = (w: Wallet, day: string) => w.login.last !== day && (!w.login.last || w.login.last < day);

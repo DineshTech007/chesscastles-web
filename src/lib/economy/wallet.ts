@@ -32,8 +32,17 @@ import {
 
 export type Mode = 'loading' | 'guest' | 'local' | 'server';
 
+/**
+ * The server's clock as of its last answer, carried forward by the browser's own stopwatch (performance.now does not
+ * move when the date on the phone is changed): owner, 2026-10-24, "kids change the date on their phone and claim
+ * future gems". The server decides every reward's day itself; this only makes the screen agree with it.
+ */
+let clock: { server: number; mono: number } | undefined;
+const nowMs = () => (clock ? clock.server + (performance.now() - clock.mono) : Date.now());
+const tzMinutes = () => -new Date().getTimezoneOffset();
+
 /** "2026-10-23" in the player's own time zone (the day the daily reward and quests count). */
-export function today(now = Date.now()): string {
+export function today(now = nowMs()): string {
   const d = new Date(now);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -99,7 +108,7 @@ function set(w: Wallet) {
 
 // ---- the server
 
-type Reply = { wallet: unknown; grants?: Grant[] };
+type Reply = { wallet: unknown; grants?: Grant[]; now?: number };
 /** The server's treasury calls run one at a time, in order. */
 let chain: Promise<unknown> = Promise.resolve();
 /** Rewards already shown here and not yet confirmed by the server: shown again on top of its answer. */
@@ -110,6 +119,7 @@ const serial = <T>(f: () => Promise<T>): Promise<T> => {
   return p;
 };
 function adopt(r: Reply) {
+  if (typeof r.now === 'number' && Number.isFinite(r.now)) clock = { server: r.now, mono: performance.now() };
   let w = cleanWallet(r.wallet, Date.now());
   for (const ev of pending) {
     const x = earn(w, ev, today(), Date.now());
@@ -174,7 +184,19 @@ async function carryIn(uid: string) {
 export function startWallet(): () => void {
   // For the local browser tests (as window.__race on the Racer page): rewards can be sent by hand.
   if (import.meta.env.DEV && typeof window !== 'undefined') (window as unknown as { __treasury: unknown }).__treasury = { record, wallet, walletMode, claimDailyReward, purchase, wear };
-  return session.subscribe((s) => {
+  // Back in the app after a while (a phone asleep overnight stops the stopwatch the screen's day runs on): the
+  // server's clock again. At most every ten minutes.
+  let resyncedAt = performance.now();
+  const resync = () => {
+    if (document.visibilityState !== 'visible' || get(walletMode) !== 'server' || performance.now() - resyncedAt < 600_000) return;
+    resyncedAt = performance.now();
+    const uid = who;
+    void serial(() => call<Reply>('GET', 'wallet'))
+      .then((r) => who === uid && adopt(r))
+      .catch(() => undefined);
+  };
+  document.addEventListener('visibilitychange', resync);
+  const stop = session.subscribe((s) => {
     if (s.status === 'loading') return;
     const id = s.status === 'in' ? s.uid : 'guest';
     if (id === who) return;
@@ -199,6 +221,10 @@ export function startWallet(): () => void {
     applyLooks();
     void loadServer(id);
   });
+  return () => {
+    stop();
+    document.removeEventListener('visibilitychange', resync);
+  };
 }
 
 /** Things done (games, puzzles, lessons…): rewards shown now, the server told a moment later. */
@@ -231,7 +257,7 @@ function flush() {
   if (!batch.length) return;
   const uid = who;
   void serial(async () => {
-    const r = await call<Reply>('POST', 'wallet/earn', { day: today(), events: batch }).catch(() => undefined);
+    const r = await call<Reply>('POST', 'wallet/earn', { tz: tzMinutes(), events: batch }).catch(() => undefined);
     // Sent (or refused): no longer pending. A failure (offline) keeps the reward on this device until the next load.
     pending = pending.filter((e) => !batch.includes(e));
     if (r && who === uid) adopt(r);
@@ -262,11 +288,11 @@ async function act(local: (w: Wallet) => ReturnType<typeof buy>, path: string, b
 
 export const claimDailyReward = () => {
   const day = today();
-  return act((w) => claimDaily(w, day, Date.now()), 'daily', { day });
+  return act((w) => claimDaily(w, day, Date.now()), 'daily', { tz: tzMinutes() });
 };
 export const claimQuestReward = (id: string) => {
   const day = today();
-  return act((w) => claimQuest(w, id, day, Date.now()), 'quest', { day, id });
+  return act((w) => claimQuest(w, id, day, Date.now()), 'quest', { tz: tzMinutes(), id });
 };
 /** Buying needs an account (so the item is never lost with a browser's data). */
 export const purchase = async (id: string): Promise<Outcome> => {
@@ -276,14 +302,14 @@ export const purchase = async (id: string): Promise<Outcome> => {
   if (get(adminTester) && get(walletMode) === 'server') {
     const uid = who;
     try {
-      const reply = await serial(() => call<Reply>('POST', 'wallet/buy', { item: id, day }));
+      const reply = await serial(() => call<Reply>('POST', 'wallet/buy', { item: id, tz: tzMinutes() }));
       if (who === uid) adopt(reply);
       return { ok: true, grants: [] };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : 'error' };
     }
   }
-  return act((w) => buy(w, id, day, Date.now()), 'buy', { item: id, day }, true);
+  return act((w) => buy(w, id, day, Date.now()), 'buy', { item: id, tz: tzMinutes() }, true);
 };
 /** Wears an item (or takes it off with ''): the board, pieces and finish change at once on every board. */
 export async function wear(slot: WearSlot, id: string): Promise<Outcome> {

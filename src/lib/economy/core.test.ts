@@ -20,6 +20,7 @@ import {
   claimQuest,
   cleanWallet,
   cupSync,
+  serverDay,
   historySync,
   GEMS_PER_DAY,
   OVER_CAP_TIMES,
@@ -117,6 +118,32 @@ describe('the treasury', () => {
     expect(levelOf(w.xp)).toBe(3);
     expect(w.levelPaid).toBe(3);
     expect(w.gems).toBe(gems + 7 * EARN.award.gems + 3 + 3);
+  });
+});
+
+describe('the server decides the day', () => {
+  // 2026-10-24 20:00 UTC is already the 25th in India (UTC+5:30), still the 24th in London.
+  const T = Date.UTC(2026, 9, 24, 20, 0);
+  it('uses the server clock and the pinned zone, not the device date', () => {
+    const a = serverDay(fresh(), 330, T);
+    expect(a.day).toBe('2026-10-25');
+    expect(a.wallet.tz).toEqual({ off: 330, at: T });
+    // A browser claiming another zone the next hour (a kid flipping zones) gets the pinned one.
+    expect(serverDay(a.wallet, -720, T + 3_600_000).day).toBe('2026-10-25');
+    // A real move is accepted after a week.
+    const b = serverDay(a.wallet, 0, T + 8 * 86_400_000);
+    expect(b.wallet.tz?.off).toBe(0);
+    expect(b.day).toBe('2026-11-01');
+  });
+  it('does not pin when the browser says nothing (India by default), and ignores nonsense', () => {
+    expect(serverDay(fresh(), undefined, T)).toMatchObject({ day: '2026-10-25' });
+    expect(serverDay(fresh(), undefined, T).wallet.tz).toBeUndefined();
+    expect(serverDay(fresh(), 99999, T).wallet.tz).toBeUndefined();
+    expect(serverDay(fresh(), '330', T).wallet.tz).toBeUndefined();
+  });
+  it('keeps the pinned zone through cleanWallet', () => {
+    expect(cleanWallet(JSON.parse(JSON.stringify(serverDay(fresh(), 60, T).wallet)), T).tz).toEqual({ off: 60, at: T });
+    expect(cleanWallet({ tz: { off: 5000, at: 1 } }, T).tz).toBeUndefined();
   });
 });
 
