@@ -58,14 +58,8 @@
     }
   }
   const flag = (c?: string) => (c ? `/flags/${c}.svg` : undefined);
-  /**
-   * Play: anyone with a Lichess account gets an invite with a popup (ChallengeSheet, src/lib/invites.ts); a friend
-   * with a Google account, the Play page's "A friend" (a message with a Join button, after connecting Lichess).
-   */
-  const playHref = (p: Player, friend: boolean) => {
-    const name = lichessId(p.uid) ?? (friend ? p.username : undefined);
-    return name ? `/play?mode=online&friend=${encodeURIComponent(name)}` : undefined;
-  };
+  // Play: anyone gets an invite with a popup (ChallengeSheet, src/lib/invites.ts); a game needing no Lichess account
+  // (bullet, or a Google account on either side) is played in a room of our own (src/lib/playWhere.ts).
 </script>
 
 {#if loaded && (friends.length || others.length)}
@@ -92,10 +86,8 @@
               <a class="btn small primary" href="/watch/friend/{encodeURIComponent(r.player.uid)}">{$t('online.watch')}</a>
             {:else if r.lichess?.playingId}
               <a class="btn small primary" href="/watch/live/{r.lichess.playingId}">{$t('online.watch')}</a>
-            {:else if lichessId(r.player.uid)}
+            {:else}
               <button class="btn small primary" onclick={() => (inviting = r.player)}>{$t('online.play')}</button>
-            {:else if playHref(r.player, true)}
-              <a class="btn small primary" href={playHref(r.player, true)}>{$t('online.play')}</a>
             {/if}
           </li>
         {/each}
@@ -112,7 +104,7 @@
               <TitleBadge title={p.title} size={12} /><strong><NameFx style={p.cos?.name ?? ''}>{p.name}</NameFx></strong>
               {#if p.kfide}<span class="num label">{p.kfide}</span>{/if}
             </a>
-            {#if p.playing}<span class="where label">{$t('online.playing')}</span>{:else if lichessId(p.uid)}<button class="btn small" onclick={() => (inviting = p)}>{$t('online.play')}</button>{/if}
+            {#if p.playing}<span class="where label">{$t('online.playing')}</span>{:else}<button class="btn small" onclick={() => (inviting = p)}>{$t('online.play')}</button>{/if}
             {#if p.relation === 'outgoing'}
               <span class="label sent">{$t('online.sent')}</span>
             {:else if p.relation === 'incoming'}

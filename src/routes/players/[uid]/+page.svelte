@@ -1,5 +1,6 @@
 <script lang="ts">
   import TitleBadge from '$lib/components/TitleBadge.svelte';
+import ChallengeSheet from '$lib/components/ChallengeSheet.svelte';
   import PlanBadge from '$lib/components/PlanBadge.svelte';
   import { page } from '$app/state';
   import Icon from '$lib/components/Icon.svelte';
@@ -26,6 +27,8 @@
   let player = $state<Player | undefined>();
   let relation = $state<Relation>('none');
   let error = $state('');
+  /** The invite sheet (ChallengeSheet): a game with this player, in a room of ours when Lichess is not needed. */
+  let inviting = $state(false);
   let busy = $state(false);
   let confirmBlock = $state(false);
 
@@ -171,7 +174,7 @@
           <a class="btn" href="/profile">Edit my profile</a>
         {:else if relation === 'friends'}
           <a class="btn primary" href="/friends/{encodeURIComponent(uid)}"><Icon name="send" size={16} />Message</a>
-          <a class="btn" href="/play?mode=online&friend={encodeURIComponent(player.username)}"><Icon name="knight" size={16} />Challenge</a>
+          <button class="btn" onclick={() => (inviting = true)}><Icon name="knight" size={16} />Challenge</button>
         {:else if relation === 'incoming'}
           <button class="btn primary" disabled={busy} onclick={() => act('accept')}>Accept friend request</button>
         {:else if relation === 'outgoing'}
@@ -269,6 +272,8 @@
     {#if reportNote}<p class="card pad note" role="status">{reportNote}</p>{/if}
   {/if}
 </div>
+
+{#if inviting && player}<ChallengeSheet player={{ uid, name: player.name }} onclose={() => (inviting = false)} />{/if}
 
 <style>
   .report {

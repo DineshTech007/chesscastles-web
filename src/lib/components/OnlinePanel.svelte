@@ -133,8 +133,9 @@
   const myId = $derived($session.status === 'in' ? $session.uid : '');
   /**
    * The lobby (owner, 2026-10-21: "like Lichess, our own lobby where they can see the players and send a request"):
-   * Chess Castles players on the site now who play online (a Lichess account), each with Challenge (an invite with a
-   * popup on their screen: src/lib/invites.ts), every 30 seconds while the lobby is open.
+   * Chess Castles players on the site now, each with Challenge (an invite with a popup on their screen:
+   * src/lib/invites.ts; without a Lichess account on either side the game is in a room of our own), every 30 seconds
+   * while the lobby is open.
    */
   let here = $state<OnlinePlayer[] | undefined>();
   let inviting = $state<{ uid: string; name: string } | undefined>();
@@ -142,7 +143,7 @@
     if (kind !== 'lobby' || $session.status !== 'in') return;
     return poll(async () => {
       const me = myId;
-      here = (await onlinePlayers()).filter((p) => p.uid.startsWith('lichess:') && p.uid !== me);
+      here = (await onlinePlayers()).filter((p) => p.uid !== me);
       return true;
     }, 30_000);
   });

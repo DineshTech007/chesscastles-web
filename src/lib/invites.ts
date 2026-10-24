@@ -4,16 +4,19 @@ import * as api from '$lib/lichessBoard';
 import { incomingChallenges, openWhenStarted, onLichessEvent, type IncomingChallenge } from '$lib/lichessEvents';
 import { call } from '$lib/social';
 import { goto } from '$app/navigation';
-import { cancelMatch, createMatch } from '$lib/cups/api';
+import { cancelMatch, createMatch, isMatchId } from '$lib/cups/api';
+import { isBullet, roomGame } from '$lib/playWhere';
 
 /**
  * Game invites between Chess Castles players (owner, 2026-10-21: "our own lobby… they should get a proper popup";
  * kids were refused with "Cannot challenge due to provisional Blitz rating"). The inviter's browser makes a Lichess
  * game only the two of them can join (no Lichess challenge, so no one's Lichess settings can refuse it) and joins it;
  * the invite goes through Chess Castles (server/api-worker src/social.ts) and the other player's site shows it as a
- * popup (ChallengePopup), wherever they are. Blitz and slower are played here on Lichess's servers; bullet, which Lichess
- * plays only on its own site, is played on Chess Castles' own server instead (owner, 2026-10-23: "never redirect to
- * Lichess"): a friendly game in a room of ours (server/api-worker src/cup.ts, "match"), no ratings, nothing opens elsewhere.
+ * popup (ChallengePopup), wherever they are. Blitz and slower between two Lichess accounts are played here on Lichess's
+ * servers; bullet, which Lichess plays only on its own site, and any game where either player has no Lichess account,
+ * are played on Chess Castles' own server instead (owner, 2026-10-23: "never redirect to Lichess"; 2026-10-24: friends
+ * play each other at any time control): a friendly game in a room of ours (server/api-worker src/cup.ts, "match"), no
+ * ratings, nothing opens elsewhere. See src/lib/playWhere.ts.
  */
 export interface ServerInvite {
   id: string;
@@ -30,8 +33,10 @@ export interface ServerInvite {
   at: number;
 }
 
-/** Bullet by Lichess's count (minutes + 40 × increment under 3 minutes): played in a Chess Castles room (a friendly game). */
-export const isBullet = (minutes: number, increment: number) => minutes * 60 + increment * 40 < 180;
+export { isBullet };
+
+/** Whether a game with `them` at this clock is played in a room of ours (see playWhere.ts). */
+export const playsHere = (them: string, minutes: number, increment: number) => roomGame(!!lichessToken(), them, minutes, increment);
 
 /** The invite this player sent, while it waits for an answer. */
 export const sentInvite = writable<{ id: string; to: string; name: string; tc: string; bullet: boolean; state: 'waiting' | 'declined' | 'gone' } | undefined>();
@@ -41,11 +46,12 @@ export const answerInvite = (id: string, answer: 'accepted' | 'declined') => cal
 const sentStatus = (to: string, id: string) => call<{ status: string }>('GET', `invites/sent?to=${encodeURIComponent(to)}&id=${id}`).then((r) => r.status);
 
 /**
- * Invites a Chess Castles player to a game. Bullet is a friendly game on our own server and needs no Lichess account
- * (the inviter's page goes to the game's room to wait there); the rest are games on Lichess for two Lichess accounts.
+ * Invites a Chess Castles player to a game. Bullet, and any game where one of the two has no Lichess account, is a
+ * friendly game on our own server (the inviter's page goes to the game's room to wait there); the rest are games on
+ * Lichess for two Lichess accounts.
  */
 export async function invitePlayer(p: { uid: string; name: string }, minutes: number, increment: number, rated: boolean): Promise<void> {
-  if (isBullet(minutes, increment)) return inviteMatch(p, minutes, increment);
+  if (playsHere(p.uid, minutes, increment)) return inviteMatch(p, minutes, increment);
   const me = lichessToken();
   if (!me) throw new Error('Connect your Lichess account to play online.');
   const theirs = p.uid.startsWith('lichess:') ? p.uid.slice(8) : undefined;
@@ -162,11 +168,11 @@ async function look() {
   if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !onGame()) {
     const list = await myInvites().catch(() => undefined);
     if (list && running) {
-      // Without a Lichess account: only the games that need none (a Puzzle Battle, a bullet game on our own server).
+      // Without a Lichess account: only the games that need none (a Puzzle Battle, a game in a room of our own).
       const canLichess = !!lichessToken();
       const fresh = list
         .filter((i) => !answered.has(`${i.id}:${i.at}`) && !answered.has(`${i.id}:0`))
-        .filter((i) => canLichess || i.battle || isBullet(...(i.tc.split('+').map(Number) as [number, number])))
+        .filter((i) => canLichess || i.battle || isMatchId(i.id))
         .map(toChallenge);
       incomingChallenges.update((l) => [...l.filter((c) => !c.cc), ...fresh]);
     }

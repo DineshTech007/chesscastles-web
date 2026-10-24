@@ -5,6 +5,7 @@
    * question from the team gets one-tap answers.
    */
   import TitleBadge from '$lib/components/TitleBadge.svelte';
+import ChallengeSheet from '$lib/components/ChallengeSheet.svelte';
   import { onDestroy, tick } from 'svelte';
   import { page } from '$app/state';
   import Icon from '$lib/components/Icon.svelte';
@@ -18,6 +19,8 @@
   let msgs = $state<Message[]>([]);
   let text = $state('');
   let error = $state('');
+  /** The invite sheet (ChallengeSheet): a game with this player, in a room of ours when Lichess is not needed. */
+  let inviting = $state(false);
   let sending = $state(false);
   let box: HTMLDivElement | undefined = $state();
   let stopPolling: (() => void) | undefined;
@@ -99,7 +102,7 @@
           <a class="title" href="/players/{encodeURIComponent(uid)}"><TitleBadge title={friend?.title} size={12} />{friend?.name ?? '…'}{#if friend?.team} <span class="team">✓ {$t('msg.team')}</span>{/if}</a>
           <span class="label">{friend?.team ? $t('msg.teamNote') : friend?.online ? 'Online now' : friend ? `@${friend.username}` : ''}</span>
         </div>
-        {#if friend && !friend.team}<a class="btn" href="/play?mode=online&friend={encodeURIComponent(friend.username)}"><Icon name="knight" size={16} />Challenge</a>{/if}
+        {#if friend && !friend.team}<button class="btn" onclick={() => (inviting = true)}><Icon name="knight" size={16} />Challenge</button>{/if}
       </header>
       <div class="msgs" bind:this={box} aria-live="polite">
         {#if error}
@@ -135,6 +138,8 @@
     </section>
   {/if}
 </div>
+
+{#if inviting && friend}<ChallengeSheet player={{ uid, name: friend.name }} onclose={() => (inviting = false)} />{/if}
 
 <style>
   .team {

@@ -9,7 +9,7 @@
   import { acceptChallenge, declineChallenge } from '$lib/lichessBoard';
   import { incomingChallenges, openWhenStarted, type IncomingChallenge } from '$lib/lichessEvents';
   import { answerInvite, isBullet, markAnswered } from '$lib/invites';
-  import { acceptMatch } from '$lib/cups/api';
+  import { acceptMatch, isMatchId } from '$lib/cups/api';
   import { sounds } from '$lib/sound';
   import { track } from '$lib/analytics';
   import Icon from './Icon.svelte';
@@ -55,15 +55,16 @@
       incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
       return void goto(`/puzzles/racer/${c.id}`);
     }
-    // A bullet invite (invites.ts): a friendly game in a room of ours, started by this answer, no Lichess account needed.
-    if (c.cc && isBullet(c.minutes, c.increment)) {
+    // An invite to a room of ours (invites.ts: bullet, or a player without Lichess): a friendly game, started by this
+    // answer, no Lichess account needed.
+    if (c.cc && isMatchId(c.id)) {
       busy = c.id;
       error = '';
       try {
         await acceptMatch(c.id);
         markAnswered(c.id, c.at);
         void answerInvite(c.id, 'accepted');
-        track('feature', 'invite_accept_bullet');
+        track('feature', isBullet(c.minutes, c.increment) ? 'invite_accept_bullet' : 'invite_accept_room');
         incomingChallenges.update((l) => l.filter((x) => x.id !== c.id));
         await goto(`/play/match/${c.id}`);
       } catch (e) {
@@ -129,7 +130,7 @@
         <span class="fact"><Icon name="history" size={15} />{shown.minutes}+{shown.increment}</span>
         <span class="fact">{shown.rated ? 'Rated' : 'Casual'}</span>
         <span class="fact">{colourText(shown)}</span>
-        {#if shown.cc && isBullet(shown.minutes, shown.increment)}<span class="fact">Friendly game · here on Chess Castles</span>{/if}
+        {#if shown.cc && isMatchId(shown.id)}<span class="fact">Friendly game · here on Chess Castles</span>{/if}
       {/if}
     </div>
     <div class="btns">

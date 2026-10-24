@@ -2,11 +2,12 @@
   /**
    * Inviting a Chess Castles player to a game (invites.ts): the clock (bullet, blitz or rapid), rated or casual, then
    * Send. The other player gets a popup wherever they are on the site; this sheet waits for their answer (a game
-   * that starts opens by itself). Bullet is a friendly game on Chess Castles' own server (no ratings).
+   * that starts opens by itself). Bullet, and any game when one of the two has no Lichess account, is a friendly game
+   * on Chess Castles' own server (no ratings): friends play each other at any clock (src/lib/playWhere.ts).
    */
   import { onDestroy } from 'svelte';
   import { track } from '$lib/analytics';
-  import { cancelSent, invitePlayer, isBullet, sentInvite } from '$lib/invites';
+  import { cancelSent, invitePlayer, isBullet, playsHere, sentInvite } from '$lib/invites';
   import Icon from './Icon.svelte';
 
   let { player, onclose }: { player: { uid: string; name: string }; onclose: () => void } = $props();
@@ -21,6 +22,8 @@
   let sending = $state(false);
   let error = $state('');
   const mine = $derived($sentInvite?.to === player.uid ? $sentInvite : undefined);
+  /** Played in a room of ours (no ratings): bullet, or one of the two has no Lichess account. */
+  const here = $derived(playsHere(player.uid, tc[0], tc[1]));
 
   function send() {
     if (sending) return;
@@ -74,6 +77,8 @@
     {/each}
     {#if isBullet(tc[0], tc[1])}
       <p class="label note">Bullet is a friendly game played right here on Chess Castles. It does not change anyone's rating.</p>
+    {:else if here}
+      <p class="label note">A friendly game played right here on Chess Castles, no Lichess account needed. It does not change anyone's rating.</p>
     {:else}
       <label class="rated"><input type="checkbox" bind:checked={rated} /> Rated (changes your Lichess rating)</label>
     {/if}
