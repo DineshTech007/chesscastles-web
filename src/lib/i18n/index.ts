@@ -14,20 +14,21 @@ import { lookWords } from './features/look';
 import { gurusWords } from './features/gurus';
 import { banWords } from './features/ban';
 import { economyWords } from './features/economy';
+import { gateWords } from './features/gate';
 
 /**
  * The site's words in the chosen language (English by default). In a component: `{$t('nav.learn')}`, or with
  * values `{$t('home.streak', { n: 5 })}`. A missing translation falls back to English. The language is the
  * one choice shared by the whole site, the Chess Guide and the Blog (src/lib/contentLang.ts).
  */
-const FEATURES = [racerWords, kidsClassWords, awardsWords, cupsWords, matchWords, menuWords, cupsUxWords, lookWords, gurusWords, banWords, economyWords];
+const FEATURES = [racerWords, kidsClassWords, awardsWords, cupsWords, matchWords, menuWords, cupsUxWords, lookWords, gurusWords, banWords, economyWords, gateWords];
 const DICT: Record<'en' | 'hi' | 'mr', Record<string, string>> = {
   en: Object.assign({}, en, ...FEATURES.map((f) => f.en)),
   hi: Object.assign({}, hi, ...FEATURES.map((f) => f.hi)),
   mr: Object.assign({}, mr, ...FEATURES.map((f) => f.mr)),
 };
 /** Every key: the site's (en.ts) and each feature's (features/*.ts). */
-type FeatureKey = keyof typeof racerWords.en | keyof typeof kidsClassWords.en | keyof typeof awardsWords.en | keyof typeof cupsWords.en | keyof typeof matchWords.en | keyof typeof menuWords.en | keyof typeof cupsUxWords.en | keyof typeof lookWords.en | keyof typeof gurusWords.en | keyof typeof banWords.en | keyof typeof economyWords.en;
+type FeatureKey = keyof typeof racerWords.en | keyof typeof kidsClassWords.en | keyof typeof awardsWords.en | keyof typeof cupsWords.en | keyof typeof matchWords.en | keyof typeof menuWords.en | keyof typeof cupsUxWords.en | keyof typeof lookWords.en | keyof typeof gurusWords.en | keyof typeof banWords.en | keyof typeof economyWords.en | keyof typeof gateWords.en;
 type AnyKey = Key | FeatureKey;
 
 export const t = derived(contentLang, (lang) => (key: AnyKey, vars?: Record<string, string | number>): string => {

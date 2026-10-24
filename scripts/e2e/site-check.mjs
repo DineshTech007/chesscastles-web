@@ -22,6 +22,12 @@ const flag = (name) => {
 const BASE = (args[0] && !args[0].startsWith('--') ? args[0] : 'https://chesscastles.com').replace(/\/$/, '');
 const OUT = flag('--out') ?? 'site-check-report';
 const ONLY = flag('--only')?.split(',');
+// Since 2026-10-24 every page but a few needs an account (src/lib/gate.ts). Without SITE_CHECK_TOKEN (a Lichess personal
+// access token of the test account, from /auth/token) this checks the wall itself and the open pages; with it, it signs in
+// and runs everything below as before.
+const TOKEN = process.env.SITE_CHECK_TOKEN;
+const OPEN = ['/', '/about', '/blog', '/features', '/parents', '/help', '/contact', '/wishes', '/legal/privacy', '/legal/terms', '/legal/refunds', '/legal/fair-play'];
+const isOpen = (path) => OPEN.includes(path.split('?')[0]);
 mkdirSync(OUT, { recursive: true });
 
 const DEVICES = {
@@ -29,7 +35,7 @@ const DEVICES = {
   phone: devices['Pixel 7'],
   tablet: devices['iPad Mini'],
 };
-/** Pages every player can open without signing in. */
+/** Pages of the site (all but a few need an account: see OPEN). */
 const PAGES = ['/', '/play', '/puzzles', '/puzzles?tab=daily', '/puzzles/themes', '/puzzles/rush', '/learn', '/learn?tab=openings', '/learn?tab=tactics', '/learn?tab=endgames', '/learn?tab=plan', '/learn/study', '/learn/study/caro-kann', '/learn/masters', '/analysis', '/games', '/profile', '/watch', '/live', '/leaderboard', '/ratings', '/more', '/help', '/insights', '/coach', '/books', '/vision', '/castleclass', '/castleclass/admin', '/awards', '/puzzles/racer', '/cups'];
 /** A tap must open its page within this long. */
 const TAP_MS = 6000;
@@ -90,6 +96,13 @@ async function run(name, options) {
   });
   const tap = (loc) => (touch ? loc.tap() : loc.click());
 
+  // Signed in with the test account (when a token is given); otherwise the check stays outside the wall.
+  if (TOKEN) {
+    await page.goto(`${BASE}/auth/token#token=${encodeURIComponent(TOKEN)}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForURL((u) => u.pathname === '/', { timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+  }
+
   // 1. Every page opens, without errors, and nothing scrolls sideways.
   for (const path of PAGES) {
     await check(name, page, `page ${path}`, async () => {
@@ -101,7 +114,34 @@ async function run(name, options) {
       const text = await page.locator('main').innerText().catch(() => '');
       expect(text.trim().length > 40, 'the page looks empty');
       expect(!errors.length, `page error: ${errors[0]}`);
+      // The wall: a page that needs an account shows the sign-in card to a visitor, and the open pages do not.
+      if (!TOKEN) {
+        const gate = await page.locator('[data-testid=signin-gate]').count();
+        expect(isOpen(path) ? gate === 0 : gate === 1, isOpen(path) ? 'an open page shows the sign-in wall' : 'a visitor can open a page that needs an account');
+      }
     });
+  }
+
+  // Without the test account nothing below can be used (it all needs an account): the wall and the open pages are checked.
+  if (!TOKEN) {
+    await check(name, page, 'the sign-in box opens from the wall and has Google and Lichess', async () => {
+      await open(page, '/play');
+      await page.locator('[role=dialog]').waitFor({ timeout: 8000 });
+      expect(await page.locator('.opt.google').count(), 'no Google button');
+      expect(await page.locator('.opt.lichess').count(), 'no Lichess button');
+    });
+    for (const path of OPEN.slice(1)) {
+      await check(name, page, `open page ${path} (no sign-in needed)`, async () => {
+        errors.length = 0;
+        const res = await open(page, path);
+        expect(!res || res.status() < 400, `HTTP ${res?.status()}`);
+        expect((await page.locator('main').innerText().catch(() => '')).trim().length > 40, 'the page looks empty');
+        expect(!(await page.locator('[role=dialog]').count()), 'the sign-in box opened by itself');
+        expect(!errors.length, `page error: ${errors[0]}`);
+      });
+    }
+    await browser.close();
+    return;
   }
 
   // 2. The menus: every item opens its page.

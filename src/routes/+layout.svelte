@@ -44,6 +44,16 @@
   import { afterNavigate, beforeNavigate } from '$app/navigation';
   import LimitModal from '$lib/components/LimitModal.svelte';
   import SignInModal from '$lib/components/SignInModal.svelte';
+  import SignInGate from '$lib/components/SignInGate.svelte';
+  import { isPublicPath } from '$lib/gate';
+  /** This browser was signed in at its last visit (kept by the session code below): no blank wait for it. */
+  const wasSignedIn = () => {
+    try {
+      return localStorage.getItem('cc.wasIn') === '1';
+    } catch {
+      return false;
+    }
+  };
   import LangMenu from '$lib/components/LangMenu.svelte';
   import { t } from '$lib/i18n';
   import ConsentNotice from '$lib/components/ConsentNotice.svelte';
@@ -573,8 +583,11 @@
       </a>
     {/if}
     <main id="content" class:focus={focusGame}>
-      <!-- A banned account (an admin suspended it): a notice over every page, and none of the play pages. -->
-      {#if $session.status === 'in' && $myBan}
+      <!-- The sign-in wall (src/lib/gate.ts; owner, 2026-10-24): no page but the open ones without an account. While the
+           account is still being found, a browser that was signed in a moment ago shows the page; any other waits. -->
+      {#if !isPublicPath(page.url.pathname) && ($session.status === 'out' || ($session.status === 'loading' && !wasSignedIn()))}
+        {#if $session.status === 'out'}<SignInGate />{/if}
+      {:else if $session.status === 'in' && $myBan}
         {#if /^\/(play|cups\/|puzzles\/racer)/.test(page.url.pathname)}
           <BanNotice fair={$myBan.fair} big />
         {:else}
