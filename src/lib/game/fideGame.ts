@@ -320,16 +320,27 @@ export class FideGame {
     this.notify();
     const started = this.now();
     let choice: BotChoice | undefined;
+    // The bot must always answer: if an engine fails to start or hangs (a device where its worker can't run), or
+    // finds nothing, a plain move is played instead of leaving the player facing a motionless opponent until their
+    // own win on time (owner, 2026-10-24: three bullet games like that against "FIDE 2000").
+    const deadline = this.timed ? Math.min(8000, Math.max(2500, this.remaining(this.botSide) / 4)) : 12_000;
     try {
-      choice = await this.bot.choose(this.position, this.sans, this.playingRating(), this.opening, this.playerRating, this.engineLimit(), (p) => this.seen.get(polyglotKey(p)) ?? 0);
+      choice = await Promise.race([
+        this.bot.choose(this.position, this.sans, this.playingRating(), this.opening, this.playerRating, this.engineLimit(), (p) => this.seen.get(polyglotKey(p)) ?? 0),
+        new Promise<undefined>((resolve) => setTimeout(resolve, deadline)),
+      ]);
     } catch (e) {
       console.warn('FIDE bot:', e);
     }
     if (this.disposed || this.isOver) return;
-    if (!choice) {
-      this.botThinking = false;
-      this.notify();
-      return;
+    if (!choice || !this.position.isLegal(choice.move)) {
+      const move = fallbackMove(this.position, this.random);
+      if (!move) {
+        this.botThinking = false;
+        this.notify();
+        return;
+      }
+      choice = { move, source: 'engine', games: 0, window: 0 };
     }
     const rest = this.thinkTime(choice.source, choice.confidence, choice.move) - (this.now() - started);
     if (rest > 0) await this.wait(rest);
@@ -592,6 +603,39 @@ export function moveTime(o: {
   if (o.fast && o.mirror && (o.kind === 'normal' || o.kind === 'recapture')) ms = ms * 0.5 + o.mirror * (0.6 + 0.8 * random()) * 0.5;
   // Never more than a fifth of what is left, and never instant (in bullet, a little quicker).
   return Math.max(Math.min(450, budget * 0.4), Math.round(Math.min(ms, left / 5)));
+}
+
+const VALUE: Record<string, number> = { pawn: 1, knight: 3, bishop: 3, rook: 5, queen: 9, king: 0 };
+
+/**
+ * A plain move for when the engines give none: mates, wins the most material and avoids losing a piece to the
+ * reply (one move deep, with a little chance so games differ). Only a safety net, never the bot's real play.
+ */
+export function fallbackMove(pos: Chess, random: () => number = Math.random): NormalMove | undefined {
+  let best: NormalMove | undefined;
+  let bestScore = -Infinity;
+  for (const [from, dests] of pos.allDests()) {
+    for (const to of dests) {
+      const promotion = pos.board.get(from)?.role === 'pawn' && (to >> 3 === 7 || to >> 3 === 0) ? ('queen' as const) : undefined;
+      const move: NormalMove = promotion ? { from, to, promotion } : { from, to };
+      const taken = pos.board.get(to);
+      const after = pos.clone();
+      after.play(move);
+      let score = (taken ? VALUE[taken.role] : 0) + (promotion ? 8 : 0) + random() * 0.5;
+      if (after.isCheckmate()) score += 1000;
+      else if (after.isStalemate() || after.isInsufficientMaterial()) score -= 50;
+      else {
+        let loss = 0;
+        for (const [, d2] of after.allDests()) for (const t2 of d2) loss = Math.max(loss, VALUE[after.board.get(t2)?.role ?? 'king'] ?? 0);
+        score -= loss;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = move;
+      }
+    }
+  }
+  return best;
 }
 
 function countLegal(pos: Chess): number {

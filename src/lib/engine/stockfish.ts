@@ -40,6 +40,7 @@ class Stockfish {
   private start(): Promise<void> {
     if (this.ready) return this.ready;
     this.ready = new Promise((resolve) => {
+      let loaded = false;
       try {
         this.worker = new Worker(ENGINE_URL);
       } catch (e) {
@@ -51,11 +52,24 @@ class Stockfish {
       this.worker.onmessage = (ev) => this.onLine(String(ev.data));
       this.worker.onerror = () => {
         this.error = 'The engine could not start in this browser.';
+        if (loaded) return;
+        // Nobody waits for an engine that is not there: its jobs answer "nothing" and the game plays on without it.
+        this.worker = undefined;
+        this.cancelNextPlay();
+        this.nextPlay = undefined;
+        const job = this.current;
+        if (job?.kind === 'play') job.resolve(null);
+        else if (job?.kind === 'score') job.resolve(new Map());
+        this.current = undefined;
+        resolve();
       };
       this.waitFor((l) => l === 'uciok', () => {
         this.send('setoption name Hash value 32');
         this.send('isready');
-        this.waitFor((l) => l === 'readyok', resolve);
+        this.waitFor((l) => l === 'readyok', () => {
+          loaded = true;
+          resolve();
+        });
       });
       this.send('uci');
     });

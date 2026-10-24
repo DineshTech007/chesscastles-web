@@ -1,11 +1,12 @@
 import { Chess } from 'chessops/chess';
+import { parseFen } from 'chessops/fen';
 import type { NormalMove } from 'chessops/types';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { BookEntry, BookSource } from '$lib/book/book';
 import { FideBot } from '$lib/bot/fideBot';
 import { playSans, uciToMove } from '$lib/chess/position';
 import { polyglotKey } from '$lib/chess/polyglot';
-import { FideGame, moveTime, type MoveKind, type TimeControl } from './fideGame';
+import { FideGame, fallbackMove, moveTime, type MoveKind, type TimeControl } from './fideGame';
 import { PremoveQueue } from './premoves';
 
 const m = (uci: string) => uciToMove(uci)!;
@@ -179,6 +180,33 @@ describe('FideGame', () => {
     expect(g.end).toBe('agreement');
     expect(g.endReason).toBe('Draw by agreement');
     g.dispose();
+  });
+
+  it('the bot always answers: a move even when the engine gives none or never answers', async () => {
+    const none = game(new FakeBook({}), { human: 'black' });
+    none.g.begin();
+    await flush();
+    expect(none.g.sans).toHaveLength(1);
+    none.g.dispose();
+
+    vi.useFakeTimers();
+    try {
+      const hung = game(new FakeBook({}), { human: 'black', engine: () => new Promise(() => {}) });
+      hung.g.begin();
+      await vi.advanceTimersByTimeAsync(13_000);
+      expect(hung.g.sans).toHaveLength(1);
+      expect(hung.g.isOver).toBe(false);
+      hung.g.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('the fallback move mates in one and takes a free queen', () => {
+    const mate = playSans('f3 e5 g4');
+    expect(fallbackMove(mate)).toMatchObject({ from: 59, to: 31 });
+    const free = Chess.fromSetup(parseFen('4k3/8/8/3q4/8/8/8/3QK3 w - - 0 1').unwrap()).unwrap();
+    expect(fallbackMove(free)).toMatchObject({ from: 3, to: 35 });
   });
 
   it('the bot opens as White and answers the player', async () => {

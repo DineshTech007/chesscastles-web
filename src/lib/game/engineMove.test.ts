@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { instinctChance, instinctShare, maxDrop, pickWeighted, slipChance } from './engineMove';
+import { instinctChance, instinctShare, maxDrop, pickWeighted, rankBase, slipChance } from './engineMove';
 
 describe('how the FIDE-level opponent picks a move', () => {
   const cands = [
@@ -9,6 +9,26 @@ describe('how the FIDE-level opponent picks a move', () => {
   ];
   // A seeded random, so the counts are the same every run.
   const seeded = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+  it('without Maia, the engine’s first moves get most of the weight: no wandering among a dozen equal moves', () => {
+    const share = (r: number, top: number) => {
+      const w = Array.from({ length: 30 }, (_, i) => rankBase(i, r));
+      return w.slice(0, top).reduce((a, b) => a + b, 0) / w.reduce((a, b) => a + b, 0);
+    };
+    expect(share(1500, 1)).toBeGreaterThan(0.3);
+    expect(share(1500, 3)).toBeGreaterThan(0.65);
+    expect(share(1500, 12)).toBeGreaterThan(0.97);
+    expect(share(1200, 1)).toBeLessThan(share(2200, 1));
+    const n = { best: 0, fine: 0, wander: 0 };
+    const even = [
+      { item: 'best', base: rankBase(0, 1500), wc: 0.52 },
+      { item: 'fine', base: rankBase(1, 1500), wc: 0.51 },
+      ...Array.from({ length: 10 }, (_, i) => ({ item: 'wander', base: rankBase(i + 2, 1500), wc: 0.5 })),
+    ];
+    const random = seeded(3);
+    for (let i = 0; i < 1000; i++) n[pickWeighted(even, 0.06, 0.3, false, random) as keyof typeof n]++;
+    expect(n.best + n.fine).toBeGreaterThan(n.wander);
+  });
 
   it('never drops a piece over the limit, unless this move may slip', () => {
     const rnd = seeded(7);

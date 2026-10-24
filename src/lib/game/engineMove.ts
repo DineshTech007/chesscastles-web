@@ -323,9 +323,26 @@ export async function stockfishPick(pos: Chess, rating: number, tc?: TimeControl
   const r = rating - TIME_PRESSURE(tc);
   // How far from the best move a player of this rating wanders: 6% of winning chance at 1400, halving every 600 points.
   const tau = 0.06 * 2 ** ((1400 - r) / 600);
-  const scored = moves.filter((_, i) => scores.has(ucis[i])).map((m) => ({ item: m, base: 1, wc: seen && repeats(pos, m, seen) ? DRAW : winChance(scores.get(maiaUci(pos, m))!) }));
+  const scored = moves
+    .filter((_, i) => scores.has(ucis[i]))
+    .map((m) => ({ item: m, base: 1, wc: seen && repeats(pos, m, seen) ? DRAW : winChance(scores.get(maiaUci(pos, m))!) }))
+    .sort((a, b) => b.wc - a.wc);
+  // Without Maia there is no measure of how natural a move is, and in a quiet position a dozen moves score about
+  // the same, so an even weight made the bot wander: 1.Na3, an early king walk, a bishop out and back (a player's
+  // complaint, 2026-10-24). The engine's ranking stands in: the first few moves get most of the weight.
+  for (let i = 0; i < scored.length; i++) scored[i].base = rankBase(i, r);
   const won = convert(scored, (x) => scores.get(maiaUci(pos, x.item)), (x) => x.wc === DRAW, r, random);
   return won ? won.item : pickWeighted(scored, tau, maxDrop(r), random() < slipChance(r), random);
+}
+
+/**
+ * How likely a player of rating `r` is to play the engine's `rank`-th move (0 = best) before its cost is counted
+ * (see stockfishPick): the best move about a third of the time at 1500 and the top three about 70%, a little more
+ * spread out for weaker players, tighter for stronger ones.
+ */
+export function rankBase(rank: number, r: number): number {
+  const spread = Math.min(3, Math.max(1.2, 3 - ((r - 1200) / 1000) * 1.8));
+  return Math.exp(-rank / spread);
 }
 
 /** The FIDE bot's engine: Maia-3 when it is downloaded, otherwise Stockfish. */
