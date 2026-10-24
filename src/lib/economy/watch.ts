@@ -64,7 +64,8 @@ export function studyEvent(a: Activity): EarnEvent | undefined {
 /** What a finished game is worth: at least 5 moves each (a game abandoned at once pays nothing). */
 export function gameEvent(g: SavedGame): EarnEvent | undefined {
   const o = outcome(g);
-  if (o === 'unfinished' || g.uci.length < 10) return undefined;
+  // Friend games (our own rooms) pay nothing: two friends could hand each other wins.
+  if (o === 'unfinished' || g.uci.length < 10 || g.kind === 'friend') return undefined;
   const online = g.kind === 'lichess';
   return { kind: o === 'won' ? (online ? 'winOnline' : 'win') : o === 'draw' ? 'draw' : 'loss', ref: `g:${g.id}` };
 }

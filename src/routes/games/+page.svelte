@@ -60,8 +60,8 @@
   const time = (t: number) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
   const RESULT = { won: ['W', 'Win'], lost: ['L', 'Loss'], draw: ['D', 'Draw'], unfinished: ['–', 'Not finished'] } as const;
-  const KIND_ICON: Record<GameKind, IconName> = { fide: 'trophy', computer: 'robot', lichess: 'globe' };
-  const KIND_SHORT: Record<GameKind, string> = { fide: 'FIDE-level', computer: 'Computer', lichess: 'Lichess' };
+  const KIND_ICON: Record<GameKind, IconName> = { fide: 'trophy', computer: 'robot', lichess: 'globe', friend: 'users' };
+  const KIND_SHORT: Record<GameKind, string> = { fide: 'FIDE-level', computer: 'Computer', lichess: 'Lichess', friend: 'Friends' };
 </script>
 
 <svelte:head><title>My games · Chess Castles</title></svelte:head>
@@ -83,7 +83,7 @@
   </header>
 
   <div class="filters" role="group" aria-label="Show">
-    {#each [['all', 'All games'], ['fide', 'FIDE-level'], ['computer', 'Computer'], ['lichess', 'Lichess']] as const as [k, label] (k)}
+    {#each [['all', 'All games'], ['fide', 'FIDE-level'], ['computer', 'Computer'], ['lichess', 'Lichess'], ['friend', 'Friends']] as const as [k, label] (k)}
       <button class="fchip" aria-pressed={filter === k} onclick={() => (filter = k)}>{label} <span class="n num">{count(k)}</span></button>
     {/each}
   </div>

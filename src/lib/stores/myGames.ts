@@ -3,12 +3,13 @@ import { positionFromFen, sanOf, uciToMove } from '$lib/chess/position';
 import { uuid } from '$lib/uuid';
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
-export type GameKind = 'computer' | 'fide' | 'lichess';
+export type GameKind = 'computer' | 'fide' | 'lichess' | 'friend';
 
 export const KIND_LABEL: Record<GameKind, string> = {
   computer: 'Computer',
   fide: 'FIDE-level opponent',
   lichess: 'Lichess',
+  friend: 'Friend game',
 };
 
 /** A game played on this site, kept in this browser (like the app's My games). */

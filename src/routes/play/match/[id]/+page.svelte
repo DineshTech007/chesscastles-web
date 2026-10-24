@@ -14,6 +14,7 @@
   import { CupLive } from '$lib/cups/cup.svelte';
   import { acceptMatch, cancelMatch, isMatchId } from '$lib/cups/api';
   import { forgetMatch, rememberMatch } from '$lib/match';
+  import { myGames } from '$lib/stores/myGames';
   import { sentInvite } from '$lib/invites';
   import { TIME_CONTROLS } from '$lib/game/fideGame';
 
@@ -47,6 +48,27 @@
   $effect(() => {
     if (status === 'running' && game && !game.result && other) rememberMatch({ id, opponent: other.name });
     else if (status !== 'open' && v) forgetMatch(id);
+  });
+  // A finished game goes into My games (owner, 2026-10-24: "two 1 minute games with my friends are not in my games").
+  // The id is the room's, so a reload or the opponent's own browser never saves it twice.
+  let savedId = '';
+  $effect(() => {
+    const g = game;
+    if (!g?.result || !g.moves.length || savedId === g.id) return;
+    savedId = g.id;
+    const side = g.white === me ? 'white' : 'black';
+    myGames.save({
+      id: `match-${id}-${g.id}`,
+      kind: 'friend',
+      white: side === 'white' ? 'You' : g.whiteName,
+      black: side === 'black' ? 'You' : g.blackName,
+      userSide: side,
+      result: g.result,
+      reason: g.reason,
+      timeControl: tcText,
+      startFen: g.root,
+      uci: g.moves,
+    });
   });
   // The invite has an answer: the sheet's waiting note goes.
   $effect(() => {
